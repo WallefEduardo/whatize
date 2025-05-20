@@ -1,0 +1,7 @@
+Aguardando conexão para iniciar a importação de mensagens:
+  Whatsapp nome: CHIP CARTORIO
+  Whatsapp Id: 15
+  Criação do arquivo de logs: 25/02/2025 02:46:45
+  Selecionado Data de inicio de importação: 01/01/2025 00:00:00 
+  Selecionado Data final da importação: 24/02/2025 17:35:00 
+   

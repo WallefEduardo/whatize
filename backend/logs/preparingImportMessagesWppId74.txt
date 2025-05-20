@@ -1,0 +1,7 @@
+Aguardando conexão para iniciar a importação de mensagens:
+  Whatsapp nome: Dr. João Marcelo
+  Whatsapp Id: 74
+  Criação do arquivo de logs: 04/04/2025 15:15:02
+  Selecionado Data de inicio de importação: 04/03/2025 08:00:00 
+  Selecionado Data final da importação: 04/04/2025 13:56:00 
+   

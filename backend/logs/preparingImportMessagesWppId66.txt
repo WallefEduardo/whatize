@@ -1,0 +1,7 @@
+Aguardando conexão para iniciar a importação de mensagens:
+  Whatsapp nome: Comercial Advogados MJ
+  Whatsapp Id: 66
+  Criação do arquivo de logs: 23/04/2025 14:24:39
+  Selecionado Data de inicio de importação: 23/02/2025 07:00:00 
+  Selecionado Data final da importação: 23/04/2025 13:42:00 
+   
