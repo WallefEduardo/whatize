@@ -1,4 +1,4 @@
-import { Chip, Paper, TextField } from "@material-ui/core";
+import { Chip, TextField } from "@material-ui/core";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 import React, { useEffect, useRef, useState } from "react";
 import { isArray, isString } from "lodash";
@@ -96,48 +96,40 @@ export function TagsContainer({ contact }) {
     }
 
     return (
-        <Paper elevation={0} style={{ padding: 2 }}>
-            <Autocomplete
-                multiple
-                size="small"
-                options={tags}
-                value={selecteds}
-                freeSolo
-                onChange={(e, v, r) => onChange(v, r)}
-                getOptionLabel={(option) => option.name}
-                renderTags={(value, getTagProps) =>
-                    value.map((option, index) => (
-                        <Chip
-                            variant="outlined"
-                            style={{
-                                backgroundColor: option.color || '#eee',
-                                color: "#FFF",
-                                marginRight: 1,
-                                padding: 1,
-                                fontWeight: 'bold',
-                                paddingLeft: 5,
-                                paddingRight: 5,
-                                borderRadius: 3,
-                                fontSize: "0.8em",
-                                whiteSpace: "nowrap"
-                            }}
-                            label={option.name}
-                            {...getTagProps({ index })}
-                            size="small"
-                        />
-                    ))
-                }
-                renderInput={(params) => (
-                    <TextField {...params} variant="outlined" placeholder="Tags" />
-                )}
-                PaperComponent={({ children }) => (
-                    <Paper
-                        style={{ width: 400, marginLeft: 6 }}
-                    >
-                        {children}
-                    </Paper>
-                )}
-            />
-        </Paper>
+        <Autocomplete
+            multiple
+            size="small"
+            options={tags}
+            value={selecteds}
+            freeSolo
+            onChange={(e, v, r) => onChange(v, r)}
+            getOptionLabel={(option) => option.name}
+            renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                    <Chip
+                        variant="outlined"
+                        style={{
+                            backgroundColor: option.color || '#eee',
+                            color: "#FFF",
+                            marginRight: 1,
+                            padding: 0,
+                            height: 20,
+                            fontWeight: 'bold',
+                            paddingLeft: 4,
+                            paddingRight: 4,
+                            borderRadius: 3,
+                            fontSize: "0.7em",
+                            whiteSpace: "nowrap"
+                        }}
+                        label={option.name}
+                        {...getTagProps({ index })}
+                        size="small"
+                    />
+                ))
+            }
+            renderInput={(params) => (
+                <TextField {...params} variant="outlined" label="Tags" />
+            )}
+        />
     )
 }

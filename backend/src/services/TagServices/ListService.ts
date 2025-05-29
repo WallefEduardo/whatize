@@ -13,6 +13,7 @@ interface Request {
   kanban?: number;
   tagId?: number;
   funilId?: number;
+  funilIds?: number[];
 }
 
 interface Response {
@@ -27,7 +28,8 @@ const ListService = async ({
   pageNumber = "1",
   kanban = 0,
   tagId = 0,
-  funilId = null
+  funilId = null,
+  funilIds = []
 }: Request): Promise<Response> => {
   let whereCondition = {};
 
@@ -110,8 +112,15 @@ const ListService = async ({
       }
     }
 
-    // Adicionar filtro por funilId se fornecido
-    if (funilId) {
+    // Adicionar filtro por funilIds ou funilId se fornecido
+    if (funilIds && funilIds.length > 0) {
+      whereCondition = {
+        ...whereCondition,
+        funilId: {
+          [Op.in]: funilIds
+        }
+      };
+    } else if (funilId) {
       whereCondition = {
         ...whereCondition,
         funilId

@@ -52,7 +52,7 @@ const useStyles = makeStyles((theme) => ({
     }
 }));
 
-export function TagsKanbanContainer({ ticket }) {
+export function TagsKanbanContainer({ ticket, funilIds = [] }) {
     const defaultChipStyle = { color: "#7f7f7f" };
     const defaultChipProps = { color: "#7f7f7f" };
     
@@ -81,10 +81,9 @@ export function TagsKanbanContainer({ ticket }) {
         const fetchInitialData = async () => {
             setLoading(true);
             try {
-                await Promise.all([
-                    loadTags(),
-                    loadFunnels()
-                ]);
+                await loadFunnels();
+                // Só carregamos as tags após carregar os funis
+                await loadTags(funilIds);
                 setInitialLoad(false);
             } catch (err) {
                 console.error("Erro ao carregar dados iniciais:", err);
@@ -96,6 +95,13 @@ export function TagsKanbanContainer({ ticket }) {
 
         fetchInitialData();
     }, []);
+
+    // Efeito para atualizar as tags quando funilIds mudar
+    useEffect(() => {
+        if (!initialLoad) {
+            loadTags(funilIds);
+        }
+    }, [JSON.stringify(funilIds), initialLoad]);
 
     // Efeito para atualizar a seleção quando o ticket mudar
     useEffect(() => {
@@ -114,9 +120,17 @@ export function TagsKanbanContainer({ ticket }) {
         }
     }, [ticket, initialLoad]);
 
-    const loadTags = async () => {
+    const loadTags = async (funilIds = []) => {
         try {
-            const { data } = await api.get(`/tags/list`, { params: { kanban: 1 } });
+            const params = { kanban: 1 };
+            
+            if (funilIds && funilIds.length > 0) {
+                // Garantir que os IDs sejam números
+                const numericFunilIds = funilIds.map(id => Number(id)).filter(id => !isNaN(id));
+                params.funilIds = JSON.stringify(numericFunilIds);
+            }
+            
+            const { data } = await api.get(`/tags/list`, { params });
             setTags(data || []);
             return data;
         } catch (err) {
@@ -260,6 +274,7 @@ export function TagsKanbanContainer({ ticket }) {
 
     return (
         <>
+            
             <FormControl fullWidth margin="dense" variant="outlined">
                 <InputLabel id="tag-kanban-id">{i18n.t("Etapa Kanban")}</InputLabel>
                 <Select

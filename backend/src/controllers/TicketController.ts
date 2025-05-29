@@ -22,6 +22,8 @@ type IndexQuery = {
   pageNumber: string;
   status: string;
   date?: string;
+  startDate?: string;
+  endDate?: string;
   dateStart?: string;
   dateEnd?: string;
   updatedAt?: string;
@@ -211,8 +213,10 @@ export const kanban = async (req: Request, res: Response): Promise<Response> => 
     pageNumber,
     status,
     date,
+    startDate,
+    endDate,
     dateStart,
-    dateEnd,
+    dateEnd: dateEndParam,
     updatedAt,
     searchParam,
     showAll,
@@ -223,6 +227,7 @@ export const kanban = async (req: Request, res: Response): Promise<Response> => 
     funilId
   } = req.query as IndexQuery;
 
+  console.log('🔍 Backend Kanban - Query recebida:', req.query);
 
   const userId = req.user.id;
   const { companyId } = req.user;
@@ -231,16 +236,18 @@ export const kanban = async (req: Request, res: Response): Promise<Response> => 
   let tagsIds: number[] = [];
   let usersIds: number[] = [];
 
-  if (queueIdsStringified) {
+  if (queueIdsStringified && queueIdsStringified !== 'undefined') {
     queueIds = JSON.parse(queueIdsStringified);
   }
 
-  if (tagIdsStringified) {
+  if (tagIdsStringified && tagIdsStringified !== 'undefined') {
     tagsIds = JSON.parse(tagIdsStringified);
+    console.log('🏷️ Backend - Tags IDs processadas:', tagsIds);
   }
 
-  if (userIdsStringified) {
+  if (userIdsStringified && userIdsStringified !== 'undefined') {
     usersIds = JSON.parse(userIdsStringified);
+    console.log('👥 Backend - Users IDs processadas:', usersIds);
   }
 
   const { tickets, count, hasMore } = await ListTicketsServiceKanban({
@@ -250,8 +257,8 @@ export const kanban = async (req: Request, res: Response): Promise<Response> => 
     pageNumber,
     status,
     date,
-    dateStart,
-    dateEnd,
+    dateStart: startDate || dateStart,
+    dateEnd: endDate || dateEndParam,
     updatedAt,
     showAll,
     userId,

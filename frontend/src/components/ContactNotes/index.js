@@ -165,53 +165,54 @@ export function ContactNotes({ ticket }) {
 
                 {({ touched, errors, setErrors }) => (
                     <Form>
-                        <Grid container spacing={2}>
-                            <Grid xs={12} item>
-                                <Field
-                                    as={TextField}
-                                    name="note"
-                                    rows={3}
-                                    label={i18n.t("ticketOptionsMenu.appointmentsModal.textarea")}
-                                    placeholder={i18n.t("ticketOptionsMenu.appointmentsModal.placeholder")}
-                                    multiline={true}
-                                    error={touched.note && Boolean(errors.note)}
-                                    helperText={touched.note && errors.note}
-                                    variant="outlined"
-                                    onChange={handleChangeComment}
-                                    fullWidth
-                                />
-                            </Grid>
-                            {notes.length > 0 && (
-                                <Grid xs={12} item>
-                                    <List className={classes.list}>
-                                        {renderNoteList()}
-                                    </List>
+                    <Grid container spacing={2}>
+                        <Grid xs={12} item>
+                            <Field
+                                as={TextField}
+                                name="note"
+                                rows={3}
+                                label={i18n.t("ticketOptionsMenu.appointmentsModal.textarea")}
+                                placeholder={i18n.t("ticketOptionsMenu.appointmentsModal.placeholder")}
+                                multiline={true}
+                                error={touched.note && Boolean(errors.note)}
+                                helperText={touched.note && errors.note}
+                                variant="outlined"
+                                onChange={handleChangeComment}
+                                fullWidth
+                            />
+                        </Grid>
+                        <Grid xs={12} item>
+                            <Grid container spacing={2}>
+                                <Grid xs={6} item>
+                                    <Button
+                                        onClick={() => {
+                                            setNewNote("");
+                                            setErrors({});
+                                        }}
+                                        color="primary"
+                                        variant="outlined"
+                                        fullWidth
+                                    >
+                                        Cancelar
+                                    </Button>
                                 </Grid>
-                            )}
-                            <Grid xs={12} item>
-                                <Grid container spacing={2}>
-                                    <Grid xs={6} item>
-                                        <Button
-                                            onClick={() => {
-                                                setNewNote("");
-                                                setErrors({});
-                                            }}
-                                            color="primary"
-                                            variant="outlined"
-                                            fullWidth
-                                        >
-                                            Cancelar
-                                        </Button>
-                                    </Grid>
-                                    <Grid xs={6} item>
-                                        <ButtonWithSpinner loading={loading} color="primary" type="submit" variant="contained" autoFocus fullWidth>
-                                            Salvar
-                                        </ButtonWithSpinner>
-                                    </Grid>
+                                <Grid xs={6} item>
+                                    <ButtonWithSpinner loading={loading} color="primary" type="submit" variant="contained" autoFocus fullWidth>
+                                        Salvar
+                                    </ButtonWithSpinner>
                                 </Grid>
                             </Grid>
                         </Grid>
-                    </Form>
+                        {notes.length > 0 && (
+                            <Grid xs={12} item>
+                                <List className={classes.list}>
+                                    {renderNoteList()}
+                                </List>
+                            </Grid>
+                        )}
+                    </Grid>
+                </Form>
+                
                 )}
             </Formik>
         </>

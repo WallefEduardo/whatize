@@ -304,30 +304,34 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 									</Grid>
 									{kanban ? (
 										<Grid item xs={6} md={3} xl={3} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-											<FormControl variant="outlined" margin="dense" fullWidth>
-												<InputLabel id="funnel-selection-label">Funil *</InputLabel>
-												<Field
-													as={Select}
-													label="Funil *"
-													labelId="funnel-selection-label"
-													id="funilId"
-													name="funilId"
-													value={values.funilId || ''}
-													onChange={e => setTag(prev => ({ ...prev, funilId: e.target.value }))}
-													error={touched.funilId && Boolean(errors.funilId)}
-													helperText={touched.funilId && errors.funilId}
-												>
-													<MenuItem value="">Selecione um funil</MenuItem>
-													{funnels.map(funnel => (
-														<MenuItem key={funnel.id} value={funnel.id}>{funnel.name}</MenuItem>
-													))}
-												</Field>
-												{touched.funilId && errors.funilId && (
-													<div style={{ color: 'red', fontSize: '12px', marginTop: '4px', marginLeft: '14px' }}>
-														{errors.funilId}
-													</div>
-												)}
-											</FormControl>
+										<FormControl variant="outlined" margin="dense" fullWidth>
+                                              <InputLabel id="funnel-selection-label">Funil *</InputLabel>
+                                              <Field
+                                                as={Select}
+                                                label="Funil *"
+                                                labelId="funnel-selection-label"
+                                                id="funilId"
+                                                name="funilId"
+                                                // Mantém value sempre como string ou vazio, evitando undefined/null
+                                                value={values.funilId !== undefined && values.funilId !== null ? String(values.funilId) : ''}
+                                                onChange={e => {
+                                                  const value = e.target.value === "" ? null : Number(e.target.value);
+                                                  setTag(prev => ({ ...prev, funilId: value }));
+                                                }}
+                                                error={touched.funilId && Boolean(errors.funilId)}
+                                                helperText={touched.funilId && errors.funilId}
+                                              >
+                                                <MenuItem value="">Selecione um funil</MenuItem>
+                                                {funnels.map(funnel => (
+                                                  <MenuItem key={funnel.id} value={String(funnel.id)}>{funnel.name}</MenuItem>
+                                                ))}
+                                              </Field>
+                                              {touched.funilId && errors.funilId && (
+                                                <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', marginLeft: '14px' }}>
+                                                  {errors.funilId}
+                                                </div>
+                                              )}
+                                            </FormControl>
 										</Grid>
 									) : null}
 									{kanban === 1 && (

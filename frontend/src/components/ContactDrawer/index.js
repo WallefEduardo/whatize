@@ -16,10 +16,11 @@ import { i18n } from "../../translate/i18n";
 import ModalImageCors from "../ModalImageCors"
 import ContactDrawerSkeleton from "../ContactDrawerSkeleton";
 import MarkdownWrapper from "../MarkdownWrapper";
-import { CardHeader, Switch, Tooltip } from "@material-ui/core";
+import { CardHeader, Chip, FormControl, MenuItem, Select, Switch, TextField, Tooltip } from "@material-ui/core";
 import { ContactForm } from "../ContactForm";
 import ContactModal from "../ContactModal";
 import { ContactNotes } from "../ContactNotes";
+import Autocomplete from "@material-ui/lab/Autocomplete";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
 import useCompanySettings from "../../hooks/useSettings/companySettings";
@@ -27,6 +28,7 @@ import toastError from "../../errors/toastError";
 import api from "../../services/api";
 import { toast } from "react-toastify";
 import { TagsKanbanContainer } from "../TagsKanbanContainer";
+import { TagsContainer } from "../TagsContainer";
 
 
 const drawerWidth = 320;
@@ -105,17 +107,17 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 	const { get } = useCompanySettings();
 	const [hideNum, setHideNum] = useState(false);
 	const { user } = useContext(AuthContext);
-    const [acceptAudioMessage, setAcceptAudio] = useState(contact.acceptAudioMessage);
+	const [acceptAudioMessage, setAcceptAudio] = useState(contact.acceptAudioMessage);
+	const [funnels, setFunnels] = useState([]);
+	const [selectedFunnels, setSelectedFunnels] = useState([]);
 
 	useEffect(() => {
 		async function fetchData() {
-
 			const lgpdHideNumber = await get({
 				"column": "lgpdHideNumber"
 			});
 
 			if (lgpdHideNumber === "enabled") setHideNum(true);
-
 		}
 		fetchData();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -125,7 +127,38 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 		setOpenForm(false);
 	}, [open, contact]);
 
-	
+	useEffect(() => {
+		async function fetchFunnels() {
+			try {
+				const { data } = await api.get("/funilkanban");
+				setFunnels(data.funilKanbans || []);
+			} catch (err) {
+				console.error("Erro ao carregar funis:", err);
+			}
+		}
+		fetchFunnels();
+	}, []);
+
+	const handleFunnelsChange = (event, newValues) => {
+		setSelectedFunnels(newValues);
+	};
+
+	// Função para gerar cores diferentes para cada funil
+	const getFunnelColor = (index) => {
+		const colors = [
+			'#FFB300', // amarelo
+			'#1E88E5', // azul
+			'#43A047', // verde
+			'#E53935', // vermelho
+			'#8E24AA', // roxo
+			'#F4511E', // laranja
+			'#00ACC1', // ciano
+			'#3949AB', // azul escuro
+			'#6D4C41', // marrom
+			'#757575', // cinza
+		];
+		return colors[index % colors.length];
+	};
 
 	const handleContactToggleAcceptAudio = async () => {
         try {
@@ -238,16 +271,6 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 									</>
 								}
 							/>
-							{/*
-								<Button
-									variant="outlined"
-									color="primary"
-									onClick={() => setModalOpen(!openForm)}
-									style={{ fontSize: 12 }}
-								>
-									{i18n.t("contactDrawer.buttons.edit")}
-								</Button>
-								*/}
 							<Button
 								variant="outlined"
 								color="secondary"
@@ -260,7 +283,49 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 							</Button>
 							{(contact.id && openForm) && <ContactForm initialContact={contact} onCancel={() => setOpenForm(false)} />}
 						</Paper>
-						<TagsKanbanContainer ticket={ticket} className={classes.contactTags} />
+						
+						<Paper square variant="outlined" className={classes.contactDetails} style={{ marginBottom: 10 }}>
+							<TagsContainer contact={contact} />
+							
+							<Autocomplete
+								multiple
+								size="small"
+								options={funnels}
+								value={selectedFunnels}
+								onChange={handleFunnelsChange}
+								getOptionLabel={(option) => option.name}
+								style={{ marginTop: 10 }}
+								renderTags={(value, getTagProps) =>
+									value.map((option, index) => (
+										<Chip
+											variant="outlined"
+											style={{
+												backgroundColor: getFunnelColor(index),
+												color: "#FFF",
+												marginRight: 1,
+												padding: 0,
+												height: 20,
+												fontWeight: 'bold',
+												paddingLeft: 4,
+												paddingRight: 4,
+												borderRadius: 3,
+												fontSize: "0.7em",
+												whiteSpace: "nowrap"
+											}}
+											label={option.name}
+											{...getTagProps({ index })}
+											size="small"
+										/>
+									))
+								}
+								renderInput={(params) => (
+									<TextField {...params} variant="outlined" label="Filtrar por Funil" />
+								)}
+							/>
+							
+							<TagsKanbanContainer ticket={ticket} funilIds={selectedFunnels.map(f => f.id)} />
+						</Paper>
+						
 						<Paper square variant="outlined" className={classes.contactDetails}>
 							<Typography variant="subtitle1" style={{ marginBottom: 10 }}>
 								{i18n.t("ticketOptionsMenu.appointmentsModal.title")}

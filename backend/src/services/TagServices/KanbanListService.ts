@@ -6,11 +6,13 @@ import TicketTag from "../../models/TicketTag";
 interface Request {
   companyId: number;
   funilId?: number;
+  funilIds?: number[];
 }
 
 const KanbanListService = async ({
   companyId,
-  funilId
+  funilId,
+  funilIds = []
 }: Request): Promise<Tag[]> => {
   // Preparar condição base
   let whereCondition: any = {
@@ -18,8 +20,14 @@ const KanbanListService = async ({
     companyId
   };
   
-  // Adicionar condição de funilId se fornecido
-  if (funilId) {
+  // Verificamos primeiro se temos múltiplos funilIds
+  if (funilIds && funilIds.length > 0) {
+    whereCondition.funilId = {
+      [Op.in]: funilIds
+    };
+  }
+  // Se não temos múltiplos mas temos um único, usamos ele
+  else if (funilId) {
     whereCondition.funilId = funilId;
   }
   

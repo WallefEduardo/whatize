@@ -214,8 +214,6 @@ const Ticket = () => {
         </TicketHeader>
         {/* </div> */}
         
-          <TagsContainer contact={contact} />
-     
         <ReplyMessageProvider>
           <ForwardMessageProvider>
             <EditMessageProvider>

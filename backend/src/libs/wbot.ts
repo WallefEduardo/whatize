@@ -12,8 +12,9 @@ import makeWASocket, {
   isJidGroup,
   jidNormalizedUser,
   makeCacheableSignalKeyStore,
-  makeInMemoryStore,
+  makeInMemoryStore // <-- AGORA SIM, direto do pacote!
 } from "@whiskeysockets/baileys";
+
 import { FindOptions } from "sequelize/types";
 import Whatsapp from "../models/Whatsapp";
 import logger from "../utils/logger";
@@ -30,9 +31,11 @@ import { add } from "date-fns";
 import moment from "moment";
 import { getTypeMessage, isValidMsg } from "../services/WbotServices/wbotMessageListener";
 import { addLogs } from "../helpers/addLogs";
-import NodeCache from 'node-cache';
+import NodeCache from "node-cache";
 import { Store } from "./store";
-import readline from 'readline';
+import readline from "readline";
+
+
 const msgRetryCounterCache = new NodeCache({
   stdTTL: 600,
   maxKeys: 1000,

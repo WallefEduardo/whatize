@@ -21,6 +21,7 @@ import User from "../models/User";
 import { head } from "lodash";
 import ToggleChangeWidthService from "../services/UserServices/ToggleChangeWidthService";
 import APIShowEmailUserService from "../services/UserServices/APIShowEmailUserService";
+import UpdateSelectedQueuesService from "../services/UserServices/UpdateSelectedQueuesService";
 import { v4 as uuidv4 } from "uuid";
 import { Op } from "sequelize";
 
@@ -548,4 +549,25 @@ export const resetPassword = async (req: Request, res: Response): Promise<Respon
   await user.save();
 
   return res.status(200).json({ message: "Senha atualizada com sucesso" });
+};
+
+export const updateSelectedQueues = async (req: Request, res: Response): Promise<Response> => {
+  const { userId } = req.params;
+  const { selectedQueueIds } = req.body;
+  const { companyId } = req.user;
+
+  const user = await UpdateSelectedQueuesService({
+    userId,
+    selectedQueueIds,
+    companyId
+  });
+
+  const io = getIO();
+  io.of(String(companyId))
+    .emit(`company-${companyId}-user`, {
+      action: "update",
+      user
+    });
+
+  return res.status(200).json(user);
 };

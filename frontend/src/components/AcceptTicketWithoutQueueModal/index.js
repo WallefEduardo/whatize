@@ -58,7 +58,7 @@ const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket })
 
 useEffect(() => {
 	try {
-	if (user.queues.length === 1) {
+	if (user?.queues?.length === 1) {
         setSelectedQueue(user.queues[0].id)
       }
 	} catch (err) {
@@ -165,9 +165,9 @@ return (
 						label={i18n.t("ticketsList.acceptModal.queue")}
 					>
 						<MenuItem value={''}>&nbsp;</MenuItem>
-						{user.queues.map((queue) => (
+						{user?.queues?.map((queue) => (
 							<MenuItem key={queue.id} value={queue.id}>{queue.name}</MenuItem>
-						))}
+						)) || []}
 					</Select>
 				</FormControl>
 			</DialogContent>

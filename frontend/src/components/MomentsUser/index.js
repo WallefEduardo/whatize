@@ -107,7 +107,7 @@ const DashboardManage = () => {
   const companyId = user.companyId;
 
 
-  const userQueueIds = user.queues.map((q) => q.id);
+  const userQueueIds = user?.queues?.map((q) => q.id) || [];
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
 
  

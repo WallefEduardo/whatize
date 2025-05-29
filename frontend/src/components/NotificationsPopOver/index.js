@@ -63,7 +63,7 @@ const NotificationsPopOver = (volume) => {
 	const anchorEl = useRef();
 	const [isOpen, setIsOpen] = useState(false);
 	const [notifications, setNotifications] = useState([]);
-	const queueIds = queues.map((q) => q.id);
+	const queueIds = queues?.map((q) => q.id) || [];
 	const { get: getSetting } = useCompanySettings();
     const { setCurrentTicket, setTabOpen } = useContext(TicketsContext);
 
@@ -144,7 +144,7 @@ const NotificationsPopOver = (volume) => {
 		const companyId = user.companyId;
 		// const socket = socketManager.GetSocket();
 		if (user.id) {
-			const queueIds = queues.map((q) => q.id);
+			const queueIds = queues?.map((q) => q.id) || [];
 
 			const onConnectNotificationsPopover = () => {
 				socket.emit("joinNotification");

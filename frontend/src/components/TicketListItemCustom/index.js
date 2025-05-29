@@ -18,6 +18,7 @@ import toastError from "../../errors/toastError";
 import { v4 as uuidv4 } from "uuid";
 
 import GroupIcon from '@material-ui/icons/Group';
+import LocalOfferIcon from '@material-ui/icons/LocalOffer';
 import ContactTag from "../ContactTag";
 import FunilTag from "../FunilTag";
 import ConnectionIcon from "../ConnectionIcon";
@@ -208,6 +209,12 @@ const useStyles = makeStyles((theme) => ({
     },
     connectionIcon: {
         marginRight: theme.spacing(1)
+    },
+    tagIcon: {
+        fontSize: "0.8em",
+        marginRight: 2,
+        marginLeft: 2,
+        verticalAlign: "middle"
     }
 }));
 
@@ -456,6 +463,30 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
         setCurrentTicket({ id, uuid, code });
     };
 
+    // Função para obter todas as tags normais (não kanban) do ticket
+    const getNormalTags = () => {
+        let normalTags = [];
+        
+        // Verifica primeiro nas tags do contato
+        if (ticket.contact && ticket.contact.tags) {
+            const contactNormalTags = ticket.contact.tags.filter(tag => tag.kanban === 0);
+            normalTags = [...normalTags, ...contactNormalTags];
+        }
+        
+        // Se não encontrou, verifica nas tags diretas do ticket
+        if (ticket.tags) {
+            const ticketNormalTags = ticket.tags.filter(tag => tag.kanban === 0);
+            normalTags = [...normalTags, ...ticketNormalTags];
+        }
+        
+        // Remove duplicatas baseado no ID
+        const uniqueTags = normalTags.filter((tag, index, self) => 
+            index === self.findIndex(t => t.id === tag.id)
+        );
+        
+        return uniqueTags;
+    };
+
     return (
         <React.Fragment key={ticket.id}>
             {openAlert && (
@@ -582,6 +613,14 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
                                     {ticket?.whatsapp ? <Badge className={classes.connectionTag} style={{ backgroundColor: ticket.channel === "whatsapp" ? "#25D366" : ticket.channel === "facebook" ? "#4267B2" : "#E1306C" }}>{ticket.whatsapp?.name.toUpperCase()}</Badge> : <br></br>}
                                     {<Badge style={{ backgroundColor: ticket.queue?.color || "#7c7c7c" }} className={classes.connectionTag}>{ticket.queueId ? ticket.queue?.name.toUpperCase() : ticket.status === "lgpd" ? "LGPD" : "SEM FILA"}</Badge>}
                                     {ticket?.user && (<Badge style={{ backgroundColor: "#000000" }} className={classes.connectionTag}>{ticket.user?.name.toUpperCase()}</Badge>)}
+                                    {getNormalTags().map((tag, index) => (
+                                        <Tooltip key={`normal-tag-${tag.id}`} title={tag.name}>
+                                            <LocalOfferIcon 
+                                                className={classes.tagIcon}
+                                                style={{ color: tag.color }}
+                                            />
+                                        </Tooltip>
+                                    ))}
                                 </span>
                                 <span className={classes.secondaryContentSecond} >
                                     {

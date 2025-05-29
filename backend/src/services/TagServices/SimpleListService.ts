@@ -7,13 +7,15 @@ interface Request {
   searchParam?: string;
   kanban?: number;
   funilId?: number;
+  funilIds?: number[];
 }
 
 const ListService = async ({
   companyId,
   searchParam,
   kanban = 0,
-  funilId = null
+  funilId = null,
+  funilIds = []
 }: Request): Promise<Tag[]> => {
   let whereCondition = {};
 
@@ -26,7 +28,17 @@ const ListService = async ({
     };
   }
 
-  if (funilId && kanban === 1) {
+  // Verificamos primeiro se temos múltiplos funilIds
+  if (funilIds && funilIds.length > 0 && Number(kanban) === 1) {
+    whereCondition = {
+      ...whereCondition,
+      funilId: {
+        [Op.in]: funilIds
+      }
+    };
+  }
+  // Se não temos múltiplos mas temos um único, usamos ele
+  else if (funilId && Number(kanban) === 1) {
     whereCondition = {
       ...whereCondition,
       funilId

@@ -184,6 +184,19 @@ class User extends Model<User> {
   @Column
   allowConnections: string;
 
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+    get() {
+      const value = this.getDataValue('selectedQueueIds' as any);
+      return value ? JSON.parse(value) : null;
+    },
+    set(value: number[] | null) {
+      this.setDataValue('selectedQueueIds' as any, value ? JSON.stringify(value) : null);
+    }
+  })
+  selectedQueueIds: number[];
+
   @BeforeDestroy
   static async updateChatbotsUsersReferences(user: User) {
     // Atualizar os registros na tabela Chatbots onde optQueueId é igual ao ID da fila que será excluída

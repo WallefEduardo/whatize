@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import api from "../../services/api";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -6,16 +6,45 @@ import Board from 'react-trello';
 import { toast } from "react-toastify";
 import { i18n } from "../../translate/i18n";
 import { useHistory } from 'react-router-dom';
-import { Facebook, Instagram, WhatsApp, Add } from "@material-ui/icons";
-import { Tooltip, Typography, Button, TextField, FormControl, InputLabel, Select, MenuItem } from "@material-ui/core";
+import { Facebook, Instagram, WhatsApp, Add, Send, LocalOffer, Person } from "@material-ui/icons";
+import { Tooltip, Typography, Button, TextField, FormControl, InputLabel, Select, MenuItem, Chip, Box, IconButton, Badge } from "@material-ui/core";
 import { format, isSameDay, parseISO } from "date-fns";
 import { Can } from "../../components/Can";
 import Swal from "sweetalert2"; 
+import Autocomplete from "@material-ui/lab/Autocomplete";
 
 const useStyles = makeStyles(theme => ({
   '@global': {
     '.dOlrNy': {
       overflowY: 'auto !important',
+    },
+    // Remove tooltips do react-trello
+    '.react-trello-lane-header, .react-trello-lane, [data-react-trello-lane-id]': {
+      '& *[title]': {
+        '&::before, &::after': {
+          display: 'none !important',
+        },
+      },
+    },
+    // Remove tooltip nativo do browser de forma mais abrangente
+    '.react-trello-board *[title], .react-trello-board *[data-title]': {
+      '&:hover::before, &:hover::after': {
+        display: 'none !important',
+      },
+      '&::before, &::after': {
+        display: 'none !important',
+      },
+    },
+    // Força remoção de tooltips em elementos específicos
+    '.react-trello-lane-header, .react-trello-lane-header *, .react-trello-lane, .react-trello-lane *': {
+      '&[title]': {
+        '&:hover': {
+          '&::before, &::after': {
+            content: 'none !important',
+            display: 'none !important',
+          },
+        },
+      },
     },
   },
   root: {
@@ -125,8 +154,9 @@ const useStyles = makeStyles(theme => ({
     flexDirection: "column",
     gap: theme.spacing(1),
     border: "1px solid rgba(0, 0, 0, 0.1)",
+    transition: "background-color 0.2s ease-in-out",
     "&:hover": {
-      boxShadow: "0 6px 12px rgba(0, 0, 0, 0.15)",
+      backgroundColor: "#f8f9fa",
     },
   },
   cardHeader: {
@@ -168,15 +198,25 @@ const useStyles = makeStyles(theme => ({
   },
   ticketNumber: {
     fontSize: "0.75rem",
-    color: "#666",
-    fontWeight: "500",
+    color: "#00C307",
+    fontWeight: "600",
     whiteSpace: "nowrap",
+    cursor: "pointer",
+    transition: "all 0.2s ease-in-out",
+    "&:hover": {
+      transform: "scale(1.05)",
+    },
   },
   contactNumber: {
     fontSize: "0.75rem",
     color: "#666",
     fontWeight: "500",
     whiteSpace: "nowrap",
+    cursor: "pointer",
+    transition: "all 0.2s ease-in-out",
+    "&:hover": {
+      transform: "scale(1.05)",
+    },
   },
   timeInfo: {
     fontSize: "0.85rem",
@@ -186,29 +226,14 @@ const useStyles = makeStyles(theme => ({
   messageContent: {
     fontSize: "0.9rem",
     color: "#444",
-    margin: theme.spacing(1, 0),
+    marginTop: "6px",
+    marginBottom: theme.spacing(1),
+    paddingTop: "6px",
+    borderTop: "1px solid rgba(0, 0, 0, 0.08)",
     wordBreak: "break-word",
   },
-  cardActions: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: theme.spacing(1),
-    marginTop: theme.spacing(0.5),
-  },
-  viewButton: {
-    backgroundColor: "#00C307",
-    color: "#FFFFFF",
-    borderRadius: "4px !important",
-    border: "none",
-    padding: "4px 14px",
-    textTransform: "none",
-    fontWeight: "500",
-    fontSize: "0.875rem",
-    "&:hover": {
-      backgroundColor: "#029907",
-    },
-  },
+
+
   connectionTag: {
     backgroundColor: "#343a40",
     color: "#FFFFFF",
@@ -223,6 +248,65 @@ const useStyles = makeStyles(theme => ({
     alignItems: "center",
     justifyContent: "center",
     minWidth: "24px",
+  },
+  sendMessageButton: {
+    backgroundColor: "transparent",
+    color: "#00C307",
+    border: "1px solid #00C307",
+    borderRadius: "4px",
+    width: "26px",
+    height: "20px",
+    minWidth: "26px",
+    padding: "3px",
+    transition: "all 0.2s ease-in-out",
+    "&:hover": {
+      backgroundColor: "rgba(0, 195, 7, 0.1)",
+      transform: "scale(1.1)",
+    },
+    "& .MuiSvgIcon-root": {
+      fontSize: "12px",
+    },
+  },
+  tagButton: {
+    backgroundColor: "transparent",
+    border: "1px solid",
+    borderRadius: "4px",
+    width: "26px",
+    height: "20px",
+    minWidth: "26px",
+    padding: "3px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "default",
+    "& .MuiSvgIcon-root": {
+      fontSize: "12px",
+    },
+  },
+  userBadge: {
+    backgroundColor: "transparent",
+    color: "#000000",
+    border: "1px solid #000000",
+    borderRadius: "4px",
+    padding: "3px 8px",
+    fontSize: "0.7rem",
+    fontWeight: "500",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "3px",
+    height: "20px",
+    "& .MuiSvgIcon-root": {
+      fontSize: "12px",
+    },
+  },
+  cardBottomActions: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: "4px",
+    marginTop: "6px",
+    paddingTop: "10px",
+    borderTop: "1px solid rgba(0, 0, 0, 0.08)",
   },
 }));
 
@@ -251,7 +335,16 @@ const Kanban = () => {
   const [moreMessage, setMoreMessage] = useState(null);
   const [funnels, setFunnels] = useState([]);
   const [selectedFunnel, setSelectedFunnel] = useState(null);
+  
+  // Novos estados para os filtros
+  const [allTags, setAllTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
   const jsonString = user?.queues?.map(queue => queue.UserQueue.queueId) || [];
+  
   // Paleta de cores para os badges dos funis
   const funnelColors = [
     '#FFB300', // amarelo
@@ -268,13 +361,46 @@ const Kanban = () => {
 
   useEffect(() => {
     if (user) {
-      fetchTags();
       fetchFunnels();
+      fetchAllTags();
+      if (user.profile === 'admin') {
+        fetchAllUsers();
+      }
     }
   }, [user]);
 
+  // Efeito para atualizar dados quando filtros mudarem
+  useEffect(() => {
+    if (user) {
+      const timeoutId = setTimeout(() => {
+        fetchTags();
+      }, 400);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedFunnel, selectedTags, selectedUsers, startDate, endDate, user]);
+
+  const fetchAllTags = async () => {
+    try {
+      const response = await api.get("/tags/list");
+      setAllTags(response.data || []);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const fetchAllUsers = async () => {
+    try {
+      const response = await api.get("/users/list");
+      setAllUsers(response.data || []);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   const fetchTags = async () => {
     try {
+      setLoading(true);
       const response = await api.get("/tag/kanban/", {
         params: {
           funilId: selectedFunnel
@@ -282,9 +408,11 @@ const Kanban = () => {
       });
       const fetchedTags = response.data.lista || [];
       setTags(fetchedTags);
-      fetchTickets(selectedFunnel);
+      await fetchTickets();
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -297,19 +425,37 @@ const Kanban = () => {
     }
   };
 
-  const fetchTickets = async (funnelIdParam = null) => {
+  const fetchTickets = async () => {
     try {
-      const { data } = await api.get("/ticket/kanban", {
-        params: {
-          queueIds: JSON.stringify(jsonString),
-          startDate,
-          endDate,
-          funilId: funnelIdParam
-        }
-      });
+      const params = {
+        queueIds: JSON.stringify(jsonString),
+        startDate,
+        endDate
+      };
+
+      // Só adiciona os parâmetros se houver valores válidos
+      if (selectedFunnel) {
+        params.funilId = selectedFunnel;
+      }
+      
+      if (selectedTags.length > 0) {
+        params.tags = JSON.stringify(selectedTags.map(tag => tag.id));
+      }
+      
+      if (selectedUsers.length > 0) {
+        params.users = JSON.stringify(selectedUsers.map(user => user.id));
+      }
+      
+      console.log('🔍 Kanban - Parâmetros enviados para API:', params);
+      console.log('🏷️ Tags selecionadas:', selectedTags);
+      console.log('👥 Usuários selecionados:', selectedUsers);
+      
+      const { data } = await api.get("/ticket/kanban", { params });
+      
+      console.log('📊 Kanban - Tickets retornados:', data.tickets?.length || 0);
       setTickets(data.tickets);
     } catch (err) {
-      console.log(err);
+      console.error('❌ Erro ao buscar tickets:', err);
       setTickets([]);
     }
   };
@@ -320,7 +466,7 @@ const Kanban = () => {
       
       const onAppMessage = (data) => {
         if (data.action === "create" || data.action === "update" || data.action === "delete") {
-          fetchTickets();
+          fetchTags();
         }
       };
 
@@ -334,10 +480,6 @@ const Kanban = () => {
     }
   }, [socket, user, startDate, endDate]);
 
-  const handleSearchClick = () => {
-    fetchTags();
-  };
-
   const handleStartDateChange = (event) => {
     setStartDate(event.target.value);
   };
@@ -348,6 +490,14 @@ const Kanban = () => {
 
   const handleFunnelChange = (event) => {
     setSelectedFunnel(event.target.value === "" ? null : event.target.value);
+  };
+
+  const handleTagsChange = (event, newValue) => {
+    setSelectedTags(newValue);
+  };
+
+  const handleUsersChange = (event, newValue) => {
+    setSelectedUsers(newValue);
   };
 
   const handleCardClick = (uuid) => {
@@ -390,6 +540,71 @@ const Kanban = () => {
     }
   };
 
+  // Função para formatar telefone brasileiro
+  const formatPhoneNumber = (phoneNumber) => {
+    if (!phoneNumber) return '';
+    
+    // Remove o código do país (55) se existir
+    let cleanNumber = phoneNumber.replace(/^\+?55/, '');
+    
+    // Remove caracteres não numéricos
+    cleanNumber = cleanNumber.replace(/\D/g, '');
+    
+    // Adiciona o 9 na frente se for celular e não tiver
+    if (cleanNumber.length === 10 && ['6', '7', '8', '9'].includes(cleanNumber[2])) {
+      cleanNumber = cleanNumber.slice(0, 2) + '9' + cleanNumber.slice(2);
+    }
+    
+    // Formata no padrão (99) 99999-9999
+    if (cleanNumber.length === 11) {
+      return `(${cleanNumber.slice(0, 2)}) ${cleanNumber.slice(2, 7)}-${cleanNumber.slice(7)}`;
+    }
+    
+    // Se não conseguir formatar, retorna o número original
+    return phoneNumber;
+  };
+
+  // Função para copiar texto para clipboard
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Número copiado!');
+    } catch (err) {
+      // Fallback para navegadores mais antigos
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      toast.success('Número copiado!');
+    }
+  };
+
+  // Função para obter todas as tags normais (não kanban) do ticket
+  const getNormalTags = (ticket) => {
+    let normalTags = [];
+    
+    // Verifica primeiro nas tags do contato
+    if (ticket.contact && ticket.contact.tags) {
+      const contactNormalTags = ticket.contact.tags.filter(tag => tag.kanban === 0);
+      normalTags = [...normalTags, ...contactNormalTags];
+    }
+    
+    // Se não encontrou, verifica nas tags diretas do ticket
+    if (ticket.tags) {
+      const ticketNormalTags = ticket.tags.filter(tag => tag.kanban === 0);
+      normalTags = [...normalTags, ...ticketNormalTags];
+    }
+    
+    // Remove duplicatas baseado no ID
+    const uniqueTags = normalTags.filter((tag, index, self) => 
+      index === self.findIndex(t => t.id === tag.id)
+    );
+    
+    return uniqueTags;
+  };
+
   const popularCards = () => {
     const filteredTickets = tickets.filter(ticket => ticket.tags.length === 0);
 
@@ -418,11 +633,19 @@ const Kanban = () => {
 
           <div className={classes.ticketInfo}>
             <div className={classes.ticketInfoContainer}>
-              <Typography className={classes.ticketNumber}>
+              <Typography 
+                className={classes.ticketNumber}
+                onClick={() => copyToClipboard(ticket.id.toString())}
+                title="Clique para copiar o número do ticket"
+              >
                 Ticket nº {ticket.id}
               </Typography>
-              <Typography className={classes.contactNumber}>
-                {ticket.contact.number}
+              <Typography 
+                className={classes.contactNumber}
+                onClick={() => copyToClipboard(ticket.contact.number.replace(/\D/g, ''))}
+                title="Clique para copiar o número"
+              >
+                {formatPhoneNumber(ticket.contact.number)}
               </Typography>
             </div>
           </div>
@@ -440,22 +663,41 @@ const Kanban = () => {
             )}
           </div>
 
-          <div className={classes.cardActions} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Button
-              variant="outlined"
-              className={classes.viewButton}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCardClick(ticket.uuid);
-              }}
-              size="small"
-              style={{ fontWeight: 'bold' }}
-            >
-              Ver ticket
-            </Button>
+          <div className={classes.cardBottomActions}>
+            {/* Botão de enviar mensagem */}
+            <Tooltip title="Abrir conversa">
+              <IconButton
+                className={classes.sendMessageButton}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCardClick(ticket.uuid);
+                }}
+                size="small"
+              >
+                <Send />
+              </IconButton>
+            </Tooltip>
+
+            {/* Botão da tag (se existir) */}
+            {getNormalTags(ticket).length > 0 && (
+              <Tooltip title={getNormalTags(ticket)[0].name}>
+                <div 
+                  className={classes.tagButton}
+                  style={{ 
+                    borderColor: getNormalTags(ticket)[0].color,
+                    color: getNormalTags(ticket)[0].color 
+                  }}
+                >
+                  <LocalOffer />
+                </div>
+              </Tooltip>
+            )}
+
+            {/* Badge do usuário responsável */}
             {ticket?.user && (
-              <div className={classes.connectionTag} style={{ marginLeft: '8px', fontWeight: 'bold' }}>
-                {ticket.user.name.toUpperCase()}
+              <div className={classes.userBadge}>
+                <Person />
+                <span>{ticket.user.name.toUpperCase()}</span>
               </div>
             )}
           </div>
@@ -508,6 +750,62 @@ const Kanban = () => {
     }
   }, [tickets, tags]);
 
+  // Remove tooltips do react-trello após renderização
+  useEffect(() => {
+    const removeTooltips = () => {
+      // Remove atributo title de todos os elementos que podem ter tooltip
+      const selectors = [
+        '.react-trello-lane-header',
+        '.react-trello-lane-header *',
+        '[data-react-trello-lane-id]',
+        '[data-react-trello-lane-id] *',
+        '.react-trello-lane',
+        '.react-trello-lane *'
+      ];
+      
+      selectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          if (el.hasAttribute('title')) {
+            el.removeAttribute('title');
+          }
+          // Remove também data-title se existir
+          if (el.hasAttribute('data-title')) {
+            el.removeAttribute('data-title');
+          }
+        });
+      });
+    };
+
+    // Executa múltiplas vezes para garantir que pegue todos os elementos
+    const timeouts = [
+      setTimeout(removeTooltips, 50),
+      setTimeout(removeTooltips, 200),
+      setTimeout(removeTooltips, 500),
+    ];
+    
+    // Observer para detectar mudanças no DOM
+    const observer = new MutationObserver(() => {
+      removeTooltips();
+    });
+    
+    // Observa mudanças no container do kanban
+    const kanbanContainer = document.querySelector('.react-trello-board');
+    if (kanbanContainer) {
+      observer.observe(kanbanContainer, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['title', 'data-title']
+      });
+    }
+    
+    return () => {
+      timeouts.forEach(timeout => clearTimeout(timeout));
+      observer.disconnect();
+    };
+  }, [file]); // Executa sempre que o file (dados do kanban) mudar
+
   return (
     <div className={classes.root}>
       <div className={classes.controlsContainer}>
@@ -550,14 +848,78 @@ const Kanban = () => {
               ))}
             </Select>
           </FormControl>
-          <Button
-            variant="contained"
-            className={classes.searchButton}
-            onClick={handleSearchClick}
-            size="medium"
-          >
-            Pesquisar
-          </Button>
+          
+          {/* Filtro de Tags */}
+          <Autocomplete
+            multiple
+            size="small"
+            options={allTags}
+            value={selectedTags}
+            onChange={handleTagsChange}
+            getOptionLabel={(option) => option.name}
+            style={{ minWidth: 250 }}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  variant="outlined"
+                  style={{
+                    backgroundColor: option.color || "#eee",
+                    color: "white",
+                    fontSize: "0.75rem",
+                    height: "24px"
+                  }}
+                  label={option.name}
+                  {...getTagProps({ index })}
+                  size="small"
+                />
+              ))
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                label="Filtrar por Tags"
+                className={classes.dateInput}
+              />
+            )}
+          />
+
+          {/* Filtro de Usuários - apenas para admin */}
+          {user?.profile === 'admin' && (
+            <Autocomplete
+              multiple
+              size="small"
+              options={allUsers}
+              value={selectedUsers}
+              onChange={handleUsersChange}
+              getOptionLabel={(option) => option.name}
+              style={{ minWidth: 250 }}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    variant="outlined"
+                    style={{
+                      backgroundColor: "#f5f5f5",
+                      color: "#333",
+                      fontSize: "0.75rem",
+                      height: "24px"
+                    }}
+                    label={option.name}
+                    {...getTagProps({ index })}
+                    size="small"
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  variant="outlined"
+                  label="Filtrar por Usuário"
+                  className={classes.dateInput}
+                />
+              )}
+            />
+          )}
         </div>
         <Can role={user?.profile} perform="dashboard:view" yes={() => (
           <Button
@@ -572,83 +934,108 @@ const Kanban = () => {
         )} />
       </div>
       <div className={classes.kanbanContainer}>
-        <Board
-          data={file}
-          onCardMoveAcrossLanes={handleCardMove}
-          style={{
-            backgroundColor: 'transparent',
-            height: '100%',
-            borderBottom: 'none !important'
-          }}
-          laneStyle={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '12px',
-            marginRight: '12px',
-            minWidth: window.innerWidth <= 600 ? '260px' : '260px',
-            maxWidth: window.innerWidth <= 600 ? '280px' : '280px',
-            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-            borderBottom: 'none !important',
-          }}
-          cardStyle={{
-            padding: 0,
-            marginBottom: '6px',
-            border: 'none',
-            boxShadow: 'none',
-            backgroundColor: 'transparent',
-            borderTop: 'none',
-            '& > div': {
-              borderTop: 'none !important'
-            }
-          }}
-          hideCardDeleteIcon
-          tagStyle={{ display: 'none' }}
-          cardDraggable={true}
-          laneDraggable={false}
-          handleDragStart={null}
-          handleDragEnd={null}
-          components={{
-            LaneHeader: ({ title, label, funilName, funilColor }) => (
-              <div style={{
-                padding: '0',
-                marginBottom: '0',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
+            <Typography>Carregando...</Typography>
+          </div>
+        ) : (
+          <Board
+            data={file}
+            onCardMoveAcrossLanes={handleCardMove}
+            style={{
+              backgroundColor: 'transparent',
+              height: '100%',
+              borderBottom: 'none !important'
+            }}
+            laneStyle={{
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              padding: '12px',
+              marginRight: '12px',
+              minWidth: window.innerWidth <= 600 ? '260px' : '260px',
+              maxWidth: window.innerWidth <= 600 ? '280px' : '280px',
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+              borderBottom: 'none !important',
+            }}
+            cardStyle={{
+              padding: 0,
+              marginBottom: '6px',
+              border: 'none',
+              boxShadow: 'none',
+              backgroundColor: 'transparent',
+              borderTop: 'none',
+              '& > div': {
                 borderTop: 'none !important'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              }
+            }}
+            hideCardDeleteIcon
+            tagStyle={{ display: 'none' }}
+            cardDraggable={true}
+            laneDraggable={false}
+            handleDragStart={null}
+            handleDragEnd={null}
+            components={{
+              LaneHeader: ({ title, label, funilName, funilColor }) => (
+                <div 
+                  style={{
+                    padding: '0',
+                    marginBottom: '0',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderTop: 'none !important'
+                  }}
+                  title="" // Remove tooltip
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Typography 
+                      style={{
+                        fontWeight: 600,
+                        color: '#444',
+                        fontSize: window.innerWidth <= 600 ? '1rem' : '1.1rem'
+                      }}
+                      title="" // Remove tooltip
+                    >{title}</Typography>
+                    {funilName && (
+                      <span style={{
+                        background: funilColor,
+                        color: '#fff',
+                        borderRadius: '8px',
+                        padding: '2px 10px',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        marginLeft: 4
+                      }}>{funilName}</span>
+                    )}
+                  </div>
                   <Typography style={{
-                    fontWeight: 600,
-                    color: '#444',
-                    fontSize: window.innerWidth <= 600 ? '1rem' : '1.1rem'
-                  }}>{title}</Typography>
-                  {funilName && (
-                    <span style={{
-                      background: funilColor,
-                      color: '#fff',
-                      borderRadius: '8px',
-                      padding: '2px 10px',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      marginLeft: 4
-                    }}>{funilName}</span>
-                  )}
+                    backgroundColor: '#f5f5f5',
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    fontSize: window.innerWidth <= 600 ? '0.75rem' : '0.875rem',
+                    color: '#666'
+                  }}>{label}</Typography>
                 </div>
-                <Typography style={{
-                  backgroundColor: '#f5f5f5',
-                  padding: '4px 12px',
-                  borderRadius: '20px',
-                  fontSize: window.innerWidth <= 600 ? '0.75rem' : '0.875rem',
-                  color: '#666'
-                }}>{label}</Typography>
-              </div>
-            )
-          }}
-        />
+              )
+            }}
+          />
+        )}
       </div>
     </div>
   );
 };
+
+// Função debounce
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
 export default Kanban;

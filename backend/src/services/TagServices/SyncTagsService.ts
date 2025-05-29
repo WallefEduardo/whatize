@@ -18,7 +18,8 @@ const SyncTags = async ({
   await ContactTag.destroy({ where: { contactId } });
   await ContactTag.bulkCreate(tagList);
 
-  contact?.reload();
+  // Recarregar o contato com as tags atualizadas
+  await contact?.reload({ include: [Tag] });
 
   return contact;
 };

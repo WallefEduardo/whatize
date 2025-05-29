@@ -19,11 +19,22 @@ type IndexQuery = {
   kanban?: number;
   tagId?: number;
   funilId?: number;
+  funilIds?: string;
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const { pageNumber, searchParam, kanban, tagId, funilId } = req.query as IndexQuery;
+  const { pageNumber, searchParam, kanban, tagId, funilId, funilIds } = req.query as IndexQuery;
   const { companyId } = req.user;
+
+  // Processar funilIds se existir
+  let funilIdsArray: number[] = [];
+  if (funilIds) {
+    try {
+      funilIdsArray = JSON.parse(funilIds);
+    } catch (error) {
+      console.error("Erro ao converter funilIds:", error);
+    }
+  }
 
   const { tags, count, hasMore } = await ListService({
     searchParam,
@@ -31,7 +42,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     companyId,
     kanban,
     tagId,
-    funilId
+    funilId,
+    funilIds: funilIdsArray
   });
 
   return res.json({ tags, count, hasMore });
@@ -127,19 +139,49 @@ export const remove = async (
 };
 
 export const list = async (req: Request, res: Response): Promise<Response> => {
-  const { searchParam, kanban, funilId } = req.query as IndexQuery;
+  const { searchParam, kanban, funilId, funilIds } = req.query as IndexQuery;
   const { companyId } = req.user;
 
-  const tags = await SimpleListService({ searchParam, kanban, companyId, funilId });
+  // Processar funilIds se existir
+  let funilIdsArray: number[] = [];
+  if (funilIds) {
+    try {
+      funilIdsArray = JSON.parse(funilIds);
+    } catch (error) {
+      console.error("Erro ao converter funilIds:", error);
+    }
+  }
+
+  const tags = await SimpleListService({ 
+    searchParam, 
+    kanban, 
+    companyId, 
+    funilId,
+    funilIds: funilIdsArray
+  });
 
   return res.json(tags);
 };
 
 export const kanban = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
-  const { funilId } = req.query as IndexQuery;
+  const { funilId, funilIds } = req.query as IndexQuery;
 
-  const tags = await KanbanListService({ companyId, funilId });
+  // Processar funilIds se existir
+  let funilIdsArray: number[] = [];
+  if (funilIds) {
+    try {
+      funilIdsArray = JSON.parse(funilIds);
+    } catch (error) {
+      console.error("Erro ao converter funilIds:", error);
+    }
+  }
+
+  const tags = await KanbanListService({ 
+    companyId, 
+    funilId,
+    funilIds: funilIdsArray
+  });
 
   return res.json({ lista: tags });
 };
@@ -151,9 +193,19 @@ export const syncTags = async (
   const data = req.body;
   const { companyId } = req.user;
 
-  const tags = await SyncTagService({ ...data, companyId });
+  const contact = await SyncTagService({ ...data, companyId });
 
-  return res.json(tags);
+  // Emitir evento de socket para atualizar o contato em tempo real
+  if (contact) {
+    const io = getIO();
+    io.of(String(companyId))
+      .emit(`company-${companyId}-contact`, {
+        action: "update",
+        contact
+      });
+  }
+
+  return res.json(contact);
 };
 
 export const removeContactTag = async (

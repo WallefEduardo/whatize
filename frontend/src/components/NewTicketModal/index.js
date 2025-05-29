@@ -361,11 +361,11 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
                   if (selectedQueue === "") {
                     return "Selecione uma fila"
                   }
-                  const queue = user.queues.find(q => q.id === selectedQueue)
-                  return queue.name
+                  const queue = user?.queues?.find(q => q.id === selectedQueue)
+                  return queue?.name || ""
                 }}
               >
-                {user.queues?.length > 0 &&
+                {user?.queues?.length > 0 &&
                   user.queues.map((queue, key) => (
                     <MenuItem dense key={key} value={queue.id}>
                       <ListItemText primary={queue.name} />

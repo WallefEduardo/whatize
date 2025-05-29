@@ -21,6 +21,7 @@ import VisibilityIcon from "@material-ui/icons/Visibility";
 import CheckIcon from "@material-ui/icons/CheckCircle";
 import ReplayIcon from "@material-ui/icons/Replay";
 import ClearOutlinedIcon from "@material-ui/icons/ClearOutlined";
+import LocalOfferIcon from "@material-ui/icons/LocalOffer";
 import api from "../../services/api";
 
 import MarkdownWrapper from "../MarkdownWrapper";
@@ -226,6 +227,12 @@ const useStyles = makeStyles((theme) => ({
             opacity: 0,
         },
     },
+    tagIcon: {
+        fontSize: "0.8em",
+        marginRight: 2,
+        marginLeft: 2,
+        verticalAlign: "middle"
+    },
 }));
 
 const SmallAvatar = withStyles((theme) => ({
@@ -384,6 +391,30 @@ const TicketListItem = ({ ticket }) => {
         const { id, uuid } = ticket;
         setTabOpen(ticket.status)
         setCurrentTicket({ id, uuid, code });
+    };
+
+    // Função para obter todas as tags normais (não kanban) do ticket
+    const getNormalTags = () => {
+        let normalTags = [];
+        
+        // Verifica primeiro nas tags do contato
+        if (ticket.contact && ticket.contact.tags) {
+            const contactNormalTags = ticket.contact.tags.filter(tag => tag.kanban === 0);
+            normalTags = [...normalTags, ...contactNormalTags];
+        }
+        
+        // Se não encontrou, verifica nas tags diretas do ticket
+        if (ticket.tags) {
+            const ticketNormalTags = ticket.tags.filter(tag => tag.kanban === 0);
+            normalTags = [...normalTags, ...ticketNormalTags];
+        }
+        
+        // Remove duplicatas baseado no ID
+        const uniqueTags = normalTags.filter((tag, index, self) => 
+            index === self.findIndex(t => t.id === tag.id)
+        );
+        
+        return uniqueTags;
     };
 
     const handleClosedTicket = async (ticket) => {
@@ -597,6 +628,17 @@ const TicketListItem = ({ ticket }) => {
                                 </div>
                             </div>
                         )}
+                    {/* Ícones de tags normais (não kanban) */}
+                    {getNormalTags().map((tag, index) => (
+                        <div key={`normal-tag-${tag.id}`} className={classes.tagsWrapper}>
+                            <Tooltip title={tag.name}>
+                                <LocalOfferIcon 
+                                    className={classes.tagIcon}
+                                    style={{ color: tag.color }}
+                                />
+                            </Tooltip>
+                        </div>
+                    ))}
                     {/* Novo badge para exibir funil + tag */}
                     {tagsWithFunnel.length > 0 && (
                         <div className={classes.tagsWrapper} style={{ marginBottom: '4px' }}>

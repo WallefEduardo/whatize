@@ -323,8 +323,7 @@ const TicketsManagerTabs = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const [groupingCount, setGroupingCount] = useState(0);
 
-  const userQueueIds = user.queues.map((q) => q.id);
-  const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
+  const [selectedQueueIds, setSelectedQueueIds] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [selectedWhatsapp, setSelectedWhatsapp] = useState([]);
@@ -345,6 +344,25 @@ const TicketsManagerTabs = () => {
   useEffect(() => {
     setSelectedQueuesMessage(selectedQueueIds);
   }, [selectedQueueIds]);
+
+  // Carregar preferências do usuário ao inicializar
+  useEffect(() => {
+    const loadUserPreferences = () => {
+      const userQueueIds = user?.queues?.map((q) => q.id) || [];
+      
+      if (user && user.selectedQueueIds && user.selectedQueueIds.length > 0) {
+        // Se o usuário tem preferências salvas, usar elas
+        setSelectedQueueIds(user.selectedQueueIds);
+      } else {
+        // Se não tem preferências salvas, usar todas as filas do usuário
+        setSelectedQueueIds(userQueueIds);
+      }
+    };
+
+    if (user && user.queues) {
+      loadUserPreferences();
+    }
+  }, [user?.id]); // Só depende do ID do usuário
 
   useEffect(() => {
     if (user.profile.toUpperCase() === "ADMIN" || user.allUserChat.toUpperCase() === "ENABLED") {
@@ -912,7 +930,13 @@ const TicketsManagerTabs = () => {
             <TicketsQueueSelect
               selectedQueueIds={selectedQueueIds}
               userQueues={user?.queues}
-              onChange={(values) => setSelectedQueueIds(values)}
+              onChange={(values) => {
+                console.log('🔄 TicketsManagerTabs onChange:', {
+                  oldValues: selectedQueueIds,
+                  newValues: values
+                });
+                setSelectedQueueIds(values);
+              }}
             />
           </Grid>
         </Grid>

@@ -25,4 +25,6 @@ userRoutes.post("/users/:userId/media-upload", isAuth, upload.array("profileImag
 
 userRoutes.put("/users/toggleChangeWidht/:userId", isAuth, UserController.toggleChangeWidht);
 
+userRoutes.put("/users/:userId/selected-queues", isAuth, UserController.updateSelectedQueues);
+
 export default userRoutes;

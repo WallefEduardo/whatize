@@ -216,6 +216,14 @@ Entre em contato com o Suporte para mais informações! `);
     }
   };
 
+    // NOVA FUNÇÃO PARA ATUALIZAR O USUÁRIO LOGADO
+    const updateUser = (newUserData) => {
+      setUser((prevUser) => ({
+        ...prevUser,
+        ...newUserData,
+      }));
+    };
+
   return {
     isAuth,
     user,
@@ -223,7 +231,8 @@ Entre em contato com o Suporte para mais informações! `);
     handleLogin,
     handleLogout,
     getCurrentUserInfo,
-    socket
+    socket,
+    updateUser
   };
 };
 
