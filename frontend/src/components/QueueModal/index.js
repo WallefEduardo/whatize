@@ -319,9 +319,21 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
   };
 
   const handleSaveSchedules = async (values) => {
-    toast.success("Clique em salvar para registar as alterações");
-    setSchedules(values);
-    setTab(0);
+    try {
+      setSchedules(values);
+      
+      if (queueId) {
+        // Salva os horários imediatamente no banco
+        await api.put(`/queue/${queueId}`, { ...queue, schedules: values });
+        toast.success("Horários salvos com sucesso!");
+      } else {
+        toast.success("Clique em salvar para registar as alterações");
+      }
+      
+      setTab(0);
+    } catch (err) {
+      toastError(err);
+    }
   };
 
   const filterOptions = createFilterOptions({

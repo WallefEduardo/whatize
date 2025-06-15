@@ -476,6 +476,14 @@ const Contacts = () => {
         contactId={selectedContactId}
       />
 
+      <ContactImportWpModal
+        isOpen={importContactModalOpen}
+        handleClose={() => setImportContactModalOpen(false)}
+        selectedTags={selectedTags}
+        hideNum={hideNum}
+        userProfile={user.profile}
+      />
+
       <ConfirmationModal
         title={
           deletingContact

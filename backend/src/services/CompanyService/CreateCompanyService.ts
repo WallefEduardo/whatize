@@ -101,6 +101,7 @@ const CreateCompanyService = async (
           lgpdConsent: "disabled",
           lgpdLink:"",
           lgpdMessage:"",
+          outOfHoursMessage: "",
           createdAt: new Date(),
           updatedAt: new Date(),
           closeTicketOnTransfer: false,

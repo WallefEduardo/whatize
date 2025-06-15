@@ -1236,42 +1236,96 @@ const handleOutsideBusinessHours = async (
   contact: Contact,
   settings?: any,
   ticketTraking?: TicketTraking,
-  isOutsideBusinessHours?: boolean
+  whatsapp?: any
 ) => {
   try {
-    const selectedOption = getBodyMessage(msg);
-    
-    // Verifica se o ticket tem queueId válido antes de buscar a queue
-    if (!ticket.queueId) {
-      logger.warn(`Ticket ${ticket.id} não possui queueId válido para verificar horário de funcionamento`);
+    // Se não há configuração de scheduleType ou está desabilitado, não faz nada
+    if (!settings?.scheduleType || settings.scheduleType === "disabled") {
+      logger.info(`Agendamento desabilitado para ticket ${ticket.id}`);
       return;
     }
 
-    // Busca a queue sem incluir QueueOption para evitar erro de inicialização
-    const queue = await Queue.findByPk(ticket.queueId);
+    let outOfHoursMessage = "";
+    let messageSource = "";
+    let isOutsideBusinessHours = false;
 
-    if (!queue) {
-      logger.warn(`Queue ${ticket.queueId} não encontrada para o ticket ${ticket.id}`);
-      return;
-    }
-
-    if (queue.outOfHoursMessage && queue.outOfHoursMessage !== "" && queue.outOfHoursMessage !== null) {
-      try {
-        // Passa o queueId válido para VerifyCurrentSchedule
-        const schedule = await VerifyCurrentSchedule(ticket.companyId, ticket.queueId);
-        
-        const body = formatBody(`\u200e${queue.outOfHoursMessage}`, ticket);
-        const sentMessage = await wbot.sendMessage(
-          `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
-          {
-            text: body
-          }
-        );
-        await verifyMessage(sentMessage, ticket, contact, ticketTraking);
-      } catch (scheduleError) {
-        logger.error(`Erro ao verificar horário para ticket ${ticket.id}: ${scheduleError}`);
-        // Continua sem enviar mensagem de horário se houver erro
+    // Determina a mensagem e verifica horário baseado no tipo de agendamento
+    if (settings.scheduleType === "company") {
+      // Gerenciamento por Empresa
+      outOfHoursMessage = settings.outOfHoursMessage || "";
+      messageSource = "Empresa";
+      
+      if (outOfHoursMessage) {
+        try {
+          const schedule = await VerifyCurrentSchedule(ticket.companyId);
+          isOutsideBusinessHours = !schedule?.inActivity; // Se não está em atividade, está fora do horário
+        } catch (scheduleError) {
+          logger.error(`Erro ao verificar horário da empresa para ticket ${ticket.id}: ${scheduleError}`);
+          return;
+        }
       }
+    } else if (settings.scheduleType === "connection") {
+      // Gerenciamento por Conexão
+      if (!whatsapp) {
+        logger.warn(`WhatsApp não fornecido para verificação de horário de conexão do ticket ${ticket.id}`);
+        return;
+      }
+      
+      outOfHoursMessage = whatsapp.outOfHoursMessage || "";
+      messageSource = `Conexão: ${whatsapp.name}`;
+      
+      if (outOfHoursMessage) {
+        try {
+          const schedule = await VerifyCurrentSchedule(ticket.companyId, null, whatsapp.id);
+          isOutsideBusinessHours = !schedule?.inActivity; // Se não está em atividade, está fora do horário
+        } catch (scheduleError) {
+          logger.error(`Erro ao verificar horário da conexão para ticket ${ticket.id}: ${scheduleError}`);
+          return;
+        }
+      }
+    } else if (settings.scheduleType === "queue") {
+      // Gerenciamento por Fila - só processa se ticket tem queueId
+      if (!ticket.queueId) {
+        logger.warn(`Ticket ${ticket.id} não possui queueId válido para verificar horário de fila`);
+        return;
+      }
+
+      const queue = await Queue.findByPk(ticket.queueId);
+      if (!queue) {
+        logger.warn(`Queue ${ticket.queueId} não encontrada para o ticket ${ticket.id}`);
+        return;
+      }
+
+      outOfHoursMessage = queue.outOfHoursMessage || "";
+      messageSource = `Fila: ${queue.name}`;
+      
+             if (outOfHoursMessage) {
+         try {
+           const schedule = await VerifyCurrentSchedule(ticket.companyId, ticket.queueId);
+           isOutsideBusinessHours = !schedule?.inActivity; // Se não está em atividade, está fora do horário
+         } catch (scheduleError) {
+           logger.error(`Erro ao verificar horário da fila para ticket ${ticket.id}: ${scheduleError}`);
+           return;
+         }
+       }
+    }
+
+    // Se está fora do horário e há mensagem configurada, envia a mensagem
+    if (isOutsideBusinessHours && outOfHoursMessage && outOfHoursMessage.trim() !== "") {
+      logger.info(`Enviando mensagem de fora de expediente (${messageSource}) para ticket ${ticket.id}`);
+      
+      const body = formatBody(`\u200e${outOfHoursMessage}`, ticket);
+      const sentMessage = await wbot.sendMessage(
+        `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
+        {
+          text: body
+        }
+      );
+      await verifyMessage(sentMessage, ticket, contact, ticketTraking);
+    } else if (!outOfHoursMessage || outOfHoursMessage.trim() === "") {
+      logger.info(`Nenhuma mensagem de fora de expediente configurada para ${messageSource} no ticket ${ticket.id}`);
+    } else {
+      logger.info(`Dentro do horário de expediente para ${messageSource} no ticket ${ticket.id}`);
     }
   } catch (error) {
     logger.error(`Erro em handleOutsideBusinessHours: ${error}`);
@@ -1557,11 +1611,12 @@ const verifyQueue = async (
       }
 
       if (
-        settings?.scheduleType === "queue" && ticket.status !== "open" &&
+        settings?.scheduleType === "queue" &&
         !isNil(currentSchedule) && (ticket.amountUsedBotQueues < maxUseBotQueues || maxUseBotQueues === 0)
         && (!currentSchedule || currentSchedule.inActivity === false)
         && (!ticket.isGroup || ticket.whatsapp?.groupAsTicket === "enabled")
       ) {
+        
         if (timeUseBotQueues !== "0") {
           //Regra para desabilitar o chatbot por x minutos/horas após o primeiro envio
           //const ticketTraking = await FindOrCreateATicketTrakingService({ ticketId: ticket.id, companyId });
@@ -1587,18 +1642,21 @@ const verifyQueue = async (
 
           const debouncedSentMessage = debounce(
             async () => {
-              await wbot.sendMessage(
+              const sentMessage = await wbot.sendMessage(
                 `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"
                 }`,
                 {
                   text: body
                 }
               );
+              await verifyMessage(sentMessage, ticket, contact, ticketTraking);
             },
             1000,
             ticket.id
           );
           debouncedSentMessage();
+          
+          logger.info(`Mensagem de fora de expediente enviada para ticket ${ticket.id} - Fila: ${queue.name}`);
 
           //atualiza o contador de vezes que enviou o bot e que foi enviado fora de hora
           // await ticket.update({
@@ -3230,6 +3288,43 @@ const handleMessage = async (
             })
           }
 
+          // CORREÇÃO: Enviar mensagem de fora de expediente baseada no tipo de agendamento
+          let outOfHoursMessage = "";
+          let messageSource = "";
+          
+          if (settings.scheduleType === "company") {
+            outOfHoursMessage = settings.outOfHoursMessage || "";
+            messageSource = "Empresa";
+          } else if (settings.scheduleType === "connection") {
+            outOfHoursMessage = whatsapp.outOfHoursMessage || "";
+            messageSource = `Conexão: ${whatsapp.name}`;
+          }
+          
+          if (outOfHoursMessage && outOfHoursMessage !== "" && outOfHoursMessage !== null) {
+            try {
+              const body = formatBody(`\u200e${outOfHoursMessage}`, ticket);
+              
+              const debouncedSentMessage = debounce(
+                async () => {
+                  const sentMessage = await wbot.sendMessage(
+                    `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
+                    {
+                      text: body
+                    }
+                  );
+                  await verifyMessage(sentMessage, ticket, contact, ticketTraking);
+                },
+                1000,
+                ticket.id
+              );
+              debouncedSentMessage();
+              
+              logger.info(`Mensagem de fora de expediente enviada para ticket ${ticket.id} - ${messageSource}`);
+            } catch (sendError) {
+              logger.error(`Erro ao enviar mensagem de fora de expediente para ticket ${ticket.id}: ${sendError}`);
+            }
+          }
+
           //atualiza o contador de vezes que enviou o bot e que foi enviado fora de hora
           await ticket.update({
             isOutOfHour: true,
@@ -3311,6 +3406,7 @@ const handleMessage = async (
     }
 
 
+    // Lógica de filas - só executa se scheduleType for "queue" ou não definido
     if (
       !ticket.imported &&
       !ticket.queue &&
@@ -3318,7 +3414,8 @@ const handleMessage = async (
       !msg.key.fromMe &&
       !ticket.userId && 
       whatsapp.queues.length >= 1 &&
-      !ticket.useIntegration
+      !ticket.useIntegration &&
+      (!settings.scheduleType || settings.scheduleType === "queue")
     ) {
       
       try {
@@ -3334,9 +3431,13 @@ const handleMessage = async (
         Sentry.captureException(queueError);
         // Continua o processamento mesmo com erro na fila
       }
-    } else if(!msg.key.fromMe){
+    }
+
+    // Lógica de mensagens fora de expediente - executa para todos os tipos (empresa, conexão, fila)
+    // mas só se não for mensagem do próprio bot
+    if (!msg.key.fromMe) {
       try {
-        await handleOutsideBusinessHours(wbot, msg, ticket, contact, settings, ticketTraking, true);
+        await handleOutsideBusinessHours(wbot, msg, ticket, contact, settings, ticketTraking, whatsapp);
       } catch (scheduleError) {
         logger.error(`Erro ao processar horário de funcionamento: ${scheduleError}`);
         Sentry.captureException(scheduleError);

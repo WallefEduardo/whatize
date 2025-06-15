@@ -4,6 +4,7 @@ import { i18n } from '../../translate/i18n';
 import { makeStyles } from "@material-ui/core/styles";
 import api from "../../services/api";
 import { Can } from "../Can";
+import AttachFileIcon from "@material-ui/icons/AttachFile";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
 import * as XLSX from "xlsx";
@@ -143,7 +144,7 @@ const ContactImportWpModal = ({ isOpen, handleClose, selectedTags, hideNum, user
     reader.onload = (evt) => {
       try {
         const bstr = evt.target.result;
-        const wb = XLSX.read(bstr, { type: "binary" });
+        const wb = XLSX.read(bstr, { type: "array" });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
@@ -207,7 +208,7 @@ const ContactImportWpModal = ({ isOpen, handleClose, selectedTags, hideNum, user
               {i18n.t("contactImportWpModal.buttons.import")}
             </Button>
           </div>
-          {/* <div className={classes.multFieldLine}>
+          <div className={classes.multFieldLine}>
             <div style={{ minWidth: "100%" }}>
               {contactsToImport?.length ?
                 <>
@@ -234,7 +235,7 @@ const ContactImportWpModal = ({ isOpen, handleClose, selectedTags, hideNum, user
                 </>
               }
             </div>
-          </div> */}
+          </div>
         </Box>
       </div>
 

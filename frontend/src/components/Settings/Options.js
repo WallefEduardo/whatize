@@ -152,6 +152,9 @@ export default function Options(props) {
   const [sendQueuePositionMessage, setSendQueuePositionMessage] = useState("");
   const [loadingSendQueuePositionMessage, setLoadingSendQueuePositionMessage] = useState(false);
 
+  const [outOfHoursMessage, setOutOfHoursMessage] = useState("");
+  const [loadingOutOfHoursMessage, setLoadingOutOfHoursMessage] = useState(false);
+
   const [showNotificationPending, setShowNotificationPending] = useState(false);
   const [loadingShowNotificationPending, setLoadingShowNotificationPending] = useState(false);
 
@@ -212,6 +215,7 @@ export default function Options(props) {
       if (key === "greetingAcceptedMessage") setGreetingAcceptedMessage(value);
       if (key === "AcceptCallWhatsappMessage") setAcceptCallWhatsappMessage(value);
       if (key === "sendQueuePositionMessage") setSendQueuePositionMessage(value);
+      if (key === "outOfHoursMessage") setOutOfHoursMessage(value);
       if (key === "showNotificationPending") setShowNotificationPending(value);
 
     }
@@ -500,6 +504,16 @@ export default function Options(props) {
       data: value,
     });
     setLoadingDirectTicketsToWallets(false);
+  }
+
+  async function handleOutOfHoursMessage(value) {
+    setOutOfHoursMessage(value);
+    setLoadingOutOfHoursMessage(true);
+    await update({
+      column: "outOfHoursMessage",
+      data: value
+    });
+    setLoadingOutOfHoursMessage(false);
   }
 
   return (
@@ -1174,6 +1188,30 @@ export default function Options(props) {
             </TextField>
             <FormHelperText>
               {loadingSendQueuePositionMessage && i18n.t("settings.settings.options.updating")}
+            </FormHelperText>
+          </FormControl>
+        </Grid>
+
+        {/* MENSAGEM DE FORA DE EXPEDIENTE DA EMPRESA */}
+        <Grid xs={12} sm={6} md={6} item>
+          <FormControl className={classes.selectContainer}>
+            <TextField
+              id="outOfHoursMessage"
+              name="outOfHoursMessage"
+              margin="dense"
+              multiline
+              required={scheduleType === "company"}
+              rows={3}
+              label="Mensagem de fora de expediente da empresa"
+              variant="outlined"
+              value={outOfHoursMessage}
+              onChange={async (e) => {
+                handleOutOfHoursMessage(e.target.value);
+              }}
+            >
+            </TextField>
+            <FormHelperText>
+              {loadingOutOfHoursMessage && i18n.t("settings.settings.options.updating")}
             </FormHelperText>
           </FormControl>
         </Grid>

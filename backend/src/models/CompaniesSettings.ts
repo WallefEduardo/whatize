@@ -97,6 +97,9 @@ import {
     @Column
     lgpdMessage: string
 
+    @Column
+    outOfHoursMessage: string
+
     @CreatedAt
     createdAt: Date;
   
