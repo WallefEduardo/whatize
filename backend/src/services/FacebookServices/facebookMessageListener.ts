@@ -151,7 +151,7 @@ export const verifyMessageFace = async (
   try {
     fileName = await downloadMedia(msg.attachments[0].payload.url, ticket.companyId);
   } catch (e) {
-    console.log(e)
+    console.error('Erro ao fazer download de mídia do Facebook:', e);
   }
 
   if (fileName) {
@@ -205,7 +205,7 @@ export const verifyMessageMedia = async (
   fromMe: boolean = false
 ): Promise<void> => {
 
-  console.log(149, "verifyMessageMedia")
+  
 
   const { data } = await axios.get(msg.attachments[0].payload.url, {
     responseType: "arraybuffer"
@@ -292,9 +292,7 @@ const flowBuilderQueue = async (
   };
 
 
-  console.log("======================================")
-  console.log("|         flowBuilderQueue           |")
-  console.log("======================================")
+
 
 
   const nodes: INodes[] = flow.flow["nodes"]
@@ -344,9 +342,7 @@ const flowbuilderIntegration = async (
   message: any,
 ) => {
 
-  console.log("======================================")
-  console.log("|      flowbuilderIntegration        |")
-  console.log("======================================")
+
 
 
 
@@ -528,7 +524,7 @@ export const handleMessage = async (
 
       let bodyMessage = message.text;
 
-      console.log(JSON.stringify(message, null, 2));
+  
       if (fromMe) {
         if (/\u200e/.test(bodyMessage)) return;
 
@@ -602,8 +598,7 @@ export const handleMessage = async (
       let rollbackTag;
       let nextTag;
       let ticketTag = undefined;
-      // console.log(ticket.id)
-      if (ticket?.company?.plan?.useKanban) {
+          if (ticket?.company?.plan?.useKanban) {
         ticketTag = await TicketTag.findOne({
           where: {
             ticketId: ticket.id
@@ -642,7 +637,7 @@ export const handleMessage = async (
         return;
 
       if (rollbackTag && formatBody(bodyNextTag, ticket) !== bodyMessage && formatBody(bodyRollbackTag, ticket) !== bodyMessage) {
-        console.log(626, "facebookMessageListener")
+  
         await TicketTag.destroy({ where: { ticketId: ticket.id, tagId: ticketTag.tagId } });
         await TicketTag.create({ ticketId: ticket.id, tagId: rollbackTag.id });
       }
@@ -658,7 +653,7 @@ export const handleMessage = async (
            * Tratamento para avaliação do atendente
            */
           if (ticket.status === "nps" && ticketTraking !== null && verifyRating(ticketTraking)) {
-            console.log(642, "facebookMessageListener")
+    
             if (!isNaN(parseFloat(bodyMessage))) {
 
               handleRating(parseFloat(bodyMessage), ticket, ticketTraking);
@@ -672,7 +667,7 @@ export const handleMessage = async (
               return;
             } else {
 
-              console.log(656, "facebookMessageListener")
+      
               if (ticket.amountUsedBotQueuesNPS < getSession.maxUseBotQueuesNPS) {
                 let bodyErrorRating = `\u200eOpção inválida, tente novamente.\n`;
                 const sentMessage = await sendText(
@@ -682,7 +677,7 @@ export const handleMessage = async (
                 );
 
                 await verifyMessageFace(sentMessage, bodyErrorRating, ticket, contact);
-                console.log(666, "facebookMessageListener")
+        
 
                 // await delay(1000);
 
@@ -729,11 +724,11 @@ export const handleMessage = async (
 
           //TRATAMENTO LGPD
           if (enableLGPD && ticket.status === "lgpd") {
-            console.log(712, "facebookMessageListener")
+    
             if (isNil(ticket.lgpdAcceptedAt) && !isNil(ticket.lgpdSendMessageAt)) {
               let choosenOption: number | null = null;
 
-              console.log(716, "facebookMessageListener")
+      
 
               if (!isNaN(parseFloat(bodyMessage))) {
                 choosenOption = parseFloat(bodyMessage);
@@ -775,7 +770,7 @@ export const handleMessage = async (
                   //se digitou qualquer opção que não seja 1 ou 2 limpa o lgpdSendMessageAt para 
                   //enviar de novo o bot respeitando o numero máximo de vezes que o bot é pra ser enviado
                 } else {
-                  console.log(758, "facebookMessageListener")
+          
                   if (ticket.amountUsedBotQueues < getSession.maxUseBotQueues) {
                     await ticket.update(
                       {
@@ -802,7 +797,7 @@ export const handleMessage = async (
               ticket.amountUsedBotQueues <= getSession.maxUseBotQueues && !isNil(settings?.lgpdMessage)
             ) {
 
-              console.log(785, "facebookMessageListener")
+      
 
               if (message?.attachments) {
                 await verifyMessageMedia(message, ticket, contact);
@@ -813,7 +808,7 @@ export const handleMessage = async (
               if (!isNil(settings?.lgpdMessage) && settings.lgpdMessage !== "") {
                 const bodyMessageLGPD = formatBody(`\u200e${settings.lgpdMessage}`, ticket);
 
-                console.log(796, "facebookMessageListener")
+        
 
                 const sentMessage = await sendText(
                   contact.number,
@@ -852,7 +847,7 @@ export const handleMessage = async (
 
               await verifyMessageFace(sentMessageBot, bodyBot, ticket, contact);
 
-              console.log(835, "facebookMessageListener")
+      
 
               await ticket.update({
                 lgpdSendMessageAt: moment().toDate(),
@@ -870,8 +865,7 @@ export const handleMessage = async (
           }
         }
       } catch (e) {
-        throw new Error(e);
-        console.log(e);
+        console.error('Erro no processamento da mensagem Facebook:', e);
       }
 
       if (ticket.channel === "facebook" || ticket.channel === "instagram") {
@@ -881,7 +875,7 @@ export const handleMessage = async (
       }
       /*
       if (message.attachments) {
-        console.log(856, "facebookMessageListener")
+    
         await verifyMessageMedia(message, ticket, contact);
       } else {
      
@@ -902,7 +896,7 @@ export const handleMessage = async (
       }
 
 
-      console.log({ ticket })
+      
 
       if (
         !ticket.fromMe &&
@@ -981,7 +975,7 @@ export const handleMessage = async (
 
     return;
   } catch (error) {
-    throw new Error(error);
+    console.error('Erro no processamento da mensagem Facebook:', error);
   }
 };
 
@@ -991,7 +985,6 @@ const verifyQueue = async (
   ticket: Ticket,
   contact: Contact
 ) => {
-  // console.log("VERIFYING QUEUE", ticket.whatsappId, getSession.id)
   const { queues, greetingMessage } = await ShowWhatsAppService(getSession.id!, ticket.companyId);
 
 
@@ -1027,7 +1020,7 @@ const verifyQueue = async (
   const choosenQueue = queues[+selectedOption - 1];
 
   if (choosenQueue) {
-    console.log(585, "facebookMessageListener")
+    
 
     await UpdateTicketService({
       ticketData: { queueId: choosenQueue.id },

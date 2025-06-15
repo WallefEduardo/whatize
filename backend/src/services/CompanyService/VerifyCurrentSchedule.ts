@@ -12,8 +12,17 @@ type Result = {
 };
 
 const VerifyCurrentSchedule = async (companyId?: number, queueId?: number, whatsappId?: number): Promise<Result> => {
-    // @ts-ignore: Unreachable code error
-  if (Number(whatsappId) > 0 && Number(queueId === 0)) {
+  // Validação de parâmetros obrigatórios
+  if (!companyId) {
+    throw new Error("companyId é obrigatório");
+  }
+
+  // Converte parâmetros para números, tratando valores nulos/undefined
+  const numWhatsappId = Number(whatsappId) || 0;
+  const numQueueId = Number(queueId) || 0;
+
+  // Verifica se é para buscar por whatsapp (whatsappId > 0 e queueId = 0)
+  if (numWhatsappId > 0 && numQueueId === 0) {
     const sql = `
         select
         s.id,
@@ -56,15 +65,15 @@ const VerifyCurrentSchedule = async (companyId?: number, queueId?: number, whats
     `;
 
     const result: Result = await sequelize.query(sql, {
-      replacements: { whatsappId, companyId },
+      replacements: { whatsappId: numWhatsappId, companyId },
       type: QueryTypes.SELECT,
       plain: true
     });
 
     return result;
   }
-    // @ts-ignore: Unreachable code error
-  else if (Number(queueId) === 0 && Number(whatsappId) === 0) {
+  // Verifica se é para buscar por empresa (queueId = 0 e whatsappId = 0)
+  else if (numQueueId === 0 && numWhatsappId === 0) {
     const sql = `
         select
         s.id,
@@ -112,7 +121,13 @@ const VerifyCurrentSchedule = async (companyId?: number, queueId?: number, whats
     });
 
     return result;
-  } else {
+  } 
+  // Caso contrário, busca por fila (queueId > 0)
+  else {
+    // Valida se queueId foi fornecido
+    if (numQueueId <= 0) {
+      throw new Error("queueId deve ser maior que 0 quando não é busca por empresa ou whatsapp");
+    }
     const sql = `
       select
         s.id,
@@ -155,7 +170,7 @@ const VerifyCurrentSchedule = async (companyId?: number, queueId?: number, whats
     `;
 
     const result: Result = await sequelize.query(sql, {
-      replacements: { queueId, companyId },
+      replacements: { queueId: numQueueId, companyId },
       type: QueryTypes.SELECT,
       plain: true
     });

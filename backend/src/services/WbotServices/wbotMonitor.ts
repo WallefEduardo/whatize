@@ -168,7 +168,7 @@ const wbotMonitor = async (
           contacts: filteredContacts,
         });
       } catch (err) {
-        console.log(filteredContacts);
+      
         logger.error(err)
       }
     });

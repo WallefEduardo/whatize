@@ -137,7 +137,6 @@ const backToMainMenu = async (
     ticketId: ticket.id,
     companyId: ticket.companyId
   });
-  // console.log("GETTING WHATSAPP BACK TO MAIN MENU", ticket.whatsappId, wbot.id)
   const { queues, greetingMessage } = await ShowWhatsAppService(wbot.id!, ticket.companyId);
 
 

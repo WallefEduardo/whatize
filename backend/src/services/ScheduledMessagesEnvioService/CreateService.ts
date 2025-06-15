@@ -48,7 +48,7 @@ const CreateService = async ({
     throw new AppError(err.message);
   }
 
-  console.log(mediaPath, mediaName)
+
 
   const schedule = await ScheduledMessagesEnvio.create(
     {

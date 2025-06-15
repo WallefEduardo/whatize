@@ -76,8 +76,7 @@ app.use(compression()); // Compressão HTTP
 app.use(bodyParser.json({ limit: '5mb' })); // Aumentar o limite de carga para 5 MB
 app.use(bodyParser.urlencoded({ limit: '5mb', extended: true }));
 app.use((req, res, next) => {
-  console.log('Origin:', req.headers.origin);
-  next();
+    next();
 });
 app.use(
   cors({

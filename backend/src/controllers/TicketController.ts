@@ -227,7 +227,7 @@ export const kanban = async (req: Request, res: Response): Promise<Response> => 
     funilId
   } = req.query as IndexQuery;
 
-  console.log('🔍 Backend Kanban - Query recebida:', req.query);
+
 
   const userId = req.user.id;
   const { companyId } = req.user;
@@ -242,12 +242,12 @@ export const kanban = async (req: Request, res: Response): Promise<Response> => 
 
   if (tagIdsStringified && tagIdsStringified !== 'undefined') {
     tagsIds = JSON.parse(tagIdsStringified);
-    console.log('🏷️ Backend - Tags IDs processadas:', tagsIds);
+
   }
 
   if (userIdsStringified && userIdsStringified !== 'undefined') {
     usersIds = JSON.parse(userIdsStringified);
-    console.log('👥 Backend - Users IDs processadas:', usersIds);
+
   }
 
   const { tickets, count, hasMore } = await ListTicketsServiceKanban({

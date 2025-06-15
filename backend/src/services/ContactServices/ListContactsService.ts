@@ -36,7 +36,6 @@ const ListContactsService = async ({
   let whereCondition: Filterable["where"];
 
   if (searchParam) {
-    // console.log("searchParam", searchParam)
     const sanitizedSearchParam = removeAccents(searchParam.toLocaleLowerCase().trim());
     whereCondition = {
       ...whereCondition,
@@ -58,15 +57,7 @@ const ListContactsService = async ({
     companyId
   };
 
-  // const user = await ShowUserService(userId, companyId);
 
-  // console.log(user)
-  // if (user.whatsappId) {
-  //   whereCondition = {
-  //     ...whereCondition,
-  //     whatsappId: user.whatsappId
-  //   };
-  // }
 
   if (Array.isArray(tagsIds) && tagsIds.length > 0) {
 
@@ -91,7 +82,7 @@ const ListContactsService = async ({
   }
 
   if (isGroup === "false") {
-    console.log("isGroup", isGroup)
+  
     whereCondition = {
       ...whereCondition,
       isGroup: false

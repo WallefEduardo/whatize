@@ -19,7 +19,7 @@ const GetTagWithFunnelService = async ({
   ticketId,
   companyId
 }: Request): Promise<TagWithFunnel[]> => {
-  console.log(`Buscando tags com funil para ticket ${ticketId} da empresa ${companyId}`);
+
   
   // Buscar todas as tags associadas ao ticket
   const ticketTags = await TicketTag.findAll({
@@ -40,7 +40,7 @@ const GetTagWithFunnelService = async ({
     ]
   });
 
-  console.log(`Encontradas ${ticketTags.length} tags de kanban para o ticket ${ticketId}`);
+  
   
   // Mapear os resultados para o formato desejado
   const tagsWithFunnel = ticketTags.map(ticketTag => {
@@ -52,7 +52,7 @@ const GetTagWithFunnelService = async ({
       funilId: tag.funilId,
       funilName: tag.funil?.name
     };
-    console.log(`Tag processada: ${JSON.stringify(result)}`);
+    
     return result;
   });
 

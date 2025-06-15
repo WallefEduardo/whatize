@@ -28,7 +28,7 @@ export const createFlowCampaign = async (
   const userId = parseInt(req.user.id);
   const { companyId } = req.user;
 
-  console.log(31, "FlowCampaignController", req.body)
+
   const flow = await CreateFlowCampaignService({
     userId,
     name,
@@ -80,7 +80,7 @@ export const updateFlowCampaign = async (
   const { companyId } = req.user;
   const { flowId, name, phrase, id, status = true, whatsappId } = req.body;
 
-  console.log(83, "FlowCampaignController", req.body)
+
 
   const flow = await UpdateFlowCampaignService({ companyId, name, flowId, phrase, id, status, whatsappId });
 

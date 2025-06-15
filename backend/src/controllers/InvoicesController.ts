@@ -150,7 +150,7 @@ export const fixZeroValueInvoices = async (
       }
     });
 
-    console.log(`Encontradas ${zeroValueInvoices.length} faturas com valor zero`);
+
 
     const updatedInvoices = [];
 
@@ -171,7 +171,7 @@ export const fixZeroValueInvoices = async (
             value: newValue
           });
           
-          console.log(`Fatura ${invoice.id} atualizada: valor ${newValue}`);
+  
           
           updatedInvoices.push({
             id: invoice.id,

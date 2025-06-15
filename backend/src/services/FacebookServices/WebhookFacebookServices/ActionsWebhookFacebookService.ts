@@ -119,7 +119,7 @@ export const ActionsWebhookFacebookService = async (
             ticketInit = await Ticket.findOne({
                 where: { id: idTicket }
             });
-            console.log(132, "ActionsWebhookFacebookService", ticketInit)
+        
             if (ticketInit.status === "closed") {
                 break;
             } else {
@@ -162,9 +162,7 @@ export const ActionsWebhookFacebookService = async (
             const queue = await ShowQueueService(nodeSelected.data.data.id, companyId)
 
             console.clear()
-            console.log("====================================")
-            console.log("              TICKET                ")
-            console.log("====================================")
+            
 
             selectedQueueid = queue.id;
             await updateQueueId(ticket, companyId, queue.id)
@@ -175,7 +173,7 @@ export const ActionsWebhookFacebookService = async (
 
             for (var iLoc = 0; iLoc < nodeSelected.data.seq.length; iLoc++) {
                 const elementNowSelected = nodeSelected.data.seq[iLoc];
-                console.log(elementNowSelected, "elementNowSelected")
+        
       
                 let ticketUpdate = await Ticket.findOne({
                     where: { id: idTicket, companyId }
@@ -818,15 +816,15 @@ export const ActionsWebhookFacebookService = async (
                 result = next;
             } else {
                 result = connects.filter(connect => connect.source === next)[0];
-                console.log(512, "ActionsWebhookFacebookService")
+        
             }
 
             if (typeof result === "undefined") {
-                console.log(517, "ActionsWebhookFacebookService")
+        
                 next = "";
             } else {
                 if (!noAlterNext) {
-                    console.log(520, "ActionsWebhookFacebookService")
+            
                     next = result.target;
                 }
             }
@@ -836,7 +834,7 @@ export const ActionsWebhookFacebookService = async (
             const nextNode = connects.filter(
                 connect => connect.source === nodeSelected.id
             ).length;
-            console.log(530, "ActionsWebhookFacebookService")
+    
 
             const ticket = await Ticket.findOne({
                 where: { id: idTicket, companyId: companyId }
@@ -864,7 +862,7 @@ export const ActionsWebhookFacebookService = async (
 
 
             if (nextNode === 0) {
-                console.log(532, "ActionsWebhookFacebookService")
+        
 
                 const ticket = await Ticket.findOne({
                     where: { id: idTicket, companyId: companyId }
@@ -1056,7 +1054,7 @@ function convertAudio(inputFile: string): Promise<string> {
         outputFile = inputFile.replace(".mp3", ".mp4");
     }
 
-    console.log("output", outputFile);
+    
 
 
     return new Promise((resolve, reject) => {

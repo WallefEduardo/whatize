@@ -104,7 +104,7 @@ const SendWhatsAppMediaFlow = async ({
         // gifPlayback: true
       };
     } else if (typeMessage === "audio") {
-      console.log('record', isRecord)
+    
       if (isRecord) {
         const convert = await processAudio(pathMedia);
         options = {
@@ -159,7 +159,7 @@ const SendWhatsAppMediaFlow = async ({
     return sentMessage;
   } catch (err) {
     Sentry.captureException(err);
-    console.log(err);
+    console.error('Erro ao enviar mídia WhatsApp Flow:', err);
     throw new AppError("ERR_SENDING_WAPP_MSG");
   }
 };

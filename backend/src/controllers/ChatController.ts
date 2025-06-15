@@ -56,7 +56,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const io = getIO();
 
   record.users.forEach(user => {
-    console.log(user.id);
+  
     io.of(String(companyId))
       .emit(`company-${companyId}-chat-user-${user.id}`, {
         action: "create",

@@ -25,7 +25,7 @@ const sendFacebookMessage = async ({ body, ticket, quotedMsg }: Request): Promis
     return send;
 
   } catch (err) {
-    console.log(err)
+    console.error('Erro ao enviar mensagem Facebook:', err);
     throw new AppError("ERR_SENDING_FACEBOOK_MSG");
   }
 };

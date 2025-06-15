@@ -404,10 +404,10 @@ export const getContactVcard = async (
   const numberUser = vNumber.toString().substr(-8, 8);
 
   if (numberDDD <= '30' && numberDDI === '55') {
-    console.log("menor 30")
+    
     vNumber = `${numberDDI + numberDDD + 9 + numberUser}@s.whatsapp.net`;
   } else if (numberDDD > '30' && numberDDI === '55') {
-    console.log("maior 30")
+    
     vNumber = `${numberDDI + numberDDD + numberUser}@s.whatsapp.net`;
   } else {
     vNumber = `${number}@s.whatsapp.net`;

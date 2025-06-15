@@ -64,7 +64,7 @@ const SendWhatsAppMessage = async ({
     return sentMessage;
   } catch (err) {
     Sentry.captureException(err);
-    console.log(err);
+    console.error('Erro ao enviar mensagem WhatsApp API:', err);
     throw new AppError("ERR_SENDING_WAPP_MSG");
   }
 };

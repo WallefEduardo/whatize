@@ -81,7 +81,7 @@ const UpdateUserService = async ({
     data.mediaPath = mediaPath;
   }
 
-  console.log(data);
+
 
   await schedule.update(data);
 

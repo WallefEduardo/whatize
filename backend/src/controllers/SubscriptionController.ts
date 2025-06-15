@@ -63,8 +63,7 @@ export const createSubscription = async (
     // Formatar o valor corretamente para a API - usando o formato fixo com 2 casas decimais
     const price = invoiceValue.toFixed(2);
     
-    console.log(`Valor da fatura ${invoiceId}: ${invoiceValue}`);
-    console.log(`Valor formatado para API: ${price}`);
+
 
     // Configurar o objeto devedor com os dados da empresa
     const devedor: { nome: string; cpf?: string; cnpj?: string } = { nome: company.name };
@@ -113,11 +112,11 @@ export const createSubscription = async (
         invoiceId
       });
     } catch (error) {
-      console.log('error_subscription_api', error);
+      console.error('Erro na API da Gerencianet:', error);
       throw new AppError(`Erro na API da Gerencianet: ${error.message || 'Desconhecido'}`, 400);
     }
   } catch (error) {
-    console.log('error_subscription', error);
+    console.error('Erro ao criar assinatura:', error);
     return res.status(error.statusCode || 400).json({ 
       error: true, 
       message: error.message || "Erro ao criar a assinatura"
@@ -166,7 +165,7 @@ export const createWebhook = async (
 
     return res.json(create);
   } catch (error) {
-    console.log(error);
+    console.error('Erro ao criar webhook:', error);
     return res.status(500).json({ error: 'Erro ao criar o webhook.',  message: error });
   }
 };
@@ -200,9 +199,6 @@ export const webhook = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  console.log("[WEBHOOK] Recebido:", JSON.stringify(req.body));
-  console.log("[WEBHOOK] Headers:", JSON.stringify(req.headers));
-
   // Responda imediatamente com 200 para evitar retentativas da Efí
   // O processamento continuará em segundo plano
   const responsePromise = res.status(200).json({ ok: true });
@@ -212,13 +208,11 @@ export const webhook = async (
     const { evento } = req.body;
 
     if (evento === "teste_webhook") {
-      console.log("[WEBHOOK] Teste recebido com sucesso");
       return responsePromise;
     }
 
     // Verificar se o corpo da requisição contém dados Pix
     if (!req.body.pix || !Array.isArray(req.body.pix) || req.body.pix.length === 0) {
-      console.log("[WEBHOOK] Corpo da requisição não contém dados Pix válidos");
       return responsePromise;
     }
 
@@ -227,32 +221,22 @@ export const webhook = async (
     // Processar cada Pix recebido
     for (const pix of req.body.pix) {
       try {
-        console.log(`[WEBHOOK] Processando PIX: ${JSON.stringify(pix)}`);
-        
         if (!pix.txid) {
-          console.log("[WEBHOOK] PIX sem txid, ignorando");
           continue;
         }
 
-        console.log(`[WEBHOOK] Consultando detalhes do PIX txid: ${pix.txid}`);
         const detalhe = await gerencianet.pixDetailCharge({ txid: pix.txid });
-        console.log(`[WEBHOOK] Detalhe recebido: ${JSON.stringify(detalhe)}`);
         
         if (!detalhe || !detalhe.status) {
-          console.log("[WEBHOOK] Detalhes do PIX inválidos ou sem status");
           continue;
         }
-
-        console.log(`[WEBHOOK] Status do pagamento: ${detalhe.status}`);
 
         // Processar apenas pagamentos concluídos
         if (detalhe.status === "CONCLUIDA") {
           const { solicitacaoPagador } = detalhe;
-          console.log(`[WEBHOOK] solicitacaoPagador: ${solicitacaoPagador}`);
 
           // Verificar se o pagamento está relacionado a uma fatura
           if (!solicitacaoPagador || !solicitacaoPagador.includes("#Fatura:")) {
-            console.log("[WEBHOOK] Formato de solicitacaoPagador inválido ou não relacionado a fatura");
             continue;
           }
 
@@ -261,22 +245,17 @@ export const webhook = async (
           const invoiceID = parseInt(invoiceIdStr, 10);
           
           if (isNaN(invoiceID)) {
-            console.log(`[WEBHOOK] ID da fatura inválido: ${invoiceIdStr}`);
             continue;
           }
-          
-          console.log(`[WEBHOOK] ID da fatura: ${invoiceID}`);
 
           // Buscar a fatura
           const invoice = await Invoices.findByPk(invoiceID);
           if (!invoice) {
-            console.log(`[WEBHOOK] Fatura não encontrada: ${invoiceID}`);
             continue;
           }
 
           // Verificar se a fatura já está paga
           if (invoice.status === 'paid') {
-            console.log(`[WEBHOOK] Fatura ${invoiceID} já está marcada como paga, ignorando`);
             continue;
           }
 
@@ -286,15 +265,11 @@ export const webhook = async (
           });
           
           if (!company) {
-            console.log(`[WEBHOOK] Empresa não encontrada: ${companyId}`);
             continue;
           }
-
-          console.log(`[WEBHOOK] Atualizando fatura ${invoiceID} para status 'paid'`);
           
           // Atualizar status da fatura para pago
           await invoice.update({ status: 'paid' });
-          console.log(`[WEBHOOK] Fatura ${invoiceID} atualizada para 'paid'`);
 
           // Calcular nova data de vencimento com base na recorrência
           let monthsToAdd = 1; // Padrão: mensal
@@ -321,31 +296,22 @@ export const webhook = async (
               monthsToAdd = 1;
               break;
             default:
-              console.log(`[WEBHOOK] Recorrência desconhecida: ${company.recurrence}, usando mensal (1 mês)`);
               monthsToAdd = 1;
           }
-          
-          console.log(`[WEBHOOK] Recorrência da empresa: ${company.recurrence}, adicionando ${monthsToAdd} meses`);
           
           // Aplicar o cálculo usando addMonths
           const newDueDate = addMonths(new Date(company.dueDate), monthsToAdd);
           const date = format(newDueDate, "yyyy-MM-dd");
-
-          console.log(`[WEBHOOK] Atualizando data de vencimento da empresa ${companyId} de ${company.dueDate} para ${date}`);
           
           // Atualizar data de vencimento da empresa
           await company.update({ dueDate: date });
           await company.reload();
-          console.log(`[WEBHOOK] Empresa ${companyId} vencimento atualizado para ${date}`);
 
           // Forçar geração da próxima fatura imediatamente após pagamento
-          console.log(`[WEBHOOK] Gerando próxima fatura para empresa ${companyId}`);
-          
           // Detalhes do plano para a próxima fatura
           const planDetails = company.plan || await Plan.findByPk(company.planId);
           
           if (!planDetails) {
-            console.log(`[WEBHOOK] Plano não encontrado para empresa ${companyId}`);
             continue;
           }
           
@@ -374,32 +340,20 @@ export const webhook = async (
             useExternalApi: planDetails.useExternalApi,
             linkInvoice: ""
           });
-          
-          if (nextInvoice) {
-            console.log(`[WEBHOOK] Próxima fatura gerada: ${nextInvoice.id}`);
-          } else {
-            console.log(`[WEBHOOK] Erro ao gerar próxima fatura`);
-          }
 
           // Notificar frontend via websocket
           const io = getIO();
           const companyUpdate = await Company.findOne({ where: { id: companyId } });
           
-          console.log(`[WEBHOOK] Notificando frontend via websocket para company-${companyId}-payment`);
           io.of(String(companyId)).emit(`company-${companyId}-payment`, {
             action: detalhe.status,
             company: companyUpdate
           });
           
-          console.log(`[WEBHOOK] Notificando frontend via websocket para company-${companyId}-invoices`);
           io.of(String(companyId)).emit(`company-${companyId}-invoices`, {
             action: 'update',
             invoice: invoice.id
           });
-          
-          console.log(`[WEBHOOK] Processamento completo para PIX ${pix.txid}`);
-        } else {
-          console.log(`[WEBHOOK] Status não é CONCLUIDA (${detalhe.status}), ignorando`);
         }
       } catch (error) {
         console.error(`[WEBHOOK] Erro ao processar PIX ${pix?.txid || 'desconhecido'}:`, error);
@@ -432,9 +386,6 @@ export const configureWebhook = async (
     // Criar a URL do webhook
     const webhookUrl = `${backendUrl}/subscription/webhook`;
     
-    console.log(`[CONFIG WEBHOOK] Iniciando configuração webhook na URL: ${webhookUrl}`);
-    console.log(`[CONFIG WEBHOOK] Usando chave PIX: ${chave}`);
-    
     const body = {
       webhookUrl
     };
@@ -449,42 +400,32 @@ export const configureWebhook = async (
       fim: '2030-12-31T23:59:00Z',
     };
     
-    console.log(`[CONFIG WEBHOOK] Listando webhooks existentes...`);
     try {
       const listaWebhooks = await gerencianet.pixListWebhook(params1);
-      console.log('[CONFIG WEBHOOK] Webhooks existentes:', JSON.stringify(listaWebhooks));
       
       // Verificar se já existe webhook para esta chave
       if (listaWebhooks && listaWebhooks.webhooks) {
         const webhookExistente = listaWebhooks.webhooks.find(webhook => webhook.chave === chave);
-        if (webhookExistente) {
-          console.log(`[CONFIG WEBHOOK] Webhook já existe para chave ${chave}: ${webhookExistente.webhookUrl}`);
-        }
       }
     } catch (error) {
-      console.log('[CONFIG WEBHOOK] Erro ao listar webhooks:', error.message);
+      // Webhook listing failed, continue with configuration
     }
     
     // Tentar excluir o webhook existente para essa chave (se houver)
-    console.log(`[CONFIG WEBHOOK] Tentando excluir webhook anterior para a chave ${chave}...`);
     try {
       const deleteResult = await gerencianet.pixDeleteWebhook(params);
-      console.log('[CONFIG WEBHOOK] Webhook anterior excluído com sucesso:', JSON.stringify(deleteResult));
     } catch (error) {
-      console.log('[CONFIG WEBHOOK] Não foi possível excluir webhook anterior:', error.message);
+      // Webhook deletion failed, continue with configuration
     }
     
     // Configurar o novo webhook
-    console.log(`[CONFIG WEBHOOK] Configurando novo webhook: ${webhookUrl}`);
     const result = await gerencianet.pixConfigWebhook(params, body);
-    console.log('[CONFIG WEBHOOK] Webhook configurado com sucesso:', JSON.stringify(result));
     
     // Verificar configuração
     try {
       const detail = await gerencianet.pixDetailWebhook(params);
-      console.log('[CONFIG WEBHOOK] Detalhes do webhook configurado:', JSON.stringify(detail));
     } catch (error) {
-      console.log('[CONFIG WEBHOOK] Erro ao obter detalhes do webhook:', error.message);
+      // Detail retrieval failed, but webhook was configured
     }
     
     return res.json({

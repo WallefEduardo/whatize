@@ -141,7 +141,6 @@ const handleOpenTickets = async (companyId: number, whatsapp: Whatsapp) => {
           whatsappId: ticket.whatsappId,
           userId: ticket.userId,
         });
-        // console.log("emitiu socket 144", ticket.id)
 
         const io = getIO();
         io.of(companyId.toString()).emit(`company-${companyId}-ticket`, {

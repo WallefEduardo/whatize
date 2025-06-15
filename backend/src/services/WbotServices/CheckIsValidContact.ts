@@ -16,7 +16,7 @@ const CheckIsValidContact = async (number: string, companyId: number): Promise<v
       throw new AppError("invalidNumber");
     }
   } catch (err) {
-    console.log(err);
+    console.error('Erro ao verificar contato válido:', err);
     if (err.message === "invalidNumber") {
       throw new AppError("ERR_WAPP_INVALID_CONTACT");
     }

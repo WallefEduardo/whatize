@@ -95,25 +95,27 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 	const [colorPickerModalOpen, setColorPickerModalOpen] = useState(false);
 	const [lanes, setLanes] = useState([]);
 	const [loading, setLoading] = useState(false);
-	const [selectedLane, setSelectedLane] = useState([]);
-	const [selectedRollbackLane, setSelectedRollbackLane] = useState([]);
+	const [selectedLane, setSelectedLane] = useState(null);
+	const [selectedRollbackLane, setSelectedRollbackLane] = useState(null);
 	const [funnels, setFunnels] = useState([]);
     const [tempColor, setTempColor] = useState("");
 
 	const initialState = {
 		name: "",
 		color: getRandomHexColor(),
-		kanban: kanban,
+		kanban: kanban || 0,
 		timeLane: 0,
-		nextLaneId: 0,
+		nextLaneId: null,
 		greetingMessageLane: "",
-		rollbackLaneId: 0,
+		rollbackLaneId: null,
 		funilId: null
 	};
 
 	const [tag, setTag] = useState(initialState);
 
 	useEffect(() => {
+		if (!open) return;
+		
 		setLoading(true);
 		const delayDebounceFn = setTimeout(() => {
 			const fetchTags = async () => {
@@ -121,47 +123,95 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 					const { data } = await api.get("/tags/", {
 						params: { kanban: 1, tagId },
 					});
-					setLanes(data.tags);
+					if (data && data.tags) {
+						setLanes(data.tags);
+					}
 				} catch (err) {
+					console.error("Erro ao buscar tags:", err);
 					toastError(err);
+				} finally {
+					setLoading(false);
 				}
 			};
 			fetchTags();
 		}, 500);
 		return () => clearTimeout(delayDebounceFn);
-	}, []);
+	}, [open, tagId]);
 
 	useEffect(() => {
-		try {
-			(async () => {
-				if (!tagId) return;
-
+		if (!open || !tagId) return;
+		
+		const fetchTag = async () => {
+			try {
 				const { data } = await api.get(`/tags/${tagId}`);
-				setTag(prevState => {
-					return { ...prevState, ...data };
-				});
-				if (data.nextLaneId) {
-					setSelectedLane(data.nextLaneId);
+				if (data) {
+					setTag(prevState => {
+						return { ...prevState, ...data };
+					});
+					if (data.nextLaneId) {
+						setSelectedLane(data.nextLaneId);
+					}
+					if (data.rollbackLaneId) {
+						setSelectedRollbackLane(data.rollbackLaneId);
+					}
 				}
-				if (data.rollbackLaneId) {
-					setSelectedRollbackLane(data.rollbackLaneId);
-				}
-			})()
-		} catch (err) {
-			toastError(err);
-		}
+			} catch (err) {
+				console.error("Erro ao buscar tag:", err);
+				toastError(err);
+			}
+		};
+		
+		fetchTag();
 	}, [tagId, open]);
 
 	useEffect(() => {
-		if (kanban) {
-			api.get("/funilkanban").then(({ data }) => {
-				setFunnels(data.funilKanbans || []);
-			});
+		if (kanban && open) {
+			api.get("/funilkanban")
+				.then(({ data }) => {
+					if (data && data.funilKanbans) {
+						setFunnels(data.funilKanbans);
+						
+						// Auto-selecionar o primeiro funil se estiver criando nova seção (não editando)
+						// e se não há funil já selecionado
+						if (!tagId && data.funilKanbans.length > 0 && !tag.funilId) {
+							const firstFunnel = data.funilKanbans[0];
+							setTag(prev => ({ 
+								...prev, 
+								funilId: firstFunnel.id 
+							}));
+						}
+					}
+				})
+				.catch(err => {
+					console.error("Erro ao buscar funis:", err);
+					toastError(err);
+				});
 		}
-	}, [kanban]);
+	}, [kanban, open, tagId]);
+
+	// useEffect separado para monitorar mudanças no funilId e resetar campos relacionados
+	useEffect(() => {
+		if (kanban === 1) {
+			// Se não há funil selecionado, limpa os campos relacionados para evitar erros
+			if (!tag.funilId) {
+				setSelectedLane(null);
+				setSelectedRollbackLane(null);
+				setTag(prev => ({
+					...prev,
+					nextLaneId: null,
+					rollbackLaneId: null,
+					greetingMessageLane: "",
+					timeLane: 0
+				}));
+			}
+		}
+	}, [tag.funilId, kanban]);
 
 	const handleClose = () => {
 		setTag(initialState);
+		setSelectedLane(null);
+		setSelectedRollbackLane(null);
+		setFunnels([]);
 		setColorPickerModalOpen(false);
 		onClose();
 	};
@@ -171,7 +221,7 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 	};
     
     const handleOpenColorPicker = () => {
-        setTempColor(tag.color);
+        setTempColor(tag.color || getRandomHexColor());
         setColorPickerModalOpen(true);
     };
     
@@ -182,7 +232,9 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
     
     const handleCancelColor = () => {
         // Restaura a cor anterior e fecha o modal
-        setTag(prev => ({ ...prev, color: tempColor }));
+        if (tempColor) {
+            setTag(prev => ({ ...prev, color: tempColor }));
+        }
         setColorPickerModalOpen(false);
     };
 
@@ -195,7 +247,7 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 		const tagData = { 
 			...values, 
 			userId: user?.id, 
-			kanban: kanban, 
+			kanban: kanban || 0, 
 			nextLaneId: selectedLane || null, 
 			rollbackLaneId: selectedRollbackLane || null,
 			funilId: values.funilId ? Number(values.funilId) : null
@@ -210,6 +262,7 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 			toast.success(kanban === 0 ? `${i18n.t("tagModal.success")}` : `${i18n.t("tagModal.successKanban")}`);
 
 		} catch (err) {
+			console.error("Erro ao salvar tag:", err);
 			toastError(err);
 		}
 		handleClose();
@@ -226,6 +279,14 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 
 		return hexColor;
 	}
+
+	// Verificação de segurança para evitar renderização com dados inválidos
+	if (!tag || typeof tag !== 'object') {
+		console.warn('TagModal: tag inválida, não renderizando componente', tag);
+		return null;
+	}
+
+	
 
 	return (
 		<div className={classes.root}>
@@ -265,7 +326,12 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 											helperText={touched.name && errors.name}
 											variant="outlined"
 											margin="dense"
-											onChange={(e) => setTag(prev => ({ ...prev, name: e.target.value }))}
+											onChange={(e) => {
+												if (e && e.target) {
+													const newValue = e.target.value || "";
+													setTag(prev => ({ ...prev, name: newValue }));
+												}
+											}}
 											fullWidth
 										/>
 									</Grid>
@@ -283,7 +349,7 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 												startAdornment: (
 													<InputAdornment position="start">
 														<div
-															style={{ backgroundColor: values.color, width: 20, height: 20 }}
+															style={{ backgroundColor: values.color || tag.color || "#000000", width: 20, height: 20 }}
 															className={classes.colorAdorment}
 														></div>
 													</InputAdornment>
@@ -317,12 +383,21 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
                                                 onChange={e => {
                                                   const value = e.target.value === "" ? null : Number(e.target.value);
                                                   setTag(prev => ({ ...prev, funilId: value }));
+                                                  
+                                                  // Se desselecionar o funil, limpa campos relacionados
+                                                  if (!value) {
+                                                    setSelectedLane(null);
+                                                    setSelectedRollbackLane(null);
+                                                  }
                                                 }}
                                                 error={touched.funilId && Boolean(errors.funilId)}
                                                 helperText={touched.funilId && errors.funilId}
                                               >
-                                                <MenuItem value="">Selecione um funil</MenuItem>
-                                                {funnels.map(funnel => (
+                                                {/* Só mostra opção vazia se não for criação de nova seção ou se não há funis */}
+                                                {(tagId || funnels.length === 0) && (
+                                                  <MenuItem value="">Selecione um funil</MenuItem>
+                                                )}
+                                                {Array.isArray(funnels) && funnels.map(funnel => (
                                                   <MenuItem key={funnel.id} value={String(funnel.id)}>{funnel.name}</MenuItem>
                                                 ))}
                                               </Field>
@@ -345,7 +420,12 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 													helperText={touched.timeLane && errors.timeLane}
 													variant="outlined"
 													margin="dense"
-													onChange={(e) => setTag(prev => ({ ...prev, timeLane: e.target.value }))}
+													onChange={(e) => {
+														if (e && e.target) {
+															const newValue = e.target.value || 0;
+															setTag(prev => ({ ...prev, timeLane: newValue }));
+														}
+													}}
 													fullWidth
 												/>
 											</Grid>
@@ -368,11 +448,11 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 														name="nextLaneId"
 														style={{ left: "-7px" }}
 														error={touched.nextLaneId && Boolean(errors.nextLaneId)}
-														value={selectedLane}
+														value={selectedLane || ""}
 														onChange={(e) => setSelectedLane(e.target.value || null)}
 													>
-														<MenuItem value={null}>&nbsp;</MenuItem>
-														{lanes &&
+														<MenuItem value="">&nbsp;</MenuItem>
+														{Array.isArray(lanes) &&
 															lanes.map((lane) => (
 																<MenuItem key={lane.id} value={lane.id}>
 																	{lane.name}
@@ -392,7 +472,12 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 													helperText={touched.greetingMessageLane && errors.greetingMessageLane}
 													variant="outlined"
 													margin="dense"
-													onChange={(e) => setTag(prev => ({ ...prev, greetingMessageLane: e.target.value }))}
+													onChange={(e) => {
+														if (e && e.target) {
+															const newValue = e.target.value || "";
+															setTag(prev => ({ ...prev, greetingMessageLane: newValue }));
+														}
+													}}
 													fullWidth
 												/>
 											</Grid>
@@ -415,11 +500,11 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 														name="rollbackLaneId"
 														style={{ left: "-7px" }}
 														error={touched.rollbackLaneId && Boolean(errors.rollbackLaneId)}
-														value={selectedRollbackLane}
-														onChange={(e) => setSelectedRollbackLane(e.target.value)}
+														value={selectedRollbackLane || ""}
+														onChange={(e) => setSelectedRollbackLane(e.target.value || null)}
 													>
-														<MenuItem value={null}>&nbsp;</MenuItem>
-														{lanes &&
+														<MenuItem value="">&nbsp;</MenuItem>
+														{Array.isArray(lanes) &&
 															lanes.map((lane) => (
 																<MenuItem key={lane.id} value={lane.id}>
 																	{lane.name}
@@ -484,9 +569,11 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
                         disableAlpha={true}
                         hslGradient={false}
                         style={{ margin: '0 auto' }}
-                        value={tag.color}
+                        value={tag.color || getRandomHexColor()}
                         onChange={val => {
-                            setTag(prev => ({ ...prev, color: `#${val.hex}` }));
+                            if (val && val.hex) {
+                                setTag(prev => ({ ...prev, color: `#${val.hex}` }));
+                            }
                         }}
                     />
                 </DialogContent>

@@ -127,7 +127,6 @@ const ListService = async ({
       };
     }
 
-    // console.log(whereCondition)
     const { count, rows: tags } = await Tag.findAndCountAll({
       where: { ...whereCondition, companyId, kanban },
       limit,

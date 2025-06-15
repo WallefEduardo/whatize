@@ -78,7 +78,6 @@ const FindOrCreateTicketService = async (
     }
 
     ticket = await ShowTicketService(ticket.id, companyId);
-    // console.log(ticket.id)
 
     if (!isCampaign && !isForward) {
       // @ts-ignore: Unreachable code error

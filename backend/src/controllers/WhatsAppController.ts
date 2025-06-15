@@ -319,7 +319,7 @@ export const storeFacebook = async (
     }
     return res.status(200);
   } catch (error) {
-    console.log(error);
+    console.error('Erro ao processar página do Facebook:', error);
     return res.status(400).json({
       error: "Facebook page not found"
     });
@@ -391,7 +391,7 @@ export const remove = async (
   if (profile !== "admin") {
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
-  console.log("REMOVING WHATSAPP", whatsappId)
+
   const whatsapp = await ShowWhatsAppService(whatsappId, companyId);
 
 
@@ -501,7 +501,7 @@ export const removeAdmin = async (
   const { whatsappId } = req.params;
   const { companyId } = req.user;
   const io = getIO();
-  console.log("REMOVING WHATSAPP ADMIN", whatsappId)
+
   const whatsapp = await ShowWhatsAppService(whatsappId, companyId);
 
 

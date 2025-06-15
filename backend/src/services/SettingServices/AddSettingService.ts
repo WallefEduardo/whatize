@@ -12,7 +12,7 @@ const AddSettingService = async () => {
         await Setting.create(newSetting);
 
     } catch (error) {
-        console.log(error);
+        console.error('Erro ao adicionar configuração:', error);
     }
 };
 

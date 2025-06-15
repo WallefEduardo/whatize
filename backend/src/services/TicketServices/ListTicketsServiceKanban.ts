@@ -101,13 +101,11 @@ const ListTicketsServiceKanban = async ({
   const shouldShowAll = showAll === "true" || hasUserFilter;
   
   if (shouldShowAll) {
-    console.log('🌐 Modo showAll ativado (showAll ou filtro de usuários)');
     whereCondition = { 
       queueId: { [Op.or]: [queueIds, null] }
     };
   } else {
     // Se não for showAll, aplicar filtro de usuário logado OU tickets pendentes
-    console.log('👤 Aplicando filtro de usuário logado ou tickets pendentes');
     whereCondition = {
       ...whereCondition,
       [Op.or]: [{ userId }, { status: "pending" }]
@@ -197,15 +195,8 @@ const ListTicketsServiceKanban = async ({
   // Aplicar filtros de tags, funil e usuários
   let filteredTicketIds: number[] | null = null;
 
-  console.log('🔍 ListTicketsServiceKanban - Iniciando filtros');
-  console.log('🏷️ Tags recebidas:', tags);
-  console.log('👥 Users recebidos:', users);
-  console.log('🎯 FunilId recebido:', funilId);
-
   // Filtro por tags específicas (AND - deve ter todas as tags)
   if (Array.isArray(tags) && tags.length > 0) {
-    console.log('🏷️ Aplicando filtro de tags...');
-    
     // Verificar se as tags existem no sistema
     const existingTags = await Tag.findAll({
       where: { 
@@ -214,21 +205,18 @@ const ListTicketsServiceKanban = async ({
       },
       attributes: ['id', 'name', 'kanban']
     });
-    console.log('🏷️ Tags existentes no sistema:', existingTags.map(t => ({ id: t.id, name: t.name, kanban: t.kanban })));
     
     // Verificar se existem tickets com tags no sistema
     const allTicketTags = await TicketTag.findAll({
       attributes: ['ticketId', 'tagId'],
       limit: 10
     });
-    console.log('🔍 Primeiros 10 TicketTags no sistema:', allTicketTags.map(tt => ({ ticketId: tt.ticketId, tagId: tt.tagId })));
     
     // Verificar também ContactTags
     const allContactTags = await ContactTag.findAll({
       attributes: ['contactId', 'tagId'],
       limit: 10
     });
-    console.log('🔍 Primeiros 10 ContactTags no sistema:', allContactTags.map(ct => ({ contactId: ct.contactId, tagId: ct.tagId })));
     
     const ticketsTagFilter: any[] = [];
     for (let tag of tags) {
@@ -236,7 +224,6 @@ const ListTicketsServiceKanban = async ({
       const ticketTags = await TicketTag.findAll({
         where: { tagId: tag }
       });
-      console.log(`🏷️ Tag ${tag} encontrada em ${ticketTags.length} tickets diretos`);
       
       // Buscar tickets através de contatos que têm a tag
       const contactTags = await ContactTag.findAll({
@@ -257,8 +244,6 @@ const ListTicketsServiceKanban = async ({
         ticketIdsFromContacts = ticketsFromContacts.map(t => t.id);
       }
       
-      console.log(`🏷️ Tag ${tag} encontrada em ${ticketIdsFromContacts.length} tickets via contatos`);
-      
       // Combinar IDs de tickets diretos e via contatos
       const allTicketIds = [
         ...ticketTags.map(t => t.ticketId),
@@ -267,7 +252,6 @@ const ListTicketsServiceKanban = async ({
       
       // Remover duplicatas
       const uniqueTicketIds = [...new Set(allTicketIds)];
-      console.log(`🏷️ Tag ${tag} total de tickets únicos: ${uniqueTicketIds.length}`);
       
       if (uniqueTicketIds.length > 0) {
         ticketsTagFilter.push(uniqueTicketIds);
@@ -278,10 +262,8 @@ const ListTicketsServiceKanban = async ({
       // Usar união (OR) em vez de interseção (AND) para múltiplas tags
       const allTicketIds = ticketsTagFilter.flat();
       filteredTicketIds = [...new Set(allTicketIds)]; // Remove duplicatas
-      console.log('🏷️ IDs filtrados por tags (união - OR):', filteredTicketIds);
     } else {
       filteredTicketIds = [];
-      console.log('🏷️ Nenhum ticket encontrado com as tags selecionadas');
     }
   }
 
@@ -316,7 +298,6 @@ const ListTicketsServiceKanban = async ({
   // Aplicar filtro de IDs se houver (tags ou funil)
   if (filteredTicketIds !== null) {
     if (filteredTicketIds.length === 0) {
-      console.log('🚫 Nenhum ticket encontrado com os filtros de tags/funil - retornando vazio');
       whereCondition = {
         ...whereCondition,
         id: {
@@ -324,7 +305,6 @@ const ListTicketsServiceKanban = async ({
         }
       };
     } else {
-      console.log('✅ Aplicando filtro de IDs:', filteredTicketIds);
       whereCondition = {
         ...whereCondition,
         id: {
@@ -337,17 +317,13 @@ const ListTicketsServiceKanban = async ({
   // Filtro por usuários (OR - pode ser qualquer um dos usuários)
   // IMPORTANTE: Este filtro SUBSTITUI a lógica de usuário padrão quando aplicado
   if (Array.isArray(users) && users.length > 0) {
-    console.log('👥 Aplicando filtro de usuários:', users);
-    
     // Remove qualquer filtro de usuário existente na whereCondition
     if (whereCondition[Op.or]) {
-      console.log('🔄 Removendo filtro de usuário padrão para aplicar filtro específico');
       delete whereCondition[Op.or];
     }
     
     // Se já temos filtro de IDs (tags/funil), precisamos combinar com AND
     if (filteredTicketIds !== null) {
-      console.log('🔗 Combinando filtro de usuários com filtro de IDs existente');
       whereCondition = {
         ...whereCondition,
         [Op.and]: [
@@ -366,7 +342,6 @@ const ListTicketsServiceKanban = async ({
         }
       };
     }
-    console.log('👥 WhereCondition após filtro de usuários:', JSON.stringify(whereCondition, null, 2));
   }
 
   const limit = 400;
@@ -376,8 +351,6 @@ const ListTicketsServiceKanban = async ({
     ...whereCondition,
     companyId
   };
-
-  console.log('🔍 WhereCondition final:', JSON.stringify(whereCondition, null, 2));
 
   const { count, rows: tickets } = await Ticket.findAndCountAll({
     where: whereCondition,
@@ -389,8 +362,6 @@ const ListTicketsServiceKanban = async ({
     subQuery: false
   });
   const hasMore = count > offset + tickets.length;
-
-  console.log('📊 Tickets encontrados:', tickets.length);
 
   return {
     tickets,

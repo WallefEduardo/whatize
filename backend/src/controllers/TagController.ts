@@ -215,7 +215,7 @@ export const removeContactTag = async (
   const { tagId, contactId } = req.params;
   const { companyId } = req.user;
 
-  console.log(tagId, contactId)
+
 
   await ContactTag.destroy({
     where: {

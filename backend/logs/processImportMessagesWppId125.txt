@@ -1,0 +1,961 @@
+Aguardando conexão para iniciar a importação de mensagens:
+    Whatsapp nome: CHIP_SEDE
+    Whatsapp Id: 125
+    Criação do arquivo de logs: 30/05/2025 16:37:26
+    Selecionado Data de inicio de importação: 30/05/2025 00:01:00 
+    Selecionado Data final da importação: 30/05/2025 16:32:00 
+     
+
+Mensagem 1 de 318
+               
+
+Mensagem 2 de 318
+               
+
+Mensagem 3 de 318
+               
+
+Mensagem 4 de 318
+               
+
+Mensagem 5 de 318
+               
+
+Mensagem 6 de 318
+               
+
+Mensagem 7 de 318
+               
+
+Mensagem 8 de 318
+               
+
+Mensagem 9 de 318
+               
+
+Mensagem 10 de 318
+               
+
+Mensagem 11 de 318
+               
+
+Mensagem 12 de 318
+               
+
+Mensagem 13 de 318
+               
+
+Mensagem 14 de 318
+               
+
+Mensagem 15 de 318
+               
+
+Mensagem 16 de 318
+               
+
+Mensagem 17 de 318
+               
+
+Mensagem 18 de 318
+               
+
+Mensagem 19 de 318
+               
+
+Mensagem 20 de 318
+               
+
+Mensagem 21 de 318
+               
+
+Mensagem 22 de 318
+               
+
+Mensagem 23 de 318
+               
+
+Mensagem 24 de 318
+               
+
+Mensagem 25 de 318
+               
+
+Mensagem 26 de 318
+               
+
+Mensagem 27 de 318
+               
+
+Mensagem 28 de 318
+               
+
+Mensagem 29 de 318
+               
+
+Mensagem 30 de 318
+               
+
+Mensagem 31 de 318
+               
+
+Mensagem 32 de 318
+               
+
+Mensagem 33 de 318
+               
+
+Mensagem 34 de 318
+               
+
+Mensagem 35 de 318
+               
+
+Mensagem 36 de 318
+               
+
+Mensagem 37 de 318
+               
+
+Mensagem 38 de 318
+               
+
+Mensagem 39 de 318
+               
+
+Mensagem 40 de 318
+               
+
+Mensagem 41 de 318
+               
+
+Mensagem 42 de 318
+               
+
+Mensagem 43 de 318
+               
+
+Mensagem 44 de 318
+               
+
+Mensagem 45 de 318
+               
+
+Mensagem 46 de 318
+               
+
+Mensagem 47 de 318
+               
+
+Mensagem 48 de 318
+               
+
+Mensagem 49 de 318
+               
+
+Mensagem 50 de 318
+               
+
+Mensagem 51 de 318
+               
+
+Mensagem 52 de 318
+               
+
+Mensagem 53 de 318
+               
+
+Mensagem 54 de 318
+               
+
+Mensagem 55 de 318
+               
+
+Mensagem 56 de 318
+               
+
+Mensagem 57 de 318
+               
+
+Mensagem 58 de 318
+               
+
+Mensagem 59 de 318
+               
+
+Mensagem 60 de 318
+               
+
+Mensagem 61 de 318
+               
+
+Mensagem 62 de 318
+               
+
+Mensagem 63 de 318
+               
+
+Mensagem 64 de 318
+               
+
+Mensagem 65 de 318
+               
+
+Mensagem 66 de 318
+               
+
+Mensagem 67 de 318
+               
+
+Mensagem 68 de 318
+               
+
+Mensagem 69 de 318
+               
+
+Mensagem 70 de 318
+               
+
+Mensagem 71 de 318
+               
+
+Mensagem 72 de 318
+               
+
+Mensagem 73 de 318
+               
+
+Mensagem 74 de 318
+               
+
+Mensagem 75 de 318
+               
+
+Mensagem 76 de 318
+               
+
+Mensagem 77 de 318
+               
+
+Mensagem 78 de 318
+               
+
+Mensagem 79 de 318
+               
+
+Mensagem 80 de 318
+               
+
+Mensagem 81 de 318
+               
+
+Mensagem 82 de 318
+               
+
+Mensagem 83 de 318
+               
+
+Mensagem 84 de 318
+               
+
+Mensagem 85 de 318
+               
+
+Mensagem 86 de 318
+               
+
+Mensagem 87 de 318
+               
+
+Mensagem 88 de 318
+               
+
+Mensagem 89 de 318
+               
+
+Mensagem 90 de 318
+               
+
+Mensagem 91 de 318
+               
+
+Mensagem 92 de 318
+               
+
+Mensagem 93 de 318
+               
+
+Mensagem 94 de 318
+               
+
+Mensagem 95 de 318
+               
+
+Mensagem 96 de 318
+               
+
+Mensagem 97 de 318
+               
+
+Mensagem 98 de 318
+               
+
+Mensagem 99 de 318
+               
+
+Mensagem 100 de 318
+               
+
+Mensagem 101 de 318
+               
+
+Mensagem 102 de 318
+               
+
+Mensagem 103 de 318
+               
+
+Mensagem 104 de 318
+               
+
+Mensagem 105 de 318
+               
+
+Mensagem 106 de 318
+               
+
+Mensagem 107 de 318
+               
+
+Mensagem 108 de 318
+               
+
+Mensagem 109 de 318
+               
+
+Mensagem 110 de 318
+               
+
+Mensagem 111 de 318
+               
+
+Mensagem 112 de 318
+               
+
+Mensagem 113 de 318
+               
+
+Mensagem 114 de 318
+               
+
+Mensagem 115 de 318
+               
+
+Mensagem 116 de 318
+               
+
+Mensagem 117 de 318
+               
+
+Mensagem 118 de 318
+               
+
+Mensagem 119 de 318
+               
+
+Mensagem 120 de 318
+               
+
+Mensagem 121 de 318
+               
+
+Mensagem 122 de 318
+               
+
+Mensagem 123 de 318
+               
+
+Mensagem 124 de 318
+               
+
+Mensagem 125 de 318
+               
+
+Mensagem 126 de 318
+               
+
+Mensagem 127 de 318
+               
+
+Mensagem 128 de 318
+               
+
+Mensagem 129 de 318
+               
+
+Mensagem 130 de 318
+               
+
+Mensagem 131 de 318
+               
+
+Mensagem 132 de 318
+               
+
+Mensagem 133 de 318
+               
+
+Mensagem 134 de 318
+               
+
+Mensagem 135 de 318
+               
+
+Mensagem 136 de 318
+               
+
+Mensagem 137 de 318
+               
+
+Mensagem 138 de 318
+               
+
+Mensagem 139 de 318
+               
+
+Mensagem 140 de 318
+               
+
+Mensagem 141 de 318
+               
+
+Mensagem 142 de 318
+               
+
+Mensagem 143 de 318
+               
+
+Mensagem 144 de 318
+               
+
+Mensagem 145 de 318
+               
+
+Mensagem 146 de 318
+               
+
+Mensagem 147 de 318
+               
+
+Mensagem 148 de 318
+               
+
+Mensagem 149 de 318
+               
+
+Mensagem 150 de 318
+               
+
+Mensagem 151 de 318
+               
+
+Mensagem 152 de 318
+               
+
+Mensagem 153 de 318
+               
+
+Mensagem 154 de 318
+               
+
+Mensagem 155 de 318
+               
+
+Mensagem 156 de 318
+               
+
+Mensagem 157 de 318
+               
+
+Mensagem 158 de 318
+               
+
+Mensagem 159 de 318
+               
+
+Mensagem 160 de 318
+               
+
+Mensagem 161 de 318
+               
+
+Mensagem 162 de 318
+               
+
+Mensagem 163 de 318
+               
+
+Mensagem 164 de 318
+               
+
+Mensagem 165 de 318
+               
+
+Mensagem 166 de 318
+               
+
+Mensagem 167 de 318
+               
+
+Mensagem 168 de 318
+               
+
+Mensagem 169 de 318
+               
+
+Mensagem 170 de 318
+               
+
+Mensagem 171 de 318
+               
+
+Mensagem 172 de 318
+               
+
+Mensagem 173 de 318
+               
+
+Mensagem 174 de 318
+               
+
+Mensagem 175 de 318
+               
+
+Mensagem 176 de 318
+               
+
+Mensagem 177 de 318
+               
+
+Mensagem 178 de 318
+               
+
+Mensagem 179 de 318
+               
+
+Mensagem 180 de 318
+               
+
+Mensagem 181 de 318
+               
+
+Mensagem 182 de 318
+               
+
+Mensagem 183 de 318
+               
+
+Mensagem 184 de 318
+               
+
+Mensagem 185 de 318
+               
+
+Mensagem 186 de 318
+               
+
+Mensagem 187 de 318
+               
+
+Mensagem 188 de 318
+               
+
+Mensagem 189 de 318
+               
+
+Mensagem 190 de 318
+               
+
+Mensagem 191 de 318
+               
+
+Mensagem 192 de 318
+               
+
+Mensagem 193 de 318
+               
+
+Mensagem 194 de 318
+               
+
+Mensagem 195 de 318
+               
+
+Mensagem 196 de 318
+               
+
+Mensagem 197 de 318
+               
+
+Mensagem 198 de 318
+               
+
+Mensagem 199 de 318
+               
+
+Mensagem 200 de 318
+               
+
+Mensagem 201 de 318
+               
+
+Mensagem 202 de 318
+               
+
+Mensagem 203 de 318
+               
+
+Mensagem 204 de 318
+               
+
+Mensagem 205 de 318
+               
+
+Mensagem 206 de 318
+               
+
+Mensagem 207 de 318
+               
+
+Mensagem 208 de 318
+               
+
+Mensagem 209 de 318
+               
+
+Mensagem 210 de 318
+               
+
+Mensagem 211 de 318
+               
+
+Mensagem 212 de 318
+               
+
+Mensagem 213 de 318
+               
+
+Mensagem 214 de 318
+               
+
+Mensagem 215 de 318
+               
+
+Mensagem 216 de 318
+               
+
+Mensagem 217 de 318
+               
+
+Mensagem 218 de 318
+               
+
+Mensagem 219 de 318
+               
+
+Mensagem 220 de 318
+               
+
+Mensagem 221 de 318
+               
+
+Mensagem 222 de 318
+               
+
+Mensagem 223 de 318
+               
+
+Mensagem 224 de 318
+               
+
+Mensagem 225 de 318
+               
+
+Mensagem 226 de 318
+               
+
+Mensagem 227 de 318
+               
+
+Mensagem 228 de 318
+               
+
+Mensagem 229 de 318
+               
+
+Mensagem 230 de 318
+               
+
+Mensagem 231 de 318
+               
+
+Mensagem 232 de 318
+               
+
+Mensagem 233 de 318
+               
+
+Mensagem 234 de 318
+               
+
+Mensagem 235 de 318
+               
+
+Mensagem 236 de 318
+               
+
+Mensagem 237 de 318
+               
+
+Mensagem 238 de 318
+               
+
+Mensagem 239 de 318
+               
+
+Mensagem 240 de 318
+               
+
+Mensagem 241 de 318
+               
+
+Mensagem 242 de 318
+               
+
+Mensagem 243 de 318
+               
+
+Mensagem 244 de 318
+               
+
+Mensagem 245 de 318
+               
+
+Mensagem 246 de 318
+               
+
+Mensagem 247 de 318
+               
+
+Mensagem 248 de 318
+               
+
+Mensagem 249 de 318
+               
+
+Mensagem 250 de 318
+               
+
+Mensagem 251 de 318
+               
+
+Mensagem 252 de 318
+               
+
+Mensagem 253 de 318
+               
+
+Mensagem 254 de 318
+               
+
+Mensagem 255 de 318
+               
+
+Mensagem 256 de 318
+               
+
+Mensagem 257 de 318
+               
+
+Mensagem 258 de 318
+               
+
+Mensagem 259 de 318
+               
+
+Mensagem 260 de 318
+               
+
+Mensagem 261 de 318
+               
+
+Mensagem 262 de 318
+               
+
+Mensagem 263 de 318
+               
+
+Mensagem 264 de 318
+               
+
+Mensagem 265 de 318
+               
+
+Mensagem 266 de 318
+               
+
+Mensagem 267 de 318
+               
+
+Mensagem 268 de 318
+               
+
+Mensagem 269 de 318
+               
+
+Mensagem 270 de 318
+               
+
+Mensagem 271 de 318
+               
+
+Mensagem 272 de 318
+               
+
+Mensagem 273 de 318
+               
+
+Mensagem 274 de 318
+               
+
+Mensagem 275 de 318
+               
+
+Mensagem 276 de 318
+               
+
+Mensagem 277 de 318
+               
+
+Mensagem 278 de 318
+               
+
+Mensagem 279 de 318
+               
+
+Mensagem 280 de 318
+               
+
+Mensagem 281 de 318
+               
+
+Mensagem 282 de 318
+               
+
+Mensagem 283 de 318
+               
+
+Mensagem 284 de 318
+               
+
+Mensagem 285 de 318
+               
+
+Mensagem 286 de 318
+               
+
+Mensagem 287 de 318
+               
+
+Mensagem 288 de 318
+               
+
+Mensagem 289 de 318
+               
+
+Mensagem 290 de 318
+               
+
+Mensagem 291 de 318
+               
+
+Mensagem 292 de 318
+               
+
+Mensagem 293 de 318
+               
+
+Mensagem 294 de 318
+               
+
+Mensagem 295 de 318
+               
+
+Mensagem 296 de 318
+               
+
+Mensagem 297 de 318
+               
+
+Mensagem 298 de 318
+               
+
+Mensagem 299 de 318
+               
+
+Mensagem 300 de 318
+               
+
+Mensagem 301 de 318
+               
+
+Mensagem 302 de 318
+               
+
+Mensagem 303 de 318
+               
+
+Mensagem 304 de 318
+               
+
+Mensagem 305 de 318
+               
+
+Mensagem 306 de 318
+               
+
+Mensagem 307 de 318
+               
+
+Mensagem 308 de 318
+               
+
+Mensagem 309 de 318
+               
+
+Mensagem 310 de 318
+               
+
+Mensagem 311 de 318
+               
+
+Mensagem 312 de 318
+               
+
+Mensagem 313 de 318
+               
+
+Mensagem 314 de 318
+               
+
+Mensagem 315 de 318
+               
+
+Mensagem 316 de 318
+               
+
+Mensagem 317 de 318
+               
+
+Mensagem 318 de 318
+               

@@ -499,7 +499,6 @@ const ListTicketsService = async ({
 
     } else
       if (withUnreadMessages === "true") {
-        // console.log(showNotificationPendingValue)
         whereCondition = {
           [Op.or]: [
             {

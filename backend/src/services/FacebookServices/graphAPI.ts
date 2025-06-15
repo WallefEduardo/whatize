@@ -75,7 +75,7 @@ export const sendText = async (
     });
     return data;
   } catch (error) {
-    console.log(error);
+    console.error('Erro ao enviar texto Facebook:', error);
   }
 };
 
@@ -160,7 +160,7 @@ export const getProfile = async (id: string, token: string): Promise<any> => {
 
     return data;
   } catch (error) {
-    console.log(error);
+    console.error('Erro ao buscar perfil Facebook:', error);
     throw new Error("ERR_FETCHING_FB_USER_PROFILE_2");
   }
 };
@@ -175,7 +175,7 @@ export const getPageProfile = async (
     );
     return data;
   } catch (error) {
-    console.log(error);
+    console.error('Erro ao buscar páginas Facebook:', error);
     throw new Error("ERR_FETCHING_FB_PAGES");
   }
 };
@@ -187,7 +187,7 @@ export const profilePsid = async (id: string, token: string): Promise<any> => {
     );
     return data;
   } catch (error) {
-    console.log(error);
+    console.error('Erro ao buscar PSID Facebook:', error);
     await getProfile(id, token);
   }
 };
@@ -208,7 +208,7 @@ export const subscribeApp = async (id: string, token: string): Promise<any> => {
     );
     return data;
   } catch (error) {
-    console.log(error)
+    console.error('Erro ao inscrever app Facebook:', error);
     throw new Error("ERR_SUBSCRIBING_PAGE_TO_MESSAGE_WEBHOOKS");
   }
 };
@@ -261,7 +261,7 @@ export const getAccessTokenFromPage = async (
 
     return data.data.access_token;
   } catch (error) {
-    console.log(error);
+    console.error('Erro ao obter token Facebook:', error);
     throw new Error("ERR_FETCHING_FB_USER_TOKEN");
   }
 };

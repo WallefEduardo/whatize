@@ -99,7 +99,7 @@ const SendWhatsAppMessage = async ({
       return sentMessage;
     } catch (err) {
       Sentry.captureException(err);
-      console.log(err);
+      console.error('Erro ao enviar vCard via WhatsApp:', err);
       throw new AppError("ERR_SENDING_WAPP_MSG");
     }
   };
@@ -118,14 +118,8 @@ const SendWhatsAppMessage = async ({
     await ticket.update({ lastMessage: formatBody(body, ticket), imported: null });
     return sentMessage;
   } catch (err) {
-    console.log(`erro ao enviar mensagem na company ${ticket.companyId} - `, body,
-      ticket,
-      quotedMsg,
-      msdelay,
-      vCard,
-      isForwarded)
+    console.error(`Erro ao enviar mensagem na company ${ticket.companyId}:`, err);
     Sentry.captureException(err);
-    console.log(err);
     throw new AppError("ERR_SENDING_WAPP_MSG");
   }
 };

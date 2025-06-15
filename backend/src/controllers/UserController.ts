@@ -141,7 +141,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
       await SendMail(_email)
     } catch (error) {
-      console.log('Não consegui enviar o email')
+
     }
 
     try {
@@ -157,7 +157,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
         await wbot.sendMessage(`55${phone}@s.whatsapp.net`, { text: body });
       }
     } catch (error) {
-      console.log('Não consegui enviar a mensagem')
+      
     }
 
     return res.status(200).json(user);
