@@ -1,6 +1,15 @@
 # 🎛️ Whatize Monitor v2.0
 
-Sistema completo de monitoramento para Race Conditions no Whatize.
+Sistema **especializado** de monitoramento para problemas críticos no Whatize.
+
+## 🎯 **Foco do Sistema**
+Este monitor foi criado especificamente para detectar e alertar sobre **problemas que causam instabilidade**, como:
+- Race conditions que geram erros de constraint única
+- Problemas de performance que afetam o sistema
+- Uso excessivo de recursos
+- Reinicializações automáticas
+
+**NÃO é um monitor geral** - ele ignora erros normais de operação e foca apenas no que realmente importa para a estabilidade.
 
 ## 📁 Estrutura Organizada
 
@@ -85,6 +94,26 @@ MAIL_FROM=seu-email@gmail.com
 ALERT_EMAIL=admin@empresa.com
 ```
 
+## ⚙️ Configuração de Limites
+
+O sistema usa os seguintes limites para detectar problemas críticos:
+
+```javascript
+// Limites configurados no monitor
+const LIMITS = {
+  MAX_ERRORS_PER_HOUR: 5,        // Race conditions por hora
+  MIN_CACHE_PERFORMANCE: 50,     // Taxa mínima de cache (%)
+  MAX_MEMORY_USAGE: 500,         // Uso máximo de memória (MB)
+  MONITOR_INTERVAL: 30000        // Intervalo de verificação (30s)
+};
+```
+
+### **Personalizar Limites**
+Para ajustar os limites, edite o arquivo:
+```bash
+nano monitoring/services/monitor-race-conditions-prod.js
+```
+
 ## 🔧 Comandos Úteis
 
 ```bash
@@ -102,6 +131,9 @@ tail -f ../backend/logs/race_conditions.log
 
 # Contar erros de hoje
 grep "$(date +%d/%m/%Y)" ../backend/logs/race_conditions.log | grep "CONSTRAINT_ERROR" | wc -l
+
+# Ver apenas problemas críticos
+grep -E "CONSTRAINT_ERROR|HIGH_MEMORY|LOW_CACHE" ../backend/logs/race_conditions.log
 ```
 
 ## 🛠️ Manutenção
@@ -148,19 +180,30 @@ cd ../backend && npm run dev
 
 ## 📊 Métricas Monitoradas
 
-- **Erros de Constraint**: `SequelizeUniqueConstraintError`
-- **Performance do Cache**: Taxa de hit/miss
-- **Uso de Memória**: Consumo do processo Node.js
-- **Uptime**: Tempo de funcionamento
-- **Conexões WhatsApp**: Status das conexões
+### **🚨 PROBLEMAS CRÍTICOS (Monitorados)**
+- **Race Conditions**: `SequelizeUniqueConstraintError` (constraint `number_companyid_unique`)
+- **Performance Crítica**: Taxa de cache abaixo de 50%
+- **Uso Excessivo de Memória**: Consumo acima de 500MB
+- **Reinicializações**: Quando o sistema reinicia
+- **Falhas de Conexão**: Desconexões críticas do WhatsApp
+
+### **ℹ️ ERROS NORMAIS (NÃO Monitorados)**
+- Erros de validação de usuário
+- Timeouts de rede ocasionais  
+- Erros de autenticação
+- Warnings do sistema
+- Logs informativos
+
+> **Objetivo**: Monitorar apenas problemas que causam instabilidade ou reinicializações do sistema.
 
 ## 🎯 Alertas Automáticos
 
-O sistema envia alertas por email quando:
-- ❌ Mais de 5 erros por hora
-- 📉 Taxa de cache abaixo de 50%
-- 💾 Uso de memória acima de 500MB
-- 🔄 Sistema reinicia
+O sistema envia alertas por email **APENAS** quando detecta problemas críticos:
+- 🚨 **Race Conditions**: Mais de 5 erros de constraint por hora
+- 📉 **Performance**: Taxa de cache abaixo de 50%
+- 💾 **Memória**: Uso acima de 500MB
+- 🔄 **Reinicialização**: Sistema reinicia automaticamente
+- 📱 **WhatsApp**: Falhas críticas de conexão
 
 ## 📞 Suporte
 

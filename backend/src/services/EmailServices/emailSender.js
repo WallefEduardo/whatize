@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
-require('dotenv').config({ path: './backend/.env' });
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '..', '.env') });
 
 class EmailSender {
   constructor() {
@@ -17,6 +18,13 @@ class EmailSender {
       from: process.env.MAIL_FROM,
       port: process.env.MAIL_PORT || 465
     };
+
+    console.log('🔍 DEBUG - Configurações carregadas:');
+    console.log('   MAIL_HOST:', mailConfig.host || 'NÃO CONFIGURADO');
+    console.log('   MAIL_USER:', mailConfig.user || 'NÃO CONFIGURADO');
+    console.log('   MAIL_PASS:', mailConfig.pass ? 'CONFIGURADO' : 'NÃO CONFIGURADO');
+    console.log('   MAIL_FROM:', mailConfig.from || 'NÃO CONFIGURADO');
+    console.log('   MAIL_PORT:', mailConfig.port);
 
     // Verificar se todas as configurações necessárias estão presentes
     if (!mailConfig.host || !mailConfig.user || !mailConfig.pass || !mailConfig.from) {

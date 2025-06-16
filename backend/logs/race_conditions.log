@@ -76,3 +76,42 @@
   }
 }
 ---
+{
+  "timestamp": "16/06/2025 18:29:29.886",
+  "type": "BAILEYS_EVENT",
+  "contact": "559870142993@company1",
+  "whatsappId": 1,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "16/06/2025 18:29:30.103",
+  "type": "CONTACT_CREATION",
+  "contact": "559870142993@company1",
+  "whatsappId": 1,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559870142993",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559870142993@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "16/06/2025 18:29:30.449",
+  "type": "CONTACT_CREATION",
+  "contact": "559870142993@company1",
+  "whatsappId": 1,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "finalName": "559870142993",
+    "contactId": 33
+  }
+}
+---

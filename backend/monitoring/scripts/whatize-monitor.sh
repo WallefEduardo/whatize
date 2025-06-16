@@ -92,11 +92,50 @@ check_git_repo() {
     return 0
 }
 
+# Função para configurar credenciais Git automaticamente
+setup_git_credentials() {
+    # Carregar credenciais do .env se existirem
+    local git_user=$(grep "^GIT_USER_NAME=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
+    local git_email=$(grep "^GIT_USER_EMAIL=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
+    local git_token=$(grep "^GIT_TOKEN=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
+    local git_username=$(grep "^GIT_USERNAME=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
+    
+    # Configurar usuário e email se disponíveis
+    if [ -n "$git_user" ]; then
+        git config user.name "$git_user"
+    fi
+    
+    if [ -n "$git_email" ]; then
+        git config user.email "$git_email"
+    fi
+    
+    # Configurar credenciais para HTTPS se disponíveis
+    if [ -n "$git_username" ] && [ -n "$git_token" ]; then
+        # Configurar credential helper para usar token
+        git config credential.helper store
+        
+        # Criar arquivo de credenciais temporário
+        local git_url=$(git config --get remote.origin.url)
+        if [[ "$git_url" == https://* ]]; then
+            # Extrair hostname (ex: github.com)
+            local hostname=$(echo "$git_url" | sed 's|https://||' | cut -d'/' -f1)
+            
+            # Configurar credenciais no git credential store
+            echo "https://$git_username:$git_token@$hostname" > ~/.git-credentials
+            chmod 600 ~/.git-credentials
+            
+            print_info "Credenciais configuradas automaticamente para $hostname"
+        fi
+    fi
+}
+
 # Função para salvar configurações Git no .env
 save_git_config_to_env() {
     local git_url=$1
     local git_user=$2
     local git_email=$3
+    local git_username=$4
+    local git_token=$5
     
     # Backup inteligente do .env
     create_smart_backup
@@ -105,6 +144,8 @@ save_git_config_to_env() {
     sed -i '/^GIT_REPOSITORY_URL=/d' $BACKEND_DIR/.env
     sed -i '/^GIT_USER_NAME=/d' $BACKEND_DIR/.env
     sed -i '/^GIT_USER_EMAIL=/d' $BACKEND_DIR/.env
+    sed -i '/^GIT_USERNAME=/d' $BACKEND_DIR/.env
+    sed -i '/^GIT_TOKEN=/d' $BACKEND_DIR/.env
     
     # Adicionar novas configurações
     echo "" >> $BACKEND_DIR/.env
@@ -112,6 +153,15 @@ save_git_config_to_env() {
     echo "GIT_REPOSITORY_URL=$git_url" >> $BACKEND_DIR/.env
     echo "GIT_USER_NAME=$git_user" >> $BACKEND_DIR/.env
     echo "GIT_USER_EMAIL=$git_email" >> $BACKEND_DIR/.env
+    
+    # Adicionar credenciais se fornecidas
+    if [ -n "$git_username" ]; then
+        echo "GIT_USERNAME=$git_username" >> $BACKEND_DIR/.env
+    fi
+    
+    if [ -n "$git_token" ]; then
+        echo "GIT_TOKEN=$git_token" >> $BACKEND_DIR/.env
+    fi
 }
 
 # Função para limpar backups antigos
@@ -848,7 +898,10 @@ git_commit_push() {
     case $add_option in
         1)
             print_step "Adicionando todos os arquivos..."
+            # Ir para a raiz do projeto para executar git add
+            cd ../../../
             git add .
+            cd backend/monitoring/scripts
             ;;
         2)
             print_step "Arquivos disponíveis:"
@@ -856,10 +909,14 @@ git_commit_push() {
             echo ""
             read -p "Digite os números dos arquivos (ex: 1,3,5) ou 'all' para todos: " file_selection
             if [ "$file_selection" = "all" ]; then
+                cd ../../../
                 git add .
+                cd backend/monitoring/scripts
             else
                 # Implementar seleção específica (simplificado por agora)
+                cd ../../../
                 git add .
+                cd backend/monitoring/scripts
                 print_info "Por enquanto, adicionando todos os arquivos."
             fi
             ;;
@@ -885,7 +942,9 @@ git_commit_push() {
     
     # Fazer commit
     print_step "Fazendo commit..."
+    cd ../../../
     if git commit -m "$commit_message"; then
+        cd backend/monitoring/scripts
         print_success "Commit realizado com sucesso!"
         
         # Perguntar se quer fazer push
@@ -897,6 +956,9 @@ git_commit_push() {
             
             # Verificar se há remote configurado
             if git remote get-url origin > /dev/null 2>&1; then
+                # Configurar credenciais temporariamente se estiverem no .env
+                setup_git_credentials
+                
                 if git push origin $(git branch --show-current); then
                     print_success "Push realizado com sucesso! 🎉"
                 else
@@ -908,6 +970,7 @@ git_commit_push() {
             fi
         fi
     else
+        cd backend/monitoring/scripts
         print_error "Erro ao fazer commit."
     fi
     
@@ -1139,6 +1202,28 @@ setup_git_config() {
         return
     fi
     
+    # Configurar credenciais para HTTPS (opcional)
+    echo ""
+    echo -e "${YELLOW}🔐 CONFIGURAÇÃO DE CREDENCIAIS (Opcional):${NC}"
+    echo ""
+    echo "Para push automático sem solicitar senha:"
+    echo "  • GitHub: Use seu username e Personal Access Token"
+    echo "  • GitLab: Use seu username e Personal Access Token"
+    echo ""
+    
+    read -p "🔑 Digite seu username Git (deixe vazio para pular): " git_username
+    
+    local git_token=""
+    if [ -n "$git_username" ]; then
+        echo ""
+        echo "Para criar um Personal Access Token:"
+        echo "  • GitHub: Settings → Developer settings → Personal access tokens"
+        echo "  • GitLab: User Settings → Access Tokens"
+        echo ""
+        read -s -p "🔐 Digite seu Personal Access Token (não será exibido): " git_token
+        echo ""
+    fi
+    
     # Confirmar configurações
     echo ""
     print_step "Confirme as configurações:"
@@ -1146,6 +1231,12 @@ setup_git_config() {
     echo -e "${BLUE}🔗 URL: ${GREEN}$git_url${NC}"
     echo -e "${BLUE}👤 Usuário: ${GREEN}$git_user${NC}"
     echo -e "${BLUE}📧 Email: ${GREEN}$git_email${NC}"
+    if [ -n "$git_username" ]; then
+        echo -e "${BLUE}🔑 Username: ${GREEN}$git_username${NC}"
+        echo -e "${BLUE}🔐 Token: ${GREEN}***configurado***${NC}"
+    else
+        echo -e "${BLUE}🔐 Credenciais: ${YELLOW}Não configuradas (será solicitado na hora do push)${NC}"
+    fi
     echo ""
     
     read -p "Confirma essas configurações? (s/n): " confirm
@@ -1172,7 +1263,7 @@ setup_git_config() {
     fi
     
     # Salvar no .env
-    save_git_config_to_env "$git_url" "$git_user" "$git_email"
+    save_git_config_to_env "$git_url" "$git_user" "$git_email" "$git_username" "$git_token"
     
     print_success "Configurações Git aplicadas com sucesso!"
     

@@ -19,7 +19,7 @@ class RaceConditionLogger {
   private logFile: string;
 
   constructor() {
-    this.logDir = path.resolve(__dirname, "..", "..", "..", "logs");
+    this.logDir = path.resolve(__dirname, "..", "..", "logs");
     this.logFile = path.join(this.logDir, "race_conditions.log");
     this.ensureLogDirectory();
   }
