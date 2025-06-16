@@ -111,16 +111,15 @@ setup_git_credentials() {
     
     # Configurar credenciais para HTTPS se disponíveis
     if [ -n "$git_username" ] && [ -n "$git_token" ]; then
-        # Configurar credential helper para usar token
-        git config credential.helper store
-        
-        # Criar arquivo de credenciais temporário
         local git_url=$(git config --get remote.origin.url)
         if [[ "$git_url" == https://* ]]; then
             # Extrair hostname (ex: github.com)
             local hostname=$(echo "$git_url" | sed 's|https://||' | cut -d'/' -f1)
             
-            # Configurar credenciais no git credential store
+            # Configurar credential helper simples
+            git config credential.helper store
+            
+            # Criar arquivo de credenciais
             echo "https://$git_username:$git_token@$hostname" > ~/.git-credentials
             chmod 600 ~/.git-credentials
             
@@ -959,10 +958,55 @@ git_commit_push() {
                 # Configurar credenciais temporariamente se estiverem no .env
                 setup_git_credentials
                 
-                if git push origin $(git branch --show-current); then
+                # Tentar push primeiro
+                if git push origin $(git branch --show-current) 2>/dev/null; then
                     print_success "Push realizado com sucesso! 🎉"
                 else
-                    print_error "Erro ao fazer push. Verifique suas credenciais."
+                    # Se falhou, pode ser porque precisa fazer pull primeiro
+                    print_warning "Push falhou. Pode ser necessário puxar atualizações primeiro."
+                    echo ""
+                    echo -e "${YELLOW}Opções:${NC}"
+                    echo "1. 📥 Fazer pull e tentar push novamente"
+                    echo "2. 🔄 Forçar push (CUIDADO!)"
+                    echo "3. 🔙 Cancelar"
+                    echo ""
+                    
+                    read -p "Escolha uma opção (1-3): " push_option
+                    
+                    case $push_option in
+                        1)
+                            print_step "Fazendo pull primeiro..."
+                            if git pull origin $(git branch --show-current); then
+                                print_step "Tentando push novamente..."
+                                if git push origin $(git branch --show-current); then
+                                    print_success "Push realizado com sucesso! 🎉"
+                                else
+                                    print_error "Erro ao fazer push mesmo após pull."
+                                fi
+                            else
+                                print_error "Erro ao fazer pull. Pode haver conflitos."
+                            fi
+                            ;;
+                        2)
+                            print_warning "ATENÇÃO: Push forçado pode sobrescrever mudanças remotas!"
+                            read -p "Tem certeza? Digite 'CONFIRMO' para continuar: " confirm_force
+                            if [ "$confirm_force" = "CONFIRMO" ]; then
+                                if git push --force origin $(git branch --show-current); then
+                                    print_success "Push forçado realizado! ⚠️"
+                                else
+                                    print_error "Erro ao fazer push forçado."
+                                fi
+                            else
+                                print_info "Push forçado cancelado."
+                            fi
+                            ;;
+                        3)
+                            print_info "Push cancelado."
+                            ;;
+                        *)
+                            print_error "Opção inválida!"
+                            ;;
+                    esac
                 fi
             else
                 print_error "Nenhum repositório remoto configurado."
@@ -1062,6 +1106,9 @@ git_pull_updates() {
     print_step "Puxando atualizações do repositório remoto..."
     echo ""
     
+    # Configurar credenciais se disponíveis
+    setup_git_credentials
+    
     if git pull origin $(git branch --show-current); then
         print_success "Atualizações puxadas com sucesso! 🎉"
         
@@ -1072,7 +1119,13 @@ git_pull_updates() {
         
     else
         print_error "Erro ao puxar atualizações."
-        print_info "Verifique sua conexão e credenciais."
+        echo ""
+        echo -e "${YELLOW}Possíveis causas:${NC}"
+        echo "• Conflitos de merge"
+        echo "• Problemas de credenciais"
+        echo "• Problemas de conexão"
+        echo ""
+        print_info "Verifique os conflitos e tente resolver manualmente se necessário."
     fi
     
     echo ""
