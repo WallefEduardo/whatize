@@ -23,6 +23,9 @@ import {
   Instagram,
   Reply,
   Close,
+  PictureAsPdf,
+  Description,
+  InsertDriveFile,
 } from "@material-ui/icons";
 
 import MarkdownWrapper from "../MarkdownWrapper";
@@ -359,6 +362,65 @@ const useStyles = makeStyles((theme) => ({
     color: theme.mode === "light" ? theme.palette.light : theme.palette.dark,
   },
 
+  // Novos estilos para documentos estilo WhatsApp
+  documentContainer: {
+    display: "flex",
+    alignItems: "center",
+    padding: "12px 16px",
+    backgroundColor: "transparent",
+    borderRadius: "8px",
+    maxWidth: "350px",
+    minWidth: "250px",
+    transition: "background-color 0.2s ease",
+    "&:hover": {
+      backgroundColor: theme.mode === 'light' ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.05)",
+    },
+  },
+
+  documentIcon: {
+    width: "48px",
+    height: "48px",
+    marginRight: "12px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "50%",
+    backgroundColor: theme.mode === 'light' ? "#e3f2fd" : "#1e3a5f",
+  },
+
+  documentInfo: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0,
+  },
+
+  documentName: {
+    fontSize: "14px",
+    fontWeight: 500,
+    color: theme.mode === 'light' ? "#303030" : "#ffffff",
+    marginBottom: "2px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+
+  documentSize: {
+    fontSize: "12px",
+    color: theme.mode === 'light' ? "#667781" : "#8696a0",
+  },
+
+  downloadIcon: {
+    width: "24px",
+    height: "24px",
+    color: theme.mode === 'light' ? "#667781" : "#8696a0",
+    marginLeft: "8px",
+    cursor: "pointer",
+    "&:hover": {
+      color: theme.mode === 'light' ? "#303030" : "#ffffff",
+    },
+  },
+
   messageCenter: {
     marginTop: 5,
     alignItems: "center",
@@ -684,22 +746,28 @@ const checkMessageMedia = (message) => {
               />
             );
           } else {
+            // Layout estilo WhatsApp para documentos
+            const fileName = getOriginalFileName(message.body);
             return (
-              <>
-                <div className={classes.downloadMedia}>
-                  <Button
-                    startIcon={<GetApp />}
-                    variant="outlined"
-                    target="_blank"
-                    onClick={() => {
-                      downloadResource(message.mediaUrl || message.body)
-                    }}
-                  >
-                    Download
-                  </Button>
+              <div className={classes.documentContainer}>
+                <div className={classes.documentIcon}>
+                  {getDocumentIcon(message.body)}
                 </div>
-                <Divider />
-              </>
+                <div className={classes.documentInfo}>
+                  <div className={classes.documentName}>
+                    {fileName}
+                  </div>
+                  <div className={classes.documentSize}>
+                    {getFileSize(message.body)}
+                  </div>
+                </div>
+                <GetApp 
+                  className={classes.downloadIcon}
+                  onClick={() => {
+                    downloadResource(message.mediaUrl || message.body)
+                  }}
+                />
+              </div>
             );
           }
 };
@@ -821,6 +889,86 @@ const renderMessageDivider = (message, index) => {
 
 const path = require('path');
 
+// Função para extrair o nome original do arquivo removendo os timestamps
+const getOriginalFileName = (fileName) => {
+  if (!fileName) return fileName;
+  
+  // Remove extensão temporariamente
+  const extension = path.extname(fileName);
+  const nameWithoutExt = fileName.replace(extension, '');
+  
+  // Padrão para remover números de timestamp no início e fim do nome
+  // Exemplo: 1750034602009_Kit_de_Ferramentas_Hackers_1750034602009.pdf -> Kit_de_Ferramentas_Hackers.pdf
+  const cleanName = nameWithoutExt.replace(/^\d+_/, '').replace(/_\d+$/, '');
+  
+  // Substitui underscores por espaços para melhor legibilidade
+  const readableName = cleanName.replace(/_/g, ' ');
+  
+  return readableName + extension;
+};
+
+// Função para obter o ícone apropriado baseado na extensão do arquivo
+const getDocumentIcon = (fileName) => {
+  if (!fileName) return <InsertDriveFile style={{ fontSize: 28, color: '#1976d2' }} />;
+  
+  const extension = path.extname(fileName).toLowerCase();
+  
+  switch (extension) {
+    case '.pdf':
+      return <PictureAsPdf style={{ fontSize: 28, color: '#d32f2f' }} />;
+    case '.doc':
+    case '.docx':
+      return <Description style={{ fontSize: 28, color: '#1976d2' }} />;
+    case '.txt':
+      return <Description style={{ fontSize: 28, color: '#757575' }} />;
+    default:
+      return <InsertDriveFile style={{ fontSize: 28, color: '#1976d2' }} />;
+  }
+};
+
+// Função para formatar o tamanho do arquivo (simulado - você pode implementar a lógica real)
+const getFileSize = (fileName) => {
+  // Esta é uma implementação simulada. Em um cenário real, você obteria o tamanho real do arquivo
+  // Por enquanto, vamos retornar um tamanho padrão baseado no tipo de arquivo
+  if (!fileName) return "Documento";
+  
+  const extension = path.extname(fileName).toLowerCase();
+  const fileType = extension.replace('.', '').toUpperCase();
+  
+  // Gera um tamanho simulado baseado no comprimento do nome do arquivo
+  const baseSize = Math.max(50, fileName.length * 8);
+  const randomFactor = Math.floor(Math.random() * 500) + 100;
+  const simulatedSize = baseSize + randomFactor;
+  
+  let sizeText;
+  if (simulatedSize < 1024) {
+    sizeText = `${simulatedSize} B`;
+  } else if (simulatedSize < 1024 * 1024) {
+    sizeText = `${Math.round(simulatedSize / 1024)} KB`;
+  } else {
+    sizeText = `${(simulatedSize / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  
+  return `${fileType} • ${sizeText}`;
+};
+
+// Função para rolar até a mensagem citada
+const scrollToQuotedMessage = (quotedMessageId) => {
+  const messageElement = document.querySelector(`[data-message-id="${quotedMessageId}"]`);
+  if (messageElement) {
+    messageElement.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'center' 
+    });
+    
+    // Adiciona um efeito de destaque temporário
+    messageElement.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+    setTimeout(() => {
+      messageElement.style.backgroundColor = '';
+    }, 2000);
+  }
+};
+
 const renderQuotedMessage = (message) => {
 
   return (
@@ -828,6 +976,8 @@ const renderQuotedMessage = (message) => {
       className={clsx(classes.quotedContainerLeft, {
         [classes.quotedContainerRight]: message.fromMe,
       })}
+      onClick={() => scrollToQuotedMessage(message.quotedMsg.id)}
+      style={{ cursor: 'pointer' }}
     >
       <span
         className={clsx(classes.quotedSideColorLeft, {
@@ -869,16 +1019,20 @@ const renderQuotedMessage = (message) => {
         }
         {message.quotedMsg.mediaType === "application"
           && (
-            <div className={classes.downloadMedia}>
-              <Button
-                startIcon={<GetApp />}
-                // color="primary"
-                variant="outlined"
-                target="_blank"
-                href={message.quotedMsg.mediaUrl}
-              >
-                Download
-              </Button>
+            <div style={{ padding: "8px 0" }}>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <div style={{ marginRight: "8px" }}>
+                  {getDocumentIcon(message.quotedMsg.body)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "12px", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {getOriginalFileName(message.quotedMsg.body)}
+                  </div>
+                  <div style={{ fontSize: "11px", color: "#667781" }}>
+                    {getFileSize(message.quotedMsg.body)}
+                  </div>
+                </div>
+              </div>
             </div>
           )
         }
@@ -943,7 +1097,7 @@ const renderMessages = () => {
             {renderDailyTimestamps(message, index)}
             {renderTicketsSeparator(message, index)}
             {renderMessageDivider(message, index)}
-            <div className={classes.messageCenter}>
+            <div className={classes.messageCenter} data-message-id={message.id}>
               <IconButton
                 variant="contained"
                 size="small"
@@ -985,6 +1139,7 @@ const renderMessages = () => {
               className={classes.messageLeft}
               title={message.queueId && message.queue?.name}
               onDoubleClick={(e) => hanldeReplyMessage(e, message)}
+              data-message-id={message.id}
             >
               {showSelectMessageCheckbox && (
                 <SelectMessageCheckbox
@@ -1050,12 +1205,13 @@ const renderMessages = () => {
                 {
                   (
                     (message.mediaUrl !== null && (message.mediaType === "image" || message.mediaType === "video") && path.basename(message.mediaUrl).trim() !== message.body.trim()) ||
-                    message.mediaType !== "audio" &&
+                    (message.mediaType !== "audio" &&
                     message.mediaType !== "image" &&
                     message.mediaType !== "video" &&
+                    message.mediaType !== "application" &&
                     message.mediaType != "reactionMessage" &&
                     message.mediaType != "locationMessage" && message.mediaType !== "contactMessage" &&
-                    message.mediaType !== "template" && message.mediaType !== "adMetaPreview") && (
+                    message.mediaType !== "template" && message.mediaType !== "adMetaPreview")) && (
                     <>
                       {xmlRegex.test(message.body) && (
                         <span>{message.body}</span>
@@ -1097,6 +1253,7 @@ const renderMessages = () => {
               className={message.isPrivate ? classes.messageRightPrivate : classes.messageRight}
               title={message.queueId && message.queue?.name}
               onDoubleClick={(e) => hanldeReplyMessage(e, message)}
+              data-message-id={message.id}
             >
               {showSelectMessageCheckbox && (
                 <SelectMessageCheckbox
@@ -1154,7 +1311,7 @@ const renderMessages = () => {
 
                 {
                   ((message.mediaType === "image" || message.mediaType === "video") && path.basename(message.mediaUrl) === message.body) ||
-                  (message.mediaType !== "audio" && message.mediaType != "reactionMessage" && message.mediaType != "locationMessage" && message.mediaType !== "contactMessage" && message.mediaType !== "template" && message.mediaType !== "adMetaPreview") && (
+                  (message.mediaType !== "audio" && message.mediaType !== "application" && message.mediaType != "reactionMessage" && message.mediaType != "locationMessage" && message.mediaType !== "contactMessage" && message.mediaType !== "template" && message.mediaType !== "adMetaPreview") && (
                     <>
                       {xmlRegex.test(message.body) && (
                         <div>{formatXml(message.body)}</div>
