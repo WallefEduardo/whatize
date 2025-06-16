@@ -70,6 +70,14 @@ cd monitoring/scripts
 - 🚨 Alertas automáticos
 - 📈 Análise de performance
 
+### **🔧 Sistema Git Integrado**
+- 📤 **Commit e Push**: Adiciona, commita e envia código automaticamente
+- 📥 **Pull Inteligente**: Puxa atualizações com opções de conflito
+- 📊 **Status Completo**: Informações detalhadas do repositório
+- ⚙️ **Configuração Automática**: Setup de credenciais e repositório
+- 🔐 **Credenciais Seguras**: Armazena tokens no .env
+- 🔄 **Backup Automático**: Backup do .env antes de mudanças
+
 ## 📧 Configuração de Emails
 
 ### **Gmail (Recomendado)**
@@ -93,6 +101,66 @@ MAIL_FROM=seu-email@gmail.com
 # Email para receber alertas
 ALERT_EMAIL=admin@empresa.com
 ```
+
+## 🔧 **Configuração Git**
+
+### **Variáveis do .env para Git**
+```bash
+# Configurações Git (adicionadas automaticamente pelo painel)
+GIT_USERNAME=seu-usuario-github
+GIT_TOKEN=ghp_seu_personal_access_token_aqui
+```
+
+### **Como Configurar Git pelo Painel:**
+
+1. **Acesse a Opção 14** no painel principal
+2. **Configure o repositório remoto:**
+   ```bash
+   https://github.com/usuario/repositorio.git
+   ```
+3. **Configure usuário e email:**
+   ```bash
+   Nome: Seu Nome
+   Email: seu-email@exemplo.com
+   ```
+4. **Configure credenciais GitHub:**
+   - Username: seu-usuario-github
+   - Token: Personal Access Token do GitHub
+
+### **📥 Pull Inteligente (Opção 12)**
+
+O sistema de pull foi configurado para **SEMPRE SOBRESCREVER** arquivos locais com a versão do Git:
+
+**Comportamento:**
+- ✅ **Detecta mudanças locais** não commitadas
+- ⚠️ **Oferece opções** antes de sobrescrever:
+  1. **Commit primeiro** (salva suas mudanças)
+  2. **Descartar mudanças** (sobrescreve com Git)
+  3. **Fazer stash** (salva temporariamente)
+  4. **Cancelar operação**
+
+**Para sobrescrever SEMPRE:**
+- Escolha opção **2** quando perguntado
+- Digite `CONFIRMO` para confirmar
+- Sistema fará `git reset --hard origin/main`
+
+### **📤 Commit e Push (Opção 11)**
+
+**Processo automático:**
+1. Adiciona todos os arquivos (`git add .`)
+2. Cria commit com timestamp
+3. Configura credenciais automaticamente
+4. Faz push para origin/main
+5. Trata conflitos automaticamente
+
+### **🔐 Personal Access Token GitHub**
+
+**Como gerar:**
+1. Acesse: https://github.com/settings/tokens
+2. Clique em "Generate new token (classic)"
+3. Selecione escopo: `repo` (acesso completo ao repositório)
+4. Copie o token gerado
+5. Cole no painel (Opção 14)
 
 ## ⚙️ Configuração de Limites
 
@@ -134,6 +202,12 @@ grep "$(date +%d/%m/%Y)" ../backend/logs/race_conditions.log | grep "CONSTRAINT_
 
 # Ver apenas problemas críticos
 grep -E "CONSTRAINT_ERROR|HIGH_MEMORY|LOW_CACHE" ../backend/logs/race_conditions.log
+
+# Comandos Git úteis
+git status                    # Ver status
+git log --oneline -10        # Últimos 10 commits
+git pull origin main         # Puxar atualizações
+git push origin main         # Enviar código
 ```
 
 ## 🛠️ Manutenção
@@ -154,7 +228,7 @@ find ../backend/logs/ -name "*.log" -mtime +7 -delete
 
 ### **Verificar Configurações**
 ```bash
-grep -E "MAIL_|ALERT_" ../backend/.env
+grep -E "MAIL_|ALERT_|GIT_" ../backend/.env
 ```
 
 ## 🚨 Solução de Problemas
@@ -173,10 +247,22 @@ cd ../backend && npm run dev
 2. Teste com: `node services/test-email-alerts.js`
 3. Para Gmail, use senha de app, não senha normal
 
+### **Git não funciona**
+1. Verifique se o repositório está configurado (Opção 13)
+2. Configure credenciais (Opção 14)
+3. Para GitHub, use Personal Access Token, não senha
+
 ### **Logs não aparecem**
 1. Execute algumas operações no sistema
 2. Verifique se o backend está processando mensagens
 3. Logs ficam em: `../backend/logs/race_conditions.log`
+
+### **Erro "ENOENT" nos logs**
+```bash
+# Criar diretório de logs se não existir
+mkdir -p ../backend/logs
+touch ../backend/logs/race_conditions.log
+```
 
 ## 📊 Métricas Monitoradas
 
@@ -211,9 +297,11 @@ Para problemas ou dúvidas:
 1. Verifique os logs em `../backend/logs/`
 2. Execute o teste de emails
 3. Consulte a documentação em `../docsBaileys/`
+4. Use as opções Git integradas (11-14) para versionamento
 
 ---
 
 **Versão:** 2.0  
-**Última Atualização:** Janeiro 2024  
-**Compatibilidade:** Baileys v6.7.16+
+**Última Atualização:** Junho 2025  
+**Compatibilidade:** Baileys v6.7.16+  
+**Git:** Integração completa com GitHub/GitLab

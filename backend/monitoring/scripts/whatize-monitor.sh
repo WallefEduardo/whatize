@@ -1022,12 +1022,12 @@ git_commit_push() {
     read -p "Pressione Enter para voltar ao menu..."
 }
 
-# Função 12: Pull (puxar atualizações)
+# Função 12: Pull (puxar atualizações) - MODO SOBRESCREVER
 git_pull_updates() {
     clear
     print_header
-    echo -e "${WHITE}📥 PULL - PUXAR ATUALIZAÇÕES${NC}"
-    echo -e "${WHITE}============================${NC}"
+    echo -e "${WHITE}📥 PULL - PUXAR ATUALIZAÇÕES (MODO SOBRESCREVER)${NC}"
+    echo -e "${WHITE}===============================================${NC}"
     echo ""
     
     # Verificar se estamos em um repositório Git
@@ -1055,12 +1055,15 @@ git_pull_updates() {
     
     # Verificar se há mudanças locais não commitadas
     if [ -n "$(git status --porcelain)" ]; then
-        print_warning "Há mudanças locais não commitadas!"
+        print_warning "⚠️  ATENÇÃO: Há mudanças locais não commitadas!"
         echo ""
-        echo -e "${YELLOW}Opções:${NC}"
-        echo "1. 💾 Fazer commit das mudanças primeiro"
-        echo "2. 🗑️  Descartar mudanças locais (CUIDADO!)"
-        echo "3. 📦 Fazer stash das mudanças"
+        echo -e "${RED}🚨 MODO SOBRESCREVER ATIVO:${NC}"
+        echo -e "${YELLOW}Este pull irá SUBSTITUIR todos os arquivos locais pela versão do Git.${NC}"
+        echo ""
+        echo -e "${YELLOW}Opções disponíveis:${NC}"
+        echo "1. 💾 Fazer commit das mudanças primeiro (RECOMENDADO)"
+        echo "2. 🗑️  SOBRESCREVER tudo com a versão do Git"
+        echo "3. 📦 Fazer stash das mudanças (backup temporário)"
         echo "4. 🔙 Voltar ao menu"
         echo ""
         
@@ -1068,27 +1071,31 @@ git_pull_updates() {
         
         case $local_changes_option in
             1)
+                print_info "Redirecionando para commit e push..."
                 git_commit_push
                 return
                 ;;
             2)
-                print_warning "ATENÇÃO: Isso irá DESCARTAR todas as mudanças locais!"
-                read -p "Tem certeza? Digite 'CONFIRMO' para continuar: " confirm
-                if [ "$confirm" = "CONFIRMO" ]; then
+                print_warning "🚨 ATENÇÃO: Isso irá SOBRESCREVER TODOS os arquivos locais!"
+                print_warning "Suas mudanças locais serão PERDIDAS PERMANENTEMENTE!"
+                echo ""
+                read -p "Tem CERTEZA ABSOLUTA? Digite 'SOBRESCREVER' para continuar: " confirm
+                if [ "$confirm" = "SOBRESCREVER" ]; then
+                    print_step "Descartando mudanças locais..."
                     git reset --hard HEAD
                     git clean -fd
-                    print_success "Mudanças locais descartadas."
+                    print_success "✅ Mudanças locais descartadas."
                 else
-                    print_info "Operação cancelada."
+                    print_info "❌ Operação cancelada por segurança."
                     echo ""
                     read -p "Pressione Enter para voltar ao menu..."
                     return
                 fi
                 ;;
             3)
-                print_step "Fazendo stash das mudanças..."
-                git stash push -m "Auto-stash antes do pull - $(date '+%Y-%m-%d %H:%M:%S')"
-                print_success "Mudanças salvas no stash."
+                print_step "Fazendo backup das mudanças no stash..."
+                git stash push -m "Auto-backup antes do pull - $(date '+%Y-%m-%d %H:%M:%S')"
+                print_success "✅ Mudanças salvas no stash (recuperáveis com 'git stash pop')."
                 ;;
             4)
                 return
@@ -1102,30 +1109,42 @@ git_pull_updates() {
         esac
     fi
     
-    # Fazer pull
-    print_step "Puxando atualizações do repositório remoto..."
-    echo ""
-    
     # Configurar credenciais se disponíveis
     setup_git_credentials
     
-    if git pull origin $(git branch --show-current); then
-        print_success "Atualizações puxadas com sucesso! 🎉"
+    # Fazer fetch primeiro para garantir que temos as últimas informações
+    print_step "Buscando informações do repositório remoto..."
+    git fetch origin
+    
+    # Fazer pull com reset hard para garantir sobrescrita
+    print_step "Puxando atualizações e sobrescrevendo arquivos locais..."
+    echo ""
+    
+    current_branch=$(git branch --show-current)
+    
+    # Método mais agressivo: reset hard para a versão remota
+    if git reset --hard origin/$current_branch; then
+        print_success "🎉 Atualizações aplicadas com sucesso!"
+        print_success "✅ Todos os arquivos foram substituídos pela versão do Git."
         
         # Mostrar o que foi atualizado
         echo ""
-        print_step "Últimos commits:"
-        git log --oneline -5
+        print_step "📋 Últimos commits aplicados:"
+        git log --oneline -5 --graph
+        
+        echo ""
+        print_step "📊 Resumo das mudanças:"
+        git diff --stat HEAD~5..HEAD 2>/dev/null || echo "Nenhuma diferença detectada."
         
     else
-        print_error "Erro ao puxar atualizações."
+        print_error "❌ Erro ao aplicar atualizações."
         echo ""
-        echo -e "${YELLOW}Possíveis causas:${NC}"
-        echo "• Conflitos de merge"
-        echo "• Problemas de credenciais"
-        echo "• Problemas de conexão"
+        echo -e "${YELLOW}🔧 Possíveis soluções:${NC}"
+        echo "• Verifique sua conexão com a internet"
+        echo "• Confirme se as credenciais estão corretas (Opção 14)"
+        echo "• Verifique se o repositório remoto existe"
         echo ""
-        print_info "Verifique os conflitos e tente resolver manualmente se necessário."
+        print_info "💡 Tente configurar o Git novamente (Opção 14)."
     fi
     
     echo ""
