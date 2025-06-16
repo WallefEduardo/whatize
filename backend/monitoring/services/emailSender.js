@@ -153,7 +153,7 @@ class EmailSender {
             <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0;">
                 <h3 style="margin-top: 0; color: #1976d2;">Ações Recomendadas:</h3>
                 <ul>
-                    <li>Verificar status: <code>curl http://localhost:4000/race-conditions/stats</code></li>
+                    <li>Verificar status: <code>curl ${process.env.BACKEND_URL || 'http://localhost:4000'}/race-conditions/stats</code></li>
                     <li>Ver logs: <code>tail -f backend/logs/race_conditions.log</code></li>
                     <li>Investigar erros: <code>grep "CONSTRAINT_ERROR" backend/logs/race_conditions.log | tail -10</code></li>
                 </ul>
@@ -184,7 +184,7 @@ Mensagem: ${message}
 Data/Hora: ${formattedTime}
 
 Ações Recomendadas:
-- Verificar status: curl http://localhost:4000/race-conditions/stats
+- Verificar status: curl ${process.env.BACKEND_URL || 'http://localhost:4000'}/race-conditions/stats
 - Ver logs: tail -f backend/logs/race_conditions.log
 - Investigar erros: grep "CONSTRAINT_ERROR" backend/logs/race_conditions.log | tail -10
 

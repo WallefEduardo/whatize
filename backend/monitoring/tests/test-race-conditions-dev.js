@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 // Configuração do teste para desenvolvimento
-const BASE_URL = 'http://localhost:4000';
+const BASE_URL = process.env.BACKEND_URL || 'http://localhost:4000';
 const COMPANY_ID = 1;
 
 // Função para verificar se o backend está rodando
@@ -66,7 +66,7 @@ async function main() {
   console.log('\n🎉 Teste concluído!');
   console.log('\n💡 Para monitoramento contínuo:');
   console.log('   - Logs: tail -f backend/logs/race_conditions.log');
-  console.log('   - Stats: curl http://localhost:4000/race-conditions/stats');
+     console.log(`   - Stats: curl ${BASE_URL}/race-conditions/stats`);
 }
 
 if (require.main === module) {

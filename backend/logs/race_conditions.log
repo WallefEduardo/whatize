@@ -115,3 +115,81 @@
   }
 }
 ---
+{
+  "timestamp": "16/06/2025 19:50:58.575",
+  "type": "BAILEYS_EVENT",
+  "contact": "559870269958@company1",
+  "whatsappId": 1,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "16/06/2025 19:50:58.815",
+  "type": "CONTACT_CREATION",
+  "contact": "559870269958@company1",
+  "whatsappId": 1,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559870269958",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559870269958@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "16/06/2025 19:50:59.312",
+  "type": "CONTACT_CREATION",
+  "contact": "559870269958@company1",
+  "whatsappId": 1,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "559870269958",
+    "contactId": 29
+  }
+}
+---
+{
+  "timestamp": "16/06/2025 20:18:01.887",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881330899@company1",
+  "whatsappId": 1,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "16/06/2025 20:18:02.131",
+  "type": "CONTACT_CREATION",
+  "contact": "559881330899@company1",
+  "whatsappId": 1,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881330899",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881330899@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "16/06/2025 20:18:02.518",
+  "type": "CONTACT_CREATION",
+  "contact": "559881330899@company1",
+  "whatsappId": 1,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "finalName": "559881330899",
+    "contactId": 34
+  }
+}
+---

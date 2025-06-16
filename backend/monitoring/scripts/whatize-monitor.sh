@@ -17,6 +17,35 @@ SERVICES_DIR="../services"
 TESTS_DIR="../tests"
 LOGS_DIR="../logs"
 
+# Função para obter a porta do backend do arquivo .env
+get_backend_port() {
+    local port=$(grep "^PORT=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
+    if [ -z "$port" ]; then
+        port="4000"  # Porta padrão se não encontrar no .env
+    fi
+    echo "$port"
+}
+
+# Função para obter a URL completa do backend
+get_backend_url() {
+    local port=$(get_backend_port)
+    echo "http://localhost:$port"
+}
+
+# Função para atualizar BACKEND_URL no .env
+update_backend_url_in_env() {
+    local backend_url=$(get_backend_url)
+    
+    # Verificar se BACKEND_URL já existe no .env
+    if grep -q "^BACKEND_URL=" $BACKEND_DIR/.env 2>/dev/null; then
+        # Atualizar a linha existente
+        sed -i "s|^BACKEND_URL=.*|BACKEND_URL=$backend_url|" $BACKEND_DIR/.env
+    else
+        # Adicionar nova linha se não existir
+        echo "BACKEND_URL=$backend_url" >> $BACKEND_DIR/.env
+    fi
+}
+
 # Função para imprimir com cores
 print_header() {
     echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
@@ -48,7 +77,8 @@ print_step() {
 
 # Função para verificar se o backend está rodando
 check_backend() {
-    if curl -s http://localhost:4000/race-conditions/stats > /dev/null 2>&1; then
+    local backend_url=$(get_backend_url)
+    if curl -s "$backend_url/race-conditions/stats" > /dev/null 2>&1; then
         return 0
     else
         return 1
@@ -191,9 +221,13 @@ check_dependencies() {
         exit 1
     fi
     
+    # Atualizar BACKEND_URL no .env com a porta correta
+    update_backend_url_in_env
+    
     # Verificar se o backend está rodando
     if ! check_backend; then
-        print_error "Backend não está rodando na porta 4000!"
+        local port=$(get_backend_port)
+        print_error "Backend não está rodando na porta $port!"
         echo -e "${YELLOW}Execute primeiro: cd backend && npm run dev${NC}"
         exit 1
     fi
@@ -436,9 +470,11 @@ monitoring_menu() {
         
         # Status do sistema
         if check_backend; then
-            print_success "Backend: Online (porta 4000)"
+            local port=$(get_backend_port)
+            print_success "Backend: Online (porta $port)"
         else
-            print_error "Backend: Offline"
+            local port=$(get_backend_port)
+            print_error "Backend: Offline (porta $port)"
         fi
         
         # Status dos emails
@@ -515,14 +551,18 @@ show_system_status() {
     echo -e "${WHITE}===========================${NC}"
     echo ""
     
-    print_step "Consultando API..."
+    local backend_url=$(get_backend_url)
+    local port=$(get_backend_port)
+    
+    print_step "Consultando API em $backend_url..."
     
     if check_backend; then
         echo ""
-        curl -s http://localhost:4000/race-conditions/stats | jq . 2>/dev/null || curl -s http://localhost:4000/race-conditions/stats
+        curl -s "$backend_url/race-conditions/stats" | jq . 2>/dev/null || curl -s "$backend_url/race-conditions/stats"
         echo ""
     else
-        print_error "Backend não está respondendo!"
+        print_error "Backend não está respondendo na porta $port!"
+        echo -e "${YELLOW}Verifique se o backend está rodando com: cd backend && npm run dev${NC}"
     fi
     
     echo ""
@@ -1365,7 +1405,8 @@ show_useful_commands() {
     echo -e "${CYAN}🔍 Comandos de Monitoramento:${NC}"
     echo ""
     echo "# Ver status geral"
-    echo "curl http://localhost:4000/race-conditions/stats"
+            local backend_url=$(get_backend_url)
+        echo "curl $backend_url/race-conditions/stats"
     echo ""
     echo "# Contar erros de hoje"
     echo "grep \"\$(date +%d/%m/%Y)\" backend/logs/race_conditions.log | grep \"CONSTRAINT_ERROR\" | wc -l"

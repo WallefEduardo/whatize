@@ -47,6 +47,34 @@ cd monitoring/scripts
 ./whatize-monitor.sh
 ```
 
+## 🔧 **Detecção Automática de Porta**
+
+O sistema **detecta automaticamente** a porta do backend do arquivo `.env`:
+
+### **Como Funciona:**
+1. **Lê a variável `PORT`** do arquivo `backend/.env`
+2. **Atualiza automaticamente** a variável `BACKEND_URL` no `.env`
+3. **Usa porta 4000** como fallback se não encontrar configuração
+4. **Todos os serviços** (monitor, emails, testes) usam a porta correta
+
+### **Configuração no .env:**
+```bash
+# O sistema detecta automaticamente esta porta
+PORT=4000
+
+# Esta variável é atualizada automaticamente pelo monitor
+BACKEND_URL=http://localhost:4000
+```
+
+### **Mudança de Porta:**
+```bash
+# Para usar porta diferente, apenas altere no .env:
+PORT=3001
+
+# O monitor detectará automaticamente e atualizará:
+# BACKEND_URL=http://localhost:3001
+```
+
 ## 🎯 Funcionalidades
 
 ### **Painel Principal (whatize-monitor.sh)**
@@ -185,13 +213,17 @@ nano monitoring/services/monitor-race-conditions-prod.js
 ## 🔧 Comandos Úteis
 
 ```bash
-# Ver status geral
-curl http://localhost:4000/race-conditions/stats
+# Ver status geral (porta detectada automaticamente)
+curl $(grep "^BACKEND_URL=" backend/.env | cut -d'=' -f2)/race-conditions/stats
+
+# Ou use a porta específica do .env
+PORT=$(grep "^PORT=" backend/.env | cut -d'=' -f2)
+curl http://localhost:$PORT/race-conditions/stats
 
 # Testar emails
 node monitoring/services/test-email-alerts.js
 
-# Monitor automático
+# Monitor automático (usa BACKEND_URL do .env)
 node monitoring/services/monitor-race-conditions-prod.js
 
 # Ver logs em tempo real
