@@ -11,10 +11,13 @@ import {
   BelongsTo,
   ForeignKey,
   HasMany,
-  Default
+  Default,
+  BelongsToMany
 } from "sequelize-typescript";
 import Company from "./Company";
 import Tag from "./Tag";
+import User from "./User";
+import FunilUser from "./FunilUser";
 
 @Table
 class FunilKanban extends Model<FunilKanban> {
@@ -42,6 +45,9 @@ class FunilKanban extends Model<FunilKanban> {
 
   @HasMany(() => Tag)
   tags: Tag[];
+
+  @BelongsToMany(() => User, () => FunilUser)
+  users: User[];
 
   @Default(true)
   @AllowNull(false)

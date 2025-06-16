@@ -164,7 +164,7 @@ export const list = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const kanban = async (req: Request, res: Response): Promise<Response> => {
-  const { companyId } = req.user;
+  const { companyId, id: userId, profile } = req.user;
   const { funilId, funilIds } = req.query as IndexQuery;
 
   // Processar funilIds se existir
@@ -180,7 +180,9 @@ export const kanban = async (req: Request, res: Response): Promise<Response> => 
   const tags = await KanbanListService({ 
     companyId, 
     funilId,
-    funilIds: funilIdsArray
+    funilIds: funilIdsArray,
+    userId: Number(userId),
+    userProfile: profile
   });
 
   return res.json({ lista: tags });

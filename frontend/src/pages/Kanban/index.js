@@ -446,13 +446,7 @@ const Kanban = () => {
         params.users = JSON.stringify(selectedUsers.map(user => user.id));
       }
       
-      console.log('🔍 Kanban - Parâmetros enviados para API:', params);
-      console.log('🏷️ Tags selecionadas:', selectedTags);
-      console.log('👥 Usuários selecionados:', selectedUsers);
-      
       const { data } = await api.get("/ticket/kanban", { params });
-      
-      console.log('📊 Kanban - Tickets retornados:', data.tickets?.length || 0);
       setTickets(data.tickets);
     } catch (err) {
       console.error('❌ Erro ao buscar tickets:', err);
@@ -607,6 +601,8 @@ const Kanban = () => {
 
   const popularCards = () => {
     const filteredTickets = tickets.filter(ticket => ticket.tags.length === 0);
+    
+
 
     const createCardContent = (ticket) => ({
       id: ticket.id.toString(),
@@ -722,6 +718,9 @@ const Kanban = () => {
         const tagTickets = tickets.filter(ticket =>
           ticket.tags.some(ticketTag => ticketTag.id === tag.id)
         );
+        
+
+        
         const funilIndex = funnels.findIndex(f => f.id === tag.funilId);
         const funilName = funnels[funilIndex]?.name;
         const funilColor = funilIndex >= 0 ? funnelColors[funilIndex % funnelColors.length] : '#e0e0e0';

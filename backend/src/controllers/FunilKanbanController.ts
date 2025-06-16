@@ -6,6 +6,7 @@ import FunilKanbanService from "../services/FunilKanbanService/FunilKanbanServic
 interface FunilKanbanRequest {
   name: string;
   isActive?: boolean;
+  userIds?: number[];
 }
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
@@ -13,7 +14,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const funilKanbanData: FunilKanbanRequest = req.body;
 
   const schema = Yup.object().shape({
-    name: Yup.string().required().max(20, "O nome do funil não pode conter mais de 20 caracteres")
+    name: Yup.string().required().max(20, "O nome do funil não pode conter mais de 20 caracteres"),
+    userIds: Yup.array().of(Yup.number()).optional()
   });
 
   try {
@@ -39,7 +41,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const { companyId } = req.user;
+  const { companyId, id: userId, profile } = req.user;
   const { searchParam, pageNumber } = req.query as {
     searchParam?: string;
     pageNumber?: string;
@@ -48,7 +50,9 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const { funilKanbans, count, hasMore } = await FunilKanbanService.list({
     searchParam,
     pageNumber,
-    companyId
+    companyId,
+    userId: Number(userId),
+    userProfile: profile
   });
 
   return res.status(200).json({ funilKanbans, count, hasMore });
@@ -73,7 +77,8 @@ export const update = async (
 
   const schema = Yup.object().shape({
     name: Yup.string().max(20, "O nome do funil não pode conter mais de 20 caracteres"),
-    isActive: Yup.boolean()
+    isActive: Yup.boolean(),
+    userIds: Yup.array().of(Yup.number()).optional()
   });
 
   try {

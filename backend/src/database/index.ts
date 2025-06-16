@@ -53,6 +53,7 @@ import { FlowCampaignModel } from "../models/FlowCampaign";
 import { FlowImgModel } from "../models/FlowImg";
 import { WebhookModel } from "../models/Webhook";
 import FunilKanban from "../models/FunilKanban";
+import FunilUser from "../models/FunilUser";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -113,6 +114,7 @@ const models = [
   FlowCampaignModel,
   FlowImgModel,
   WebhookModel,
+  FunilUser,
   FunilKanban,
 ];
 

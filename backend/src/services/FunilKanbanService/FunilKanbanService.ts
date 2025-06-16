@@ -2,27 +2,33 @@ import { Op } from "sequelize";
 import AppError from "../../errors/AppError";
 import FunilKanban from "../../models/FunilKanban";
 import Tag from "../../models/Tag";
+import User from "../../models/User";
+import FunilUser from "../../models/FunilUser";
 
 interface FunilKanbanData {
   name: string;
   companyId: number;
   isActive?: boolean;
+  userIds?: number[];
 }
 
 interface ListFunilKanbanParams {
   searchParam?: string;
   pageNumber?: string;
   companyId: number;
+  userId?: number;
+  userProfile?: string;
 }
 
 interface UpdateFunilKanbanParams {
   name?: string;
   isActive?: boolean;
+  userIds?: number[];
 }
 
 class FunilKanbanService {
   async create(funilKanbanData: FunilKanbanData): Promise<FunilKanban> {
-    const { name, companyId } = funilKanbanData;
+    const { name, companyId, userIds } = funilKanbanData;
 
     // Validar tamanho do nome
     if (name.length > 20) {
@@ -34,53 +40,115 @@ class FunilKanbanService {
       companyId
     });
 
-    return funilKanban;
+    // Associar usuários se fornecidos
+    if (userIds && userIds.length > 0) {
+      await this.updateFunilUsers(funilKanban.id, userIds);
+    }
+
+    return await this.findById(funilKanban.id, companyId);
   }
 
   async list({
     searchParam = "",
     pageNumber = "1",
-    companyId
+    companyId,
+    userId,
+    userProfile
   }: ListFunilKanbanParams): Promise<{
     funilKanbans: FunilKanban[];
     count: number;
     hasMore: boolean;
   }> {
-    const limit = 20;
+        const limit = 20;
     const offset = (parseInt(pageNumber, 10) - 1) * limit;
 
-    const { count, rows: funilKanbans } = await FunilKanban.findAndCountAll({
-      where: {
-        companyId,
-        [Op.or]: [
-          {
-            name: {
-              [Op.like]: `%${searchParam}%`
-            }
-          }
-        ]
-      },
-      include: [
+    let whereCondition: any = {
+      companyId,
+      [Op.or]: [
         {
-          model: Tag,
-          required: false,
-          where: {
-            kanban: 1
+          name: {
+            [Op.like]: `%${searchParam}%`
           }
         }
-      ],
-      limit,
-      offset,
-      order: [["name", "ASC"]]
-    });
-
-    const hasMore = count > offset + funilKanbans.length;
-
-    return {
-      funilKanbans,
-      count,
-      hasMore
+      ]
     };
+
+    // Para usuários não-admin, usar uma abordagem diferente
+    if (userProfile !== 'admin' && userId) {
+      // Buscar funis onde o usuário tem acesso OU que não têm usuários associados
+      const { count, rows: allFunnels } = await FunilKanban.findAndCountAll({
+        where: whereCondition,
+        include: [
+          {
+            model: Tag,
+            required: false,
+            where: {
+              kanban: 1
+            }
+          },
+          {
+            model: User,
+            as: "users",
+            attributes: ["id", "name", "email"],
+            through: { attributes: [] },
+            required: false
+          }
+        ],
+        limit,
+        offset,
+        order: [["name", "ASC"]]
+      });
+
+      // Filtrar funis após a consulta
+      const funilKanbans = allFunnels.filter(funnel => {
+        // Se o funil não tem usuários associados, todos têm acesso
+        if (!funnel.users || funnel.users.length === 0) {
+          return true;
+        }
+        // Se o funil tem usuários associados, verificar se o usuário atual está na lista
+        return funnel.users.some(user => user.id === userId);
+      });
+
+      const hasMore = count > offset + funilKanbans.length;
+
+      return {
+        funilKanbans,
+        count,
+        hasMore
+      };
+    } else {
+      // Para admins, retornar todos os funis
+      const { count, rows: allFunnels } = await FunilKanban.findAndCountAll({
+        where: whereCondition,
+        include: [
+          {
+            model: Tag,
+            required: false,
+            where: {
+              kanban: 1
+            }
+          },
+          {
+            model: User,
+            as: "users",
+            attributes: ["id", "name", "email"],
+            through: { attributes: [] },
+            required: false
+          }
+        ],
+        limit,
+        offset,
+        order: [["name", "ASC"]]
+      });
+
+      const hasMore = count > offset + allFunnels.length;
+
+      return {
+        funilKanbans: allFunnels,
+        count,
+        hasMore
+      };
+    }
   }
 
   async findById(id: number, companyId: number): Promise<FunilKanban> {
@@ -96,6 +164,12 @@ class FunilKanbanService {
           where: {
             kanban: 1
           }
+        },
+        {
+          model: User,
+          as: "users",
+          attributes: ["id", "name", "email"],
+          through: { attributes: [] }
         }
       ]
     });
@@ -118,9 +192,34 @@ class FunilKanbanService {
       throw new AppError("O nome do funil não pode conter mais de 20 caracteres.");
     }
 
-    await funilKanban.update(funilKanbanData);
+    await funilKanban.update({
+      name: funilKanbanData.name,
+      isActive: funilKanbanData.isActive
+    });
 
-    return funilKanban;
+    // Atualizar usuários se fornecidos
+    if (funilKanbanData.userIds !== undefined) {
+      await this.updateFunilUsers(id, funilKanbanData.userIds);
+    }
+
+    return await this.findById(id, companyId);
+  }
+
+  private async updateFunilUsers(funilId: number, userIds: number[]): Promise<void> {
+    // Remover todas as associações existentes
+    await FunilUser.destroy({
+      where: { funilId }
+    });
+
+    // Criar novas associações
+    if (userIds.length > 0) {
+      const funilUsers = userIds.map(userId => ({
+        funilId,
+        userId
+      }));
+
+      await FunilUser.bulkCreate(funilUsers);
+    }
   }
 
   async delete(id: number, companyId: number): Promise<void> {

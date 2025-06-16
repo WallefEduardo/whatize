@@ -163,6 +163,16 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid, ticket }) => 
               noOptionsText={i18n.t("transferTicketModal.noOptions")}
               loading={loading}
               renderOption={option => (<span> <UserStatusIcon user={option} /> {option.name}</span>)}
+              PaperComponent={({ children, ...props }) => (
+                <div {...props} style={{ 
+                  backgroundColor: '#ffffff', 
+                  border: '1px solid #e0e0e0',
+                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                  borderRadius: '4px'
+                }}>
+                  {children}
+                </div>
+              )}
               renderInput={(params) => (
                 <TextField
                   {...params}

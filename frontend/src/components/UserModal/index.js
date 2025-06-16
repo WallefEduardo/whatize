@@ -116,6 +116,53 @@ const UserSchema = Yup.object().shape({
 	password: Yup.string().min(5, "Too Short!").max(50, "Too Long!"),
 	email: Yup.string().email("Invalid email").required("Required"),
 	allHistoric: Yup.string().nullable(),
+	startWork: Yup.string()
+		.required("Horário de início é obrigatório")
+		.test(
+			'not-both-zero',
+			'Início e fim de trabalho não podem ser ambos 00:00. Isso bloquearia o acesso ao sistema.',
+			function(value) {
+				const { endWork } = this.parent;
+				// Se ambos forem 00:00, retorna erro
+				if (value === '00:00' && endWork === '00:00') {
+					return false;
+				}
+				return true;
+			}
+		),
+	endWork: Yup.string()
+		.required("Horário de fim é obrigatório")
+		.test(
+			'not-both-zero',
+			'Início e fim de trabalho não podem ser ambos 00:00. Isso bloquearia o acesso ao sistema.',
+			function(value) {
+				const { startWork } = this.parent;
+				// Se ambos forem 00:00, retorna erro
+				if (startWork === '00:00' && value === '00:00') {
+					return false;
+				}
+				return true;
+			}
+		)
+		.test(
+			'end-after-start',
+			'Horário de fim deve ser posterior ao horário de início',
+			function(value) {
+				const { startWork } = this.parent;
+				// Se ambos estão definidos, verifica se fim é depois do início
+				if (startWork && value) {
+					// Converte para minutos para comparação
+					const startMinutes = startWork.split(':').reduce((acc, time) => (60 * acc) + +time);
+					const endMinutes = value.split(':').reduce((acc, time) => (60 * acc) + +time);
+					
+					// Se fim for menor que início, é inválido (exceto se for 00:00 que representa fim do dia)
+					if (endMinutes <= startMinutes && value !== '00:00') {
+						return false;
+					}
+				}
+				return true;
+			}
+		),
 });
 
 const UserModal = ({ open, onClose, userId }) => {
@@ -190,6 +237,12 @@ const UserModal = ({ open, onClose, userId }) => {
 	};
 
 	const handleSaveUser = async (values) => {
+
+		// Validação adicional para horários de trabalho
+		if (values.startWork === '00:00' && values.endWork === '00:00') {
+			toast.error('Erro: Início e fim de trabalho não podem ser ambos 00:00. Isso bloquearia o acesso ao sistema.');
+			return;
+		}
 
 		const uploadAvatar = async (file) => {
 			const formData = new FormData();
@@ -483,6 +536,20 @@ const UserModal = ({ open, onClose, userId }) => {
 															margin="dense"
 															className={classes.textField}
 														/>
+													</Grid>
+													<Grid item xs={12}>
+														<div style={{ 
+															backgroundColor: '#fff3cd', 
+															border: '1px solid #ffeaa7', 
+															borderRadius: '4px', 
+															padding: '8px 12px', 
+															marginTop: '8px',
+															fontSize: '0.875rem',
+															color: '#856404'
+														}}>
+															<strong>⚠️ Atenção:</strong> Os horários de início e fim de trabalho definem quando o usuário pode acessar o sistema. 
+															Não configure ambos como 00:00, pois isso bloqueará completamente o acesso do usuário.
+														</div>
 													</Grid>
 												</Grid>
 											)}

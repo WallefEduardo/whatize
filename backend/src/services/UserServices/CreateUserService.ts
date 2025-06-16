@@ -81,6 +81,11 @@ const CreateUserService = async ({
     }
   }
 
+  // Validação específica para horários de trabalho
+  if (startWork === '00:00' && endWork === '00:00') {
+    throw new AppError("Erro: Início e fim de trabalho não podem ser ambos 00:00. Isso bloquearia o acesso ao sistema.");
+  }
+
   const schema = Yup.object().shape({
     name: Yup.string().required().min(2),
     allHistoric: Yup.string(),

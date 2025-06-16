@@ -51,13 +51,9 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     email,
     password,
     name,
-    phone,
     profile,
-    document,
     companyId: bodyCompanyId,
     queueIds,
-    companyName,
-    planId,
     startWork,
     endWork,
     whatsappId,
@@ -69,13 +65,16 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     allUserChat,
     userClosePendingTicket,
     showDashboard,
-    defaultTicketsManagerWidth = 550,
+    defaultTicketsManagerWidth,
     allowRealTime,
-    allowConnections
+    allowConnections,
+    companyName,
+    planId,
+    phone,
+    document
   } = req.body;
-  let userCompanyId: number | null = null;
 
-  const { dateToClient } = useDate();
+  let userCompanyId: number | null = null;
 
   if (req.user !== undefined) {
     const { companyId: cId } = req.user;
@@ -98,7 +97,6 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const companyUser = bodyCompanyId || userCompanyId;
 
   if (!companyUser) {
-
     const dataNowMoreTwoDays = new Date();
     dataNowMoreTwoDays.setDate(dataNowMoreTwoDays.getDate() + 3);
 
@@ -122,45 +120,72 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       defaultMenu: 'closed',
       allowGroup: false,
       allHistoric: false,
-      userClosePendingTicket: 'enabled',
-      showDashboard: 'disabled',
-      defaultTicketsManagerWidth: 550,
-      allowRealTime: 'disabled',
-      allowConnections: 'disabled'
+      userClosePendingTicket: true,
+      showDashboard: false,
+      defaultTicketsManagerWidth: '550',
+      allowRealTime: false,
+      allowConnections: false
     };
 
-    const user = await CreateCompanyService(companyData);
-
     try {
-      const _email = {
-        to: email,
-        subject: `Login e senha do Whatize para empresa ${companyName}`,
-        text: `Olá ${name}, obrigado por iniciar o seu período de teste no Whatize! Estou te enviando este email para confirmar o cadastro da empresa ${companyName}!<br><br>
-        Também vou lhe passar os dados de login para caso você esqueça:<br><br>Nome: ${companyName}<br>Email: ${email}<br>Senha: ${password}<br>Data de vencimento do teste: ${dateToClient(date)}<br>Página de login: https://whatize.pro/login`
+      const user = await CreateCompanyService(companyData);
+
+      // Envio de email com tratamento de erro robusto
+      try {
+        if (process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASS) {
+          const { dateToClient } = useDate();
+          const _email = {
+            to: email,
+            subject: `Login e senha do Whatize para empresa ${companyName}`,
+            text: `Olá ${name}, obrigado por iniciar o seu período de teste no Whatize! Estou te enviando este email para confirmar o cadastro da empresa ${companyName}!<br><br>
+            Também vou lhe passar os dados de login para caso você esqueça:<br><br>Nome: ${companyName}<br>Email: ${email}<br>Senha: ${password}<br>Data de vencimento do teste: ${dateToClient(date)}<br>Página de login: https://whatize.pro/login`
+          }
+
+          // Timeout de 10 segundos para envio de email
+          const emailPromise = SendMail(_email);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Email timeout')), 10000)
+          );
+          
+          await Promise.race([emailPromise, timeoutPromise]);
+        }
+      } catch (error) {
+        // Email não é crítico para o cadastro
+        console.log('Aviso: Erro ao enviar email de confirmação:', error.message);
       }
 
-      await SendMail(_email)
-    } catch (error) {
+      // Envio de WhatsApp com tratamento de erro robusto
+      try {
+        const whatsappPromise = (async () => {
+          const company = await ShowCompanyService(1);
+          const whatsappCompany = await FindCompaniesWhatsappService(company.id)
 
-    }
+          if (whatsappCompany.whatsapps[0].status === "CONNECTED" && (phone !== undefined || !isNil(phone) || !isEmpty(phone))) {
+            const whatsappId = whatsappCompany.whatsapps[0].id
+            const wbot = getWbot(whatsappId);
 
-    try {
-      const company = await ShowCompanyService(1);
-      const whatsappCompany = await FindCompaniesWhatsappService(company.id)
+            const body = `Olá ${name}, \n\nQue bom ter você com a gente! 🎉\n\nVocê acaba de iniciar seu *período de teste no Whatize*, a plataforma que vai transformar seu atendimento e impulsionar seus resultados com chatbots inteligentes, CRM e automações poderosas.\n\nPara te ajudar a aproveitar ao máximo todos os recursos, que tal uma rápida apresentação com um de nossos especialistas? 🚀 \n\nÉ só digitar *Quero*! 😊`
 
-      if (whatsappCompany.whatsapps[0].status === "CONNECTED" && (phone !== undefined || !isNil(phone) || !isEmpty(phone))) {
-        const whatsappId = whatsappCompany.whatsapps[0].id
-        const wbot = getWbot(whatsappId);
-
-        const body = `Olá ${name}, \n\nQue bom ter você com a gente! 🎉\n\nVocê acaba de iniciar seu *período de teste no Whatize*, a plataforma que vai transformar seu atendimento e impulsionar seus resultados com chatbots inteligentes, CRM e automações poderosas.\n\nPara te ajudar a aproveitar ao máximo todos os recursos, que tal uma rápida apresentação com um de nossos especialistas? 🚀 \n\nÉ só digitar *Quero*! 😊`
-
-        await wbot.sendMessage(`55${phone}@s.whatsapp.net`, { text: body });
+            await wbot.sendMessage(`55${phone}@s.whatsapp.net`, { text: body });
+            return true;
+          }
+          return false;
+        })();
+        
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('WhatsApp timeout')), 10000)
+        );
+        
+        await Promise.race([whatsappPromise, timeoutPromise]);
+      } catch (error) {
+        // WhatsApp não é crítico para o cadastro
+        console.log('Aviso: Erro ao enviar WhatsApp de boas-vindas:', error.message);
       }
-    } catch (error) {
-      
-    }
 
-    return res.status(200).json(user);
+      return res.status(200).json(user);
+    } catch (error) {
+      throw error;
+    }
   }
 
   if (companyUser) {

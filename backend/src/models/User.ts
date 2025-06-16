@@ -24,6 +24,8 @@ import Company from "./Company";
 import QuickMessage from "./QuickMessage";
 import Whatsapp from "./Whatsapp";
 import Chatbot from "./Chatbot";
+import FunilKanban from "./FunilKanban";
+import FunilUser from "./FunilUser";
 
 @Table
 class User extends Model<User> {
@@ -119,6 +121,9 @@ class User extends Model<User> {
 
   @BelongsToMany(() => Queue, () => UserQueue)
   queues: Queue[];
+
+  @BelongsToMany(() => FunilKanban, () => FunilUser)
+  funis: FunilKanban[];
 
   @HasMany(() => QuickMessage, {
     onUpdate: "CASCADE",

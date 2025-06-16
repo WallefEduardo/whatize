@@ -30,6 +30,7 @@ import {
   Select,
   MenuItem
 } from "@material-ui/core";
+import { Autocomplete } from "@material-ui/lab";
 import {
   Search as SearchIcon,
   Delete as DeleteOutlineIcon,
@@ -202,6 +203,8 @@ const Tags = () => {
   const [confirmDeleteFunnelOpen, setConfirmDeleteFunnelOpen] = useState(false);
   const [savingFunnel, setSavingFunnel] = useState(false);
   const [selectedFunnelFilter, setSelectedFunnelFilter] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState([]);
 
   useEffect(() => {
     setLoading(true);
@@ -242,6 +245,21 @@ const Tags = () => {
     };
     fetchFunnels();
   }, []);
+
+  useEffect(() => {
+    // Buscar usuários apenas se o usuário for admin
+    if (user.profile === 'admin') {
+      const fetchUsers = async () => {
+        try {
+          const { data } = await api.get("/users/list");
+          setUsers(data || []);
+        } catch (err) {
+          toastError(err);
+        }
+      };
+      fetchUsers();
+    }
+  }, [user.profile]);
 
   useEffect(() => {
     dispatch({ type: "RESET" });
@@ -332,12 +350,14 @@ const Tags = () => {
     setFunnelModalOpen(true);
     setFunnelName("");
     setSelectedFunnel(null);
+    setSelectedUsers([]);
   };
 
   const handleCloseFunnelModal = () => {
     setFunnelModalOpen(false);
     setFunnelName("");
     setSelectedFunnel(null);
+    setSelectedUsers([]);
   };
 
   const handleAddFunnel = async () => {
@@ -346,11 +366,13 @@ const Tags = () => {
     try {
       setSavingFunnel(true);
       const { data } = await api.post("/funilkanban", {
-        name: funnelName
+        name: funnelName,
+        userIds: selectedUsers.map(user => user.id)
       });
       
       setFunnels(prev => [...prev, data]);
       setFunnelName("");
+      setSelectedUsers([]);
       toast.success("Funil criado com sucesso!");
     } catch (err) {
       toastError(err);
@@ -362,6 +384,7 @@ const Tags = () => {
   const handleEditFunnel = (funnel) => {
     setSelectedFunnel(funnel);
     setFunnelName(funnel.name);
+    setSelectedUsers(funnel.users || []);
   };
 
   const handleUpdateFunnel = async () => {
@@ -370,7 +393,8 @@ const Tags = () => {
     try {
       setSavingFunnel(true);
       const { data } = await api.put(`/funilkanban/${selectedFunnel.id}`, {
-        name: funnelName
+        name: funnelName,
+        userIds: selectedUsers.map(user => user.id)
       });
       
       setFunnels(prev => prev.map(funnel => 
@@ -379,6 +403,7 @@ const Tags = () => {
       
       setFunnelName("");
       setSelectedFunnel(null);
+      setSelectedUsers([]);
       toast.success("Funil atualizado com sucesso!");
     } catch (err) {
       toastError(err);
@@ -623,6 +648,60 @@ const Tags = () => {
                 disabled={savingFunnel}
                 InputLabelProps={{ shrink: true }}
               />
+              
+              {user.profile === 'admin' && (
+                <Autocomplete
+                  multiple
+                  options={users}
+                  value={selectedUsers}
+                  onChange={(event, newValue) => {
+                    setSelectedUsers(newValue);
+                  }}
+                  getOptionLabel={(option) => option.name}
+                  disabled={savingFunnel}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => (
+                      <Chip
+                        variant="outlined"
+                        label={option.name}
+                        {...getTagProps({ index })}
+                        size="small"
+                        style={{
+                          backgroundColor: "#f5f5f5",
+                          color: "#333",
+                          fontSize: "0.75rem",
+                          height: "24px"
+                        }}
+                      />
+                    ))
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      variant="outlined"
+                      label="Usuários com Acesso"
+                      placeholder="Selecione os usuários que terão acesso a este funil"
+                      helperText="Apenas usuários selecionados poderão ver este funil no Kanban. Deixe vazio para permitir acesso a todos."
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  )}
+                  PaperComponent={({ children, ...other }) => (
+                    <div
+                      {...other}
+                      style={{
+                        backgroundColor: "white",
+                        border: "1px solid #ccc",
+                        borderRadius: "4px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                        maxHeight: "200px",
+                        overflow: "auto"
+                      }}
+                    >
+                      {children}
+                    </div>
+                  )}
+                />
+              )}
             </div>
           </form>
           <Table size="small" style={{ marginTop: 32 }}>
@@ -646,7 +725,33 @@ const Tags = () => {
                 funnels.map(funnel => (
                   <TableRow key={funnel.id}>
                     <TableCell>{funnel.id}</TableCell>
-                    <TableCell>{funnel.name}</TableCell>
+                    <TableCell>
+                      <div>
+                        <div style={{ fontWeight: 600, marginBottom: 4 }}>{funnel.name}</div>
+                        {funnel.users && funnel.users.length > 0 ? (
+                          <div style={{ fontSize: '0.75rem', color: '#666', display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                            {funnel.users.map((user, index) => (
+                              <Chip
+                                key={user.id}
+                                label={user.name}
+                                size="small"
+                                style={{
+                                  backgroundColor: "#e3f2fd",
+                                  color: "#1976d2",
+                                  fontSize: "0.65rem",
+                                  height: "18px",
+                                  fontWeight: 500
+                                }}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.75rem', color: '#999', fontStyle: 'italic' }}>
+                            Acesso livre (todos os usuários)
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell align="right">
                       <IconButton
                         size="small"

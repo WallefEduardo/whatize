@@ -54,6 +54,8 @@ const ListTicketsServiceKanban = async ({
   companyId,
   funilId
 }: Request): Promise<Response> => {
+
+
   let whereCondition: Filterable["where"] = {
     queueId: { [Op.or]: [queueIds, null] }
   };
@@ -268,7 +270,7 @@ const ListTicketsServiceKanban = async ({
   }
 
   // Filtro por funil (aplica apenas se não houver tags específicas selecionadas)
-  if (funilId && (!Array.isArray(tags) || tags.length === 0)) {
+  if (funilId && typeof funilId === 'number' && (!Array.isArray(tags) || tags.length === 0)) {
     const tagsFromFunnel = await Tag.findAll({
       where: { 
         funilId,
@@ -289,9 +291,50 @@ const ListTicketsServiceKanban = async ({
         attributes: ['ticketId']
       });
       
-      filteredTicketIds = ticketTags.map(ticketTag => ticketTag.ticketId);
+      // Buscar também tickets sem tags (coluna "Em Aberto")
+      const ticketsWithoutTags = await Ticket.findAll({
+        where: {
+          companyId,
+          status: { [Op.or]: ["pending", "open"] }
+        },
+        include: [
+          {
+            model: Tag,
+            as: "tags",
+            required: false
+          }
+        ],
+        attributes: ['id']
+      });
+      
+      // Filtrar apenas tickets que realmente não têm tags
+      const ticketsWithoutTagsIds = ticketsWithoutTags
+        .filter(ticket => !ticket.tags || ticket.tags.length === 0)
+        .map(ticket => ticket.id);
+      
+      // Combinar tickets do funil com tickets sem tags
+      const ticketIdsFromFunnel = ticketTags.map(ticketTag => ticketTag.ticketId);
+      filteredTicketIds = [...new Set([...ticketIdsFromFunnel, ...ticketsWithoutTagsIds])];
     } else {
-      filteredTicketIds = [];
+      // Se não há tags no funil, retornar apenas tickets sem tags
+      const ticketsWithoutTags = await Ticket.findAll({
+        where: {
+          companyId,
+          status: { [Op.or]: ["pending", "open"] }
+        },
+        include: [
+          {
+            model: Tag,
+            as: "tags",
+            required: false
+          }
+        ],
+        attributes: ['id']
+      });
+      
+      filteredTicketIds = ticketsWithoutTags
+        .filter(ticket => !ticket.tags || ticket.tags.length === 0)
+        .map(ticket => ticket.id);
     }
   }
 
@@ -361,6 +404,7 @@ const ListTicketsServiceKanban = async ({
     order: [["updatedAt", "DESC"]],
     subQuery: false
   });
+  
   const hasMore = count > offset + tickets.length;
 
   return {

@@ -1,4 +1,9 @@
- export function validateCpfCnpj(val) {
+export function validateCpfCnpj(val) {
+  // Verifica se o valor existe e é uma string
+  if (!val || typeof val !== 'string') {
+    return false;
+  }
+  
   val = val.replace(/[^\d]+/g, '');
 
   if (val.length === 11) {

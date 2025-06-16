@@ -5,8 +5,9 @@ import User from "../../models/User";
 import Plan from "../../models/Plan";
 import sequelize from "../../database";
 import CompaniesSettings from "../../models/CompaniesSettings";
-import Invoice from "../../models/Invoices";
+import Invoices from "../../models/Invoices";
 import { addMonths, format } from "date-fns";
+import { hash } from "bcryptjs";
 
 interface CompanyData {
   name: string;
@@ -20,177 +21,149 @@ interface CompanyData {
   paymentMethod?: string;
   password?: string;
   companyUserName?: string;
+  startWork?: string;
+  endWork?: string;
+  defaultTheme?: string;
+  defaultMenu?: string;
+  allowGroup?: boolean;
+  allHistoric?: boolean;
+  userClosePendingTicket?: boolean;
+  showDashboard?: boolean;
+  defaultTicketsManagerWidth?: string;
+  allowRealTime?: boolean;
+  allowConnections?: boolean;
 }
 
 const CreateCompanyService = async (
   companyData: CompanyData
-): Promise<Company> => {
-  const {
-    name,
-    phone,
-    password,
-    email,
-    status,
-    planId,
-    dueDate,
-    recurrence,
-    document,
-    paymentMethod,
-    companyUserName
-  } = companyData;
-
-  const companySchema = Yup.object().shape({
-    name: Yup.string()
-      .min(2, "ERR_COMPANY_INVALID_NAME")
-      .required("ERR_COMPANY_INVALID_NAME")
-  });
-
+): Promise<User> => {
   try {
-    await companySchema.validate({ name });
-  } catch (err: any) {
-    throw new AppError(err.message);
-  }
-
-  const t = await sequelize.transaction();
-
-  try {
-    const company = await Company.create({
+    const {
       name,
-      phone,
       email,
-      status,
+      phone,
       planId,
+      status,
       dueDate,
       recurrence,
       document,
-      paymentMethod
-    },
-      { transaction: t }
-    );
+      paymentMethod,
+      password,
+      companyUserName,
+      startWork,
+      endWork,
+      defaultTheme,
+      defaultMenu,
+      allowGroup,
+      allHistoric,
+      userClosePendingTicket,
+      showDashboard,
+      defaultTicketsManagerWidth,
+      allowRealTime,
+      allowConnections
+    } = companyData;
 
-    const user = await User.create({
-      name: companyUserName ? companyUserName : name,
-      email: company.email,
-      password: password ? password : "mudar123",
-      profile: "admin",
-      companyId: company.id
-    },
-      { transaction: t }
-    );
+    const companySchema = Yup.object().shape({
+      name: Yup.string().required(),
+      email: Yup.string().email().required(),
+      phone: Yup.string().required(),
+      planId: Yup.number().required(),
+      status: Yup.boolean().required(),
+      dueDate: Yup.string().required(),
+      document: Yup.string().required(),
+      password: Yup.string().required(),
+      companyUserName: Yup.string().required()
+    });
 
-    const settings = await CompaniesSettings.create({
-          companyId: company.id,
-          hoursCloseTicketsAuto: "9999999999",
-          chatBotType: "text",
-          acceptCallWhatsapp: "enabled",
-          userRandom: "enabled",
-          sendGreetingMessageOneQueues: "enabled",
-          sendSignMessage: "enabled",
-          sendFarewellWaitingTicket: "disabled",
-          userRating: "disabled",
-          sendGreetingAccepted: "enabled",
-          CheckMsgIsGroup: "enabled",
-          sendQueuePosition: "disabled",
-          scheduleType: "disabled",
-          acceptAudioMessageContact: "enabled",
-          sendMsgTransfTicket:"disabled",
-          enableLGPD: "disabled",
-          requiredTag: "disabled",
-          lgpdDeleteMessage: "disabled",
-          lgpdHideNumber: "disabled",
-          lgpdConsent: "disabled",
-          lgpdLink:"",
-          lgpdMessage:"",
-          outOfHoursMessage: "",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          closeTicketOnTransfer: false,
-          DirectTicketsToWallets: false
-    },{ transaction: t })
-    
-    // Buscar dados do plano para a fatura
-    if (planId) {
-      const plan = await Plan.findByPk(planId);
-      
-      if (plan && dueDate) {
-        // Criar fatura baseada no plano
-        const planValue = parseFloat(String(plan.amount).replace(',', '.'));
-        await Invoice.create({
-          companyId: company.id,
-          dueDate: dueDate,
-          detail: `Mensalidade do plano ${plan.name}`,
-          status: "open", // Status inicial da fatura
-          value: planValue,
-          users: plan.users,
-          connections: plan.connections,
-          queues: plan.queues,
-          useWhatsapp: plan.useWhatsapp,
-          useFacebook: plan.useFacebook,
-          useInstagram: plan.useInstagram,
-          useCampaigns: plan.useCampaigns,
-          useSchedules: plan.useSchedules,
-          useInternalChat: plan.useInternalChat,
-          useExternalApi: plan.useExternalApi,
-          linkInvoice: ""
-        }, { transaction: t });
-        
-        // Criar a próxima fatura programada com base na recorrência
-        if (recurrence === "MONTHLY") {
-          // Calcular próximo vencimento (1 mês após dueDate)
-          const currentDueDate = new Date(dueDate);
-          const nextDueDate = addMonths(currentDueDate, 1);
-          
-          await Invoice.create({
+    try {
+      await companySchema.validate(companyData);
+    } catch (err) {
+      throw new AppError(err.message);
+    }
+
+    const transaction = await sequelize.transaction();
+
+    try {
+      const company = await Company.create({
+        name,
+        email,
+        phone,
+        planId,
+        status,
+        dueDate,
+        recurrence,
+        document,
+        paymentMethod
+      }, { transaction });
+
+      const user = await User.create({
+        name: companyUserName,
+        email,
+        password: await hash(password, 8),
+        profile: "admin",
+        companyId: company.id,
+        startWork,
+        endWork
+      }, { transaction });
+
+      await CompaniesSettings.create({
+        companyId: company.id,
+        hoursCloseTicketsAuto: 24,
+        chatBotType: "text",
+        acceptCallWhatsapp: "enabled",
+        userRandom: "enabled",
+        sendGreetingMessageOneQueues: "enabled",
+        sendSignMessage: "enabled",
+        sendFarewellWaitingTicket: "disabled",
+        userRating: "enabled",
+        sendGreetingAccepted: "enabled",
+        CheckMsgIsGroup: "enabled",
+        sendQueuePosition: "enabled",
+        scheduleType: "enabled",
+        acceptAudioMessageContact: "enabled",
+        sendMsgTransfTicket: "enabled",
+        enableLGPD: "disabled",
+        requiredTag: "disabled",
+        lgpdDeleteMessage: "Você pode solicitar a exclusão dos seus dados a qualquer momento.",
+        lgpdHideNumber: "enabled",
+        lgpdConsent: "A LGPD (Lei Geral de Proteção de Dados) garante a você o controle sobre suas informações pessoais. Ao prosseguir, você concorda com a coleta e uso dos seus dados para melhorar nossos serviços. Você pode gerenciar suas preferências a qualquer momento.",
+        lgpdLink: "https://site.com/politicas-de-privacidade/",
+        lgpdMessage: "🔒 *Política de Privacidade*\n\nA sua privacidade é importante para nós. Coletamos e usamos seus dados de acordo com a LGPD.\n\n📋 *Dados coletados:*\n• Nome e informações de contato\n• Histórico de conversas para melhor atendimento\n• Preferências de comunicação\n\n🎯 *Finalidade:*\n• Prestar suporte e atendimento\n• Melhorar nossos serviços\n• Comunicações importantes\n\n🔐 *Seus direitos:*\n• Acessar seus dados\n• Corrigir informações\n• Solicitar exclusão\n• Revogar consentimento\n\n📞 *Dúvidas sobre privacidade:*\nEntre em contato conosco pelo e-mail: privacidade@empresa.com\n\n✅ Digite *ACEITO* para concordar ou *POLÍTICA* para ler nossa política completa.",
+        deleteTicketMessageGroups: "disabled",
+        timeDeleteTicketMessageGroups: 24,
+        defaultTheme,
+        defaultMenu,
+        allowGroup,
+        allHistoric,
+        userClosePendingTicket,
+        showDashboard,
+        defaultTicketsManagerWidth,
+        allowRealTime,
+        allowConnections
+      }, { transaction });
+
+      if (planId) {
+        const plan = await Plan.findByPk(planId);
+        if (plan) {
+          const invoiceData = {
             companyId: company.id,
-            dueDate: format(nextDueDate, "yyyy-MM-dd"),
-            detail: `Próxima mensalidade do plano ${plan.name}`,
-            status: "pending", // Status da próxima fatura
-            value: parseFloat(plan.amount),
-            users: plan.users,
-            connections: plan.connections,
-            queues: plan.queues,
-            useWhatsapp: plan.useWhatsapp,
-            useFacebook: plan.useFacebook,
-            useInstagram: plan.useInstagram,
-            useCampaigns: plan.useCampaigns,
-            useSchedules: plan.useSchedules,
-            useInternalChat: plan.useInternalChat,
-            useExternalApi: plan.useExternalApi,
-            linkInvoice: ""
-          }, { transaction: t });
-        } else if (recurrence === "YEARLY") {
-          // Calcular próximo vencimento (12 meses após dueDate)
-          const currentDueDate = new Date(dueDate);
-          const nextDueDate = addMonths(currentDueDate, 12);
-          
-          await Invoice.create({
-            companyId: company.id,
-            dueDate: format(nextDueDate, "yyyy-MM-dd"),
-            detail: `Próxima anuidade do plano ${plan.name}`,
-            status: "pending", // Status da próxima fatura
-            value: parseFloat(plan.amount),
-            users: plan.users,
-            connections: plan.connections,
-            queues: plan.queues,
-            useWhatsapp: plan.useWhatsapp,
-            useFacebook: plan.useFacebook,
-            useInstagram: plan.useInstagram,
-            useCampaigns: plan.useCampaigns,
-            useSchedules: plan.useSchedules,
-            useInternalChat: plan.useInternalChat,
-            useExternalApi: plan.useExternalApi,
-            linkInvoice: ""
-          }, { transaction: t });
+            dueDate,
+            detail: plan.name,
+            status: "open",
+            value: plan.amount
+          };
+          await Invoices.create(invoiceData, { transaction });
         }
       }
-    }
-    
-    await t.commit();
 
-    return company;
+      await transaction.commit();
+      return user;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   } catch (error) {
-    await t.rollback();
-    throw new AppError("Não foi possível criar a empresa!", error);
+    throw error;
   }
 };
 

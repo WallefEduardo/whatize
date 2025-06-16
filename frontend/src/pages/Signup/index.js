@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback, useMemo } from "react";
 import qs from 'query-string';
 import * as Yup from "yup";
 import { useHistory } from "react-router-dom";
 import { Link as RouterLink } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Formik, Form, Field } from "formik";
+
+// Components
+import ProgressModal from "../../components/ProgressModal";
 
 // MUI Components
 import Box from '@mui/material/Box';
@@ -22,6 +25,7 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import InputAdornment from '@mui/material/InputAdornment';
+import CircularProgress from '@mui/material/CircularProgress';
 
 // Icons
 import { Person, Mail, Lock, Business, Phone } from '@mui/icons-material';
@@ -34,9 +38,43 @@ import toastError from "../../errors/toastError";
 import ColorModeContext from "../../layout/themeContext";
 import { Helmet } from "react-helmet";
 
-
 // utils
-import { validateCpfCnpj} from "../../utils/validateCpfCnpj";
+import { validateCpfCnpj } from "../../utils/validateCpfCnpj";
+
+// Função para formatar telefone
+const formatPhone = (value) => {
+    if (!value) return value;
+    const phoneNumber = value.replace(/[^\d]/g, '');
+    const phoneNumberLength = phoneNumber.length;
+    
+    if (phoneNumberLength < 3) return phoneNumber;
+    if (phoneNumberLength < 7) {
+        return `(${phoneNumber.slice(0, 2)}) ${phoneNumber.slice(2)}`;
+    }
+    return `(${phoneNumber.slice(0, 2)}) ${phoneNumber.slice(2, 7)}-${phoneNumber.slice(7, 11)}`;
+};
+
+// Função para formatar CPF/CNPJ
+const formatDocument = (value) => {
+    if (!value) return value;
+    const cleanValue = value.replace(/[^\d]/g, '');
+    
+    if (cleanValue.length <= 11) {
+        // CPF
+        return cleanValue
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    } else {
+        // CNPJ
+        return cleanValue
+            .replace(/(\d{2})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d)/, '$1/$2')
+            .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+    }
+};
+
 const Card = styled(MuiCard)(({ theme }) => ({
     display: 'flex',
     borderRadius: '16px',
@@ -154,38 +192,58 @@ const PlanCard = styled(Box)(({ theme }) => ({
     },
 }));
 
+// Memoizar o schema para evitar recriações desnecessárias
 const UserSchema = Yup.object().shape({
     name: Yup.string()
-        .min(2, "Too Short!")
-        .max(50, "Too Long!")
-        .required("Required"),
+        .min(2, "Nome muito curto!")
+        .max(50, "Nome muito longo!")
+        .required("Nome é obrigatório"),
     companyName: Yup.string()
-        .min(2, "Too Short!")
-        .max(50, "Too Long!")
-        .required("Required"),
-    password: Yup.string().min(5, "Too Short!").max(50, "Too Long!"),
+        .min(2, "Nome da empresa muito curto!")
+        .max(50, "Nome da empresa muito longo!")
+        .required("Nome da empresa é obrigatório"),
+    password: Yup.string()
+        .min(5, "Senha muito curta!")
+        .max(50, "Senha muito longa!")
+        .required("Senha é obrigatória"),
     document: Yup.string()
-    .test('is-cpf-cnpj', 'CPF/CNPJ inválido', validateCpfCnpj).required("Required"),
-    email: Yup.string().email("Invalid email").required("Required"),
-    phone: Yup.string().required("Required"),
-    planId: Yup.string().required("Required"),
+        .test('is-cpf-cnpj', 'CPF/CNPJ inválido', (value) => {
+            if (!value) return false;
+            return validateCpfCnpj(value);
+        })
+        .required("CPF/CNPJ é obrigatório"),
+    email: Yup.string()
+        .email("Email inválido")
+        .required("Email é obrigatório"),
+    phone: Yup.string()
+        .min(10, "Telefone inválido")
+        .required("Telefone é obrigatório"),
+    planId: Yup.string().required("Plano é obrigatório"),
 });
 
 const SignUp = () => {
     const history = useHistory();
     const { getPlanList } = usePlans();
     const [plans, setPlans] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
     const { colorMode } = useContext(ColorModeContext);
     const { appName } = colorMode;
+    
+    // Estados para o modal de progresso
+    const [showProgress, setShowProgress] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [currentStep, setCurrentStep] = useState(0);
+    const [progressMessage, setProgressMessage] = useState("Preparando sua conta...");
 
-    let companyId = null;
-    const params = qs.parse(window.location.search);
-    if (params.companyId !== undefined) {
-        companyId = params.companyId;
-    }
+    // Memoizar companyId para evitar recálculos
+    const companyId = useMemo(() => {
+        const params = qs.parse(window.location.search);
+        return params.companyId || null;
+    }, []);
 
-    const initialState = {
+    // Memoizar estado inicial
+    const initialState = useMemo(() => ({
         name: "",
         email: "",
         password: "",
@@ -194,27 +252,141 @@ const SignUp = () => {
         document: "",
         companyName: "",
         planId: ""
-    };
+    }), [companyId]);
 
+    // Simplificar carregamento dos planos
     useEffect(() => {
-        setLoading(true);
-        const fetchData = async () => {
-            const planList = await getPlanList({ listPublic: "false" });
-            setPlans(planList);
-            setLoading(false);
+        const fetchPlans = async () => {
+            try {
+                // Timeout de 10 segundos para evitar travamento
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Timeout')), 10000)
+                );
+                
+                const planListPromise = getPlanList({ listPublic: "false" });
+                
+                const planList = await Promise.race([planListPromise, timeoutPromise]);
+                setPlans(planList || []);
+            } catch (error) {
+                // Dados mock para evitar travamento
+                const mockPlans = [
+                    {
+                        id: 1,
+                        name: "Plano Básico",
+                        users: 2,
+                        connections: 1,
+                        queues: 3,
+                        amount: "49.90"
+                    },
+                    {
+                        id: 2,
+                        name: "Plano Profissional",
+                        users: 5,
+                        connections: 2,
+                        queues: 5,
+                        amount: "99.90"
+                    },
+                    {
+                        id: 3,
+                        name: "Plano Empresarial",
+                        users: 10,
+                        connections: 5,
+                        queues: 10,
+                        amount: "199.90"
+                    }
+                ];
+                setPlans(mockPlans);
+                toast.warning('Usando planos de demonstração. Verifique a conexão com o servidor.');
+            } finally {
+                setLoading(false);
+            }
         };
-        fetchData();
-    }, [getPlanList]);
+        
+        fetchPlans();
+    }, []); // Removido getPlanList da dependência para evitar loops
 
-    const handleSignUp = async values => {
+    // Função para simular progresso
+    const simulateProgress = useCallback(() => {
+        const steps = [
+            { message: "Validando informações...", duration: 1000 },
+            { message: "Criando empresa...", duration: 2000 },
+            { message: "Configurando sistema...", duration: 1500 },
+            { message: "Finalizando cadastro...", duration: 1000 }
+        ];
+
+        let currentProgress = 0;
+        let stepIndex = 0;
+
+        const updateProgress = () => {
+            if (stepIndex < steps.length) {
+                setCurrentStep(stepIndex);
+                setProgressMessage(steps[stepIndex].message);
+                
+                const stepProgress = 100 / steps.length;
+                const targetProgress = (stepIndex + 1) * stepProgress;
+                
+                const progressInterval = setInterval(() => {
+                    currentProgress += 2;
+                    setProgress(Math.min(currentProgress, targetProgress));
+                    
+                    if (currentProgress >= targetProgress) {
+                        clearInterval(progressInterval);
+                        stepIndex++;
+                        setTimeout(updateProgress, 200);
+                    }
+                }, 50);
+            }
+        };
+
+        updateProgress();
+    }, []);
+
+    // Memoizar função de signup
+    const handleSignUp = useCallback(async (values) => {
+        if (submitting) return;
+        
         try {
-            await openApi.post("/auth/signup", values);
+            setSubmitting(true);
+            setShowProgress(true);
+            setProgress(0);
+            setCurrentStep(0);
+            setProgressMessage("Validando informações...");
+            
+            // Iniciar simulação de progresso
+            simulateProgress();
+            
+            // Timeout de 30 segundos para evitar travamento
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout na requisição')), 30000)
+            );
+            
+            const signupPromise = openApi.post("/auth/signup", values);
+            
+            const response = await Promise.race([signupPromise, timeoutPromise]);
+            
+            // Garantir que chegue a 100%
+            setProgress(100);
+            setCurrentStep(3);
+            setProgressMessage("Conta criada com sucesso!");
+            
+            // Aguardar um pouco para mostrar o sucesso
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
             toast.success(i18n.t("signup.toasts.success"));
             history.push("/login");
         } catch (err) {
-            toastError(err);
+            if (err.message === 'Timeout na requisição') {
+                toast.error('A requisição demorou muito para responder. Tente novamente.');
+            } else {
+                toastError(err);
+            }
+        } finally {
+            setSubmitting(false);
+            setShowProgress(false);
+            setProgress(0);
+            setCurrentStep(0);
         }
-    };
+    }, [history, submitting, simulateProgress]);
 
     return (
         <>
@@ -252,12 +424,14 @@ const SignUp = () => {
                     <Formik
                         initialValues={initialState}
                         validationSchema={UserSchema}
-                        onSubmit={(values, actions) => {
-                            handleSignUp(values);
+                        onSubmit={async (values, actions) => {
+                            await handleSignUp(values);
                             actions.setSubmitting(false);
                         }}
+                        validateOnChange={false}
+                        validateOnBlur={true}
                     >
-                        {({ touched, errors, isSubmitting }) => (
+                        {({ touched, errors, isSubmitting, values }) => (
                             <Form style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                 <FormControl>
                                     <StyledFormLabel>Nome da Empresa</StyledFormLabel>
@@ -277,24 +451,31 @@ const SignUp = () => {
                                         }}
                                     />
                                 </FormControl>
-                                <FormControl>
-                                    <StyledFormLabel>Seu CPF ou CNPJ</StyledFormLabel>
-                                    <Field
-                                        as={StyledTextField}
-                                        name="document"
-                                        placeholder="Seu CPF ou CNPJ"
-                                        error={touched.document && Boolean(errors.document)}
-                                        helperText={touched.document && errors.document}
-                                        fullWidth
-                                        InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <Business sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                    />
-                                </FormControl>
+                                                                    <FormControl>
+                                        <StyledFormLabel>Seu CPF ou CNPJ</StyledFormLabel>
+                                        <Field name="document">
+                                            {({ field, form }) => (
+                                                <StyledTextField
+                                                    {...field}
+                                                    placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                                                    error={touched.document && Boolean(errors.document)}
+                                                    helperText={touched.document && errors.document}
+                                                    fullWidth
+                                                    onChange={(e) => {
+                                                        const formatted = formatDocument(e.target.value);
+                                                        form.setFieldValue('document', formatted);
+                                                    }}
+                                                    InputProps={{
+                                                        startAdornment: (
+                                                            <InputAdornment position="start">
+                                                                <Business sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                                                            </InputAdornment>
+                                                        ),
+                                                    }}
+                                                />
+                                            )}
+                                        </Field>
+                                    </FormControl>
                                 <Box sx={{ 
                                     display: 'grid', 
                                     gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, 
@@ -321,21 +502,28 @@ const SignUp = () => {
 
                                     <FormControl>
                                         <StyledFormLabel>Telefone</StyledFormLabel>
-                                        <Field
-                                            as={StyledTextField}
-                                            name="phone"
-                                            placeholder="(00) 00000-0000"
-                                            error={touched.phone && Boolean(errors.phone)}
-                                            helperText={touched.phone && errors.phone}
-                                            fullWidth
-                                            InputProps={{
-                                                startAdornment: (
-                                                    <InputAdornment position="start">
-                                                        <Phone sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
-                                                    </InputAdornment>
-                                                ),
-                                            }}
-                                        />
+                                        <Field name="phone">
+                                            {({ field, form }) => (
+                                                <StyledTextField
+                                                    {...field}
+                                                    placeholder="(00) 00000-0000"
+                                                    error={touched.phone && Boolean(errors.phone)}
+                                                    helperText={touched.phone && errors.phone}
+                                                    fullWidth
+                                                    onChange={(e) => {
+                                                        const formatted = formatPhone(e.target.value);
+                                                        form.setFieldValue('phone', formatted);
+                                                    }}
+                                                    InputProps={{
+                                                        startAdornment: (
+                                                            <InputAdornment position="start">
+                                                                <Phone sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                                                            </InputAdornment>
+                                                        ),
+                                                    }}
+                                                />
+                                            )}
+                                        </Field>
                                     </FormControl>
                                 </Box>
 
@@ -388,46 +576,76 @@ const SignUp = () => {
 
                                 <FormControl>
                                     <StyledFormLabel>Plano</StyledFormLabel>
-                                    <Field
-                                        as={StyledSelect}
-                                        name="planId"
-                                        error={touched.planId && Boolean(errors.planId)}
-                                        fullWidth
-                                        MenuProps={{
-                                            PaperProps: {
-                                                sx: {
-                                                    bgcolor: 'rgba(25, 25, 25, 0.95)',
-                                                    backdropFilter: 'blur(10px)',
-                                                    borderRadius: '12px',
-                                                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                                                    maxHeight: '400px',
+                                    {loading ? (
+                                        <Box sx={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            gap: 1, 
+                                            p: 2,
+                                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                            borderRadius: '12px',
+                                            border: '1px solid rgba(255, 255, 255, 0.2)'
+                                        }}>
+                                            <CircularProgress size={20} sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                                            <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                                                Carregando planos...
+                                            </Typography>
+                                        </Box>
+                                    ) : (
+                                        <Field
+                                            as={StyledSelect}
+                                            name="planId"
+                                            error={touched.planId && Boolean(errors.planId)}
+                                            fullWidth
+                                            MenuProps={{
+                                                PaperProps: {
+                                                    sx: {
+                                                        bgcolor: 'rgba(25, 25, 25, 0.95)',
+                                                        backdropFilter: 'blur(10px)',
+                                                        borderRadius: '12px',
+                                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                                        maxHeight: '400px',
+                                                    }
                                                 }
-                                            }
-                                        }}
-                                    >
-                                        {plans.map((plan) => (
-                                            <StyledMenuItem key={plan.id} value={plan.id}>
-                                                <PlanCard>
-                                                    <Typography className="plan-name">
-                                                        {plan.name}
+                                            }}
+                                        >
+                                            {plans.length === 0 ? (
+                                                <StyledMenuItem disabled>
+                                                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                                                        Nenhum plano disponível
                                                     </Typography>
-                                                    <Typography className="plan-details">
-                                                        {plan.users} atendentes • {plan.connections} WhatsApp • {plan.queues} filas
-                                                    </Typography>
-                                                    <Typography className="plan-price">
-                                                        R$ {plan.amount}
-                                                    </Typography>
-                                                </PlanCard>
-                                            </StyledMenuItem>
-                                        ))}
-                                    </Field>
+                                                </StyledMenuItem>
+                                            ) : (
+                                                plans.map((plan) => (
+                                                    <StyledMenuItem key={plan.id} value={plan.id}>
+                                                        <PlanCard>
+                                                            <Typography className="plan-name">
+                                                                {plan.name}
+                                                            </Typography>
+                                                            <Typography className="plan-details">
+                                                                {plan.users} atendentes • {plan.connections} WhatsApp • {plan.queues} filas
+                                                            </Typography>
+                                                            <Typography className="plan-price">
+                                                                R$ {plan.amount}
+                                                            </Typography>
+                                                        </PlanCard>
+                                                    </StyledMenuItem>
+                                                ))
+                                            )}
+                                        </Field>
+                                    )}
+                                    {touched.planId && errors.planId && (
+                                        <Typography sx={{ color: '#f44336', fontSize: '0.75rem', mt: 1 }}>
+                                            {errors.planId}
+                                        </Typography>
+                                    )}
                                 </FormControl>
 
                                 <Button
                                     type="submit"
                                     fullWidth
                                     variant="contained"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || submitting || loading}
                                     sx={{
                                         borderRadius: '12px',
                                         padding: '12px',
@@ -435,15 +653,22 @@ const SignUp = () => {
                                         textTransform: 'none',
                                         fontSize: '1rem',
                                         fontWeight: 500,
-                                        // boxShadow: '0 2px 10px #090b11',
                                         '&:hover': {
                                             background: '#32CD32',
                                             transition: '0.5s'
+                                        },
+                                        '&:disabled': {
+                                            background: 'rgba(255, 255, 255, 0.3)',
+                                            color: 'rgba(255, 255, 255, 0.5)'
                                         }
                                     }}
-                                    endIcon={<SendIcon />}
+                                    endIcon={
+                                        (isSubmitting || submitting) ? 
+                                        <CircularProgress size={20} sx={{ color: 'white' }} /> : 
+                                        <SendIcon />
+                                    }
                                 >
-                                    {i18n.t("signup.buttons.submit")}
+                                    {(isSubmitting || submitting) ? 'Criando conta...' : i18n.t("signup.buttons.submit")}
                                 </Button>
 
                                 <Typography sx={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)' }}>
@@ -456,6 +681,14 @@ const SignUp = () => {
                         )}
                     </Formik>
                 </Card>
+                
+                {/* Modal de Progresso */}
+                <ProgressModal
+                    open={showProgress}
+                    progress={progress}
+                    currentStep={currentStep}
+                    message={progressMessage}
+                />
             </SignUpContainer>
         </>
     );
