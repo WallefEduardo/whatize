@@ -29,6 +29,9 @@ interface SerializedUser {
   allowRealTime: string;
   allowConnections: string;
   selectedQueueIds: number[];
+  kanbanSelectedFunnel: number;
+  kanbanSelectedTags: number[];
+  kanbanSelectedUsers: number[];
 }
 
 export const SerializeUser = async (user: User): Promise<SerializedUser> => {
@@ -64,6 +67,9 @@ export const SerializeUser = async (user: User): Promise<SerializedUser> => {
     allowGroup: user.allowGroup,
     allowRealTime: user.allowRealTime,
     allowConnections: user.allowConnections,
-    selectedQueueIds: user.selectedQueueIds
+    selectedQueueIds: user.selectedQueueIds,
+    kanbanSelectedFunnel: user.kanbanSelectedFunnel,
+    kanbanSelectedTags: user.kanbanSelectedTags,
+    kanbanSelectedUsers: user.kanbanSelectedUsers
   };
 };

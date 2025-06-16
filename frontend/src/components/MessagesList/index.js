@@ -745,7 +745,7 @@ const checkMessageMedia = (message) => {
                 controls
               />
             );
-          } else {
+          } else if (message.mediaType === "application" || isDocumentFile(message.body)) {
             // Layout estilo WhatsApp para documentos
             const fileName = getOriginalFileName(message.body);
             return (
@@ -758,7 +758,7 @@ const checkMessageMedia = (message) => {
                     {fileName}
                   </div>
                   <div className={classes.documentSize}>
-                    {getFileSize(message.body)}
+                    <FileSize fileName={message.body} mediaUrl={message.mediaUrl} />
                   </div>
                 </div>
                 <GetApp 
@@ -768,6 +768,25 @@ const checkMessageMedia = (message) => {
                   }}
                 />
               </div>
+            );
+          } else {
+            // Fallback para outros tipos de arquivo
+            return (
+              <>
+                <div className={classes.downloadMedia}>
+                  <Button
+                    startIcon={<GetApp />}
+                    variant="outlined"
+                    target="_blank"
+                    onClick={() => {
+                      downloadResource(message.mediaUrl || message.body)
+                    }}
+                  >
+                    Download
+                  </Button>
+                </div>
+                <Divider />
+              </>
             );
           }
 };
@@ -889,6 +908,16 @@ const renderMessageDivider = (message, index) => {
 
 const path = require('path');
 
+// Função para verificar se é um documento baseado na extensão
+const isDocumentFile = (fileName) => {
+  if (!fileName) return false;
+  
+  const extension = path.extname(fileName).toLowerCase();
+  const documentExtensions = ['.pdf', '.doc', '.docx', '.txt', '.rtf', '.odt', '.xls', '.xlsx', '.ppt', '.pptx'];
+  
+  return documentExtensions.includes(extension);
+};
+
 // Função para extrair o nome original do arquivo removendo os timestamps
 const getOriginalFileName = (fileName) => {
   if (!fileName) return fileName;
@@ -926,30 +955,88 @@ const getDocumentIcon = (fileName) => {
   }
 };
 
-// Função para formatar o tamanho do arquivo (simulado - você pode implementar a lógica real)
-const getFileSize = (fileName) => {
-  // Esta é uma implementação simulada. Em um cenário real, você obteria o tamanho real do arquivo
-  // Por enquanto, vamos retornar um tamanho padrão baseado no tipo de arquivo
+// Cache para armazenar tamanhos de arquivo já consultados
+const fileSizeCache = new Map();
+
+// Função para formatar bytes em formato legível
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 B';
+  
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
+
+// Função para obter o tamanho real do arquivo
+const getFileSize = async (fileName, mediaUrl) => {
   if (!fileName) return "Documento";
   
   const extension = path.extname(fileName).toLowerCase();
   const fileType = extension.replace('.', '').toUpperCase();
   
-  // Gera um tamanho simulado baseado no comprimento do nome do arquivo
-  const baseSize = Math.max(50, fileName.length * 8);
-  const randomFactor = Math.floor(Math.random() * 500) + 100;
-  const simulatedSize = baseSize + randomFactor;
-  
-  let sizeText;
-  if (simulatedSize < 1024) {
-    sizeText = `${simulatedSize} B`;
-  } else if (simulatedSize < 1024 * 1024) {
-    sizeText = `${Math.round(simulatedSize / 1024)} KB`;
-  } else {
-    sizeText = `${(simulatedSize / (1024 * 1024)).toFixed(1)} MB`;
+  // Verifica se já temos o tamanho no cache
+  const cacheKey = mediaUrl || fileName;
+  if (fileSizeCache.has(cacheKey)) {
+    const cachedSize = fileSizeCache.get(cacheKey);
+    return `${fileType} • ${cachedSize}`;
   }
   
-  return `${fileType} • ${sizeText}`;
+  // Se temos uma URL de mídia, tenta obter o tamanho real
+  if (mediaUrl) {
+    try {
+      const response = await fetch(mediaUrl, { 
+        method: 'HEAD',
+        headers: {
+          'Origin': window.location.origin
+        },
+        mode: 'cors'
+      });
+      
+      const contentLength = response.headers.get('content-length');
+      if (contentLength) {
+        const sizeInBytes = parseInt(contentLength);
+        const formattedSize = formatFileSize(sizeInBytes);
+        
+        // Armazena no cache
+        fileSizeCache.set(cacheKey, formattedSize);
+        
+        return `${fileType} • ${formattedSize}`;
+      }
+    } catch (error) {
+      console.log('Erro ao obter tamanho do arquivo:', error);
+    }
+  }
+  
+  // Fallback: retorna apenas o tipo do arquivo
+  return `${fileType}`;
+};
+
+// Função síncrona para uso imediato (retorna tipo + placeholder)
+const getFileSizeSync = (fileName) => {
+  if (!fileName) return "Documento";
+  
+  const extension = path.extname(fileName).toLowerCase();
+  const fileType = extension.replace('.', '').toUpperCase();
+  
+  return `${fileType}`;
+};
+
+// Componente para exibir o tamanho do arquivo de forma assíncrona
+const FileSize = ({ fileName, mediaUrl }) => {
+  const [fileSize, setFileSize] = useState(getFileSizeSync(fileName));
+  
+  useEffect(() => {
+    const loadFileSize = async () => {
+      const size = await getFileSize(fileName, mediaUrl);
+      setFileSize(size);
+    };
+    
+    loadFileSize();
+  }, [fileName, mediaUrl]);
+  
+  return <span>{fileSize}</span>;
 };
 
 // Função para rolar até a mensagem citada
@@ -1017,7 +1104,7 @@ const renderQuotedMessage = (message) => {
             "Contato"
           )
         }
-        {message.quotedMsg.mediaType === "application"
+        {(message.quotedMsg.mediaType === "application" || isDocumentFile(message.quotedMsg.body))
           && (
             <div style={{ padding: "8px 0" }}>
               <div style={{ display: "flex", alignItems: "center" }}>
@@ -1029,7 +1116,7 @@ const renderQuotedMessage = (message) => {
                     {getOriginalFileName(message.quotedMsg.body)}
                   </div>
                   <div style={{ fontSize: "11px", color: "#667781" }}>
-                    {getFileSize(message.quotedMsg.body)}
+                    <FileSize fileName={message.quotedMsg.body} mediaUrl={message.quotedMsg.mediaUrl} />
                   </div>
                 </div>
               </div>
@@ -1209,6 +1296,7 @@ const renderMessages = () => {
                     message.mediaType !== "image" &&
                     message.mediaType !== "video" &&
                     message.mediaType !== "application" &&
+                    !isDocumentFile(message.body) &&
                     message.mediaType != "reactionMessage" &&
                     message.mediaType != "locationMessage" && message.mediaType !== "contactMessage" &&
                     message.mediaType !== "template" && message.mediaType !== "adMetaPreview")) && (
@@ -1311,7 +1399,7 @@ const renderMessages = () => {
 
                 {
                   ((message.mediaType === "image" || message.mediaType === "video") && path.basename(message.mediaUrl) === message.body) ||
-                  (message.mediaType !== "audio" && message.mediaType !== "application" && message.mediaType != "reactionMessage" && message.mediaType != "locationMessage" && message.mediaType !== "contactMessage" && message.mediaType !== "template" && message.mediaType !== "adMetaPreview") && (
+                  (message.mediaType !== "audio" && message.mediaType !== "application" && !isDocumentFile(message.body) && message.mediaType != "reactionMessage" && message.mediaType != "locationMessage" && message.mediaType !== "contactMessage" && message.mediaType !== "template" && message.mediaType !== "adMetaPreview") && (
                     <>
                       {xmlRegex.test(message.body) && (
                         <div>{formatXml(message.body)}</div>

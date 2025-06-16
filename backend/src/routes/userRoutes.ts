@@ -26,5 +26,6 @@ userRoutes.post("/users/:userId/media-upload", isAuth, upload.array("profileImag
 userRoutes.put("/users/toggleChangeWidht/:userId", isAuth, UserController.toggleChangeWidht);
 
 userRoutes.put("/users/:userId/selected-queues", isAuth, UserController.updateSelectedQueues);
+userRoutes.put("/users/:userId/kanban-filters", isAuth, UserController.updateKanbanFilters);
 
 export default userRoutes;

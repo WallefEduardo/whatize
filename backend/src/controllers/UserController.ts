@@ -22,6 +22,7 @@ import { head } from "lodash";
 import ToggleChangeWidthService from "../services/UserServices/ToggleChangeWidthService";
 import APIShowEmailUserService from "../services/UserServices/APIShowEmailUserService";
 import UpdateSelectedQueuesService from "../services/UserServices/UpdateSelectedQueuesService";
+import UpdateKanbanFiltersService from "../services/UserServices/UpdateKanbanFiltersService";
 import { v4 as uuidv4 } from "uuid";
 import { Op } from "sequelize";
 
@@ -584,6 +585,29 @@ export const updateSelectedQueues = async (req: Request, res: Response): Promise
   const user = await UpdateSelectedQueuesService({
     userId,
     selectedQueueIds,
+    companyId
+  });
+
+  const io = getIO();
+  io.of(String(companyId))
+    .emit(`company-${companyId}-user`, {
+      action: "update",
+      user
+    });
+
+  return res.status(200).json(user);
+};
+
+export const updateKanbanFilters = async (req: Request, res: Response): Promise<Response> => {
+  const { userId } = req.params;
+  const { kanbanSelectedFunnel, kanbanSelectedTags, kanbanSelectedUsers } = req.body;
+  const { companyId } = req.user;
+
+  const user = await UpdateKanbanFiltersService({
+    userId,
+    kanbanSelectedFunnel,
+    kanbanSelectedTags,
+    kanbanSelectedUsers,
     companyId
   });
 

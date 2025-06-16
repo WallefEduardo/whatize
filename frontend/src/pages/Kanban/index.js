@@ -10,13 +10,16 @@ import { Facebook, Instagram, WhatsApp, Add, Send, LocalOffer, Person } from "@m
 import { Tooltip, Typography, Button, TextField, FormControl, InputLabel, Select, MenuItem, Chip, Box, IconButton, Badge } from "@material-ui/core";
 import { format, isSameDay, parseISO } from "date-fns";
 import { Can } from "../../components/Can";
-import Swal from "sweetalert2"; 
-import Autocomplete from "@material-ui/lab/Autocomplete";
+import Swal from "sweetalert2";
 
 const useStyles = makeStyles(theme => ({
   '@global': {
     '.dOlrNy': {
       overflowY: 'auto !important',
+    },
+    '@keyframes spin': {
+      '0%': { transform: 'rotate(0deg)' },
+      '100%': { transform: 'rotate(360deg)' }
     },
     // Remove tooltips do react-trello
     '.react-trello-lane-header, .react-trello-lane, [data-react-trello-lane-id]': {
@@ -46,6 +49,7 @@ const useStyles = makeStyles(theme => ({
         },
       },
     },
+
   },
   root: {
     display: "flex",
@@ -119,6 +123,16 @@ const useStyles = makeStyles(theme => ({
       width: "100%",
     },
   },
+  selectDropdown: {
+    "& .MuiSelect-root": {
+      backgroundColor: "#ffffff",
+    },
+    "& .MuiPaper-root": {
+      backgroundColor: "#ffffff",
+      marginTop: "4px",
+    },
+  },
+
   searchButton: {
     backgroundColor: "#00C307",
     color: "#FFFFFF",
@@ -342,6 +356,11 @@ const Kanban = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(true);
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
+  const [lastFilterState, setLastFilterState] = useState(null);
+  const [socketDebounceTimer, setSocketDebounceTimer] = useState(null);
   
   const jsonString = user?.queues?.map(queue => queue.UserQueue.queueId) || [];
   
@@ -361,31 +380,120 @@ const Kanban = () => {
 
   useEffect(() => {
     if (user) {
-      fetchFunnels();
-      fetchAllTags();
-      if (user.profile === 'admin') {
-        fetchAllUsers();
-      }
+      const initializeData = async () => {
+        try {
+          await Promise.all([
+            fetchFunnels(),
+            fetchAllTags(),
+            user.profile === 'admin' ? fetchAllUsers() : Promise.resolve()
+          ]);
+          
+          // Carregar preferências salvas do usuário
+          loadUserPreferences();
+        } catch (error) {
+          console.error('Erro ao inicializar dados:', error);
+        }
+      };
+      
+      initializeData();
     }
   }, [user]);
 
+  // Função para carregar preferências salvas do usuário
+  const loadUserPreferences = () => {
+    if (user) {
+      // Carregar funil selecionado
+      if (user.kanbanSelectedFunnel) {
+        setSelectedFunnel(user.kanbanSelectedFunnel);
+      }
+    }
+  };
+
+  // Efeito para carregar tags selecionadas quando allTags for carregado
+  useEffect(() => {
+    if (user && user.kanbanSelectedTags && user.kanbanSelectedTags.length > 0 && allTags.length > 0 && selectedTags.length === 0) {
+      const savedTags = allTags.filter(tag => 
+        user.kanbanSelectedTags.includes(tag.id)
+      );
+      setSelectedTags(savedTags);
+    }
+  }, [allTags, user]);
+
+  // Efeito para carregar usuários selecionados quando allUsers for carregado
+  useEffect(() => {
+    if (user && user.profile === 'admin' && user.kanbanSelectedUsers && user.kanbanSelectedUsers.length > 0 && allUsers.length > 0 && selectedUsers.length === 0) {
+      const savedUsers = allUsers.filter(u => 
+        user.kanbanSelectedUsers.includes(u.id)
+      );
+      setSelectedUsers(savedUsers);
+    }
+  }, [allUsers, user]);
+
+  // Função para salvar filtros do usuário
+  const saveKanbanFilters = async (funnel, tags, users) => {
+    try {
+      await api.put(`/users/${user.id}/kanban-filters`, {
+        kanbanSelectedFunnel: funnel,
+        kanbanSelectedTags: tags?.map(tag => tag.id) || null,
+        kanbanSelectedUsers: users?.map(user => user.id) || null
+      });
+    } catch (error) {
+      console.error('Erro ao salvar filtros do Kanban:', error);
+    }
+  };
+
   // Efeito para atualizar dados quando filtros mudarem
   useEffect(() => {
-    if (user) {
+    if (user && initialLoadComplete) {
+      const currentFilterState = JSON.stringify({
+        funnel: selectedFunnel,
+        tags: selectedTags.map(t => t.id).sort(),
+        users: selectedUsers.map(u => u.id).sort(),
+        startDate,
+        endDate
+      });
+      
+      console.log('🔍 useEffect filtros:', {
+        lastFilterState,
+        currentFilterState,
+        isEqual: lastFilterState === currentFilterState
+      });
+      
+      // Só atualiza se realmente houve mudança
+      if (lastFilterState === currentFilterState) {
+        console.log('⏭️ Pulando atualização - sem mudanças');
+        return;
+      }
+      
+      console.log('✅ Agendando atualização dos filtros');
       const timeoutId = setTimeout(() => {
+        setLastFilterState(currentFilterState);
         fetchTags();
-      }, 400);
+      }, 800);
       
       return () => clearTimeout(timeoutId);
     }
-  }, [selectedFunnel, selectedTags, selectedUsers, startDate, endDate, user]);
+  }, [selectedFunnel, selectedTags, selectedUsers, startDate, endDate, user, initialLoadComplete]);
+
+  // Efeito separado para salvar filtros (evita loops infinitos)
+  useEffect(() => {
+    if (user && initialLoadComplete && (selectedFunnel !== null || selectedTags.length > 0 || selectedUsers.length > 0)) {
+      const timeoutId = setTimeout(() => {
+        saveKanbanFilters(selectedFunnel, selectedTags, selectedUsers);
+      }, 2000); // Delay maior para evitar muitas chamadas
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedFunnel, selectedTags, selectedUsers, initialLoadComplete]);
 
   const fetchAllTags = async () => {
     try {
       const response = await api.get("/tags/list");
       setAllTags(response.data || []);
+      return response.data || [];
     } catch (error) {
       console.log(error);
+      return [];
     }
   };
 
@@ -393,14 +501,19 @@ const Kanban = () => {
     try {
       const response = await api.get("/users/list");
       setAllUsers(response.data || []);
+      return response.data || [];
     } catch (error) {
       console.log(error);
+      return [];
     }
   };
 
   const fetchTags = async () => {
     try {
-      setLoading(true);
+      console.log('🔄 fetchTags chamado:', new Date().toLocaleTimeString());
+      if (initialLoadComplete) {
+        setIsFilterLoading(true);
+      }
       const response = await api.get("/tag/kanban/", {
         params: {
           funilId: selectedFunnel
@@ -412,7 +525,12 @@ const Kanban = () => {
     } catch (error) {
       console.log(error);
     } finally {
-      setLoading(false);
+      if (initialLoadComplete) {
+        // Pequeno delay para mostrar que algo aconteceu
+        setTimeout(() => {
+          setIsFilterLoading(false);
+        }, 200);
+      }
     }
   };
 
@@ -420,8 +538,10 @@ const Kanban = () => {
     try {
       const { data } = await api.get("/funilkanban");
       setFunnels(data.funilKanbans || []);
+      return data.funilKanbans || [];
     } catch (err) {
       // erro silencioso
+      return [];
     }
   };
 
@@ -455,12 +575,22 @@ const Kanban = () => {
   };
 
   useEffect(() => {
-    if (user?.companyId && socket) {
+    if (user?.companyId && socket && initialLoadComplete) {
       const companyId = user.companyId;
       
       const onAppMessage = (data) => {
         if (data.action === "create" || data.action === "update" || data.action === "delete") {
-          fetchTags();
+          // Debounce robusto para evitar muitas atualizações
+          if (socketDebounceTimer) {
+            clearTimeout(socketDebounceTimer);
+          }
+          
+          const newTimer = setTimeout(() => {
+            fetchTags();
+            setSocketDebounceTimer(null);
+          }, 2000);
+          
+          setSocketDebounceTimer(newTimer);
         }
       };
 
@@ -472,7 +602,7 @@ const Kanban = () => {
         socket.off(`company-${companyId}-appMessage`, onAppMessage);
       };
     }
-  }, [socket, user, startDate, endDate]);
+  }, [socket, user, initialLoadComplete]);
 
   const handleStartDateChange = (event) => {
     setStartDate(event.target.value);
@@ -486,13 +616,7 @@ const Kanban = () => {
     setSelectedFunnel(event.target.value === "" ? null : event.target.value);
   };
 
-  const handleTagsChange = (event, newValue) => {
-    setSelectedTags(newValue);
-  };
 
-  const handleUsersChange = (event, newValue) => {
-    setSelectedUsers(newValue);
-  };
 
   const handleCardClick = (uuid) => {
     history.push('/tickets/' + uuid);
@@ -600,6 +724,8 @@ const Kanban = () => {
   };
 
   const popularCards = () => {
+    if (!initialLoadComplete) return;
+    
     const filteredTickets = tickets.filter(ticket => ticket.tags.length === 0);
     
 
@@ -744,10 +870,10 @@ const Kanban = () => {
   };
 
   useEffect(() => {
-    if (tickets.length > 0 || tags.length > 0) {
+    if ((tickets.length > 0 || tags.length > 0) && initialLoadComplete) {
       popularCards();
     }
-  }, [tickets, tags]);
+  }, [tickets, tags, initialLoadComplete]);
 
   // Remove tooltips do react-trello após renderização
   useEffect(() => {
@@ -832,7 +958,7 @@ const Kanban = () => {
           <FormControl 
             variant="outlined" 
             size="small" 
-            className={classes.dateInput} 
+            className={`${classes.dateInput} ${classes.selectDropdown}`} 
             style={{ minWidth: 200 }}
           >
             <InputLabel>Filtrar por Funil</InputLabel>
@@ -840,6 +966,23 @@ const Kanban = () => {
               value={selectedFunnel || ""}
               onChange={handleFunnelChange}
               label="Filtrar por Funil"
+              MenuProps={{
+                anchorOrigin: {
+                  vertical: "bottom",
+                  horizontal: "left"
+                },
+                transformOrigin: {
+                  vertical: "top",
+                  horizontal: "left"
+                },
+                getContentAnchorEl: null,
+                PaperProps: {
+                  style: {
+                    backgroundColor: "#ffffff",
+                    marginTop: "4px",
+                  }
+                }
+              }}
             >
               <MenuItem value="">Todos os Funis</MenuItem>
               {funnels.map(funnel => (
@@ -849,75 +992,146 @@ const Kanban = () => {
           </FormControl>
           
           {/* Filtro de Tags */}
-          <Autocomplete
-            multiple
-            size="small"
-            options={allTags}
-            value={selectedTags}
-            onChange={handleTagsChange}
-            getOptionLabel={(option) => option.name}
+          <FormControl 
+            variant="outlined" 
+            size="small" 
+            className={`${classes.dateInput} ${classes.selectDropdown}`} 
             style={{ minWidth: 250 }}
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => (
-                <Chip
-                  variant="outlined"
-                  style={{
-                    backgroundColor: option.color || "#eee",
-                    color: "white",
-                    fontSize: "0.75rem",
-                    height: "24px"
-                  }}
-                  label={option.name}
-                  {...getTagProps({ index })}
-                  size="small"
-                />
-              ))
-            }
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                variant="outlined"
-                label="Filtrar por Tags"
-                className={classes.dateInput}
-              />
-            )}
-          />
+          >
+            <InputLabel>Filtrar por Tags</InputLabel>
+            <Select
+              multiple
+              value={selectedTags.map(tag => tag.id)}
+              onChange={(event) => {
+                const selectedIds = event.target.value;
+                const selectedTagsArray = allTags.filter(tag => selectedIds.includes(tag.id));
+                setSelectedTags(selectedTagsArray);
+              }}
+              label="Filtrar por Tags"
+              renderValue={(selected) => (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {selected.map((tagId) => {
+                    const tag = allTags.find(t => t.id === tagId);
+                    return tag ? (
+                      <Chip
+                        key={tagId}
+                        label={tag.name}
+                        size="small"
+                        style={{
+                          backgroundColor: tag.color || "#eee",
+                          color: "white",
+                          fontSize: "0.75rem",
+                          height: "24px"
+                        }}
+                      />
+                    ) : null;
+                  })}
+                </div>
+              )}
+              MenuProps={{
+                anchorOrigin: {
+                  vertical: "bottom",
+                  horizontal: "left"
+                },
+                transformOrigin: {
+                  vertical: "top",
+                  horizontal: "left"
+                },
+                getContentAnchorEl: null,
+                PaperProps: {
+                  style: {
+                    backgroundColor: "#ffffff",
+                    marginTop: "4px",
+                    maxHeight: "200px"
+                  }
+                }
+              }}
+            >
+              {allTags.map(tag => (
+                <MenuItem key={tag.id} value={tag.id}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div 
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        backgroundColor: tag.color || "#eee"
+                      }}
+                    />
+                    {tag.name}
+                  </div>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           {/* Filtro de Usuários - apenas para admin */}
           {user?.profile === 'admin' && (
-            <Autocomplete
-              multiple
-              size="small"
-              options={allUsers}
-              value={selectedUsers}
-              onChange={handleUsersChange}
-              getOptionLabel={(option) => option.name}
+            <FormControl 
+              variant="outlined" 
+              size="small" 
+              className={`${classes.dateInput} ${classes.selectDropdown}`} 
               style={{ minWidth: 250 }}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    variant="outlined"
-                    style={{
-                      backgroundColor: "#f5f5f5",
-                      color: "#333",
-                      fontSize: "0.75rem",
-                      height: "24px"
-                    }}
-                    label={option.name}
-                    {...getTagProps({ index })}
-                    size="small"
-                  />
-                ))
-              }
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  variant="outlined"
-                  label="Filtrar por Usuário"
-                  className={classes.dateInput}
-                />
-              )}
-            />
+            >
+              <InputLabel>Filtrar por Usuário</InputLabel>
+              <Select
+                multiple
+                value={selectedUsers.map(user => user.id)}
+                onChange={(event) => {
+                  const selectedIds = event.target.value;
+                  const selectedUsersArray = allUsers.filter(user => selectedIds.includes(user.id));
+                  setSelectedUsers(selectedUsersArray);
+                }}
+                label="Filtrar por Usuário"
+                renderValue={(selected) => (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {selected.map((userId) => {
+                      const user = allUsers.find(u => u.id === userId);
+                      return user ? (
+                        <Chip
+                          key={userId}
+                          label={user.name}
+                          size="small"
+                          style={{
+                            backgroundColor: "#f5f5f5",
+                            color: "#333",
+                            fontSize: "0.75rem",
+                            height: "24px"
+                          }}
+                        />
+                      ) : null;
+                    })}
+                  </div>
+                )}
+                MenuProps={{
+                  anchorOrigin: {
+                    vertical: "bottom",
+                    horizontal: "left"
+                  },
+                  transformOrigin: {
+                    vertical: "top",
+                    horizontal: "left"
+                  },
+                  getContentAnchorEl: null,
+                  PaperProps: {
+                    style: {
+                      backgroundColor: "#ffffff",
+                      marginTop: "4px",
+                      maxHeight: "200px"
+                    }
+                  }
+                }}
+              >
+                {allUsers.map(user => (
+                  <MenuItem key={user.id} value={user.id}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Person style={{ fontSize: 16, color: '#666' }} />
+                      {user.name}
+                    </div>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           )}
         </div>
         <Can role={user?.profile} perform="dashboard:view" yes={() => (
@@ -933,11 +1147,35 @@ const Kanban = () => {
         )} />
       </div>
       <div className={classes.kanbanContainer}>
-        {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
-            <Typography>Carregando...</Typography>
-          </div>
-        ) : (
+        <div style={{ position: 'relative' }}>
+          {isFilterLoading && (
+            <div style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: 'rgba(0, 195, 7, 0.1)',
+              padding: '6px 10px',
+              borderRadius: '20px',
+              border: '1px solid rgba(0, 195, 7, 0.2)',
+              backdropFilter: 'blur(4px)'
+            }}>
+              <div style={{
+                width: '12px',
+                height: '12px',
+                border: '2px solid rgba(0, 195, 7, 0.3)',
+                borderTop: '2px solid #00C307',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }}></div>
+              <Typography style={{ color: '#00C307', fontSize: '11px', fontWeight: 500 }}>
+                Atualizando
+              </Typography>
+            </div>
+          )}
           <Board
             data={file}
             onCardMoveAcrossLanes={handleCardMove}
@@ -1018,7 +1256,7 @@ const Kanban = () => {
               )
             }}
           />
-        )}
+        </div>
       </div>
     </div>
   );

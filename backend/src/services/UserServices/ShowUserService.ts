@@ -36,7 +36,10 @@ const ShowUserService = async (id: string | number, companyId: string | number):
         "allHistoric",
         "allowRealTime",
         "allowConnections",
-        "selectedQueueIds"
+        "selectedQueueIds",
+        "kanbanSelectedFunnel",
+        "kanbanSelectedTags",
+        "kanbanSelectedUsers"
       ],
       include: [
         { model: Queue, as: "queues", attributes: ["id", "name", "color"] },
