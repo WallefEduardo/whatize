@@ -54,6 +54,7 @@ import { FlowImgModel } from "../models/FlowImg";
 import { WebhookModel } from "../models/Webhook";
 import FunilKanban from "../models/FunilKanban";
 import FunilUser from "../models/FunilUser";
+import UserKanbanColumnOrder from "../models/UserKanbanColumnOrder";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -116,6 +117,7 @@ const models = [
   WebhookModel,
   FunilUser,
   FunilKanban,
+  UserKanbanColumnOrder,
 ];
 
 sequelize.addModels(models);

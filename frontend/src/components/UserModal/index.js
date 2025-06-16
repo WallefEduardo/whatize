@@ -182,7 +182,7 @@ const UserModal = ({ open, onClose, userId }) => {
 		defaultMenu: "open",
 		allHistoric: "disabled",
 		allUserChat: "disabled",
-		userClosePendingTicket: "enabled",
+		userClosePendingTicket: "disabled",
 		showDashboard: "disabled",
 		allowRealTime: "disabled",
 		allowConnections: "disabled",

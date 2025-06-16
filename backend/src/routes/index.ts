@@ -39,6 +39,7 @@ import apiMessageRoutes from "./api/apiMessageRoutes";
 import companySettingsRoutes from "./companySettingsRoutes";
 import funilKanbanRoutes from "./funilkanbanRoutes";
 import tagFunnelRoutes from "./tagFunnelRoutes";
+import userKanbanColumnOrderRoutes from "./userKanbanColumnOrderRoutes";
 
 import promptRoutes from "./promptRouter";
 import statisticsRoutes from "./statisticsRoutes";
@@ -90,6 +91,7 @@ routes.use("/api", apiContactRoutes);
 routes.use("/api", apiMessageRoutes);
 routes.use(funilKanbanRoutes);
 routes.use(tagFunnelRoutes);
+routes.use(userKanbanColumnOrderRoutes);
 
 routes.use(flowDefaultRoutes);
 routes.use(webHook)

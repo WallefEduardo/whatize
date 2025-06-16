@@ -5,7 +5,7 @@ module.exports = {
     return queryInterface.addColumn("Users", "userClosePendingTicket", {
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: "enabled"
+      defaultValue: "disabled"
     }),
       queryInterface.addColumn("Users", "showDashboard", {
         type: DataTypes.STRING,

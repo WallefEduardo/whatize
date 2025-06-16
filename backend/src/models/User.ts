@@ -159,7 +159,7 @@ class User extends Model<User> {
   @Column
   allUserChat: string;
 
-  @Default("enabled")
+  @Default("disabled")
   @Column
   userClosePendingTicket: string;
 

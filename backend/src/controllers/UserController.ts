@@ -121,7 +121,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       defaultMenu: 'closed',
       allowGroup: false,
       allHistoric: false,
-      userClosePendingTicket: true,
+      userClosePendingTicket: false,
       showDashboard: false,
       defaultTicketsManagerWidth: '550',
       allowRealTime: false,

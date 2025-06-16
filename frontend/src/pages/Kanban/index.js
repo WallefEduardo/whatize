@@ -8,7 +8,7 @@ import { i18n } from "../../translate/i18n";
 import { useHistory } from 'react-router-dom';
 import { Facebook, Instagram, WhatsApp, Add, Send, LocalOffer, Person } from "@material-ui/icons";
 import { Tooltip, Typography, Button, TextField, FormControl, InputLabel, Select, MenuItem, Chip, Box, IconButton, Badge } from "@material-ui/core";
-import { format, isSameDay, parseISO } from "date-fns";
+import { format, isSameDay, parseISO, subMonths } from "date-fns";
 import { Can } from "../../components/Can";
 import Swal from "sweetalert2";
 
@@ -49,7 +49,55 @@ const useStyles = makeStyles(theme => ({
         },
       },
     },
-
+    // Habilita drag das lanes
+    '.react-trello-lane': {
+      cursor: 'grab !important',
+      '&:active': {
+        cursor: 'grabbing !important',
+      },
+    },
+    // Garante que o header da lane seja arrastável
+    '.react-trello-lane-header': {
+      cursor: 'grab !important',
+      userSelect: 'none !important',
+      '&:active': {
+        cursor: 'grabbing !important',
+      },
+    },
+    // Força o drag das lanes
+    '.react-trello-board .react-trello-lane': {
+      '&[draggable="true"]': {
+        cursor: 'grab !important',
+      },
+      '&:hover': {
+        cursor: 'grab !important',
+      },
+    },
+    // Garante que elementos filhos não interfiram
+    '.react-trello-lane-header *': {
+      pointerEvents: 'none !important',
+    },
+    // Classes de drag das lanes
+    '.lane-dragging': {
+      opacity: '0.5 !important',
+      transform: 'rotate(5deg) !important',
+      zIndex: '1000 !important',
+    },
+    '.lane-dropping': {
+      opacity: '1 !important',
+      transform: 'none !important',
+    },
+    // Garante visibilidade dos cards
+    '.react-trello-card': {
+      display: 'block !important',
+      visibility: 'visible !important',
+      opacity: '1 !important',
+    },
+    // Remove qualquer borderTop das lanes
+    '.react-trello-lane': {
+      borderTop: 'none !important',
+      border: 'none !important',
+    },
   },
   root: {
     display: "flex",
@@ -68,12 +116,15 @@ const useStyles = makeStyles(theme => ({
     width: "100%",
     height: "calc(100vh - 80px)",
     overflowX: "auto",
-    overflowY: "auto",
+    overflowY: "hidden",
     padding: theme.spacing(1),
     boxSizing: "border-box",
     WebkitOverflowScrolling: "touch",
+    position: "relative",
     '&::-webkit-scrollbar': {
       height: '8px',
+      position: 'absolute',
+      bottom: '0',
     },
     '&::-webkit-scrollbar-track': {
       background: '#f1f1f1',
@@ -159,14 +210,14 @@ const useStyles = makeStyles(theme => ({
   },
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: "12px",
-    padding: theme.spacing(2),
-    marginBottom: theme.spacing(1),
-    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+    borderRadius: "10px",
+    padding: theme.spacing(1.5),
+    marginBottom: theme.spacing(0.5),
+    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08)",
     cursor: "pointer",
     display: "flex",
     flexDirection: "column",
-    gap: theme.spacing(1),
+    gap: theme.spacing(0.8),
     border: "1px solid rgba(0, 0, 0, 0.1)",
     transition: "background-color 0.2s ease-in-out",
     "&:hover": {
@@ -190,7 +241,7 @@ const useStyles = makeStyles(theme => ({
     minWidth: 0,
   },
   contactName: {
-    fontSize: "1rem",
+    fontSize: "0.9rem",
     fontWeight: "600",
     color: "#333",
     whiteSpace: "nowrap",
@@ -238,11 +289,11 @@ const useStyles = makeStyles(theme => ({
     whiteSpace: "nowrap",
   },
   messageContent: {
-    fontSize: "0.9rem",
+    fontSize: "0.85rem",
     color: "#444",
-    marginTop: "6px",
-    marginBottom: theme.spacing(1),
-    paddingTop: "6px",
+    marginTop: "4px",
+    marginBottom: theme.spacing(0.8),
+    paddingTop: "4px",
     borderTop: "1px solid rgba(0, 0, 0, 0.08)",
     wordBreak: "break-word",
   },
@@ -318,8 +369,8 @@ const useStyles = makeStyles(theme => ({
     alignItems: "center",
     justifyContent: "flex-start",
     gap: "4px",
-    marginTop: "6px",
-    paddingTop: "10px",
+    marginTop: "4px",
+    paddingTop: "6px",
     borderTop: "1px solid rgba(0, 0, 0, 0.08)",
   },
 }));
@@ -344,7 +395,7 @@ const Kanban = () => {
   const [tags, setTags] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [file, setFile] = useState({ lanes: [] });
-  const [startDate, setStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [startDate, setStartDate] = useState(format(subMonths(new Date(), 6), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [moreMessage, setMoreMessage] = useState(null);
   const [funnels, setFunnels] = useState([]);
@@ -361,6 +412,8 @@ const Kanban = () => {
   const [isFilterLoading, setIsFilterLoading] = useState(false);
   const [lastFilterState, setLastFilterState] = useState(null);
   const [socketDebounceTimer, setSocketDebounceTimer] = useState(null);
+  const [columnOrder, setColumnOrder] = useState([]);
+  const [isReordering, setIsReordering] = useState(false);
   
   const jsonString = user?.queues?.map(queue => queue.UserQueue.queueId) || [];
   
@@ -385,7 +438,8 @@ const Kanban = () => {
           await Promise.all([
             fetchFunnels(),
             fetchAllTags(),
-            user.profile === 'admin' ? fetchAllUsers() : Promise.resolve()
+            user.profile === 'admin' ? fetchAllUsers() : Promise.resolve(),
+            loadColumnOrder()
           ]);
           
           // Carregar preferências salvas do usuário
@@ -440,6 +494,60 @@ const Kanban = () => {
     } catch (error) {
       console.error('Erro ao salvar filtros do Kanban:', error);
     }
+  };
+
+  // Função para carregar ordem das colunas do usuário
+  const loadColumnOrder = async () => {
+    try {
+      const response = await api.get(`/users/${user.id}/kanban-column-order`);
+      if (response.data && response.data.length > 0) {
+        setColumnOrder(response.data);
+      }
+    } catch (error) {
+      console.log('Nenhuma ordem personalizada encontrada, usando padrão');
+    }
+  };
+
+  // Função para salvar ordem das colunas
+  const saveColumnOrder = async (newOrder) => {
+    try {
+      await api.post(`/users/${user.id}/kanban-column-order`, {
+        columnOrders: newOrder
+      });
+    } catch (error) {
+      console.error('Erro ao salvar ordem das colunas:', error);
+    }
+  };
+
+  // Função para aplicar ordem personalizada nas lanes
+  const applyColumnOrder = (lanes) => {
+    if (columnOrder.length === 0) {
+      return lanes; // Retorna ordem padrão se não há personalização
+    }
+
+    const orderedLanes = [];
+    const laneMap = new Map();
+    
+    // Mapeia lanes por ID
+    lanes.forEach(lane => {
+      laneMap.set(lane.id, lane);
+    });
+
+    // Aplica ordem personalizada
+    columnOrder.forEach(orderItem => {
+      const lane = laneMap.get(orderItem.columnId);
+      if (lane) {
+        orderedLanes.push(lane);
+        laneMap.delete(orderItem.columnId);
+      }
+    });
+
+    // Adiciona lanes não ordenadas no final (novas colunas)
+    laneMap.forEach(lane => {
+      orderedLanes.push(lane);
+    });
+
+    return orderedLanes;
   };
 
   // Efeito para atualizar dados quando filtros mudarem
@@ -658,6 +766,44 @@ const Kanban = () => {
     }
   };
 
+  // Callback para drag das lanes (colunas)
+  const handleLaneDragEnd = async (removedIndex, addedIndex, payload) => {
+    if (removedIndex === addedIndex) return; // Não houve mudança
+
+    setIsReordering(true);
+    
+    try {
+      // Atualiza ordem local imediatamente para UX responsiva
+      const currentLanes = file.lanes;
+      const newLanes = [...currentLanes];
+      const [movedLane] = newLanes.splice(removedIndex, 1);
+      newLanes.splice(addedIndex, 0, movedLane);
+
+      // Atualiza estado local
+      setFile({ lanes: newLanes });
+
+      // Cria nova ordem para salvar
+      const newOrder = newLanes.map((lane, index) => ({
+        columnId: lane.id,
+        columnType: lane.id === 'lane0' ? 'default' : 'tag',
+        position: index
+      }));
+
+      // Salva no backend com debounce
+      setTimeout(() => {
+        saveColumnOrder(newOrder);
+        setColumnOrder(newOrder);
+        setIsReordering(false);
+      }, 500);
+
+    } catch (error) {
+      console.error('Erro ao reordenar colunas:', error);
+      setIsReordering(false);
+      // Recarrega dados em caso de erro
+      fetchTags();
+    }
+  };
+
   // Função para formatar telefone brasileiro
   const formatPhoneNumber = (phoneNumber) => {
     if (!phoneNumber) return '';
@@ -727,12 +873,14 @@ const Kanban = () => {
     if (!initialLoadComplete) return;
     
     const filteredTickets = tickets.filter(ticket => ticket.tags.length === 0);
+    console.log('🎫 Tickets filtrados (Em aberto):', filteredTickets.length);
+    console.log('🏷️ Total de tags:', tags.length);
     
 
 
     const createCardContent = (ticket) => ({
       id: ticket.id.toString(),
-      title: ' ',
+      title: "",
       description: (
         <div className={classes.card}>
           <div className={classes.cardHeader}>
@@ -835,6 +983,7 @@ const Kanban = () => {
         title: i18n.t("tagsKanban.laneDefault"),
         label: filteredTickets.length.toString(),
         cards: filteredTickets.map(ticket => createCardContent(ticket)),
+        draggable: true,
         style: {
           backgroundColor: "#ffffff",
           color: "#444",
@@ -856,17 +1005,20 @@ const Kanban = () => {
           funilName: funilName || null,
           funilColor,
           label: tagTickets.length.toString(),
+          draggable: true,
           style: {
             backgroundColor: "#ffffff",
             color: "#444",
-            borderTop: `3px solid ${tag.color}`
           },
           cards: tagTickets.map(ticket => createCardContent(ticket)),
         };
       }),
     ];
 
-    setFile({ lanes });
+    // Aplica ordem personalizada se existir
+    const orderedLanes = applyColumnOrder(lanes);
+    console.log('📋 Lanes criadas:', orderedLanes.map(l => ({ title: l.title, cards: l.cards.length })));
+    setFile({ lanes: orderedLanes });
   };
 
   useEffect(() => {
@@ -1148,7 +1300,7 @@ const Kanban = () => {
       </div>
       <div className={classes.kanbanContainer}>
         <div style={{ position: 'relative' }}>
-          {isFilterLoading && (
+          {(isFilterLoading || isReordering) && (
             <div style={{
               position: 'absolute',
               top: '10px',
@@ -1157,82 +1309,108 @@ const Kanban = () => {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              backgroundColor: 'rgba(0, 195, 7, 0.1)',
+              backgroundColor: isReordering ? 'rgba(33, 150, 243, 0.1)' : 'rgba(0, 195, 7, 0.1)',
               padding: '6px 10px',
               borderRadius: '20px',
-              border: '1px solid rgba(0, 195, 7, 0.2)',
+              border: isReordering ? '1px solid rgba(33, 150, 243, 0.2)' : '1px solid rgba(0, 195, 7, 0.2)',
               backdropFilter: 'blur(4px)'
             }}>
               <div style={{
                 width: '12px',
                 height: '12px',
-                border: '2px solid rgba(0, 195, 7, 0.3)',
-                borderTop: '2px solid #00C307',
+                border: isReordering ? '2px solid rgba(33, 150, 243, 0.3)' : '2px solid rgba(0, 195, 7, 0.3)',
+                borderTop: isReordering ? '2px solid #2196F3' : '2px solid #00C307',
                 borderRadius: '50%',
                 animation: 'spin 1s linear infinite'
               }}></div>
-              <Typography style={{ color: '#00C307', fontSize: '11px', fontWeight: 500 }}>
-                Atualizando
+              <Typography style={{ 
+                color: isReordering ? '#2196F3' : '#00C307', 
+                fontSize: '11px', 
+                fontWeight: 500 
+              }}>
+                {isReordering ? 'Reordenando' : 'Atualizando'}
               </Typography>
             </div>
           )}
           <Board
             data={file}
             onCardMoveAcrossLanes={handleCardMove}
+            draggable={true}
+            cardDraggable={true}
+            laneDraggable={true}
+            handleLaneDragStart={(laneId) => {
+              // Lane drag iniciado
+            }}
+            handleLaneDragEnd={handleLaneDragEnd}
             style={{
               backgroundColor: 'transparent',
-              height: '100%',
+              height: 'calc(100vh - 160px)',
               borderBottom: 'none !important'
             }}
             laneStyle={{
               backgroundColor: '#ffffff',
               borderRadius: '12px',
-              padding: '12px',
-              marginRight: '12px',
-              minWidth: window.innerWidth <= 600 ? '260px' : '260px',
-              maxWidth: window.innerWidth <= 600 ? '280px' : '280px',
+              padding: '10px',
+              marginRight: '10px',
+              minWidth: window.innerWidth <= 600 ? '220px' : '220px',
+              maxWidth: window.innerWidth <= 600 ? '240px' : '240px',
               boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-              borderBottom: 'none !important',
+              border: 'none',
+              borderTop: 'none',
+              borderBottom: 'none',
+              minHeight: '400px',
+              maxHeight: 'calc(100vh - 200px)',
+              overflowY: 'auto',
             }}
             cardStyle={{
               padding: 0,
-              marginBottom: '6px',
+              marginBottom: '4px',
               border: 'none',
               boxShadow: 'none',
               backgroundColor: 'transparent',
               borderTop: 'none',
+              display: 'block',
+              visibility: 'visible',
+              opacity: 1,
               '& > div': {
                 borderTop: 'none !important'
               }
             }}
             hideCardDeleteIcon
             tagStyle={{ display: 'none' }}
-            cardDraggable={true}
-            laneDraggable={false}
-            handleDragStart={null}
-            handleDragEnd={null}
+            laneDragClass="lane-dragging"
+            laneDropClass="lane-dropping"
             components={{
-              LaneHeader: ({ title, label, funilName, funilColor }) => (
+              LaneHeader: ({ title, label, funilName, funilColor, ...props }) => (
                 <div 
+                  {...props}
                   style={{
                     padding: '0',
                     marginBottom: '0',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    borderTop: 'none !important'
+                    borderTop: 'none !important',
+                    cursor: 'grab',
+                    userSelect: 'none',
+                    ...props.style
                   }}
                   title="" // Remove tooltip
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Typography 
-                      style={{
-                        fontWeight: 600,
-                        color: '#444',
-                        fontSize: window.innerWidth <= 600 ? '1rem' : '1.1rem'
-                      }}
-                      title="" // Remove tooltip
-                    >{title}</Typography>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 8,
+                    pointerEvents: 'none' // Importante: não interfere com o drag
+                  }}>
+                                         <Typography 
+                       style={{
+                         fontWeight: 600,
+                         color: '#444',
+                         fontSize: window.innerWidth <= 600 ? '0.9rem' : '1rem',
+                       }}
+                       title="" // Remove tooltip
+                     >{title}</Typography>
                     {funilName && (
                       <span style={{
                         background: funilColor,
@@ -1241,17 +1419,18 @@ const Kanban = () => {
                         padding: '2px 10px',
                         fontSize: '0.75rem',
                         fontWeight: 600,
-                        marginLeft: 4
+                        marginLeft: 4,
                       }}>{funilName}</span>
                     )}
                   </div>
-                  <Typography style={{
-                    backgroundColor: '#f5f5f5',
-                    padding: '4px 12px',
-                    borderRadius: '20px',
-                    fontSize: window.innerWidth <= 600 ? '0.75rem' : '0.875rem',
-                    color: '#666'
-                  }}>{label}</Typography>
+                                     <Typography style={{
+                     backgroundColor: '#f5f5f5',
+                     padding: '3px 10px',
+                     borderRadius: '16px',
+                     fontSize: window.innerWidth <= 600 ? '0.7rem' : '0.8rem',
+                     color: '#666',
+                     pointerEvents: 'none' // Importante: não interfere com o drag
+                   }}>{label}</Typography>
                 </div>
               )
             }}
