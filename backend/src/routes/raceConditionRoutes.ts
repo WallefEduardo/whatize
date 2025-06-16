@@ -7,9 +7,8 @@ const raceConditionRoutes = express.Router();
 
 
 // Rota para obter estatísticas do sistema 
-// Em desenvolvimento: sem auth | Em produção: com auth
-const statsMiddleware = process.env.NODE_ENV === 'development' ? [] : [isAuth];
-raceConditionRoutes.get("/stats", ...statsMiddleware, RaceConditionController.getStats);
+// SEM AUTENTICAÇÃO para permitir monitoramento automático
+raceConditionRoutes.get("/stats", RaceConditionController.getStats);
 
 // Rota para limpar cache
 raceConditionRoutes.delete("/cache/:companyId?", isAuth, RaceConditionController.clearCache);

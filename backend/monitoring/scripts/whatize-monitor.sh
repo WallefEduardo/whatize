@@ -630,6 +630,9 @@ test_email_system() {
     echo -e "${WHITE}=============================${NC}"
     echo ""
     
+    # Atualizar BACKEND_URL no .env antes de testar
+    update_backend_url_in_env
+    
     print_step "Executando teste de email..."
     echo ""
     
@@ -681,6 +684,9 @@ send_real_alert_test() {
         print_step "Enviando alerta de teste real..."
         echo ""
         
+        # Atualizar BACKEND_URL no .env antes de enviar
+        update_backend_url_in_env
+        
         cd $BACKEND_DIR && node monitoring/services/send-test-alert.js
         
         echo ""
@@ -702,9 +708,25 @@ run_auto_monitor() {
     echo -e "${WHITE}=====================${NC}"
     echo ""
     
+    local backend_url=$(get_backend_url)
+    local port=$(get_backend_port)
+    
     print_info "Iniciando monitor automático..."
+    print_info "Monitorando: $backend_url"
     print_warning "Pressione Ctrl+C para parar"
     echo ""
+    
+    # Atualizar BACKEND_URL no .env antes de executar
+    update_backend_url_in_env
+    
+    # Verificar se o backend está respondendo antes de iniciar
+    if ! check_backend; then
+        print_error "Backend não está respondendo na porta $port!"
+        echo -e "${YELLOW}Verifique se o backend está rodando com: cd backend && npm run dev${NC}"
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    fi
     
     cd $BACKEND_DIR && node monitoring/services/monitor-race-conditions-prod.js
     

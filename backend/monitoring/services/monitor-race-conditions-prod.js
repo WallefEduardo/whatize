@@ -4,7 +4,8 @@ const path = require('path');
 const EmailSender = require('./emailSender');
 
 // Caminhos relativos à nova estrutura
-const backendLogsPath = path.join(__dirname, '../../backend/logs/race_conditions.log');
+// Estamos em backend/monitoring/services, então backend/logs é ../../logs
+const backendLogsPath = path.join(__dirname, '../../logs/race_conditions.log');
 
 // Configuração para produção
 const CONFIG = {

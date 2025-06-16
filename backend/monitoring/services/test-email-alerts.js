@@ -4,7 +4,8 @@ const path = require('path');
 const EmailSender = require('./emailSender');
 
 // Caminho para o .env do backend
-const envPath = path.join(__dirname, '../../backend/.env');
+// Estamos em backend/monitoring/services, então backend/.env é ../../.env
+const envPath = path.join(__dirname, '../../.env');
 
 async function testEmailSystem() {
   console.log('🧪 TESTE DO SISTEMA DE EMAILS');
