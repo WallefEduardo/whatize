@@ -53,9 +53,6 @@ import raceConditionRoutes from "./raceConditionRoutes";
 
 const routes = Router();
 
-// Rotas de monitoramento (sem autenticação para desenvolvimento)
-routes.use("/race-conditions", raceConditionRoutes);
-
 routes.use(userRoutes);
 routes.use("/auth", authRoutes);
 routes.use("/api/messages", apiRoutes);
@@ -107,5 +104,6 @@ routes.use(promptRoutes);
 routes.use(statisticsRoutes);
 routes.use(companySettingsRoutes);
 routes.use(scheduleMessageRoutes);
+routes.use("/race-conditions", raceConditionRoutes);
 
 export default routes;
