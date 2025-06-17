@@ -205,8 +205,7 @@ whatize/
 #### Backend (.env)
 ```env
 # Servidor
-NODE_ENV=production
-BACKEND_URL=https://api.seudominio.com
+BACKEND_URL=https://api.seudominio.com  # URL da API (produção) ou http://localhost:4000 (desenvolvimento)
 FRONTEND_URL=https://seudominio.com
 PORT=4000
 

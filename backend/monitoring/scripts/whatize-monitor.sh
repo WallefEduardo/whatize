@@ -26,28 +26,17 @@ get_backend_port() {
     echo "$port"
 }
 
-# Função para detectar ambiente (produção vs desenvolvimento)
-get_environment() {
-    local node_env=$(grep "^NODE_ENV=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
-    echo "${node_env:-development}"
-}
-
-# Função para obter a URL completa do backend (produção ou desenvolvimento)
+# Função para obter a URL completa do backend
 get_backend_url() {
-    local env=$(get_environment)
-    local port=$(get_backend_port)
+    # Primeiro, tentar usar BACKEND_URL se estiver configurada
+    local backend_url=$(grep "^BACKEND_URL=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2- | tr -d '"' | tr -d "'")
     
-    if [ "$env" = "production" ]; then
-        # Em produção, usar o domínio configurado
-        local domain=$(grep "^DOMAIN_URL=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
-        if [ -n "$domain" ] && [ "$domain" != "https://seudominio.com.br" ]; then
-            echo "$domain"
-        else
-            # Fallback para localhost se domínio não configurado
-            echo "http://localhost:$port"
-        fi
+    if [ -n "$backend_url" ] && [ "$backend_url" != "http://localhost:4000" ]; then
+        # Se BACKEND_URL está configurada e não é o padrão, usar ela
+        echo "$backend_url"
     else
-        # Em desenvolvimento, usar localhost
+        # Caso contrário, construir baseado na porta atual
+        local port=$(get_backend_port)
         echo "http://localhost:$port"
     fi
 }
