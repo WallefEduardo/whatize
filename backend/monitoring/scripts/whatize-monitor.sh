@@ -1144,8 +1144,14 @@ git_pull_updates() {
                 read -p "Tem CERTEZA ABSOLUTA? Digite 'SOBRESCREVER' para continuar: " confirm
                 if [ "$confirm" = "SOBRESCREVER" ]; then
                     print_step "Descartando mudanças locais..."
-                    git reset --hard HEAD
-                    git clean -fd
+                    # Verificar se HEAD existe antes de fazer reset
+                    if git rev-parse --verify HEAD >/dev/null 2>&1; then
+                        git reset --hard HEAD
+                    else
+                        # Se HEAD não existe, apenas limpar arquivos não rastreados
+                        git clean -fd
+                        print_info "ℹ️  Repositório sem histórico - apenas limpando arquivos não rastreados."
+                    fi
                     print_success "✅ Mudanças locais descartadas."
                 else
                     print_info "❌ Operação cancelada por segurança."
@@ -1182,7 +1188,28 @@ git_pull_updates() {
     print_step "Puxando atualizações e sobrescrevendo arquivos locais..."
     echo ""
     
-    current_branch=$(git branch --show-current)
+    # Detectar branch principal do remoto
+    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+    current_branch=$(git branch --show-current 2>/dev/null || echo "$default_branch")
+    
+    # Se não conseguir detectar o branch atual, usar main
+    if [ -z "$current_branch" ]; then
+        current_branch="main"
+    fi
+    
+    print_info "🌿 Usando branch: $current_branch"
+    
+    # Verificar se o branch remoto existe
+    if ! git rev-parse --verify origin/$current_branch >/dev/null 2>&1; then
+        print_warning "⚠️  Branch origin/$current_branch não encontrado, tentando origin/main..."
+        current_branch="main"
+        if ! git rev-parse --verify origin/main >/dev/null 2>&1; then
+            print_error "❌ Nenhum branch remoto válido encontrado (main ou $current_branch)!"
+            echo ""
+            read -p "Pressione Enter para voltar ao menu..."
+            return
+        fi
+    fi
     
     # Método mais agressivo: reset hard para a versão remota
     if git reset --hard origin/$current_branch; then
