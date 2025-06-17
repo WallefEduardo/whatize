@@ -26,10 +26,30 @@ get_backend_port() {
     echo "$port"
 }
 
-# Função para obter a URL completa do backend
+# Função para detectar ambiente (produção vs desenvolvimento)
+get_environment() {
+    local node_env=$(grep "^NODE_ENV=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
+    echo "${node_env:-development}"
+}
+
+# Função para obter a URL completa do backend (produção ou desenvolvimento)
 get_backend_url() {
+    local env=$(get_environment)
     local port=$(get_backend_port)
-    echo "http://localhost:$port"
+    
+    if [ "$env" = "production" ]; then
+        # Em produção, usar o domínio configurado
+        local domain=$(grep "^DOMAIN_URL=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
+        if [ -n "$domain" ] && [ "$domain" != "https://seudominio.com.br" ]; then
+            echo "$domain"
+        else
+            # Fallback para localhost se domínio não configurado
+            echo "http://localhost:$port"
+        fi
+    else
+        # Em desenvolvimento, usar localhost
+        echo "http://localhost:$port"
+    fi
 }
 
 # Função para atualizar BACKEND_URL no .env
@@ -508,11 +528,18 @@ monitoring_menu() {
         echo "13. 📊 Status do Git"
         echo "14. ⚙️  Configurar Git"
         echo ""
-        echo "15. 📚 Ver comandos úteis"
+        echo -e "${GREEN}💾 BACKUP DO BANCO:${NC}"
+        echo ""
+        echo "15. 💾 Criar backup do banco de dados"
+        echo "16. 📋 Listar backups existentes"
+        echo "17. 🧹 Limpar backups antigos"
+        echo "18. 🔌 Testar conexão com banco"
+        echo ""
+        echo "19. 📚 Ver comandos úteis"
         echo "0. 🚪 Sair"
         echo ""
         
-        read -p "Escolha uma opção (0-15): " option
+        read -p "Escolha uma opção (0-19): " option
         
         case $option in
             1) show_system_status ;;
@@ -529,7 +556,11 @@ monitoring_menu() {
             12) git_pull_updates ;;
             13) git_status ;;
             14) setup_git_config ;;
-            15) show_useful_commands ;;
+            15) create_database_backup ;;
+            16) list_database_backups ;;
+            17) clean_database_backups ;;
+            18) test_database_connection ;;
+            19) show_useful_commands ;;
             0) 
                 echo ""
                 print_info "Saindo do Whatize Monitor..."
@@ -1443,7 +1474,166 @@ setup_git_config() {
     read -p "Pressione Enter para voltar ao menu..."
 }
 
-# Função 15: Comandos úteis
+# Função 15: Criar backup do banco de dados
+create_database_backup() {
+    clear
+    print_header
+    echo -e "${WHITE}💾 CRIAR BACKUP DO BANCO DE DADOS${NC}"
+    echo -e "${WHITE}==================================${NC}"
+    echo ""
+    
+    print_step "Verificando configurações do banco..."
+    
+    # Verificar se as configurações do banco existem
+    local db_host=$(grep "^DB_HOST=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
+    local db_name=$(grep "^DB_NAME=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
+    local db_user=$(grep "^DB_USER=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
+    
+    if [ -z "$db_host" ] || [ -z "$db_name" ] || [ -z "$db_user" ]; then
+        print_error "Configurações do banco não encontradas no .env!"
+        echo ""
+        echo -e "${YELLOW}Verifique se as seguintes variáveis estão configuradas:${NC}"
+        echo "• DB_HOST"
+        echo "• DB_NAME"
+        echo "• DB_USER"
+        echo "• DB_PASS"
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    fi
+    
+    echo -e "${BLUE}📊 Configurações encontradas:${NC}"
+    echo "• Host: $db_host"
+    echo "• Banco: $db_name"
+    echo "• Usuário: $db_user"
+    echo ""
+    
+    read -p "Confirma a criação do backup? (s/n): " confirm
+    
+    if [ "$confirm" != "s" ] && [ "$confirm" != "S" ]; then
+        print_info "Backup cancelado."
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    fi
+    
+    print_step "Criando backup..."
+    echo ""
+    
+    if node $SERVICES_DIR/database-backup.js create; then
+        echo ""
+        print_success "Backup criado com sucesso!"
+        echo ""
+        print_info "💡 O backup foi salvo na pasta backend/backups/"
+    else
+        echo ""
+        print_error "Falha ao criar backup!"
+        echo ""
+        print_info "💡 Verifique se o PostgreSQL está instalado e acessível."
+    fi
+    
+    echo ""
+    read -p "Pressione Enter para voltar ao menu..."
+}
+
+# Função 16: Listar backups existentes
+list_database_backups() {
+    clear
+    print_header
+    echo -e "${WHITE}📋 BACKUPS EXISTENTES${NC}"
+    echo -e "${WHITE}=====================${NC}"
+    echo ""
+    
+    print_step "Listando backups disponíveis..."
+    echo ""
+    
+    node $SERVICES_DIR/database-backup.js list
+    
+    echo ""
+    read -p "Pressione Enter para voltar ao menu..."
+}
+
+# Função 17: Limpar backups antigos
+clean_database_backups() {
+    clear
+    print_header
+    echo -e "${WHITE}🧹 LIMPAR BACKUPS ANTIGOS${NC}"
+    echo -e "${WHITE}=========================${NC}"
+    echo ""
+    
+    print_step "Verificando backups existentes..."
+    echo ""
+    
+    # Mostrar backups atuais
+    node $SERVICES_DIR/database-backup.js list
+    
+    echo ""
+    echo -e "${YELLOW}⚠️  ATENÇÃO: Esta operação irá remover backups antigos!${NC}"
+    echo ""
+    
+    read -p "Quantos backups deseja manter? (padrão: 5): " keep_count
+    
+    # Usar 5 como padrão se não especificado
+    if [ -z "$keep_count" ]; then
+        keep_count=5
+    fi
+    
+    # Validar se é um número
+    if ! [[ "$keep_count" =~ ^[0-9]+$ ]]; then
+        print_error "Número inválido!"
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    fi
+    
+    echo ""
+    read -p "Confirma a limpeza mantendo $keep_count backups? (s/n): " confirm
+    
+    if [ "$confirm" != "s" ] && [ "$confirm" != "S" ]; then
+        print_info "Limpeza cancelada."
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    fi
+    
+    print_step "Limpando backups antigos..."
+    echo ""
+    
+    node $SERVICES_DIR/database-backup.js clean $keep_count
+    
+    echo ""
+    read -p "Pressione Enter para voltar ao menu..."
+}
+
+# Função 18: Testar conexão com banco
+test_database_connection() {
+    clear
+    print_header
+    echo -e "${WHITE}🔌 TESTAR CONEXÃO COM BANCO${NC}"
+    echo -e "${WHITE}===========================${NC}"
+    echo ""
+    
+    print_step "Testando conexão com o banco de dados..."
+    echo ""
+    
+    if node $SERVICES_DIR/database-backup.js test; then
+        echo ""
+        print_success "Conexão com banco funcionando perfeitamente!"
+    else
+        echo ""
+        print_error "Falha na conexão com o banco!"
+        echo ""
+        print_info "💡 Verifique:"
+        echo "• Se o PostgreSQL está rodando"
+        echo "• Se as credenciais no .env estão corretas"
+        echo "• Se a porta do banco está acessível"
+    fi
+    
+    echo ""
+    read -p "Pressione Enter para voltar ao menu..."
+}
+
+# Função 19: Comandos úteis
 show_useful_commands() {
     clear
     print_header
