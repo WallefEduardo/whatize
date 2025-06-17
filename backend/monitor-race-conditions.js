@@ -4,7 +4,7 @@ const path = require('path');
 
 // Configuração do monitoramento
 const CONFIG = {
-  BASE_URL: process.env.BACKEND_URL || 'http://localhost:8080',
+  BASE_URL: process.env.BACKEND_URL || 'http://localhost:4035',
   MONITOR_INTERVAL: 60000, // 1 minuto
   ALERT_THRESHOLD: 5, // Alerta se mais de 5 erros por hora
   LOG_FILE: path.join(__dirname, 'logs', 'monitor.log'),

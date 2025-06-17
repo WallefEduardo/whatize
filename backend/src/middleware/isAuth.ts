@@ -19,9 +19,16 @@ interface TokenPayload {
 }
 
 const isAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  // LOGS PARA DEBUG - Rastreando middleware de autenticação
+  console.log("🔐 [DEBUG] Middleware isAuth executado");
+  console.log("🔐 [DEBUG] Rota:", req.originalUrl);
+  console.log("🔐 [DEBUG] Método:", req.method);
+  console.log("🔐 [DEBUG] Headers auth:", req.headers.authorization ? "Presente" : "Ausente");
+  
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
+    console.log("❌ [DEBUG] Token de autorização ausente");
     throw new AppError("ERR_SESSION_EXPIRED", 401);
   }
 

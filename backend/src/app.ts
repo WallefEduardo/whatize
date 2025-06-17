@@ -99,7 +99,15 @@ app.use(express.json());
 app.use(Sentry.Handlers.requestHandler());
 app.use("/public", express.static(uploadConfig.directory));
 
-
+// MIDDLEWARE DE DEBUG - Rastreando todas as requisições
+app.use((req, res, next) => {
+  console.log("🌐 [DEBUG] Requisição recebida:");
+  console.log("   - URL:", req.originalUrl);
+  console.log("   - Método:", req.method);
+  console.log("   - Headers Auth:", req.headers.authorization ? "Presente" : "Ausente");
+  console.log("   - IP:", req.ip || req.connection.remoteAddress);
+  next();
+});
 
 // Rotas
 app.use(routes);

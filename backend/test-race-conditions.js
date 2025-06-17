@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 // Configuração do teste
-const BASE_URL = 'http://localhost:8080'; // Ajuste conforme necessário
+const BASE_URL = process.env.BACKEND_URL || 'http://localhost:4035'; // Ajuste conforme necessário
 const COMPANY_ID = 1; // Ajuste conforme necessário
 const TEST_CONTACTS = [
   { number: '5511999999001', name: 'Teste Race 1' },
