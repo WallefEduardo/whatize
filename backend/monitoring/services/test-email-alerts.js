@@ -25,14 +25,26 @@ async function testEmailSystem() {
   };
 
   console.log('📧 Testando envio de email de alerta...\n');
+  
+  // Mostrar emails configurados
+  const alertEmailConfig = process.env.ALERT_EMAIL;
+  const emailList = emailSender.parseEmailList(alertEmailConfig);
+  
   console.log('Dados do teste:');
-  console.log(`   Email destino: ${process.env.ALERT_EMAIL || 'NÃO CONFIGURADO'}`);
+  if (emailList.length > 1) {
+    console.log(`   📧 ${emailList.length} emails configurados:`);
+    emailList.forEach((email, index) => {
+      console.log(`      ${index + 1}. ${email}`);
+    });
+  } else {
+    console.log(`   Email destino: ${alertEmailConfig || 'NÃO CONFIGURADO'}`);
+  }
   console.log(`   Servidor: ${testAlertData.server}`);
   console.log(`   Tipo: ${testAlertData.type}`);
   console.log(`   Mensagem: ${testAlertData.message}\n`);
 
   try {
-    const result = await emailSender.sendAlert(testAlertData);
+    const result = await emailSender.sendTestEmail();
     
     if (result) {
       console.log('✅ TESTE CONCLUÍDO COM SUCESSO!');
@@ -60,8 +72,15 @@ async function testEmailSystem() {
   console.log('MAIL_PASS=sua-senha-de-app-do-gmail');
   console.log('MAIL_FROM=seu-email@gmail.com');
   console.log('');
-  console.log('# Email para receber alertas');
+  console.log('# Email(s) para receber alertas');
+  console.log('# UM EMAIL:');
   console.log('ALERT_EMAIL=wallefeduardo@gmail.com');
+  console.log('');
+  console.log('# MÚLTIPLOS EMAILS (separados por vírgula):');
+  console.log('ALERT_EMAIL=admin@empresa.com,suporte@empresa.com,dev@empresa.com');
+  console.log('');
+  console.log('# MÚLTIPLOS EMAILS (separados por ponto e vírgula):');
+  console.log('ALERT_EMAIL=admin@empresa.com;suporte@empresa.com;dev@empresa.com');
   console.log('');
   console.log('💡 DICA: Para Gmail, você precisa:');
   console.log('   1. Ativar autenticação de 2 fatores');

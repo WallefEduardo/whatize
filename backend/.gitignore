@@ -13,3 +13,52 @@ package-lock.json
 public/*
 public/company*
 
+# ========================================
+# LOGS E ARQUIVOS DE MONITORAMENTO
+# ========================================
+# Logs do sistema
+logs/
+*.log
+race_conditions.log
+combined.log
+error.log
+access.log
+
+# Logs de monitoramento
+monitoring/logs/
+monitor-production.log
+
+# ========================================
+# BACKUPS E DADOS TEMPORÁRIOS
+# ========================================
+# Backups do banco de dados
+backups/
+*.sql
+*.dump
+
+# Certificados e chaves privadas
+certs/
+*.pem
+*.key
+*.crt
+private/
+
+# ========================================
+# ARQUIVOS TEMPORÁRIOS E CACHE
+# ========================================
+# Arquivos temporários
+tmp/
+temp/
+*.tmp
+
+# Cache e uploads
+uploads/
+cache/
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+

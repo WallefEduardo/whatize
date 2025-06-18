@@ -21,7 +21,7 @@ LOGS_DIR="../logs"
 get_backend_port() {
     local port=$(grep "^PORT=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
     if [ -z "$port" ]; then
-        port="4000"  # Porta padrão se não encontrar no .env
+        port="4035"  # Porta padrão se não encontrar no .env
     fi
     echo "$port"
 }
@@ -31,7 +31,7 @@ get_backend_url() {
     # Primeiro, tentar usar BACKEND_URL se estiver configurada
     local backend_url=$(grep "^BACKEND_URL=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2- | tr -d '"' | tr -d "'")
     
-    if [ -n "$backend_url" ] && [ "$backend_url" != "http://localhost:4000" ]; then
+    if [ -n "$backend_url" ] && [ "$backend_url" != "http://localhost:4035" ]; then
         # Se BACKEND_URL está configurada e não é o padrão, usar ela
         echo "$backend_url"
     else
@@ -1482,31 +1482,30 @@ create_database_backup() {
     echo -e "${WHITE}==================================${NC}"
     echo ""
     
-    print_step "Verificando configurações do banco..."
-    
-    # Verificar se as configurações do banco existem
-    local db_host=$(grep "^DB_HOST=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
-    local db_name=$(grep "^DB_NAME=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
-    local db_user=$(grep "^DB_USER=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2)
-    
-    if [ -z "$db_host" ] || [ -z "$db_name" ] || [ -z "$db_user" ]; then
-        print_error "Configurações do banco não encontradas no .env!"
-        echo ""
-        echo -e "${YELLOW}Verifique se as seguintes variáveis estão configuradas:${NC}"
-        echo "• DB_HOST"
-        echo "• DB_NAME"
-        echo "• DB_USER"
-        echo "• DB_PASS"
-        echo ""
-        read -p "Pressione Enter para voltar ao menu..."
-        return
-    fi
-    
-    echo -e "${BLUE}📊 Configurações encontradas:${NC}"
-    echo "• Host: $db_host"
-    echo "• Banco: $db_name"
-    echo "• Usuário: $db_user"
+    print_step "Verificando requisitos para backup..."
     echo ""
+    
+    # Executar verificação de requisitos
+    if ../../check-backup-requirements.sh > /dev/null 2>&1; then
+        print_success "Todos os requisitos estão OK!"
+    else
+        print_warning "Problemas encontrados nos requisitos de backup!"
+        echo ""
+        read -p "Deseja ver detalhes e tentar corrigir? (s/n): " show_details
+        
+        if [ "$show_details" = "s" ] || [ "$show_details" = "S" ]; then
+            echo ""
+            ../../check-backup-requirements.sh
+            echo ""
+            read -p "Pressione Enter para continuar ou Ctrl+C para cancelar..."
+            echo ""
+        else
+            print_info "Backup cancelado. Use a verificação manual: ../../check-backup-requirements.sh"
+            echo ""
+            read -p "Pressione Enter para voltar ao menu..."
+            return
+        fi
+    fi
     
     read -p "Confirma a criação do backup? (s/n): " confirm
     

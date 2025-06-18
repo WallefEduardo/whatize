@@ -1,0 +1,130 @@
+# ========================================
+# LOGS E ARQUIVOS DE MONITORAMENTO
+# ========================================
+# Logs do sistema (ambos backend e frontend)
+backend/logs/
+frontend/logs/
+*.log
+race_conditions.log
+combined.log
+error.log
+access.log
+monitor-production.log
+
+# ========================================
+# BACKUPS E DADOS SENSÍVEIS
+# ========================================
+# Backups do banco de dados
+backend/backups/
+backups/
+*.sql
+*.dump
+
+# Certificados e chaves privadas
+backend/certs/
+backend/private/
+certs/
+private/
+*.pem
+*.key
+*.crt
+
+# ========================================
+# CONFIGURAÇÕES SENSÍVEIS
+# ========================================
+# Arquivos de ambiente (contém senhas)
+.env
+.env.local
+.env.production
+.env.development
+.env.backup.*
+
+# ========================================
+# DEPENDÊNCIAS E BUILD
+# ========================================
+# Node modules (ambos backend e frontend)
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Build e dist
+dist/
+build/
+coverage/
+
+# Lock files
+package-lock.json
+yarn.lock
+yarn-error.log
+
+# ========================================
+# ARQUIVOS TEMPORÁRIOS
+# ========================================
+# Temporários
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+*~
+
+# Cache
+cache/
+.cache/
+
+# Uploads
+uploads/
+public/uploads/
+
+# ========================================
+# ARQUIVOS DO SISTEMA
+# ========================================
+# Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ========================================
+# IDEs E EDITORES
+# ========================================
+# VSCode
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+
+# JetBrains IDEs
+.idea/
+
+# ========================================
+# DOCKER E DEPLOYMENT
+# ========================================
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# PM2
+.pm2/
+ecosystem.config.js
+
+# ========================================
+# MONITORAMENTO (arquivos específicos)
+# ========================================
+# Scripts de monitoramento executáveis ficam, mas logs não
+backend/monitoring/logs/
+monitoring/logs/
+start-monitor.sh.log 

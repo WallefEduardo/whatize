@@ -16,6 +16,32 @@ class DatabaseBackup {
         if (!fs.existsSync(this.backupDir)) {
             fs.mkdirSync(this.backupDir, { recursive: true });
         }
+        
+        // Verificar se as configurações estão presentes
+        this.validateConfig();
+    }
+    
+    validateConfig() {
+        const missing = [];
+        if (!this.dbUser) missing.push('DB_USER');
+        if (!this.dbPass) missing.push('DB_PASS');
+        if (!this.dbName) missing.push('DB_NAME');
+        
+        if (missing.length > 0) {
+            throw new Error(`Configurações faltando no .env: ${missing.join(', ')}`);
+        }
+    }
+    
+    async checkPgDump() {
+        return new Promise((resolve, reject) => {
+            exec('which pg_dump', (error, stdout, stderr) => {
+                if (error) {
+                    reject(new Error('PostgreSQL client não está instalado. Execute: apt install postgresql-client'));
+                    return;
+                }
+                resolve(true);
+            });
+        });
     }
 
     generateBackupFilename() {
@@ -28,19 +54,32 @@ class DatabaseBackup {
     }
 
     async createBackup() {
+        try {
+            // Verificar se pg_dump está disponível
+            await this.checkPgDump();
+        } catch (error) {
+            throw error;
+        }
+        
         return new Promise((resolve, reject) => {
             const filename = this.generateBackupFilename();
             const backupPath = path.join(this.backupDir, filename);
             
-            // Comando pg_dump
-            const command = `PGPASSWORD="${this.dbPass}" pg_dump -h ${this.dbHost} -p ${this.dbPort} -U ${this.dbUser} -d ${this.dbName} --no-password --verbose --clean --no-acl --no-owner -f "${backupPath}"`;
-            
             console.log('🔄 Iniciando backup do banco de dados...');
             console.log(`📁 Arquivo: ${filename}`);
+            console.log(`🔗 Conectando: ${this.dbUser}@${this.dbHost}:${this.dbPort}/${this.dbName}`);
+            
+            // Comando pg_dump
+            const command = `PGPASSWORD="${this.dbPass}" pg_dump -h ${this.dbHost} -p ${this.dbPort} -U ${this.dbUser} -d ${this.dbName} --no-password --verbose --clean --no-acl --no-owner -f "${backupPath}"`;
             
             exec(command, (error, stdout, stderr) => {
                 if (error) {
                     console.error('❌ Erro ao criar backup:', error.message);
+                    console.error('🔧 Detalhes do erro:', stderr);
+                    console.error('💡 Possíveis soluções:');
+                    console.error('   • Verifique se PostgreSQL está rodando');
+                    console.error('   • Confirme as credenciais no .env');
+                    console.error('   • Teste a conexão com: node database-backup.js test');
                     reject(error);
                     return;
                 }

@@ -73,17 +73,37 @@ class EmailSender {
     }
   }
 
+  parseEmailList(emailString) {
+    if (!emailString) return [];
+    
+    // Suporta vírgula, ponto e vírgula ou espaço como separadores
+    return emailString
+      .split(/[,;|\s]+/)
+      .map(email => email.trim())
+      .filter(email => email && email.includes('@'));
+  }
+
   async sendAlert(alertData) {
     const { type, message, server, timestamp } = alertData;
-    const alertEmail = process.env.ALERT_EMAIL;
+    const alertEmailConfig = process.env.ALERT_EMAIL;
 
-    if (!alertEmail) {
+    if (!alertEmailConfig) {
       console.log('⚠️ ALERT_EMAIL não configurado no .env');
       return false;
     }
 
+    // Suportar múltiplos emails
+    const emailList = this.parseEmailList(alertEmailConfig);
+    
+    if (emailList.length === 0) {
+      console.log('⚠️ Nenhum email válido encontrado em ALERT_EMAIL');
+      return false;
+    }
+
+    console.log(`📧 Enviando alerta para ${emailList.length} email(s): ${emailList.join(', ')}`);
+
     if (!this.isConfigured) {
-      console.log(`📧 [SIMULADO] Email para: ${alertEmail}`);
+      console.log(`📧 [SIMULADO] Emails para: ${emailList.join(', ')}`);
       console.log(`   Assunto: 🚨 ALERTA: ${type} - ${server}`);
       console.log(`   Mensagem: ${message}`);
       return false;
@@ -92,28 +112,66 @@ class EmailSender {
     const emailSubject = `🚨 ALERTA: ${type} - ${server}`;
     const emailBody = this.generateEmailBody(alertData);
 
-    try {
-      const info = await this.transporter.sendMail({
-        from: this.fromEmail,
-        to: alertEmail,
-        subject: emailSubject,
-        html: emailBody,
-        text: this.generateTextBody(alertData)
-      });
+    let successCount = 0;
+    let errorCount = 0;
 
-      console.log(`✅ Email enviado com sucesso para: ${alertEmail}`);
-      console.log(`   Message ID: ${info.messageId}`);
-      return true;
+    // Enviar para cada email individualmente
+    for (const email of emailList) {
+      try {
+        const info = await this.transporter.sendMail({
+          from: this.fromEmail,
+          to: email,
+          subject: emailSubject,
+          html: emailBody,
+          text: this.generateTextBody(alertData)
+        });
 
-    } catch (error) {
-      console.error(`❌ Erro ao enviar email para ${alertEmail}:`, error.message);
-      
-      // Fallback para simulação se houver erro
-      console.log(`📧 [FALLBACK] Email simulado para: ${alertEmail}`);
-      console.log(`   Assunto: ${emailSubject}`);
-      console.log(`   Erro SMTP: ${error.message}`);
+        console.log(`✅ Email enviado com sucesso para: ${email}`);
+        console.log(`   Message ID: ${info.messageId}`);
+        successCount++;
+
+      } catch (error) {
+        console.error(`❌ Erro ao enviar email para ${email}:`, error.message);
+        
+        // Fallback para simulação se houver erro
+        console.log(`📧 [FALLBACK] Email simulado para: ${email}`);
+        console.log(`   Assunto: ${emailSubject}`);
+        console.log(`   Erro SMTP: ${error.message}`);
+        errorCount++;
+      }
+    }
+
+    console.log(`📊 Resultado: ${successCount} enviados, ${errorCount} erros de ${emailList.length} emails`);
+    
+    return successCount > 0; // Retorna true se pelo menos um email foi enviado
+  }
+
+  async sendTestEmail() {
+    const alertEmailConfig = process.env.ALERT_EMAIL;
+    
+    if (!alertEmailConfig) {
+      console.log('⚠️ ALERT_EMAIL não configurado no .env');
       return false;
     }
+
+    const emailList = this.parseEmailList(alertEmailConfig);
+    
+    if (emailList.length === 0) {
+      console.log('⚠️ Nenhum email válido encontrado em ALERT_EMAIL');
+      return false;
+    }
+
+    console.log(`🧪 Testando envio para ${emailList.length} email(s): ${emailList.join(', ')}`);
+
+    const testAlertData = {
+      type: 'TEST_ALERT',
+      message: 'Este é um teste do sistema de múltiplos emails',
+      server: process.env.SERVER_NAME || 'TalkZap Test Server',
+      timestamp: new Date().toISOString(),
+      data: { test: true }
+    };
+
+    return await this.sendAlert(testAlertData);
   }
 
   generateEmailBody(alertData) {
