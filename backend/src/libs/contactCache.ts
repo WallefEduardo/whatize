@@ -1,6 +1,7 @@
 import NodeCache from "node-cache";
 import Contact from "../models/Contact";
 import raceConditionLogger from "../utils/raceConditionLogger";
+import { cache } from "../utils/debugLogger";
 
 interface CachedContact {
   id: number;
@@ -40,7 +41,7 @@ class ContactCache {
     const stats = this.cache.getStats();
     if (stats.hits > 0 || stats.misses > 0) {
       const hitRate = ((stats.hits / (stats.hits + stats.misses)) * 100).toFixed(2);
-      console.info(`📊 Contact Cache Stats: ${stats.keys} keys, ${hitRate}% hit rate, ${stats.hits} hits, ${stats.misses} misses`);
+      cache(`${stats.keys} keys, ${hitRate}% hit rate, ${stats.hits} hits, ${stats.misses} misses`);
     }
   }
 

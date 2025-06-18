@@ -15,6 +15,7 @@ import uploadConfig from "./config/upload";
 import AppError from "./errors/AppError";
 import routes from "./routes";
 import logger from "./utils/logger";
+import { request } from "./utils/debugLogger";
 import { messageQueue, sendScheduledMessages } from "./queues";
 import BullQueue from "./libs/queue"
 import BullBoard from 'bull-board';
@@ -99,13 +100,13 @@ app.use(express.json());
 app.use(Sentry.Handlers.requestHandler());
 app.use("/public", express.static(uploadConfig.directory));
 
-// MIDDLEWARE DE DEBUG - Rastreando todas as requisições
+// Middleware de debug condicional - só ativo em desenvolvimento
 app.use((req, res, next) => {
-  console.log("🌐 [DEBUG] Requisição recebida:");
-  console.log("   - URL:", req.originalUrl);
-  console.log("   - Método:", req.method);
-  console.log("   - Headers Auth:", req.headers.authorization ? "Presente" : "Ausente");
-  console.log("   - IP:", req.ip || req.connection.remoteAddress);
+  request("Requisição recebida:");
+  request("   - URL:", req.originalUrl);
+  request("   - Método:", req.method);
+  request("   - Headers Auth:", req.headers.authorization ? "Presente" : "Ausente");
+  request("   - IP:", req.ip || req.connection.remoteAddress);
   next();
 });
 

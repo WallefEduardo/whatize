@@ -1,20 +1,21 @@
 import { Request, Response } from "express";
 import raceConditionLogger from "../utils/raceConditionLogger";
 import contactCache from "../libs/contactCache";
+import { debug } from "../utils/debugLogger";
 
 export const getStats = async (req: Request, res: Response): Promise<Response> => {
   try {
-    // LOGS PARA DEBUG - Rastreando requisições
-    console.log("🔍 [DEBUG] RaceConditionController.getStats chamado");
-    console.log("🔍 [DEBUG] Headers da requisição:", {
+    // Logs condicionais - só aparecem em desenvolvimento
+    debug("🔍 RaceConditionController.getStats chamado");
+    debug("🔍 Headers da requisição:", {
       authorization: req.headers.authorization ? "Token presente" : "Token ausente",
       userAgent: req.headers['user-agent'],
       origin: req.headers.origin,
       host: req.headers.host
     });
-    console.log("🔍 [DEBUG] IP da requisição:", req.ip || req.connection.remoteAddress);
-    console.log("🔍 [DEBUG] URL completa:", req.originalUrl);
-    console.log("🔍 [DEBUG] Método HTTP:", req.method);
+    debug("🔍 IP da requisição:", req.ip || req.connection.remoteAddress);
+    debug("🔍 URL completa:", req.originalUrl);
+    debug("🔍 Método HTTP:", req.method);
     
     const logStats = raceConditionLogger.getLogStats();
     const cacheStats = contactCache.getStats();
@@ -43,10 +44,10 @@ export const getStats = async (req: Request, res: Response): Promise<Response> =
       }
     };
 
-    console.log("✅ [DEBUG] Stats geradas com sucesso, retornando resposta");
+    debug("✅ Stats geradas com sucesso, retornando resposta");
     return res.json(stats);
   } catch (error) {
-    console.error("❌ [DEBUG] Error getting race condition stats:", error);
+    console.error("❌ Error getting race condition stats:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };

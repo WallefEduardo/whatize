@@ -1,23 +1,24 @@
 import express from "express";
 import * as RaceConditionController from "../controllers/RaceConditionController";
 import isAuth from "../middleware/isAuth";
+import { debug } from "../utils/debugLogger";
 
 const raceConditionRoutes = express.Router();
 
-// LOGS PARA DEBUG - Verificando se as rotas são registradas
-console.log("📋 [DEBUG] Registrando rotas de race-conditions");
+// Logs condicionais - só aparecem em desenvolvimento
+debug("📋 Registrando rotas de race-conditions");
 
 // ROTA DE TESTE SIMPLES
 raceConditionRoutes.get("/test", (req, res) => {
-  console.log("🧪 [DEBUG] Rota de teste acessada sem problemas");
+  debug("🧪 Rota de teste acessada sem problemas");
   res.json({ message: "Rota de teste funcionando", timestamp: new Date().toISOString() });
 });
 
 // Rota para obter estatísticas do sistema 
 // SEM AUTENTICAÇÃO para permitir monitoramento automático
 raceConditionRoutes.get("/stats", (req, res, next) => {
-  console.log("📊 [DEBUG] Rota /race-conditions/stats acessada");
-  console.log("📊 [DEBUG] Headers:", req.headers);
+  debug("📊 Rota /race-conditions/stats acessada");
+  debug("📊 Headers:", req.headers);
   next();
 }, RaceConditionController.getStats);
 

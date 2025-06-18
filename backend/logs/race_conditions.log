@@ -31368,3 +31368,843 @@
   }
 }
 ---
+{
+  "timestamp": "18/06/2025 19:58:21.724",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 19:58:21.943",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 19:58:22.803",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 19:59:01.855",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:00:30.523",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:00:30.742",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:00:31.605",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:01:33.580",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:02:09.943",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:02:10.162",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:02:11.028",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:02:50.001",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:08:33.559",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:08:33.778",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:08:34.674",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:08:40.475",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881969521@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:08:40.693",
+  "type": "CONTACT_CREATION",
+  "contact": "559881969521@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881969521",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881969521@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:08:41.594",
+  "type": "CONTACT_CREATION",
+  "contact": "559881969521@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Guilherme Ronald🧔🏻‍♂️",
+    "contactId": 10
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:09:45.595",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:09:52.577",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:09:52.796",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:09:53.664",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:09:58.935",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:10:32.976",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:10:33.197",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:10:34.061",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:15:43.896",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:15:44.126",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:15:44.957",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:16:48.706",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:16:48.957",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:16:49.860",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:18:15.279",
+  "type": "BAILEYS_EVENT",
+  "contact": "559870039841@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:18:15.529",
+  "type": "CONTACT_CREATION",
+  "contact": "559870039841@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559870039841",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559870039841@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:18:16.392",
+  "type": "CONTACT_CREATION",
+  "contact": "559870039841@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "559870039841",
+    "contactId": 243
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:19:25.732",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:19:49.189",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:19:49.438",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:19:50.332",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:20:47.028",
+  "type": "BAILEYS_EVENT",
+  "contact": "559984698390@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:20:47.276",
+  "type": "CONTACT_CREATION",
+  "contact": "559984698390@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559984698390",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559984698390@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:20:48.345",
+  "type": "CONTACT_CREATION",
+  "contact": "559984698390@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "finalName": "559984698390",
+    "contactId": 867
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:22:36.030",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:22:36.294",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:22:37.196",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:24:50.636",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881969521@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:24:50.897",
+  "type": "CONTACT_CREATION",
+  "contact": "559881969521@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881969521",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881969521@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:24:51.938",
+  "type": "CONTACT_CREATION",
+  "contact": "559881969521@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Guilherme Ronald🧔🏻‍♂️",
+    "contactId": 10
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:30:51.467",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:30:51.728",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:30:52.634",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:31:56.631",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:31:56.849",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:31:57.673",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:32:19.351",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:39:53.084",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:39:53.299",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:39:54.142",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:41:15.217",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:41:31.229",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:41:31.443",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:41:32.298",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:43:46.470",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881448114@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:43:46.685",
+  "type": "CONTACT_CREATION",
+  "contact": "559881448114@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881448114",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881448114@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:43:47.576",
+  "type": "CONTACT_CREATION",
+  "contact": "559881448114@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "🫤",
+    "contactId": 429
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 20:44:57.738",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---

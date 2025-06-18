@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import moment from "moment";
+import { baileys, contact } from './debugLogger';
 
 interface RaceConditionLogData {
   timestamp: string;
@@ -152,7 +153,7 @@ class RaceConditionLogger {
     };
 
     this.writeLog(logData);
-    console.info(`📝 CONTACT ${action}: ${contactNumber}@company${companyId} via ${source}`);
+    contact(`${action}: ${contactNumber}@company${companyId} via ${source}`);
   }
 
   public logBaileysEvent(
@@ -175,7 +176,7 @@ class RaceConditionLogger {
     };
 
     this.writeLog(logData);
-    console.debug(`📡 BAILEYS EVENT: ${eventType} for ${contactNumber}@company${companyId}`);
+    baileys(`${eventType} for ${contactNumber}@company${companyId}`);
   }
 
   private writeLog(data: RaceConditionLogData): void {
