@@ -233,12 +233,12 @@ check_dependencies() {
     # Atualizar BACKEND_URL no .env com a porta correta
     update_backend_url_in_env
     
-    # Verificar se o backend está rodando
+    # Verificar se o backend está rodando (não bloquear se offline)
     if ! check_backend; then
         local port=$(get_backend_port)
-        print_error "Backend não está rodando na porta $port!"
-        echo -e "${YELLOW}Execute primeiro: cd backend && npm run dev${NC}"
-        exit 1
+        print_warning "Backend aparenta estar offline na porta $port"
+        print_info "Algumas funcionalidades podem ter limitações"
+        echo ""
     fi
     
     # Verificar se o arquivo .env existe
@@ -480,17 +480,24 @@ monitoring_menu() {
         # Status do sistema
         if check_backend; then
             local port=$(get_backend_port)
-            print_success "Backend: Online (porta $port)"
+            print_success "Backend: Online (porta $port) - Produção"
         else
             local port=$(get_backend_port)
             print_error "Backend: Offline (porta $port)"
         fi
         
         # Status dos emails
-        if grep -q "^MAIL_HOST=" $BACKEND_DIR/.env 2>/dev/null; then
-            print_success "Emails: Configurados"
+        if grep -q "^MAIL_HOST=" $BACKEND_DIR/.env 2>/dev/null && grep -q "^ALERT_EMAIL=" $BACKEND_DIR/.env 2>/dev/null; then
+            print_success "Emails: Configurados e Ativos"
         else
-            print_warning "Emails: Modo simulação"
+            print_warning "Emails: Não configurados"
+        fi
+        
+        # Status do Monitor Automático
+        if pgrep -f "monitor-race-conditions-prod.js" > /dev/null; then
+            print_success "Monitor Automático: ATIVO (PID: $(pgrep -f "monitor-race-conditions-prod.js"))"
+        else
+            print_info "Monitor Automático: Inativo"
         fi
         
         echo ""
@@ -525,10 +532,13 @@ monitoring_menu() {
         echo "18. 🔌 Testar conexão com banco"
         echo ""
         echo "19. 📚 Ver comandos úteis"
+        echo ""
+        echo -e "${GREEN}🚀 PRODUÇÃO:${NC}"
+        echo "20. 🚀 Iniciar Monitor Automático de Produção"
         echo "0. 🚪 Sair"
         echo ""
         
-        read -p "Escolha uma opção (0-19): " option
+        read -p "Escolha uma opção (0-20): " option
         
         case $option in
             1) show_system_status ;;
@@ -550,6 +560,7 @@ monitoring_menu() {
             17) clean_database_backups ;;
             18) test_database_connection ;;
             19) show_useful_commands ;;
+            20) start_production_monitor ;;
             0) 
                 echo ""
                 print_info "Saindo do Whatize Monitor..."
@@ -1678,6 +1689,136 @@ show_useful_commands() {
     echo "# Ver histórico"
     echo "git log --oneline -10"
     echo ""
+    
+    echo ""
+    read -p "Pressione Enter para voltar ao menu..."
+}
+
+# Função 20: Iniciar Monitor Automático de Produção
+start_production_monitor() {
+    clear
+    print_header
+    echo -e "${WHITE}🚀 MONITOR AUTOMÁTICO DE PRODUÇÃO${NC}"
+    echo -e "${WHITE}===================================${NC}"
+    echo ""
+    
+    # Verificar se já existe um monitor rodando
+    if pgrep -f "monitor-race-conditions-prod.js" > /dev/null; then
+        print_warning "Monitor automático já está rodando!"
+        echo ""
+        echo -e "${BLUE}PID do processo: ${GREEN}$(pgrep -f "monitor-race-conditions-prod.js")${NC}"
+        echo ""
+        echo "Para parar o monitor, use: kill $(pgrep -f "monitor-race-conditions-prod.js")"
+        echo ""
+        read -p "Deseja parar o monitor atual? (s/n): " stop_current
+        
+        if [ "$stop_current" = "s" ] || [ "$stop_current" = "S" ]; then
+            print_step "Parando monitor atual..."
+            kill $(pgrep -f "monitor-race-conditions-prod.js") 2>/dev/null
+            sleep 2
+            print_success "Monitor parado!"
+            echo ""
+        else
+            echo ""
+            read -p "Pressione Enter para voltar ao menu..."
+            return
+        fi
+    fi
+    
+    # Verificar configurações de email
+    if ! grep -q "^ALERT_EMAIL=" $BACKEND_DIR/.env 2>/dev/null; then
+        print_error "ALERT_EMAIL não está configurado!"
+        echo ""
+        read -p "Deseja configurar agora? (s/n): " setup_email
+        if [ "$setup_email" = "s" ] || [ "$setup_email" = "S" ]; then
+            setup_emails
+            echo ""
+            print_info "Email configurado! Continuando com o monitor..."
+            echo ""
+        else
+            print_warning "Monitor funcionará sem alertas por email."
+            echo ""
+        fi
+    fi
+    
+    # Verificar se o backend está respondendo
+    print_step "Verificando backend..."
+    local backend_url=$(get_backend_url)
+    
+    if check_backend; then
+        print_success "Backend está respondendo! ✅"
+        echo "URL: $backend_url"
+    else
+        print_error "Backend não está respondendo!"
+        echo ""
+        print_info "💡 Verifique se o backend está rodando antes de iniciar o monitor."
+        echo ""
+        read -p "Deseja continuar mesmo assim? (s/n): " continue_anyway
+        if [ "$continue_anyway" != "s" ] && [ "$continue_anyway" != "S" ]; then
+            echo ""
+            read -p "Pressione Enter para voltar ao menu..."
+            return
+        fi
+    fi
+    
+    echo ""
+    echo -e "${CYAN}🔧 CONFIGURAÇÕES DO MONITOR:${NC}"
+    echo ""
+    echo "• ⏱️  Intervalo: 5 minutos (otimizado para produção)"
+    echo "• 📧 Email: $(grep "ALERT_EMAIL=" $BACKEND_DIR/.env 2>/dev/null | cut -d'=' -f2 || echo "NÃO CONFIGURADO")"
+    echo "• 🌐 API: $backend_url"
+    echo "• 🚨 Alertas: Race conditions, Alto uso de memória, Cache baixo"
+    echo ""
+    
+    echo -e "${YELLOW}⚠️  IMPORTANTE:${NC}"
+    echo "• O monitor rodará em background 24/7"
+    echo "• Enviará emails automáticos quando detectar problemas"
+    echo "• Para parar, use a opção 20 novamente ou kill PID"
+    echo ""
+    
+    read -p "Deseja iniciar o monitor automático? (s/n): " confirm
+    
+    if [ "$confirm" = "s" ] || [ "$confirm" = "S" ]; then
+        print_step "Iniciando monitor automático de produção..."
+        echo ""
+        
+        # Atualizar BACKEND_URL no .env
+        update_backend_url_in_env
+        
+        # Garantir que o diretório de logs existe
+        mkdir -p $BACKEND_DIR/logs
+        
+        # Iniciar o monitor em background independente
+        cd $BACKEND_DIR
+        setsid nohup node monitoring/services/monitor-race-conditions-prod.js > logs/monitor-production.log 2>&1 &
+        disown  # Desanexar do terminal atual
+        
+        # Aguardar um pouco para verificar se iniciou
+        sleep 3
+        
+        if pgrep -f "monitor-race-conditions-prod.js" > /dev/null; then
+            print_success "Monitor iniciado com sucesso! 🚀"
+            echo ""
+            echo -e "${GREEN}✅ Status: ATIVO${NC}"
+            echo -e "${BLUE}PID: ${GREEN}$(pgrep -f "monitor-race-conditions-prod.js")${NC}"
+            echo ""
+            echo -e "${CYAN}📋 IMPORTANTE:${NC}"
+            echo "• O monitor está rodando INDEPENDENTE deste painel"
+            echo "• Pode fechar o painel que o monitor continuará ativo"
+            echo "• Logs: backend/logs/race_conditions.log"
+            echo "• Logs do monitor: backend/logs/monitor-production.log"
+            echo ""
+            print_info "Para parar o monitor, use novamente a opção 20 ou:"
+            echo "   kill $(pgrep -f "monitor-race-conditions-prod.js")"
+        else
+            print_error "Falha ao iniciar o monitor!"
+            echo ""
+            print_info "💡 Tente executar manualmente:"
+            echo "cd backend && node monitoring/services/monitor-race-conditions-prod.js"
+        fi
+    else
+        print_info "Operação cancelada."
+    fi
     
     echo ""
     read -p "Pressione Enter para voltar ao menu..."

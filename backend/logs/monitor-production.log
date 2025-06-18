@@ -1,0 +1,15 @@
+✅ Configuração SMTP carregada com sucesso
+🚀 MONITOR DE RACE CONDITIONS - PRODUÇÃO
+==========================================
+📡 API: http://localhost:4035/race-conditions/stats
+⏱️  Intervalo: 300s
+📁 Log: /www/wwwroot/TalkZap/backend/logs/race_conditions.log
+==========================================
+✅ Backend está respondendo!
+✅ Conexão SMTP testada com sucesso
+✅ [18/06/2025, 13:58:35] Sistema estável - 0 erros
+📊 [18/06/2025, 13:58:35] Cache: 47.77% | Memória: 116.05 MB | Uptime: 1625min
+✅ [18/06/2025, 14:03:34] Sistema estável - 0 erros
+📊 [18/06/2025, 14:03:34] Cache: 47.95% | Memória: 116.03 MB | Uptime: 1630min
+✅ [18/06/2025, 14:08:34] Sistema estável - 0 erros
+📊 [18/06/2025, 14:08:34] Cache: 48.00% | Memória: 122.80 MB | Uptime: 1635min

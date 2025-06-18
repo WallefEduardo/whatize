@@ -1,6 +1,7 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const EmailSender = require('./monitoring/services/emailSender');
 
 // Configuração do monitoramento
 const CONFIG = {
@@ -16,6 +17,7 @@ class RaceConditionMonitor {
     this.isRunning = false;
     this.lastStats = null;
     this.alertsSent = new Set();
+    this.emailSender = new EmailSender();
     this.ensureLogDirectory();
   }
 
@@ -62,6 +64,24 @@ class RaceConditionMonitor {
     setTimeout(() => this.alertsSent.delete(alertKey), 3600000);
 
     this.log(`ALERTA: ${message}`, 'WARN');
+
+    // Dados do alerta para email
+    const alertData = {
+      type: level === 'critical' ? 'CRITICAL_ERROR' : 'WARNING',
+      message,
+      server: process.env.SERVER_NAME || 'TalkZap Server',
+      timestamp: new Date().toISOString()
+    };
+
+    // Enviar email se configurado
+    if (process.env.ALERT_EMAIL) {
+      try {
+        await this.emailSender.sendAlert(alertData);
+        this.log(`Email enviado para: ${process.env.ALERT_EMAIL}`, 'INFO');
+      } catch (error) {
+        this.log(`Erro ao enviar email: ${error.message}`, 'ERROR');
+      }
+    }
 
     // Envia para Slack se configurado
     if (CONFIG.WEBHOOK_URL) {

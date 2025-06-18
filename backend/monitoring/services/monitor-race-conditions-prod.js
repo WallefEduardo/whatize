@@ -26,7 +26,7 @@ function getBackendUrl() {
 const BACKEND_URL = getBackendUrl();
 const API_URL = `${BACKEND_URL}/race-conditions/stats`;
 const LOG_FILE = path.join(__dirname, '../../logs/race_conditions.log');
-const CHECK_INTERVAL = 30000; // 30 segundos
+const CHECK_INTERVAL = 300000; // 5 minutos (mais apropriado para produção)
 
 // Configurações de alertas
 const ALERT_THRESHOLDS = {
@@ -55,9 +55,32 @@ class RaceConditionMonitor {
 
     async checkBackend() {
         try {
-            const response = await axios.get(API_URL, { timeout: 10000 });
+            const response = await axios.get(API_URL, { 
+                timeout: 15000,
+                headers: {
+                    'User-Agent': 'TalkZap-Monitor/2.0'
+                }
+            });
             return { success: true, data: response.data };
         } catch (error) {
+            // Se for erro de timeout/rede, aguardar antes de reportar
+            if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND') {
+                console.log(`⚠️ [${this.formatDateTime()}] Erro de rede: ${error.message} - Tentando novamente em 30s`);
+                await new Promise(resolve => setTimeout(resolve, 30000));
+                
+                // Segunda tentativa
+                try {
+                    const retryResponse = await axios.get(API_URL, { timeout: 15000 });
+                    return { success: true, data: retryResponse.data };
+                } catch (retryError) {
+                    return { 
+                        success: false, 
+                        error: retryError.message,
+                        code: retryError.code || 'UNKNOWN'
+                    };
+                }
+            }
+            
             return { 
                 success: false, 
                 error: error.message,
@@ -88,6 +111,7 @@ class RaceConditionMonitor {
             type,
             message,
             timestamp: new Date().toISOString(),
+            server: process.env.SERVER_NAME || 'TalkZap Server',
             data
         };
 
@@ -96,7 +120,12 @@ class RaceConditionMonitor {
 
         // Enviar email se configurado
         if (process.env.ALERT_EMAIL) {
-            await this.emailSender.sendAlert(type, message, data);
+            try {
+                await this.emailSender.sendAlert(alert);
+                console.log(`📧 Alerta por email enviado: ${type}`);
+            } catch (error) {
+                this.logMessage(`Erro ao enviar email: ${error.message}`, 'ERROR');
+            }
         }
 
         // Webhook se configurado
