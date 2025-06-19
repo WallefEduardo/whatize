@@ -30,10 +30,9 @@ const CHECK_INTERVAL = 300000; // 5 minutos (mais apropriado para produção)
 
 // Configurações de alertas
 const ALERT_THRESHOLDS = {
-    MAX_ERRORS_PER_HOUR: 10,
-    LOW_CACHE_PERFORMANCE: 5,
-    HIGH_MEMORY_USAGE: 750,
-    MIN_CACHE_OPERATIONS: 50
+    MAX_ERRORS_PER_HOUR: 5,
+    LOW_CACHE_PERFORMANCE: 10, // %
+    HIGH_MEMORY_USAGE: 500 // MB
 };
 
 class RaceConditionMonitor {
@@ -45,10 +44,6 @@ class RaceConditionMonitor {
             lastCheck: null,
             alerts: []
         };
-        
-        // Sistema anti-spam para alertas
-        this.alertCooldowns = new Map(); // tipo -> timestamp do último envio
-        this.COOLDOWN_MINUTES = 30; // 30 minutos entre alertas do mesmo tipo
         
         // Garantir que o diretório de logs existe
         const logDir = path.dirname(LOG_FILE);
@@ -112,22 +107,11 @@ class RaceConditionMonitor {
     }
 
     async sendAlert(type, message, data = {}) {
-        // Verificar cooldown - evitar spam de alertas
-        const now = Date.now();
-        const lastSent = this.alertCooldowns.get(type);
-        const cooldownMs = this.COOLDOWN_MINUTES * 60 * 1000;
-        
-        if (lastSent && (now - lastSent) < cooldownMs) {
-            const remainingMinutes = Math.ceil((cooldownMs - (now - lastSent)) / 1000 / 60);
-            console.log(`⏭️ Alerta ${type} em cooldown (${remainingMinutes}min restantes)`);
-            return; // Não enviar durante cooldown
-        }
-        
         const alert = {
             type,
             message,
             timestamp: new Date().toISOString(),
-            server: process.env.SERVER_NAME || 'TalkZap Server',
+            server: process.env.SERVER_NAME || 'Whatize Server',
             data
         };
 
@@ -139,10 +123,6 @@ class RaceConditionMonitor {
             try {
                 await this.emailSender.sendAlert(alert);
                 console.log(`📧 Alerta por email enviado: ${type}`);
-                
-                // Marcar timestamp do envio para cooldown
-                this.alertCooldowns.set(type, now);
-                
             } catch (error) {
                 this.logMessage(`Erro ao enviar email: ${error.message}`, 'ERROR');
             }
@@ -162,36 +142,59 @@ class RaceConditionMonitor {
     analyzeStats(data) {
         const alerts = [];
         
-        // Verificar erros de race condition - só alerta se há muitos erros
-        if (data.raceConditions.todayErrors > ALERT_THRESHOLDS.MAX_ERRORS_PER_HOUR) {
+        // Verificar erros de race condition com proteção
+        const todayErrors = data.raceConditions?.todayErrors || 0;
+        if (todayErrors > 0) {
             alerts.push({
                 type: 'RACE_CONDITION_ERRORS',
-                message: `${data.raceConditions.todayErrors} erros de race condition hoje`,
-                severity: data.raceConditions.todayErrors > 20 ? 'HIGH' : 'MEDIUM'
+                message: `${todayErrors} erros de race condition hoje`,
+                severity: todayErrors > 5 ? 'HIGH' : 'MEDIUM'
             });
         }
 
-        // Verificar performance do cache - só alerta se há operações suficientes e cache muito baixo
-        const cacheHitRate = parseFloat(data.contactCache.hitRate.replace('%', ''));
-        const totalOperations = data.contactCache.hits + data.contactCache.misses;
-        
-        if (cacheHitRate < ALERT_THRESHOLDS.LOW_CACHE_PERFORMANCE && 
-            totalOperations > ALERT_THRESHOLDS.MIN_CACHE_OPERATIONS) {
+        // Verificar performance do cache com proteção
+        const hitRateStr = data.contactCache?.hitRate || "0%";
+        const cacheHitRate = parseFloat(hitRateStr.replace('%', ''));
+        const cacheMisses = data.contactCache?.misses || 0;
+        if (cacheHitRate < ALERT_THRESHOLDS.LOW_CACHE_PERFORMANCE && cacheMisses > 10) {
             alerts.push({
                 type: 'LOW_CACHE_PERFORMANCE',
-                message: `Taxa de cache baixa: ${data.contactCache.hitRate} (${totalOperations} operações)`,
+                message: `Taxa de cache baixa: ${hitRateStr}`,
                 severity: 'MEDIUM'
             });
         }
 
-        // Verificar uso de memória - só alerta se realmente alto
-        const memoryUsage = parseFloat(data.contactCache.memoryUsage.replace(' MB', ''));
+        // Verificar uso de memória com proteção
+        const memoryStr = data.contactCache?.memoryUsage || "0 MB";
+        const memoryUsage = parseFloat(memoryStr.replace(' MB', ''));
         if (memoryUsage > ALERT_THRESHOLDS.HIGH_MEMORY_USAGE) {
             alerts.push({
                 type: 'HIGH_MEMORY_USAGE',
-                message: `Alto uso de memória: ${data.contactCache.memoryUsage}`,
+                message: `Alto uso de memória: ${memoryStr}`,
                 severity: 'HIGH'
             });
+        }
+
+        // Verificar erros de download de imagem com proteção
+        if (data.imageDownload) {
+            const errors502 = data.imageDownload.errors502 || 0;
+            const totalErrors = data.imageDownload.totalErrors || 0;
+            
+            if (errors502 > 5) {
+                alerts.push({
+                    type: 'IMAGE_DOWNLOAD_502_ERRORS',
+                    message: `${errors502} erros 502 no download de imagens (24h)`,
+                    severity: 'HIGH'
+                });
+            }
+            
+            if (totalErrors > 20) {
+                alerts.push({
+                    type: 'HIGH_IMAGE_DOWNLOAD_ERRORS',
+                    message: `${totalErrors} erros de download de imagem (24h)`,
+                    severity: 'MEDIUM'
+                });
+            }
         }
 
         return alerts;
@@ -217,29 +220,40 @@ class RaceConditionMonitor {
 
         const data = result.data;
         
-        // Análise básica
-        if (data.raceConditions.todayErrors === 0) {
+        // Verificar se a estrutura de dados está completa
+        if (!data || !data.data) {
+            console.error(`❌ [${this.formatDateTime()}] Estrutura de dados inválida:`, data);
+            return;
+        }
+
+        const stats = data.data;
+        
+        // Análise básica com proteção
+        const todayErrors = stats.raceConditions?.todayErrors || 0;
+        if (todayErrors === 0) {
             console.log(`✅ [${this.formatDateTime()}] Sistema estável - 0 erros`);
         } else {
-            console.log(`⚠️ [${this.formatDateTime()}] ${data.raceConditions.todayErrors} erros hoje`);
+            console.log(`⚠️ [${this.formatDateTime()}] ${todayErrors} erros hoje`);
         }
 
-        // Verificar cache performance
-        const cacheHitRate = parseFloat(data.contactCache.hitRate.replace('%', ''));
-        if (cacheHitRate < ALERT_THRESHOLDS.LOW_CACHE_PERFORMANCE && data.contactCache.misses > 0) {
-            console.log(`⚠️ [${this.formatDateTime()}] Taxa de cache baixa: ${data.contactCache.hitRate}`);
+        // Verificar cache performance com proteção
+        const cacheHitRate = parseFloat((stats.contactCache?.hitRate || "0%").replace('%', ''));
+        const cacheMisses = stats.contactCache?.misses || 0;
+        if (cacheHitRate < ALERT_THRESHOLDS.LOW_CACHE_PERFORMANCE && cacheMisses > 0) {
+            console.log(`⚠️ [${this.formatDateTime()}] Taxa de cache baixa: ${stats.contactCache?.hitRate || "0%"}`);
         }
 
-        // Análise detalhada e alertas
-        const alerts = this.analyzeStats(data);
+        // Análise detalhada e alertas com proteção
+        const alerts = this.analyzeStats(stats);
         for (const alert of alerts) {
-            await this.sendAlert(alert.type, alert.message, data);
+            await this.sendAlert(alert.type, alert.message, stats);
         }
 
-        // Log de status resumido
-        const uptime = Math.floor(data.system.uptime / 60);
-        const memoryMB = data.contactCache.memoryUsage;
-        console.log(`📊 [${this.formatDateTime()}] Cache: ${data.contactCache.hitRate} | Memória: ${memoryMB} | Uptime: ${uptime}min`);
+        // Log de status resumido com proteção
+        const uptime = Math.floor((stats.system?.uptime || 0) / 60);
+        const memoryMB = stats.contactCache?.memoryUsage || "0 MB";
+        const imageErrors = stats.imageDownload?.totalErrors || 0;
+        console.log(`📊 [${this.formatDateTime()}] Cache: ${stats.contactCache?.hitRate || "0%"} | Memória: ${memoryMB} | Imagens: ${imageErrors} erros | Uptime: ${uptime}min`);
     }
 
     async start() {

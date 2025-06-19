@@ -1,22 +1,89 @@
 ✅ Configuração SMTP carregada com sucesso
 🚀 MONITOR DE RACE CONDITIONS - PRODUÇÃO
 ==========================================
-📡 API: http://localhost:4035/race-conditions/stats
+📡 API: http://localhost:4000/race-conditions/stats
 ⏱️  Intervalo: 300s
-📁 Log: /www/wwwroot/TalkZap/backend/logs/race_conditions.log
+📁 Log: /home/deploy/whatize/backend/logs/race_conditions.log
 ==========================================
 ✅ Backend está respondendo!
 ✅ Conexão SMTP testada com sucesso
-✅ [18/06/2025, 21:34:20] Sistema estável - 0 erros
-📊 [18/06/2025, 21:34:20] Cache: 0% | Memória: 116.33 MB | Uptime: 0min
-✅ [18/06/2025, 21:39:19] Sistema estável - 0 erros
-⚠️ [18/06/2025, 21:39:19] Taxa de cache baixa: 0.00%
-📊 [18/06/2025, 21:39:19] Cache: 0.00% | Memória: 101.54 MB | Uptime: 5min
-✅ [18/06/2025, 21:44:19] Sistema estável - 0 erros
-📊 [18/06/2025, 21:44:19] Cache: 33.33% | Memória: 100.35 MB | Uptime: 10min
-✅ [18/06/2025, 21:49:19] Sistema estável - 0 erros
-📊 [18/06/2025, 21:49:19] Cache: 33.33% | Memória: 108.16 MB | Uptime: 15min
-✅ [18/06/2025, 21:54:20] Sistema estável - 0 erros
-📊 [18/06/2025, 21:54:20] Cache: 40.00% | Memória: 106.60 MB | Uptime: 20min
-✅ [18/06/2025, 21:59:20] Sistema estável - 0 erros
-📊 [18/06/2025, 21:59:20] Cache: 25.00% | Memória: 103.79 MB | Uptime: 25min
+⚠️ [18/06/2025, 22:57:26] 8 erros hoje
+[18/06/2025, 22:57:26] ALERT: ALERTA: RACE_CONDITION_ERRORS - 8 erros de race condition hoje
+📧 Enviando alerta para 2 email(s): wallefeduardo18@gmail.com, contato@whatize.com.br
+✅ Email enviado com sucesso para: wallefeduardo18@gmail.com
+   Message ID: <7b9b7165-c02a-819b-9837-f66fbf47113b@gmail.com>
+✅ Email enviado com sucesso para: contato@whatize.com.br
+   Message ID: <a23d2c1b-dd80-3c9a-aebb-e66bc7859c85@gmail.com>
+📊 Resultado: 2 enviados, 0 erros de 2 emails
+📧 Alerta por email enviado: RACE_CONDITION_ERRORS
+📊 [18/06/2025, 22:57:28] Cache: 15.63% | Memória: 128.87 MB | Imagens: 0 erros | Uptime: 4min
+⚠️ [18/06/2025, 23:02:25] 8 erros hoje
+[18/06/2025, 23:02:25] ALERT: ALERTA: RACE_CONDITION_ERRORS - 8 erros de race condition hoje
+📧 Enviando alerta para 2 email(s): wallefeduardo18@gmail.com, contato@whatize.com.br
+✅ Email enviado com sucesso para: wallefeduardo18@gmail.com
+   Message ID: <00762ae8-d459-e76a-db2f-16d65e57bfda@gmail.com>
+✅ Email enviado com sucesso para: contato@whatize.com.br
+   Message ID: <7f3c3d31-e311-587d-7174-55cda848690a@gmail.com>
+📊 Resultado: 2 enviados, 0 erros de 2 emails
+📧 Alerta por email enviado: RACE_CONDITION_ERRORS
+📊 [18/06/2025, 23:02:27] Cache: 11.54% | Memória: 110.41 MB | Imagens: 0 erros | Uptime: 4min
+⚠️ [18/06/2025, 23:07:25] 8 erros hoje
+[18/06/2025, 23:07:25] ALERT: ALERTA: RACE_CONDITION_ERRORS - 8 erros de race condition hoje
+📧 Enviando alerta para 2 email(s): wallefeduardo18@gmail.com, contato@whatize.com.br
+✅ Email enviado com sucesso para: wallefeduardo18@gmail.com
+   Message ID: <2d6a3d1b-8627-0a75-be4b-884cfa013a39@gmail.com>
+✅ Email enviado com sucesso para: contato@whatize.com.br
+   Message ID: <ef248350-a8a0-c47d-090a-031e421a310b@gmail.com>
+📊 Resultado: 2 enviados, 0 erros de 2 emails
+📧 Alerta por email enviado: RACE_CONDITION_ERRORS
+📊 [18/06/2025, 23:07:26] Cache: 31.88% | Memória: 109.23 MB | Imagens: 0 erros | Uptime: 9min
+⚠️ [18/06/2025, 23:12:25] 10 erros hoje
+[18/06/2025, 23:12:25] ALERT: ALERTA: RACE_CONDITION_ERRORS - 10 erros de race condition hoje
+📧 Enviando alerta para 2 email(s): wallefeduardo18@gmail.com, contato@whatize.com.br
+✅ Email enviado com sucesso para: wallefeduardo18@gmail.com
+   Message ID: <285bb40d-5b5c-4beb-ba0f-638b8e086386@gmail.com>
+✅ Email enviado com sucesso para: contato@whatize.com.br
+   Message ID: <5162a9c4-4b72-5d25-a3e8-f02d6ac4c53b@gmail.com>
+📊 Resultado: 2 enviados, 0 erros de 2 emails
+📧 Alerta por email enviado: RACE_CONDITION_ERRORS
+📊 [18/06/2025, 23:12:27] Cache: 35.00% | Memória: 121.17 MB | Imagens: 0 erros | Uptime: 14min
+⚠️ [18/06/2025, 23:17:25] 10 erros hoje
+[18/06/2025, 23:17:25] ALERT: ALERTA: RACE_CONDITION_ERRORS - 10 erros de race condition hoje
+📧 Enviando alerta para 2 email(s): wallefeduardo18@gmail.com, contato@whatize.com.br
+✅ Email enviado com sucesso para: wallefeduardo18@gmail.com
+   Message ID: <1a871221-96bb-e1e3-fee5-7f51f52d3e7f@gmail.com>
+✅ Email enviado com sucesso para: contato@whatize.com.br
+   Message ID: <24416496-c5a1-5a00-4db9-c4f9de36cdbe@gmail.com>
+📊 Resultado: 2 enviados, 0 erros de 2 emails
+📧 Alerta por email enviado: RACE_CONDITION_ERRORS
+📊 [18/06/2025, 23:17:26] Cache: 30.34% | Memória: 115.06 MB | Imagens: 0 erros | Uptime: 19min
+⚠️ [18/06/2025, 23:22:25] 10 erros hoje
+[18/06/2025, 23:22:25] ALERT: ALERTA: RACE_CONDITION_ERRORS - 10 erros de race condition hoje
+📧 Enviando alerta para 2 email(s): wallefeduardo18@gmail.com, contato@whatize.com.br
+✅ Email enviado com sucesso para: wallefeduardo18@gmail.com
+   Message ID: <dbb6a4ec-8c8a-9dc8-d1d9-8ea4485f614b@gmail.com>
+✅ Email enviado com sucesso para: contato@whatize.com.br
+   Message ID: <46a8d60a-ae99-98d5-6e06-556194b26557@gmail.com>
+📊 Resultado: 2 enviados, 0 erros de 2 emails
+📧 Alerta por email enviado: RACE_CONDITION_ERRORS
+📊 [18/06/2025, 23:22:27] Cache: 36.45% | Memória: 112.40 MB | Imagens: 0 erros | Uptime: 24min
+⚠️ [18/06/2025, 23:27:25] 10 erros hoje
+[18/06/2025, 23:27:25] ALERT: ALERTA: RACE_CONDITION_ERRORS - 10 erros de race condition hoje
+📧 Enviando alerta para 2 email(s): wallefeduardo18@gmail.com, contato@whatize.com.br
+✅ Email enviado com sucesso para: wallefeduardo18@gmail.com
+   Message ID: <92d64f55-a377-d965-3c4b-a16397d53db1@gmail.com>
+✅ Email enviado com sucesso para: contato@whatize.com.br
+   Message ID: <60228260-abbf-5b2a-1b50-3294ec90659a@gmail.com>
+📊 Resultado: 2 enviados, 0 erros de 2 emails
+📧 Alerta por email enviado: RACE_CONDITION_ERRORS
+📊 [18/06/2025, 23:27:27] Cache: 38.87% | Memória: 123.35 MB | Imagens: 0 erros | Uptime: 29min
+⚠️ [18/06/2025, 23:32:25] 10 erros hoje
+[18/06/2025, 23:32:25] ALERT: ALERTA: RACE_CONDITION_ERRORS - 10 erros de race condition hoje
+📧 Enviando alerta para 2 email(s): wallefeduardo18@gmail.com, contato@whatize.com.br
+✅ Email enviado com sucesso para: wallefeduardo18@gmail.com
+   Message ID: <1812ea0e-d583-c078-da62-a7681107c292@gmail.com>
+✅ Email enviado com sucesso para: contato@whatize.com.br
+   Message ID: <a1a5c097-7eb0-54c4-f4fb-45546d7a190d@gmail.com>
+📊 Resultado: 2 enviados, 0 erros de 2 emails
+📧 Alerta por email enviado: RACE_CONDITION_ERRORS
+📊 [18/06/2025, 23:32:27] Cache: 38.57% | Memória: 112.01 MB | Imagens: 0 erros | Uptime: 34min

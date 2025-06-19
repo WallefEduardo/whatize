@@ -84,15 +84,14 @@ interface Request {
   wbot?: any;
 }
 
-const downloadProfileImage = async ({
-  profilePicUrl,
-  companyId,
-  contact
-}) => {
+import { isPlaceholderUrl, isValidImageUrl, generateImageFilename, IMAGE_CONFIG } from "../../config/images";
+import imageDownloadLogger from "../../utils/imageDownloadLogger";
+
+/**
+ * Cria o diretório de imagens se não existir
+ */
+const ensureImageDirectory = (companyId: number): string => {
   const publicFolder = path.resolve(__dirname, "..", "..", "..", "public");
-  let filename;
-
-
   const folder = path.resolve(publicFolder, `company${companyId}`, "contacts");
 
   if (!fs.existsSync(folder)) {
@@ -100,21 +99,112 @@ const downloadProfileImage = async ({
     fs.chmodSync(folder, 0o777);
   }
 
-  try {
+  return folder;
+};
 
-    const response = await axios.get(profilePicUrl, {
-      responseType: 'arraybuffer'
-    });
-
-    filename = `${new Date().getTime()}.jpeg`;
-    fs.writeFileSync(join(folder, filename), response.data);
-
-  } catch (error) {
-    console.error(error)
+/**
+ * Baixa a imagem de perfil do contato
+ * Retorna o nome do arquivo salvo ou null em caso de erro
+ */
+const downloadProfileImage = async ({
+  profilePicUrl,
+  companyId,
+  contact
+}): Promise<string | null> => {
+  if (!profilePicUrl || !isValidImageUrl(profilePicUrl)) {
+    return null;
   }
 
-  return filename
-}
+  // Se é uma URL de placeholder, não tentar baixar
+  if (isPlaceholderUrl(profilePicUrl)) {
+    imageDownloadLogger.logPlaceholderSkipped(profilePicUrl, contact?.id || 'N/A', companyId);
+    return null;
+  }
+
+  const folder = ensureImageDirectory(companyId);
+
+  // Implementar retry com backoff
+  for (let attempt = 1; attempt <= IMAGE_CONFIG.RETRY.MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = await axios.get(profilePicUrl, {
+        responseType: 'arraybuffer',
+        timeout: IMAGE_CONFIG.DOWNLOAD_TIMEOUT,
+        validateStatus: (status) => status < 400,
+        headers: {
+          'User-Agent': IMAGE_CONFIG.USER_AGENT
+        },
+        maxContentLength: IMAGE_CONFIG.MAX_FILE_SIZE
+      });
+
+      const filename = generateImageFilename();
+      const filePath = join(folder, filename);
+      
+      fs.writeFileSync(filePath, response.data);
+      
+      // Log de sucesso apenas no arquivo
+      imageDownloadLogger.logSuccess({
+        url: profilePicUrl,
+        contactId: contact?.id || 'N/A',
+        companyId,
+        filename,
+        attempt,
+        fileSize: response.data.length
+      });
+      
+      return filename;
+
+    } catch (error) {
+      const isLastAttempt = attempt === IMAGE_CONFIG.RETRY.MAX_ATTEMPTS;
+      
+      const errorDetails = {
+        attempt,
+        maxAttempts: IMAGE_CONFIG.RETRY.MAX_ATTEMPTS,
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        url: profilePicUrl,
+        contactId: contact?.id || 'N/A',
+        companyId
+      };
+
+      // Log do erro
+      imageDownloadLogger.logError({
+        url: profilePicUrl,
+        contactId: contact?.id || 'N/A',
+        companyId,
+        error: {
+          status: error.response?.status,
+          message: error.message,
+          code: error.code
+        },
+        attempt,
+        maxAttempts: IMAGE_CONFIG.RETRY.MAX_ATTEMPTS
+      });
+
+      if (isLastAttempt) {
+        console.error(`❌ Falha final ao baixar imagem (${attempt}/${IMAGE_CONFIG.RETRY.MAX_ATTEMPTS}):`, errorDetails);
+        
+        // Alertas específicos para diferentes tipos de erro
+        if (error.response?.status === 502) {
+          console.warn(`🚨 Erro 502 (Bad Gateway) - Possível problema de infraestrutura no servidor de imagens`);
+        } else if (error.response?.status === 403) {
+          console.warn(`🚨 Erro 403 (Forbidden) - Acesso negado à imagem`);
+        } else if (error.response?.status === 404) {
+          console.warn(`🚨 Erro 404 (Not Found) - Imagem não encontrada`);
+        } else if (error.code === 'ECONNABORTED') {
+          console.warn(`🚨 Timeout - Servidor demorou mais de ${IMAGE_CONFIG.DOWNLOAD_TIMEOUT}ms para responder`);
+        }
+        
+        return null;
+      } else {
+        // Retry silencioso - log apenas no arquivo
+        await new Promise(resolve => setTimeout(resolve, IMAGE_CONFIG.RETRY.DELAY_MS * attempt));
+      }
+    }
+  }
+
+  return null;
+};
 
 const CreateOrUpdateContactService = async ({
   name,
@@ -255,40 +345,41 @@ const CreateOrUpdateContactService = async ({
 
 
     if (updateImage) {
-
-
-      let filename;
-
-      filename = await downloadProfileImage({
+      let filename = await downloadProfileImage({
         profilePicUrl,
         companyId,
         contact
-      })
-
-
-      await contact.update({
-        urlPicture: filename,
-        pictureUpdated: true
       });
 
-      await contact.reload();
-    } else {
-      if (['facebook', 'instagram'].includes(channel)) {
-        let filename;
-
-        filename = await downloadProfileImage({
-          profilePicUrl,
-          companyId,
-          contact
-        })
-
-
+      // Só atualizar se conseguiu baixar a imagem
+      if (filename) {
         await contact.update({
           urlPicture: filename,
           pictureUpdated: true
         });
-
         await contact.reload();
+      } else {
+        // Se falhou ao baixar, manter o estado atual mas marcar como tentado
+        console.warn(`⚠️ Falha ao baixar imagem para contato ${contact.id}`);
+      }
+    } else {
+      if (['facebook', 'instagram'].includes(channel)) {
+        let filename = await downloadProfileImage({
+          profilePicUrl,
+          companyId,
+          contact
+        });
+
+        // Só atualizar se conseguiu baixar a imagem
+        if (filename) {
+          await contact.update({
+            urlPicture: filename,
+            pictureUpdated: true
+          });
+          await contact.reload();
+        } else {
+          console.warn(`⚠️ Falha ao baixar imagem para contato ${contact.id} (${channel})`);
+        }
       }
     }
 
