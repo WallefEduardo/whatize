@@ -30,9 +30,10 @@ const CHECK_INTERVAL = 300000; // 5 minutos (mais apropriado para produção)
 
 // Configurações de alertas
 const ALERT_THRESHOLDS = {
-    MAX_ERRORS_PER_HOUR: 5,
-    LOW_CACHE_PERFORMANCE: 10, // %
-    HIGH_MEMORY_USAGE: 500 // MB
+    MAX_ERRORS_PER_HOUR: 10,
+    LOW_CACHE_PERFORMANCE: 5,
+    HIGH_MEMORY_USAGE: 750,
+    MIN_CACHE_OPERATIONS: 50
 };
 
 class RaceConditionMonitor {
@@ -44,6 +45,10 @@ class RaceConditionMonitor {
             lastCheck: null,
             alerts: []
         };
+        
+        // Sistema anti-spam para alertas
+        this.alertCooldowns = new Map(); // tipo -> timestamp do último envio
+        this.COOLDOWN_MINUTES = 30; // 30 minutos entre alertas do mesmo tipo
         
         // Garantir que o diretório de logs existe
         const logDir = path.dirname(LOG_FILE);
@@ -107,6 +112,17 @@ class RaceConditionMonitor {
     }
 
     async sendAlert(type, message, data = {}) {
+        // Verificar cooldown - evitar spam de alertas
+        const now = Date.now();
+        const lastSent = this.alertCooldowns.get(type);
+        const cooldownMs = this.COOLDOWN_MINUTES * 60 * 1000;
+        
+        if (lastSent && (now - lastSent) < cooldownMs) {
+            const remainingMinutes = Math.ceil((cooldownMs - (now - lastSent)) / 1000 / 60);
+            console.log(`⏭️ Alerta ${type} em cooldown (${remainingMinutes}min restantes)`);
+            return; // Não enviar durante cooldown
+        }
+        
         const alert = {
             type,
             message,
@@ -123,6 +139,10 @@ class RaceConditionMonitor {
             try {
                 await this.emailSender.sendAlert(alert);
                 console.log(`📧 Alerta por email enviado: ${type}`);
+                
+                // Marcar timestamp do envio para cooldown
+                this.alertCooldowns.set(type, now);
+                
             } catch (error) {
                 this.logMessage(`Erro ao enviar email: ${error.message}`, 'ERROR');
             }
@@ -142,26 +162,29 @@ class RaceConditionMonitor {
     analyzeStats(data) {
         const alerts = [];
         
-        // Verificar erros de race condition
-        if (data.raceConditions.todayErrors > 0) {
+        // Verificar erros de race condition - só alerta se há muitos erros
+        if (data.raceConditions.todayErrors > ALERT_THRESHOLDS.MAX_ERRORS_PER_HOUR) {
             alerts.push({
                 type: 'RACE_CONDITION_ERRORS',
                 message: `${data.raceConditions.todayErrors} erros de race condition hoje`,
-                severity: data.raceConditions.todayErrors > 5 ? 'HIGH' : 'MEDIUM'
+                severity: data.raceConditions.todayErrors > 20 ? 'HIGH' : 'MEDIUM'
             });
         }
 
-        // Verificar performance do cache
+        // Verificar performance do cache - só alerta se há operações suficientes e cache muito baixo
         const cacheHitRate = parseFloat(data.contactCache.hitRate.replace('%', ''));
-        if (cacheHitRate < ALERT_THRESHOLDS.LOW_CACHE_PERFORMANCE && data.contactCache.misses > 10) {
+        const totalOperations = data.contactCache.hits + data.contactCache.misses;
+        
+        if (cacheHitRate < ALERT_THRESHOLDS.LOW_CACHE_PERFORMANCE && 
+            totalOperations > ALERT_THRESHOLDS.MIN_CACHE_OPERATIONS) {
             alerts.push({
                 type: 'LOW_CACHE_PERFORMANCE',
-                message: `Taxa de cache baixa: ${data.contactCache.hitRate}`,
+                message: `Taxa de cache baixa: ${data.contactCache.hitRate} (${totalOperations} operações)`,
                 severity: 'MEDIUM'
             });
         }
 
-        // Verificar uso de memória
+        // Verificar uso de memória - só alerta se realmente alto
         const memoryUsage = parseFloat(data.contactCache.memoryUsage.replace(' MB', ''));
         if (memoryUsage > ALERT_THRESHOLDS.HIGH_MEMORY_USAGE) {
             alerts.push({
