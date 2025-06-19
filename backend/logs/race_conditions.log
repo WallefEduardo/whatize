@@ -32774,3 +32774,198 @@
   }
 }
 ---
+{
+  "timestamp": "18/06/2025 21:53:50.445",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 21:53:50.652",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881364572",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881364572@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 21:53:51.538",
+  "type": "CONTACT_CREATION",
+  "contact": "559881364572@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "Click - Comunicação Visual",
+    "contactId": 8
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 21:55:13.533",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881462237@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 21:55:13.738",
+  "type": "CONTACT_CREATION",
+  "contact": "559881462237@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881462237",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881462237@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 21:55:14.115",
+  "type": "CONTACT_CREATION",
+  "contact": "559881462237@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "finalName": "559881462237",
+    "contactId": 870
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 21:56:42.432",
+  "type": "BAILEYS_EVENT",
+  "contact": "559884692368@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 21:56:42.637",
+  "type": "CONTACT_CREATION",
+  "contact": "559884692368@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559884692368",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559884692368@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 21:56:43.600",
+  "type": "CONTACT_CREATION",
+  "contact": "559884692368@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "finalName": "559884692368",
+    "contactId": 871
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 21:57:02.713",
+  "type": "BAILEYS_EVENT",
+  "contact": "559891402746@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 21:57:02.921",
+  "type": "CONTACT_CREATION",
+  "contact": "559891402746@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559891402746",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559891402746@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 21:57:03.835",
+  "type": "CONTACT_CREATION",
+  "contact": "559891402746@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "UPDATE",
+    "source": "MESSAGE",
+    "finalName": "559891402746",
+    "contactId": 107
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 21:59:44.270",
+  "type": "BAILEYS_EVENT",
+  "contact": "559881946355@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "eventType": "contacts.update",
+    "hasImgUrl": true
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 21:59:44.475",
+  "type": "CONTACT_CREATION",
+  "contact": "559881946355@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "name": "559881946355",
+    "isGroup": false,
+    "channel": "whatsapp",
+    "remoteJid": "559881946355@s.whatsapp.net"
+  }
+}
+---
+{
+  "timestamp": "18/06/2025 21:59:45.633",
+  "type": "CONTACT_CREATION",
+  "contact": "559881946355@company1",
+  "whatsappId": 2,
+  "additionalData": {
+    "action": "CREATE",
+    "source": "MESSAGE",
+    "finalName": "559881946355",
+    "contactId": 872
+  }
+}
+---
