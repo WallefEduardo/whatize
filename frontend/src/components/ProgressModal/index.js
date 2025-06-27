@@ -114,7 +114,9 @@ const StepContainer = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(2),
 }));
 
-const StepItem = styled(Box)(({ theme, completed, active }) => ({
+const StepItem = styled(Box, {
+  shouldForwardProp: (prop) => !['completed', 'active'].includes(prop),
+})(({ theme, completed, active }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(2),

@@ -37,6 +37,7 @@ import { openApi } from "../../services/api";
 import toastError from "../../errors/toastError";
 import ColorModeContext from "../../layout/themeContext";
 import { Helmet } from "react-helmet";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 // utils
 import { validateCpfCnpj } from "../../utils/validateCpfCnpj";
@@ -81,17 +82,19 @@ const Card = styled(MuiCard)(({ theme }) => ({
     flexDirection: 'column',
     alignSelf: 'center',
     width: '100%',
-    padding: theme.spacing(4),
+    padding: theme.spacing(3),
     gap: theme.spacing(2),
     margin: 'auto',
     background: 'rgba(255, 255, 255, 0.05)',
     backdropFilter: 'blur(10px)',
     border: '1px solid rgba(255, 255, 255, 0.1)',
     [theme.breakpoints.up('sm')]: {
-        maxWidth: '600px',
+        maxWidth: '500px',
+        padding: theme.spacing(3),
     },
     [theme.breakpoints.up('md')]: {
-        maxWidth: '800px',
+        maxWidth: '600px',
+        padding: theme.spacing(4),
     },
     boxShadow: '0 8px 32px 0 #090b11',
 }));
@@ -101,10 +104,10 @@ const SignUpContainer = styled(Stack)(({ theme }) => ({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    padding: theme.spacing(2),
+    padding: theme.spacing(1),
     background: 'linear-gradient(135deg, #474c4f 0%, #090b11 100%)',
     [theme.breakpoints.up('sm')]: {
-        padding: theme.spacing(4),
+        padding: theme.spacing(2),
     },
 }));
 
@@ -121,6 +124,7 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
     },
     '& .MuiInputBase-input': {
         color: 'rgba(255, 255, 255, 0.9)',
+        padding: '12px 14px',
     },
     '& .MuiInputLabel-root': {
         color: 'rgba(255, 255, 255, 0.7)',
@@ -129,7 +133,8 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
 
 const StyledFormLabel = styled(FormLabel)({
     color: 'rgba(255, 255, 255, 0.7)',
-    marginBottom: '8px',
+    marginBottom: '6px',
+    fontSize: '0.9rem',
 });
 
 const StyledLink = styled(Link)({
@@ -150,7 +155,7 @@ const StyledSelect = styled(Select)(({ theme }) => ({
     },
     '& .MuiSelect-select': {
         color: 'rgba(255, 255, 255, 0.9)',
-        padding: '14px',
+        padding: '12px 14px',
     },
     '& .MuiSvgIcon-root': {
         color: 'rgba(255, 255, 255, 0.7)',
@@ -159,7 +164,7 @@ const StyledSelect = styled(Select)(({ theme }) => ({
 
 const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
     '&.MuiMenuItem-root': {
-        padding: '16px',
+        padding: '12px 16px',
         borderRadius: '8px',
         margin: '4px',
         '&:hover': {
@@ -177,18 +182,20 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
 const PlanCard = styled(Box)(({ theme }) => ({
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '6px',
     '& .plan-name': {
         fontWeight: 600,
         color: 'rgba(255, 255, 255, 0.9)',
+        fontSize: '0.95rem',
     },
     '& .plan-details': {
         color: 'rgba(255, 255, 255, 0.7)',
-        fontSize: '0.9rem',
+        fontSize: '0.85rem',
     },
     '& .plan-price': {
         color: '#4CAF50',
         fontWeight: 600,
+        fontSize: '0.9rem',
     },
 }));
 
@@ -229,12 +236,15 @@ const SignUp = () => {
     const [submitting, setSubmitting] = useState(false);
     const { colorMode } = useContext(ColorModeContext);
     const { appName } = colorMode;
+    const { handleLogin } = useContext(AuthContext);
     
     // Estados para o modal de progresso
     const [showProgress, setShowProgress] = useState(false);
     const [progress, setProgress] = useState(0);
     const [currentStep, setCurrentStep] = useState(0);
     const [progressMessage, setProgressMessage] = useState("Preparando sua conta...");
+    
+
 
     // Memoizar companyId para evitar recálculos
     const companyId = useMemo(() => {
@@ -305,13 +315,13 @@ const SignUp = () => {
         fetchPlans();
     }, []); // Removido getPlanList da dependência para evitar loops
 
-    // Função para simular progresso
+    // Função para simular progresso até 95%
     const simulateProgress = useCallback(() => {
         const steps = [
-            { message: "Validando informações...", duration: 1000 },
-            { message: "Criando empresa...", duration: 2000 },
-            { message: "Configurando sistema...", duration: 1500 },
-            { message: "Finalizando cadastro...", duration: 1000 }
+            { message: "Validando informações...", duration: 1000, maxProgress: 25 },
+            { message: "Criando empresa...", duration: 2000, maxProgress: 50 },
+            { message: "Configurando sistema...", duration: 1500, maxProgress: 75 },
+            { message: "Finalizando cadastro...", duration: 1000, maxProgress: 95 }
         ];
 
         let currentProgress = 0;
@@ -322,8 +332,7 @@ const SignUp = () => {
                 setCurrentStep(stepIndex);
                 setProgressMessage(steps[stepIndex].message);
                 
-                const stepProgress = 100 / steps.length;
-                const targetProgress = (stepIndex + 1) * stepProgress;
+                const targetProgress = steps[stepIndex].maxProgress;
                 
                 const progressInterval = setInterval(() => {
                     currentProgress += 2;
@@ -341,11 +350,45 @@ const SignUp = () => {
         updateProgress();
     }, []);
 
+    // Função para tratar erros de forma amigável
+    const handleError = (error) => {
+        console.log('Erro completo:', error);
+        console.log('Response data:', error.response?.data);
+        
+        // Priorizar a mensagem do backend se existir
+        if (error.response?.data?.error) {
+            // Mensagem personalizada do backend
+            toast.error(error.response.data.error);
+        } else if (error.response?.data?.message) {
+            // Mensagem alternativa do backend
+            toast.error(error.response.data.message);
+        } else if (error.response?.status === 400) {
+            // Erro de validação
+            toast.error("Verifique os dados informados e tente novamente.");
+        } else if (error.response?.status === 409) {
+            // Conflito (dados duplicados)
+            toast.error("Dados já cadastrados no sistema. Verifique as informações.");
+        } else if (error.response?.status >= 500) {
+            // Erro do servidor
+            toast.error("Erro interno do servidor. Tente novamente em alguns instantes.");
+        } else if (error.message === 'Timeout na requisição') {
+            toast.error('A requisição demorou muito para responder. Tente novamente.');
+        } else {
+            // Erro genérico
+            toastError(error);
+        }
+    };
+
+
+
     // Memoizar função de signup
     const handleSignUp = useCallback(async (values) => {
         if (submitting) return;
         
+        let isMounted = true; // Flag para verificar se componente ainda está montado
+        
         try {
+            if (!isMounted) return;
             setSubmitting(true);
             setShowProgress(true);
             setProgress(0);
@@ -364,7 +407,9 @@ const SignUp = () => {
             
             const response = await Promise.race([signupPromise, timeoutPromise]);
             
-            // Garantir que chegue a 100%
+            if (!isMounted) return; // Verificar se ainda está montado
+            
+            // Completar progresso rapidamente
             setProgress(100);
             setCurrentStep(3);
             setProgressMessage("Conta criada com sucesso!");
@@ -372,19 +417,37 @@ const SignUp = () => {
             // Aguardar um pouco para mostrar o sucesso
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            toast.success(i18n.t("signup.toasts.success"));
-            history.push("/login");
-        } catch (err) {
-            if (err.message === 'Timeout na requisição') {
-                toast.error('A requisição demorou muito para responder. Tente novamente.');
-            } else {
-                toastError(err);
-            }
-        } finally {
-            setSubmitting(false);
+            if (!isMounted) return; // Verificar novamente
+            
+            toast.success("Conta criada com sucesso! Fazendo login...");
+            
+            // Fechar modal de progresso
             setShowProgress(false);
-            setProgress(0);
-            setCurrentStep(0);
+            
+            // Salvar dados no localStorage para login automático
+            localStorage.setItem('signup_email', values.email.toLowerCase().trim());
+            localStorage.setItem('signup_password', values.password);
+            
+            // Aguardar um pouco antes do redirecionamento
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            if (!isMounted) return; // Verificar antes do redirecionamento
+            
+            // Redirecionar para página de login automático
+            history.push('/auto-login');
+            
+        } catch (err) {
+            if (!isMounted) return;
+            console.error('Erro no signup:', err);
+            handleError(err);
+        } finally {
+            if (isMounted) {
+                setSubmitting(false);
+                setShowProgress(false);
+                setProgress(0);
+                setCurrentStep(0);
+            }
+            isMounted = false; // Marcar como desmontado
         }
     }, [history, submitting, simulateProgress]);
 
@@ -400,24 +463,31 @@ const SignUp = () => {
                     <Box sx={{
                         display: 'flex',
                         justifyContent: 'center',
-                        mb: 4,
+                        mb: 2,
                         flexDirection: 'column',
                         alignItems: 'center',
-                        gap: 2
+                        gap: 1
                     }}>
                         <Box>
-                            <img src="/logo.svg" alt="Logo" style={{ width: '350px' }} />
+                            <img src="/logo.svg" alt="Logo" style={{ 
+                                width: '280px',
+                                maxWidth: '90vw'
+                            }} />
                         </Box>
                         <Typography variant="h4" sx={{
                             color: 'white',
                             fontWeight: 600,
                             textAlign: 'center',
-                            fontSize: 'clamp(1.5rem, 5vw, 2rem)'
+                            fontSize: 'clamp(1.3rem, 4vw, 1.8rem)'
                         }}>
                             {i18n.t("signup.title")}
                         </Typography>
-                        <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.7)', textAlign: 'center' }}>
-                        Inicie agora mesmo seu teste gratuito!
+                        <Typography variant="body1" sx={{ 
+                            color: 'rgba(255, 255, 255, 0.7)', 
+                            textAlign: 'center',
+                            fontSize: '0.9rem'
+                        }}>
+                            Inicie agora mesmo seu teste gratuito!
                         </Typography>
                     </Box>
 
@@ -432,7 +502,7 @@ const SignUp = () => {
                         validateOnBlur={true}
                     >
                         {({ touched, errors, isSubmitting, values }) => (
-                            <Form style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            <Form style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                 <FormControl>
                                     <StyledFormLabel>Nome da Empresa</StyledFormLabel>
                                     <Field
@@ -442,40 +512,44 @@ const SignUp = () => {
                                         error={touched.companyName && Boolean(errors.companyName)}
                                         helperText={touched.companyName && errors.companyName}
                                         fullWidth
+                                        size="small"
                                         InputProps={{
                                             startAdornment: (
                                                 <InputAdornment position="start">
-                                                    <Business sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                                                    <Business sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1.2rem' }} />
                                                 </InputAdornment>
                                             ),
                                         }}
                                     />
                                 </FormControl>
-                                                                    <FormControl>
-                                        <StyledFormLabel>Seu CPF ou CNPJ</StyledFormLabel>
-                                        <Field name="document">
-                                            {({ field, form }) => (
-                                                <StyledTextField
-                                                    {...field}
-                                                    placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                                                    error={touched.document && Boolean(errors.document)}
-                                                    helperText={touched.document && errors.document}
-                                                    fullWidth
-                                                    onChange={(e) => {
-                                                        const formatted = formatDocument(e.target.value);
-                                                        form.setFieldValue('document', formatted);
-                                                    }}
-                                                    InputProps={{
-                                                        startAdornment: (
-                                                            <InputAdornment position="start">
-                                                                <Business sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
-                                                            </InputAdornment>
-                                                        ),
-                                                    }}
-                                                />
-                                            )}
-                                        </Field>
-                                    </FormControl>
+
+                                <FormControl>
+                                    <StyledFormLabel>Seu CPF ou CNPJ</StyledFormLabel>
+                                    <Field name="document">
+                                        {({ field, form }) => (
+                                            <StyledTextField
+                                                {...field}
+                                                placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                                                error={touched.document && Boolean(errors.document)}
+                                                helperText={touched.document && errors.document}
+                                                fullWidth
+                                                size="small"
+                                                onChange={(e) => {
+                                                    const formatted = formatDocument(e.target.value);
+                                                    form.setFieldValue('document', formatted);
+                                                }}
+                                                InputProps={{
+                                                    startAdornment: (
+                                                        <InputAdornment position="start">
+                                                            <Business sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1.2rem' }} />
+                                                        </InputAdornment>
+                                                    ),
+                                                }}
+                                            />
+                                        )}
+                                    </Field>
+                                </FormControl>
+
                                 <Box sx={{ 
                                     display: 'grid', 
                                     gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, 
@@ -490,10 +564,11 @@ const SignUp = () => {
                                             error={touched.name && Boolean(errors.name)}
                                             helperText={touched.name && errors.name}
                                             fullWidth
+                                            size="small"
                                             InputProps={{
                                                 startAdornment: (
                                                     <InputAdornment position="start">
-                                                        <Person sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                                                        <Person sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1.2rem' }} />
                                                     </InputAdornment>
                                                 ),
                                             }}
@@ -510,6 +585,7 @@ const SignUp = () => {
                                                     error={touched.phone && Boolean(errors.phone)}
                                                     helperText={touched.phone && errors.phone}
                                                     fullWidth
+                                                    size="small"
                                                     onChange={(e) => {
                                                         const formatted = formatPhone(e.target.value);
                                                         form.setFieldValue('phone', formatted);
@@ -517,7 +593,7 @@ const SignUp = () => {
                                                     InputProps={{
                                                         startAdornment: (
                                                             <InputAdornment position="start">
-                                                                <Phone sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                                                                <Phone sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1.2rem' }} />
                                                             </InputAdornment>
                                                         ),
                                                     }}
@@ -542,10 +618,11 @@ const SignUp = () => {
                                             error={touched.email && Boolean(errors.email)}
                                             helperText={touched.email && errors.email}
                                             fullWidth
+                                            size="small"
                                             InputProps={{
                                                 startAdornment: (
                                                     <InputAdornment position="start">
-                                                        <Mail sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                                                        <Mail sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1.2rem' }} />
                                                     </InputAdornment>
                                                 ),
                                                 style: { textTransform: 'lowercase' }
@@ -563,10 +640,11 @@ const SignUp = () => {
                                             error={touched.password && Boolean(errors.password)}
                                             helperText={touched.password && errors.password}
                                             fullWidth
+                                            size="small"
                                             InputProps={{
                                                 startAdornment: (
                                                     <InputAdornment position="start">
-                                                        <Lock sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                                                        <Lock sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1.2rem' }} />
                                                     </InputAdornment>
                                                 ),
                                             }}
@@ -581,13 +659,13 @@ const SignUp = () => {
                                             display: 'flex', 
                                             alignItems: 'center', 
                                             gap: 1, 
-                                            p: 2,
+                                            p: 1.5,
                                             backgroundColor: 'rgba(255, 255, 255, 0.05)',
                                             borderRadius: '12px',
                                             border: '1px solid rgba(255, 255, 255, 0.2)'
                                         }}>
-                                            <CircularProgress size={20} sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
-                                            <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                                            <CircularProgress size={16} sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                                            <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>
                                                 Carregando planos...
                                             </Typography>
                                         </Box>
@@ -597,6 +675,7 @@ const SignUp = () => {
                                             name="planId"
                                             error={touched.planId && Boolean(errors.planId)}
                                             fullWidth
+                                            size="small"
                                             MenuProps={{
                                                 PaperProps: {
                                                     sx: {
@@ -604,14 +683,14 @@ const SignUp = () => {
                                                         backdropFilter: 'blur(10px)',
                                                         borderRadius: '12px',
                                                         border: '1px solid rgba(255, 255, 255, 0.1)',
-                                                        maxHeight: '400px',
+                                                        maxHeight: '300px',
                                                     }
                                                 }
                                             }}
                                         >
                                             {plans.length === 0 ? (
                                                 <StyledMenuItem disabled>
-                                                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                                                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>
                                                         Nenhum plano disponível
                                                     </Typography>
                                                 </StyledMenuItem>
@@ -635,7 +714,7 @@ const SignUp = () => {
                                         </Field>
                                     )}
                                     {touched.planId && errors.planId && (
-                                        <Typography sx={{ color: '#f44336', fontSize: '0.75rem', mt: 1 }}>
+                                        <Typography sx={{ color: '#f44336', fontSize: '0.75rem', mt: 0.5 }}>
                                             {errors.planId}
                                         </Typography>
                                     )}
@@ -648,11 +727,12 @@ const SignUp = () => {
                                     disabled={isSubmitting || submitting || loading}
                                     sx={{
                                         borderRadius: '12px',
-                                        padding: '12px',
+                                        padding: '10px',
                                         background: '#00C307',
                                         textTransform: 'none',
-                                        fontSize: '1rem',
+                                        fontSize: '0.95rem',
                                         fontWeight: 500,
+                                        mt: 1,
                                         '&:hover': {
                                             background: '#32CD32',
                                             transition: '0.5s'
@@ -664,14 +744,14 @@ const SignUp = () => {
                                     }}
                                     endIcon={
                                         (isSubmitting || submitting) ? 
-                                        <CircularProgress size={20} sx={{ color: 'white' }} /> : 
-                                        <SendIcon />
+                                        <CircularProgress size={18} sx={{ color: 'white' }} /> : 
+                                        <SendIcon sx={{ fontSize: '1.1rem' }} />
                                     }
                                 >
                                     {(isSubmitting || submitting) ? 'Criando conta...' : i18n.t("signup.buttons.submit")}
                                 </Button>
 
-                                <Typography sx={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                <Typography sx={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>
                                     Já tem uma conta?{' '}
                                     <StyledLink component={RouterLink} to="/login">
                                         {i18n.t("signup.buttons.login")}
@@ -689,6 +769,7 @@ const SignUp = () => {
                     currentStep={currentStep}
                     message={progressMessage}
                 />
+
             </SignUpContainer>
         </>
     );

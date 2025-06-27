@@ -7,7 +7,6 @@ import sequelize from "../../database";
 import CompaniesSettings from "../../models/CompaniesSettings";
 import Invoices from "../../models/Invoices";
 import { addMonths, format } from "date-fns";
-import { hash } from "bcryptjs";
 
 interface CompanyData {
   name: string;
@@ -99,7 +98,7 @@ const CreateCompanyService = async (
       const user = await User.create({
         name: companyUserName,
         email,
-        password: await hash(password, 8),
+        password: password, // Remove a criptografia manual - o modelo User já faz isso automaticamente
         profile: "admin",
         companyId: company.id,
         startWork,

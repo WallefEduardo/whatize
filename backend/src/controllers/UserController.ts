@@ -17,6 +17,7 @@ import ShowCompanyService from "../services/CompanyService/ShowCompanyService";
 import { getWbot } from "../libs/wbot";
 import FindCompaniesWhatsappService from "../services/CompanyService/FindCompaniesWhatsappService";
 import User from "../models/User";
+import Company from "../models/Company";
 
 import { head } from "lodash";
 import ToggleChangeWidthService from "../services/UserServices/ToggleChangeWidthService";
@@ -115,8 +116,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       paymentMethod: "",
       password: password,
       companyUserName: name,
-      startWork: startWork,
-      endWork: endWork,
+      startWork: "00:01",
+      endWork: "23:59",
       defaultTheme: 'light',
       defaultMenu: 'closed',
       allowGroup: false,
@@ -129,6 +130,42 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     };
 
     try {
+      // Verificar se já existe empresa com o mesmo nome
+      const existingCompanyByName = await Company.findOne({
+        where: { name: companyName }
+      });
+
+      if (existingCompanyByName) {
+        throw new AppError("Já existe uma empresa cadastrada com este nome. Por favor, escolha outro nome.", 400);
+      }
+
+      // Verificar se já existe empresa com o mesmo documento
+      const existingCompanyByDocument = await Company.findOne({
+        where: { document: document }
+      });
+
+      if (existingCompanyByDocument) {
+        throw new AppError("Já existe uma empresa cadastrada com este CPF/CNPJ.", 400);
+      }
+
+      // Verificar se já existe empresa com o mesmo email
+      const existingCompanyByEmail = await Company.findOne({
+        where: { email: email }
+      });
+
+      if (existingCompanyByEmail) {
+        throw new AppError("Já existe uma empresa cadastrada com este email.", 400);
+      }
+
+      // Verificar se já existe usuário com o mesmo email
+      const existingUser = await User.findOne({
+        where: { email: email }
+      });
+
+      if (existingUser) {
+        throw new AppError("Já existe um usuário cadastrado com este email.", 400);
+      }
+
       const user = await CreateCompanyService(companyData);
 
       // Envio de email com tratamento de erro robusto
@@ -157,27 +194,105 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
       // Envio de WhatsApp com tratamento de erro robusto
       try {
+        console.log('Iniciando tentativa de envio de WhatsApp...');
+        
         const whatsappPromise = (async () => {
-          const company = await ShowCompanyService(1);
-          const whatsappCompany = await FindCompaniesWhatsappService(company.id)
+          try {
+            // Verificar se existe empresa ID 1
+            const company = await ShowCompanyService(1);
+            if (!company) {
+              console.log('Empresa ID 1 não encontrada');
+              return false;
+            }
+            console.log('Empresa ID 1 encontrada:', company.name);
 
-          if (whatsappCompany.whatsapps[0].status === "CONNECTED" && (phone !== undefined || !isNil(phone) || !isEmpty(phone))) {
-            const whatsappId = whatsappCompany.whatsapps[0].id
+            // Buscar conexões WhatsApp da empresa
+            const whatsappCompany = await FindCompaniesWhatsappService(company.id);
+            if (!whatsappCompany) {
+              console.log('Nenhuma empresa com WhatsApp encontrada para ID 1');
+              return false;
+            }
+            console.log('Empresa com WhatsApp encontrada');
+
+            // Verificar se há conexões WhatsApp
+            if (!whatsappCompany.whatsapps || whatsappCompany.whatsapps.length === 0) {
+              console.log('Nenhuma conexão WhatsApp encontrada para a empresa ID 1');
+              return false;
+            }
+            console.log(`${whatsappCompany.whatsapps.length} conexão(ões) WhatsApp encontrada(s)`);
+
+            // Verificar se a primeira conexão está conectada
+            const firstWhatsapp = whatsappCompany.whatsapps[0];
+            if (firstWhatsapp.status !== "CONNECTED") {
+              console.log(`Conexão WhatsApp não está conectada. Status: ${firstWhatsapp.status}`);
+              return false;
+            }
+            console.log('Conexão WhatsApp está conectada');
+
+            // Verificar se o telefone é válido
+            if (!phone || isNil(phone) || isEmpty(phone)) {
+              console.log('Telefone não fornecido ou inválido');
+              return false;
+            }
+            console.log('Telefone válido fornecido:', phone);
+
+            const whatsappId = firstWhatsapp.id;
             const wbot = getWbot(whatsappId);
+            
+            if (!wbot) {
+              console.log('Bot WhatsApp não encontrado');
+              return false;
+            }
+            console.log('Bot WhatsApp obtido com sucesso');
 
-            const body = `Olá ${name}, \n\nQue bom ter você com a gente! 🎉\n\nVocê acaba de iniciar seu *período de teste no Whatize*, a plataforma que vai transformar seu atendimento e impulsionar seus resultados com chatbots inteligentes, CRM e automações poderosas.\n\nPara te ajudar a aproveitar ao máximo todos os recursos, que tal uma rápida apresentação com um de nossos especialistas? 🚀 \n\nÉ só digitar *Quero*! 😊`
+            // Formatar telefone para WhatsApp (garantir que tenha 55 no início)
+            let formattedPhone = phone.replace(/\D/g, ''); // Remove tudo que não é número
+            
+            console.log('Telefone original:', phone);
+            console.log('Telefone apenas números:', formattedPhone);
+            
+            // Verificar se o telefone tem 10 dígitos (sem o 9 do celular) e adicionar o 9
+            if (formattedPhone.length === 10) {
+              // Telefone com 10 dígitos (DDD + 8 dígitos), adicionar o 9
+              const ddd = formattedPhone.substring(0, 2);
+              const numero = formattedPhone.substring(2);
+              formattedPhone = ddd + '9' + numero;
+              console.log('Adicionado 9 do celular:', formattedPhone);
+            }
+            
+            // Se não começar com 55, adiciona
+            if (!formattedPhone.startsWith('55')) {
+              formattedPhone = '55' + formattedPhone;
+            }
+            
+            console.log('Telefone final formatado:', formattedPhone);
 
-            await wbot.sendMessage(`55${phone}@s.whatsapp.net`, { text: body });
+            const body = `Olá ${name}, \n\nQue bom ter você com a gente! 🎉\n\nVocê acaba de iniciar seu *período de teste no Whatize*, a plataforma que vai transformar seu atendimento e impulsionar seus resultados com chatbots inteligentes, CRM e automações poderosas.\n\nPara te ajudar a aproveitar ao máximo todos os recursos, que tal uma rápida apresentação com um de nossos especialistas? 🚀 \n\nÉ só digitar *Quero*! 😊`;
+
+            const messageTarget = `${formattedPhone}@s.whatsapp.net`;
+            console.log('Enviando mensagem para:', messageTarget);
+            
+            await wbot.sendMessage(messageTarget, { text: body });
+            console.log('Mensagem WhatsApp enviada com sucesso!');
             return true;
+            
+          } catch (innerError) {
+            console.log('Erro interno no envio do WhatsApp:', innerError.message);
+            return false;
           }
-          return false;
         })();
         
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('WhatsApp timeout')), 10000)
         );
         
-        await Promise.race([whatsappPromise, timeoutPromise]);
+        const result = await Promise.race([whatsappPromise, timeoutPromise]);
+        if (result) {
+          console.log('WhatsApp enviado com sucesso para o novo usuário');
+        } else {
+          console.log('WhatsApp não foi enviado (condições não atendidas)');
+        }
+        
       } catch (error) {
         // WhatsApp não é crítico para o cadastro
         console.log('Aviso: Erro ao enviar WhatsApp de boas-vindas:', error.message);
@@ -185,7 +300,29 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
       return res.status(200).json(user);
     } catch (error) {
-      throw error;
+      // Se for um erro conhecido (AppError), retorna a mensagem personalizada
+      if (error instanceof AppError) {
+        throw error;
+      }
+      
+      // Se for erro de constraint única do Sequelize
+      if (error.name === 'SequelizeUniqueConstraintError') {
+        const field = error.errors[0]?.path;
+        switch (field) {
+          case 'name':
+            throw new AppError("Já existe uma empresa cadastrada com este nome. Por favor, escolha outro nome.", 400);
+          case 'email':
+            throw new AppError("Já existe uma empresa cadastrada com este email.", 400);
+          case 'document':
+            throw new AppError("Já existe uma empresa cadastrada com este CPF/CNPJ.", 400);
+          default:
+            throw new AppError("Dados já cadastrados no sistema. Verifique as informações e tente novamente.", 400);
+        }
+      }
+      
+      // Para outros erros, retorna mensagem genérica
+      console.error('Erro no cadastro:', error);
+      throw new AppError("Erro interno do servidor. Tente novamente em alguns instantes.", 500);
     }
   }
 
