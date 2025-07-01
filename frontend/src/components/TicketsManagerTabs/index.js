@@ -24,6 +24,7 @@ import {
   Add as AddIcon,
   TextRotateUp,
   TextRotationDown,
+  ClearAll as ClearAllIcon,
 } from "@material-ui/icons";
 import VisibilityIcon from "@material-ui/icons/Visibility";
 import VisibilityOffIcon from "@material-ui/icons/VisibilityOff";
@@ -345,6 +346,12 @@ const TicketsManagerTabs = () => {
     setSelectedQueuesMessage(selectedQueueIds);
   }, [selectedQueueIds]);
 
+  // Efeito para sincronizar showAllTickets com selectedQueueIds
+  useEffect(() => {
+    // Remove a sincronização automática que estava causando conflito
+    // Agora o usuário pode usar "Todos" junto com filtros de fila
+  }, []);
+
   // Carregar preferências do usuário ao inicializar
   useEffect(() => {
     const loadUserPreferences = () => {
@@ -457,12 +464,7 @@ const TicketsManagerTabs = () => {
 
     clearTimeout(searchTimeout);
 
-    if (tags.length === 0) {
-      setForceSearch(!forceSearch);
-    } else if (tab !== "search") {
-      setTab("search");
-    }
-
+    // Não mudar a tab para "search", manter as tabs sempre visíveis
     searchTimeout = setTimeout(() => {
       setSelectedTags(tags);
       setForceSearch(!forceSearch);
@@ -474,11 +476,7 @@ const TicketsManagerTabs = () => {
 
     clearTimeout(searchTimeout);
 
-    if (users.length === 0) {
-      setForceSearch(!forceSearch);
-    } else if (tab !== "search") {
-      setTab("search");
-    }
+    // Não mudar a tab para "search", manter as tabs sempre visíveis
     searchTimeout = setTimeout(() => {
       setSelectedUsers(users);
       setForceSearch(!forceSearch);
@@ -490,11 +488,7 @@ const TicketsManagerTabs = () => {
 
     clearTimeout(searchTimeout);
 
-    if (whatsapp.length === 0) {
-      setForceSearch(!forceSearch);
-    } else if (tab !== "search") {
-      setTab("search");
-    }
+    // Não mudar a tab para "search", manter as tabs sempre visíveis
     searchTimeout = setTimeout(() => {
       setSelectedWhatsapp(whatsapp);
       setForceSearch(!forceSearch);
@@ -506,12 +500,7 @@ const TicketsManagerTabs = () => {
 
     clearTimeout(searchTimeout);
 
-    if (statusFilter.length === 0) {
-      setForceSearch(!forceSearch);
-    } else if (tab !== "search") {
-      setTab("search");
-    }
-
+    // Não mudar a tab para "search", manter as tabs sempre visíveis
     searchTimeout = setTimeout(() => {
       setSelectedStatus(statusFilter);
       setForceSearch(!forceSearch);
@@ -521,9 +510,9 @@ const TicketsManagerTabs = () => {
   const handleFilter = () => {
     if (filter) {
       setFilter(false);
-      setTab("open");
-    } else setFilter(true);
-    setTab("search");
+    } else {
+      setFilter(true);
+    }
   };
 
   const [open, setOpen] = React.useState(false);
@@ -539,6 +528,30 @@ const TicketsManagerTabs = () => {
 
   const handleClosed = () => {
     setOpen(false);
+  };
+
+  const clearAllFilters = () => {
+    // Limpar todos os filtros
+    setSelectedTags([]);
+    setSelectedUsers([]);
+    setSelectedWhatsapp([]);
+    setSelectedStatus([]);
+    setSearchParam("");
+    setSearchOnMessages(false);
+    setForceSearch(!forceSearch);
+    
+    // Limpar campo de busca
+    if (searchInputRef.current) {
+      searchInputRef.current.value = "";
+    }
+    
+    // Desativar filtros se estiverem ativos
+    if (filter) {
+      setFilter(false);
+      setIsFilterActive(false);
+    }
+    
+    console.log("🧹 Todos os filtros foram limpos");
   };
 
   const tooltipTitleStyle = {
@@ -587,29 +600,70 @@ const TicketsManagerTabs = () => {
           component="span"
           onClick={handleFilter}
         /> */}
-        <IconButton
-          style={{
-            backgroundColor: "transparent",
-            boxShadow: "none",
-            border: "none",
-            borderRadius: "50%",
-            justifyContent: "flex-end",
-            alignItems: "center",
-          }}
-          variant="contained"
-          aria-label="filter"
-          className={classes.filterIcon}
-          onClick={() => {
-            setIsFilterActive((prevState) => !prevState);
-            handleFilter();
-          }}
-        >
-          {isFilterActive ? (
-            <FilterSearch className={classes.icon} />
-          ) : (
-            <Filter className={classes.icon} />
+        <Badge
+          color="primary"
+          variant="dot"
+          invisible={!(
+            selectedTags.length > 0 || 
+            selectedUsers.length > 0 || 
+            selectedWhatsapp.length > 0 || 
+            selectedStatus.length > 0 || 
+            searchParam
           )}
-        </IconButton>
+        >
+          <IconButton
+            style={{
+              backgroundColor: "transparent",
+              boxShadow: "none",
+              border: "none",
+              borderRadius: "50%",
+              justifyContent: "flex-end",
+              alignItems: "center",
+            }}
+            variant="contained"
+            aria-label="filter"
+            className={classes.filterIcon}
+            onClick={() => {
+              setIsFilterActive((prevState) => !prevState);
+              handleFilter();
+            }}
+          >
+            {isFilterActive ? (
+              <FilterSearch className={classes.icon} />
+            ) : (
+              <Filter className={classes.icon} />
+            )}
+          </IconButton>
+        </Badge>
+        
+        {/* Botão Limpar Filtros - só aparece quando há filtros ativos */}
+        {(isFilterActive && (
+          selectedTags.length > 0 || 
+          selectedUsers.length > 0 || 
+          selectedWhatsapp.length > 0 || 
+          selectedStatus.length > 0 || 
+          searchParam
+        )) && (
+          <Tooltip title="Limpar todos os filtros">
+            <IconButton
+              style={{
+                backgroundColor: "transparent",
+                boxShadow: "none",
+                border: "none",
+                borderRadius: "50%",
+                justifyContent: "flex-end",
+                alignItems: "center",
+                marginLeft: 4,
+              }}
+              variant="contained"
+              aria-label="clear-filters"
+              className={classes.filterIcon}
+              onClick={clearAllFilters}
+            >
+              <ClearAllIcon className={classes.icon} style={{ color: "#f44336" }} />
+            </IconButton>
+          </Tooltip>
+        )}
       </div>
 
       {filter === true && (
@@ -679,9 +733,10 @@ const TicketsManagerTabs = () => {
                     className={classes.button}
                     value="uncheck"
                     selected={showAllTickets}
-                    onChange={() =>
-                      setShowAllTickets((prevState) => !prevState)
-                    }
+                    onChange={() => {
+                      // Apenas alterna o estado do "Todos", sem mexer nas filas
+                      setShowAllTickets(!showAllTickets);
+                    }}
                   >
                     {showAllTickets ? (
                       <VisibilityIcon className={classes.icon} />
@@ -881,7 +936,7 @@ const TicketsManagerTabs = () => {
                 />
               </IconButton>
             </Badge>
-            {tab !== "closed" && tab !== "search" && (
+            {tab !== "closed" && (
               <Badge
                 color="primary"
                 invisible={
@@ -1069,15 +1124,29 @@ const TicketsManagerTabs = () => {
             updateCount={(val) => setOpenCount(val)}
             style={applyPanelStyle("open")}
             setTabOpen={setTabOpen}
+            tags={filter ? selectedTags : undefined}
+            users={filter ? selectedUsers : undefined}
+            whatsappIds={filter ? selectedWhatsapp : undefined}
+            statusFilter={filter ? selectedStatus : undefined}
+            searchParam={filter ? searchParam : undefined}
+            forceSearch={filter ? forceSearch : undefined}
+            searchOnMessages={filter ? searchOnMessages : undefined}
           />
           <TicketsList
             status="pending"
             selectedQueueIds={selectedQueueIds}
             sortTickets={sortTickets ? "ASC" : "DESC"}
-            showAll={user.profile === "admin" || user.allUserChat === 'enabled' ? showAllTickets : false}
+            showAll={showAllTickets}
             updateCount={(val) => setPendingCount(val)}
             style={applyPanelStyle("pending")}
             setTabOpen={setTabOpen}
+            tags={filter ? selectedTags : undefined}
+            users={filter ? selectedUsers : undefined}
+            whatsappIds={filter ? selectedWhatsapp : undefined}
+            statusFilter={filter ? selectedStatus : undefined}
+            searchParam={filter ? searchParam : undefined}
+            forceSearch={filter ? forceSearch : undefined}
+            searchOnMessages={filter ? searchOnMessages : undefined}
           />
           {user.allowGroup && (
             <TicketsList
@@ -1088,6 +1157,13 @@ const TicketsManagerTabs = () => {
               updateCount={(val) => setGroupingCount(val)}
               style={applyPanelStyle("group")}
               setTabOpen={setTabOpen}
+              tags={filter ? selectedTags : undefined}
+              users={filter ? selectedUsers : undefined}
+              whatsappIds={filter ? selectedWhatsapp : undefined}
+              statusFilter={filter ? selectedStatus : undefined}
+              searchParam={filter ? searchParam : undefined}
+              forceSearch={filter ? forceSearch : undefined}
+              searchOnMessages={filter ? searchOnMessages : undefined}
             />
           )}
         </Paper>
@@ -1098,40 +1174,49 @@ const TicketsManagerTabs = () => {
           showAll={showAllTickets}
           selectedQueueIds={selectedQueueIds}
           setTabOpen={setTabOpen}
+          tags={filter ? selectedTags : undefined}
+          users={filter ? selectedUsers : undefined}
+          whatsappIds={filter ? selectedWhatsapp : undefined}
+          statusFilter={filter ? selectedStatus : undefined}
+          searchParam={filter ? searchParam : undefined}
+          forceSearch={filter ? forceSearch : undefined}
+          searchOnMessages={filter ? searchOnMessages : undefined}
         />
       </TabPanel>
-      <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
-        {profile === "admin" && (
-          <>
+      {filter && (
+        <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
+          {profile === "admin" && (
+            <>
+              <TicketsList
+                statusFilter={selectedStatus}
+                searchParam={searchParam}
+                showAll={showAllTickets}
+                tags={selectedTags}
+                users={selectedUsers}
+                selectedQueueIds={selectedQueueIds}
+                whatsappIds={selectedWhatsapp}
+                forceSearch={forceSearch}
+                searchOnMessages={searchOnMessages}
+                status="search"
+              />
+            </>
+          )}
+
+          {profile === "user" && (
             <TicketsList
               statusFilter={selectedStatus}
               searchParam={searchParam}
-              showAll={showAllTickets}
+              showAll={false}
               tags={selectedTags}
-              users={selectedUsers}
               selectedQueueIds={selectedQueueIds}
               whatsappIds={selectedWhatsapp}
               forceSearch={forceSearch}
               searchOnMessages={searchOnMessages}
               status="search"
             />
-          </>
-        )}
-
-        {profile === "user" && (
-          <TicketsList
-            statusFilter={selectedStatus}
-            searchParam={searchParam}
-            showAll={false}
-            tags={selectedTags}
-            selectedQueueIds={selectedQueueIds}
-            whatsappIds={selectedWhatsapp}
-            forceSearch={forceSearch}
-            searchOnMessages={searchOnMessages}
-            status="search"
-          />
-        )}
-      </TabPanel>
+          )}
+        </TabPanel>
+      )}
     </Paper >
   );
 };

@@ -1,0 +1,232 @@
+/* ===== CORREÇÕES PARA SIDEBAR ===== */
+
+/* Texto do sidebar deve ser branco */
+.MuiDrawer-root .MuiTypography-root,
+.MuiDrawer-root .MuiListItemText-root,
+.MuiDrawer-root .MuiListItemText-primary,
+.MuiDrawer-root .MuiListItem-root {
+  color: #ffffff !important;
+}
+
+/* ===== CORREÇÕES PARA DROPDOWNS MATERIAL-UI ===== */
+
+/* Autocomplete - Dropdown principal */
+.MuiAutocomplete-paper {
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  border-radius: 8px !important;
+  max-height: 300px !important;
+}
+
+.MuiAutocomplete-root {
+  min-height: 56px !important; /* Campos mais altos */
+}
+
+.MuiAutocomplete-inputRoot {
+  min-height: 56px !important; /* Input do autocomplete mais alto */
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+.MuiAutocomplete-listbox {
+  background-color: #ffffff !important;
+  padding: 8px 0 !important;
+  max-height: 250px !important;
+}
+
+.MuiAutocomplete-option {
+  background-color: transparent !important;
+  padding: 12px 16px !important;
+  min-height: 48px !important;
+  border: none !important;
+  color: rgba(0, 0, 0, 0.87) !important;
+  font-size: 14px !important;
+}
+
+.MuiAutocomplete-option:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.MuiAutocomplete-option[aria-selected="true"] {
+  background-color: rgba(25, 118, 210, 0.08) !important;
+}
+
+.MuiAutocomplete-option[aria-selected="true"]:hover {
+  background-color: rgba(25, 118, 210, 0.12) !important;
+}
+
+/* Select - Dropdown nativo do Material-UI */
+.MuiSelect-select {
+  background-color: #ffffff !important;
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.MuiMenuItem-root {
+  background-color: #ffffff !important;
+  padding: 12px 16px !important;
+  min-height: 48px !important;
+  border: none !important;
+  color: rgba(0, 0, 0, 0.87) !important;
+  font-size: 14px !important;
+}
+
+.MuiMenuItem-root:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.MuiMenuItem-root.Mui-selected {
+  background-color: rgba(25, 118, 210, 0.08) !important;
+}
+
+.MuiMenuItem-root.Mui-selected:hover {
+  background-color: rgba(25, 118, 210, 0.12) !important;
+}
+
+/* Menu/Popover container */
+.MuiMenu-paper,
+.MuiPopover-paper {
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  border-radius: 8px !important;
+}
+
+.MuiMenu-list {
+  background-color: #ffffff !important;
+  padding: 8px 0 !important;
+}
+
+/* TextField - Input fields */
+.MuiOutlinedInput-root {
+  background-color: #ffffff !important;
+  min-height: 56px !important; /* Campos mais altos */
+}
+
+.MuiOutlinedInput-input {
+  padding: 16px 14px !important; /* Padding maior para campos mais grossos */
+}
+
+.MuiOutlinedInput-notchedOutline {
+  border-color: rgba(0, 0, 0, 0.23) !important;
+}
+
+.MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #1976d2 !important;
+  border-width: 2px !important;
+}
+
+/* Input Label */
+.MuiInputLabel-root {
+  color: rgba(0, 0, 0, 0.54) !important;
+}
+
+.MuiInputLabel-root.Mui-focused {
+  color: #1976d2 !important;
+}
+
+/* Chips dentro dos Autocomplete - REMOVIDO para usar cores originais */
+.MuiChip-root {
+  border-radius: 6px !important; /* Menos arredondado, quase retangular */
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  height: 28px !important;
+  /* Removido background-color e color para manter cores originais */
+}
+
+.MuiChip-deleteIcon {
+  color: rgba(0, 0, 0, 0.54) !important;
+}
+
+.MuiChip-deleteIcon:hover {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+/* ===== ESTILOS PARA DASHBOARD ===== */
+
+/* Container principal do Dashboard */
+.dashboard-container {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+  min-height: 100vh !important;
+}
+
+/* Cards do Dashboard */
+.dashboard-card,
+.MuiCard-root {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.1) !important;
+  border-radius: 12px !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.dashboard-card:hover,
+.MuiCard-root:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.15) !important;
+}
+
+.MuiCardContent-root {
+  background-color: transparent !important;
+}
+
+/* ===== CORREÇÕES ESPECÍFICAS PARA COMPONENTES ===== */
+
+/* Garantir que todos os poppers tenham fundo branco */
+.MuiPopper-root .MuiPaper-root {
+  background-color: #ffffff !important;
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+/* Correções para z-index */
+.MuiAutocomplete-popper {
+  z-index: 1300 !important;
+}
+
+.MuiMenu-root {
+  z-index: 1300 !important;
+}
+
+/* Garantir visibilidade do texto */
+.MuiTypography-root {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+/* Correções para estados disabled */
+.MuiAutocomplete-option[aria-disabled="true"] {
+  opacity: 0.5 !important;
+  pointer-events: none !important;
+}
+
+.MuiMenuItem-root.Mui-disabled {
+  opacity: 0.5 !important;
+  color: rgba(0, 0, 0, 0.26) !important;
+}
+
+/* ===== RESET DE ESTILOS CONFLITANTES ===== */
+
+/* Remover qualquer reset que possa estar interferindo */
+* {
+  box-sizing: border-box;
+}
+
+/* Garantir que os dropdowns não sejam afetados por resets globais */
+.MuiAutocomplete-root *,
+.MuiSelect-root *,
+.MuiMenu-root *,
+.MuiPopover-root * {
+  box-sizing: border-box !important;
+}
+
+/* Correções para posicionamento */
+.MuiAutocomplete-popper[x-placement*="bottom"] .MuiAutocomplete-paper {
+  margin-top: 4px !important;
+}
+
+.MuiAutocomplete-popper[x-placement*="top"] .MuiAutocomplete-paper {
+  margin-bottom: 4px !important;
+} 

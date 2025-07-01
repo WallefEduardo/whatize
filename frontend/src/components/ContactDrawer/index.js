@@ -110,6 +110,7 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 	const [acceptAudioMessage, setAcceptAudio] = useState(contact.acceptAudioMessage);
 	const [funnels, setFunnels] = useState([]);
 	const [selectedFunnels, setSelectedFunnels] = useState([]);
+	const [isEtapaKanbanEnabled, setIsEtapaKanbanEnabled] = useState(false);
 
 	useEffect(() => {
 		async function fetchData() {
@@ -131,7 +132,13 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 		async function fetchFunnels() {
 			try {
 				const { data } = await api.get("/funilkanban");
-				setFunnels(data.funilKanbans || []);
+				const loadedFunnels = data.funilKanbans || [];
+				setFunnels(loadedFunnels);
+				
+				// Selecionar automaticamente o primeiro funil se houver funis disponíveis
+				if (loadedFunnels.length > 0 && selectedFunnels.length === 0) {
+					setSelectedFunnels([loadedFunnels[0]]);
+				}
 			} catch (err) {
 				console.error("Erro ao carregar funis:", err);
 			}
@@ -139,8 +146,25 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 		fetchFunnels();
 	}, []);
 
+	// Efeito para controlar se o campo Etapa Kanban deve estar habilitado
+	useEffect(() => {
+		setIsEtapaKanbanEnabled(selectedFunnels.length > 0);
+	}, [selectedFunnels]);
+
 	const handleFunnelsChange = (event, newValues) => {
+		const previousFunnels = selectedFunnels.map(f => f.id);
+		const newFunnels = newValues.map(f => f.id);
+		
+		// Se os funis mudaram, limpar a seleção de Etapa Kanban
+		const funnelsChanged = JSON.stringify(previousFunnels.sort()) !== JSON.stringify(newFunnels.sort());
+		
 		setSelectedFunnels(newValues);
+		
+		// Se mudou os funis, resetar a etapa kanban (será implementado via context ou callback)
+		if (funnelsChanged && ticket?.id) {
+			// Aqui podemos adicionar uma callback para limpar a etapa kanban
+			console.log('Funis alterados, etapa kanban deve ser resetada');
+		}
 	};
 
 	// Função para gerar cores diferentes para cada funil
@@ -323,7 +347,11 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 								)}
 							/>
 							
-							<TagsKanbanContainer ticket={ticket} funilIds={selectedFunnels.map(f => f.id)} />
+							<TagsKanbanContainer 
+								ticket={ticket} 
+								funilIds={selectedFunnels.map(f => f.id)}
+								isEnabled={isEtapaKanbanEnabled}
+							/>
 						</Paper>
 						
 						<Paper square variant="outlined" className={classes.contactDetails}>

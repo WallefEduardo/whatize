@@ -1,5 +1,5 @@
 import { Chip, Paper, Select, MenuItem, Grid, InputLabel, FormControl, Tooltip, CircularProgress } from "@material-ui/core";
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { isString } from "lodash";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { makeStyles } from "@material-ui/core/styles";
 import { i18n } from "../../translate/i18n";
 import { Field, Form } from "formik";
+import { debounce } from "lodash";
 
 const useStyles = makeStyles((theme) => ({
     menuListItem: {
@@ -52,7 +53,7 @@ const useStyles = makeStyles((theme) => ({
     }
 }));
 
-export function TagsKanbanContainer({ ticket, funilIds = [] }) {
+export function TagsKanbanContainer({ ticket, funilIds = [], isEnabled = true }) {
     const defaultChipStyle = { color: "#7f7f7f" };
     const defaultChipProps = { color: "#7f7f7f" };
     
@@ -62,6 +63,12 @@ export function TagsKanbanContainer({ ticket, funilIds = [] }) {
     const [loading, setLoading] = useState(false);
     const [chipProps, setChipProps] = useState(defaultChipProps);
     const [initialLoad, setInitialLoad] = useState(true);
+    
+    // Cache simples para evitar consultas desnecessárias
+    const cacheRef = useRef({
+        funnels: null,
+        tags: new Map() // Map para cache por funilIds
+    });
     
     const classes = useStyles(chipProps);
 
@@ -122,6 +129,16 @@ export function TagsKanbanContainer({ ticket, funilIds = [] }) {
 
     const loadTags = async (funilIds = []) => {
         try {
+            // Criar chave de cache baseada nos funilIds
+            const cacheKey = JSON.stringify(funilIds.sort());
+            
+            // Verificar se já temos os dados no cache
+            if (cacheRef.current.tags.has(cacheKey)) {
+                const cachedData = cacheRef.current.tags.get(cacheKey);
+                setTags(cachedData);
+                return cachedData;
+            }
+            
             const params = { kanban: 1 };
             
             if (funilIds && funilIds.length > 0) {
@@ -131,8 +148,13 @@ export function TagsKanbanContainer({ ticket, funilIds = [] }) {
             }
             
             const { data } = await api.get(`/tags/list`, { params });
-            setTags(data || []);
-            return data;
+            const tagsData = data || [];
+            
+            // Armazenar no cache
+            cacheRef.current.tags.set(cacheKey, tagsData);
+            
+            setTags(tagsData);
+            return tagsData;
         } catch (err) {
             console.error("Erro ao carregar tags:", err);
             toastError(err);
@@ -142,9 +164,20 @@ export function TagsKanbanContainer({ ticket, funilIds = [] }) {
 
     const loadFunnels = async () => {
         try {
+            // Verificar se já temos os funis no cache
+            if (cacheRef.current.funnels) {
+                setFunnels(cacheRef.current.funnels);
+                return cacheRef.current.funnels;
+            }
+            
             const { data } = await api.get("/funilkanban");
-            setFunnels(data.funilKanbans || []);
-            return data.funilKanbans || [];
+            const funnelsData = data.funilKanbans || [];
+            
+            // Armazenar no cache
+            cacheRef.current.funnels = funnelsData;
+            
+            setFunnels(funnelsData);
+            return funnelsData;
         } catch (err) {
             console.error("Erro ao carregar funis:", err);
             return [];
@@ -163,70 +196,69 @@ export function TagsKanbanContainer({ ticket, funilIds = [] }) {
         }
     };
 
-    const handleChange = async (e) => {
+    // Função para atualizar tag no backend com debounce
+    const updateTagInBackend = useCallback(
+        debounce(async (ticketId, tagValue) => {
+            try {
+                if (tagValue) {
+                    // Removemos qualquer tag existente antes de adicionar a nova
+                    await api.delete(`/ticket-tags/${ticketId}`);
+                    
+                    // Adicionamos a nova tag
+                    await api.put(`/ticket-tags/${ticketId}/${tagValue}`);
+                    toast.success("Tag atualizada com sucesso!");
+                } else {
+                    // Removemos todas as tags do ticket
+                    await api.delete(`/ticket-tags/${ticketId}`);
+                    toast.info("Tag removida com sucesso!");
+                }
+                
+                // Aguardamos um pouco para garantir que o backend processou a mudança
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Recarregamos o ticket para ter certeza que está atualizado
+                const updatedTicket = await fetchCurrentTicket(ticketId);
+                
+                if (updatedTicket) {
+                    // Atualizamos a seleção com base nos dados atualizados
+                    if (updatedTicket.tags && updatedTicket.tags.length > 0) {
+                        setSelected(updatedTicket.tags[0].id);
+                        updateChipStyle(updatedTicket.tags[0].id);
+                    } else {
+                        setSelected("");
+                        setChipProps(defaultChipProps);
+                    }
+                }
+                
+            } catch (err) {
+                console.error("Erro ao atualizar tag:", err);
+                toast.error("Erro ao atualizar tag. Tente novamente.");
+            } finally {
+                setLoading(false);
+            }
+        }, 500),
+        [fetchCurrentTicket, updateChipStyle, defaultChipProps]
+    );
+
+    const handleChange = (e) => {
         const value = e.target.value;
         
         if (loading || !ticket?.id) return;
         
+        // Feedback imediato na UI
+        setSelected(value);
+        
+        if (value) {
+            updateChipStyle(value);
+        } else {
+            setChipProps(defaultChipProps);
+        }
+        
+        // Indicar que está carregando
         setLoading(true);
         
-        try {
-            // Primeiro atualizamos o estado local para feedback imediato ao usuário
-            setSelected(value);
-            
-            if (value) {
-                updateChipStyle(value);
-            } else {
-                setChipProps(defaultChipProps);
-            }
-
-            // Se selecionou uma tag, adicionamos ela
-            if (value) {
-                // Removemos qualquer tag existente antes de adicionar a nova
-                await api.delete(`/ticket-tags/${ticket.id}`);
-                
-                // Adicionamos a nova tag
-                await api.put(`/ticket-tags/${ticket.id}/${value}`);
-                toast.success("Tag atualizada com sucesso!");
-            } else {
-                // Removemos todas as tags do ticket
-                await api.delete(`/ticket-tags/${ticket.id}`);
-                toast.info("Tag removida com sucesso!");
-            }
-            
-            // Aguardamos um pouco para garantir que o backend processou a mudança
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Recarregamos o ticket para ter certeza que está atualizado
-            const updatedTicket = await fetchCurrentTicket(ticket.id);
-            
-            if (updatedTicket) {
-                // Atualizamos a seleção com base nos dados atualizados
-                if (updatedTicket.tags && updatedTicket.tags.length > 0) {
-                    setSelected(updatedTicket.tags[0].id);
-                    updateChipStyle(updatedTicket.tags[0].id);
-                } else {
-                    setSelected("");
-                    setChipProps(defaultChipProps);
-                }
-            }
-            
-        } catch (err) {
-            console.error("Erro ao atualizar tag:", err);
-            
-            // Em caso de erro, tentamos restaurar o estado anterior
-            if (ticket.tags && ticket.tags.length > 0) {
-                setSelected(ticket.tags[0].id);
-                updateChipStyle(ticket.tags[0].id);
-            } else {
-                setSelected("");
-                setChipProps(defaultChipProps);
-            }
-            
-            toast.error("Erro ao atualizar tag. Tente novamente.");
-        } finally {
-            setLoading(false);
-        }
+        // Chamar função debounced para atualizar no backend
+        updateTagInBackend(ticket.id, value);
     };
 
     const getFunnelName = (funilId) => {
@@ -240,7 +272,22 @@ export function TagsKanbanContainer({ ticket, funilIds = [] }) {
         return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
     };
 
-    const renderSelectedValue = () => {
+    // Memoizar os itens do menu para evitar re-renderizações desnecessárias
+    const menuItems = useMemo(() => {
+        return tags.map(tag => {
+            const funnelName = getFunnelName(tag.funilId);
+            const displayText = funnelName ? `${funnelName} - ${tag.name}` : tag.name;
+            
+            return (
+                <MenuItem key={tag.id} value={tag.id}>
+                    {displayText}
+                </MenuItem>
+            );
+        });
+    }, [tags, funnels]);
+
+    // Memoizar o valor selecionado para evitar re-renderizações desnecessárias
+    const selectedValue = useMemo(() => {
         if (!selected) return null;
         
         const selectedTag = tags.find(tag => tag.id === selected);
@@ -262,7 +309,9 @@ export function TagsKanbanContainer({ ticket, funilIds = [] }) {
                 </Tooltip>
             </div>
         );
-    };
+    }, [selected, tags, funnels, classes]);
+
+    const renderSelectedValue = () => selectedValue;
 
     if (loading && tags.length === 0) {
         return (
@@ -275,15 +324,31 @@ export function TagsKanbanContainer({ ticket, funilIds = [] }) {
     return (
         <>
             
-            <FormControl fullWidth margin="dense" variant="outlined">
-                <InputLabel id="tag-kanban-id">{i18n.t("Etapa Kanban")}</InputLabel>
+            <FormControl 
+                fullWidth 
+                margin="dense" 
+                variant="outlined"
+                disabled={!isEnabled}
+            >
+                <InputLabel 
+                    id="tag-kanban-id"
+                    style={{ 
+                        color: !isEnabled ? '#c0c0c0' : undefined 
+                    }}
+                >
+                    {!isEnabled ? "Selecione um funil primeiro" : i18n.t("Etapa Kanban")}
+                </InputLabel>
                 <Select
                     labelWidth={90}
                     value={selected}
                     labelId="tag-kanban-id"
-                    label={i18n.t("Etapa Kanban")}
+                    label={!isEnabled ? "Selecione um funil primeiro" : i18n.t("Etapa Kanban")}
                     onChange={handleChange}
-                    disabled={loading}
+                    disabled={loading || !isEnabled}
+                    style={{
+                        backgroundColor: !isEnabled ? '#f5f5f5' : undefined,
+                        color: !isEnabled ? '#c0c0c0' : undefined
+                    }}
                     MenuProps={{
                         anchorOrigin: {
                             vertical: "bottom",
@@ -298,16 +363,7 @@ export function TagsKanbanContainer({ ticket, funilIds = [] }) {
                     renderValue={renderSelectedValue}
                 >
                     <MenuItem value="">Nenhuma Tag</MenuItem>
-                    {tags.map(tag => {
-                        const funnelName = getFunnelName(tag.funilId);
-                        const displayText = funnelName ? `${funnelName} - ${tag.name}` : tag.name;
-                        
-                        return (
-                            <MenuItem key={tag.id} value={tag.id}>
-                                {displayText}
-                            </MenuItem>
-                        );
-                    })}
+                    {menuItems}
                 </Select>
             </FormControl>
         </>

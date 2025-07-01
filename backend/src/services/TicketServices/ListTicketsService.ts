@@ -228,9 +228,15 @@ const ListTicketsService = async ({
 
   if (showAll === "true" && (user.profile === "admin" || user.allUserChat === "enabled") && status !== "search") {
     if (user.allHistoric === "enabled" && showTicketWithoutQueue) {
-      whereCondition = { companyId };
+      // Quando "Todos" está ativo, sempre respeitar o filtro de filas se houver filas selecionadas
+      whereCondition = queueIds && queueIds.length > 0 
+        ? { companyId, queueId: { [Op.or]: [queueIds, null] } }
+        : { companyId };
     } else if (user.allHistoric === "enabled" && !showTicketWithoutQueue) {
-      whereCondition = { companyId, queueId: { [Op.ne]: null } };
+      // Quando "Todos" está ativo, sempre respeitar o filtro de filas se houver filas selecionadas
+      whereCondition = queueIds && queueIds.length > 0 
+        ? { companyId, queueId: queueIds }
+        : { companyId, queueId: { [Op.ne]: null } };
     } else if (user.allHistoric === "disabled" && showTicketWithoutQueue) {
       whereCondition = { companyId, queueId: { [Op.or]: [queueIds, null] } };
     } else if (user.allHistoric === "disabled" && !showTicketWithoutQueue) {
