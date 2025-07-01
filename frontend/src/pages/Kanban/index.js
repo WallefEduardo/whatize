@@ -14,6 +14,44 @@ import Swal from "sweetalert2";
 
 const useStyles = makeStyles(theme => ({
   '@global': {
+    // Força barras de rolagem sempre visíveis
+    '.react-trello-board': {
+      overflowX: 'auto !important',
+      scrollbarWidth: 'thin !important',
+      scrollbarColor: '#888 #f1f1f1 !important',
+      '&::-webkit-scrollbar': {
+        height: '12px !important',
+        display: 'block !important',
+      },
+      '&::-webkit-scrollbar-track': {
+        background: '#f1f1f1 !important',
+        borderRadius: '6px !important',
+      },
+      '&::-webkit-scrollbar-thumb': {
+        background: '#888 !important',
+        borderRadius: '6px !important',
+      },
+    },
+    // Corrige barras de rolagem das lanes
+    '.react-trello-lane': {
+      overflowY: 'auto !important',
+      scrollbarWidth: 'thin !important',
+      scrollbarColor: '#888 #f1f1f1 !important',
+      paddingBottom: '20px !important',
+      boxSizing: 'border-box !important',
+      '&::-webkit-scrollbar': {
+        width: '8px !important',
+        display: 'block !important',
+      },
+      '&::-webkit-scrollbar-track': {
+        background: '#f1f1f1 !important',
+        borderRadius: '4px !important',
+      },
+      '&::-webkit-scrollbar-thumb': {
+        background: '#888 !important',
+        borderRadius: '4px !important',
+      },
+    },
     '.dOlrNy': {
       overflowY: 'auto !important',
     },
@@ -115,27 +153,50 @@ const useStyles = makeStyles(theme => ({
   kanbanContainer: {
     width: "100%",
     height: "calc(100vh - 80px)",
-    overflowX: "auto",
+    overflowX: "auto !important", // Força sempre aparecer
     overflowY: "hidden",
     padding: theme.spacing(1),
     boxSizing: "border-box",
     WebkitOverflowScrolling: "touch",
     position: "relative",
+    minWidth: "100%", // Garante largura mínima
+    // Força barra de rolagem horizontal sempre visível
+    scrollbarWidth: "thin", // Firefox
+    scrollbarColor: "#888 #f1f1f1", // Firefox
     '&::-webkit-scrollbar': {
-      height: '8px',
-      position: 'absolute',
-      bottom: '0',
+      height: '12px !important', // Aumenta altura para melhor visibilidade
+      display: 'block !important', // Força exibição
     },
     '&::-webkit-scrollbar-track': {
       background: '#f1f1f1',
-      borderRadius: '4px',
+      borderRadius: '6px',
+      display: 'block !important',
     },
     '&::-webkit-scrollbar-thumb': {
       background: '#888',
-      borderRadius: '4px',
+      borderRadius: '6px',
+      display: 'block !important',
     },
     '&::-webkit-scrollbar-thumb:hover': {
       background: '#555',
+    },
+    // Garante visibilidade em diferentes resoluções
+    [theme.breakpoints.down('xl')]: {
+      overflowX: "auto !important",
+      minWidth: "100%",
+    },
+    [theme.breakpoints.down('lg')]: {
+      overflowX: "auto !important",
+      minWidth: "100%",
+    },
+    [theme.breakpoints.down('md')]: {
+      overflowX: "auto !important",
+      minWidth: "100%",
+    },
+    [theme.breakpoints.down('sm')]: {
+      overflowX: "auto !important",
+      minWidth: "100%",
+      height: "calc(100vh - 120px)", // Ajusta altura em telas menores
     },
   },
   controlsContainer: {
@@ -415,6 +476,18 @@ const Kanban = () => {
   const [columnOrder, setColumnOrder] = useState([]);
   const [isReordering, setIsReordering] = useState(false);
   
+  // Estados para drag to scroll
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const kanbanContainerRef = React.useRef(null);
+  
+  // Estados para updates em tempo real
+  const [newCards, setNewCards] = useState([]);
+  const [updateQueue, setUpdateQueue] = useState([]);
+  const updateQueueRef = React.useRef([]);
+  const processingUpdates = React.useRef(false);
+  
   const jsonString = user?.queues?.map(queue => queue.UserQueue.queueId) || [];
   
   // Paleta de cores para os badges dos funis
@@ -688,15 +761,21 @@ const Kanban = () => {
       
       const onAppMessage = (data) => {
         if (data.action === "create" || data.action === "update" || data.action === "delete") {
-          // Debounce robusto para evitar muitas atualizações
+          // Adicionar à fila de atualizações ao invés de recarregar tudo
+          updateQueueRef.current.push({
+            ...data,
+            timestamp: Date.now()
+          });
+          
+          // Processar fila com debounce menor (500ms)
           if (socketDebounceTimer) {
             clearTimeout(socketDebounceTimer);
           }
           
           const newTimer = setTimeout(() => {
-            fetchTags();
+            processUpdateQueue();
             setSocketDebounceTimer(null);
-          }, 2000);
+          }, 500);
           
           setSocketDebounceTimer(newTimer);
         }
@@ -845,6 +924,214 @@ const Kanban = () => {
     }
   };
 
+  // Funções para drag to scroll
+  const handleMouseDown = (e) => {
+    // Verificar se o clique foi em uma área válida (não em cards ou headers)
+    const target = e.target;
+    
+    // Elementos que NÃO devem ativar o drag to scroll
+    const invalidSelectors = [
+      '.react-trello-card',
+      '.react-trello-lane-header', 
+      'button',
+      'input',
+      'select',
+      '.MuiIconButton-root',
+      '[role="button"]',
+      '.react-trello-lane',
+      'a',
+      'svg',
+      '[draggable="true"]'
+    ];
+    
+    const isInvalidArea = invalidSelectors.some(selector => target.closest(selector));
+    
+    // Procurar pelo container correto do react-trello
+    const reactTrelloBoard = document.querySelector('.react-trello-board');
+    const scrollContainer = reactTrelloBoard || kanbanContainerRef.current;
+    
+    // Só ativar se não for área inválida E estiver dentro do container do kanban
+    if (!isInvalidArea && scrollContainer && scrollContainer.contains(target)) {
+      setIsDragging(true);
+      setStartX(e.pageX);
+      setScrollLeft(scrollContainer.scrollLeft);
+      scrollContainer.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none'; // Previne seleção de texto
+      e.preventDefault();
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    
+    // Usar o mesmo container que foi usado no mouseDown
+    const reactTrelloBoard = document.querySelector('.react-trello-board');
+    const scrollContainer = reactTrelloBoard || kanbanContainerRef.current;
+    
+    if (!scrollContainer) return;
+    
+    const x = e.pageX;
+    const walk = (x - startX) * 1.5; // Velocidade do scroll
+    const newScrollLeft = scrollLeft - walk;
+    
+    // Garantir que o valor está dentro dos limites
+    const maxScroll = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+    const clampedScrollLeft = Math.max(0, Math.min(newScrollLeft, maxScroll));
+    
+    // Aplicar o scroll
+    scrollContainer.scrollLeft = clampedScrollLeft;
+  };
+
+  const handleMouseUp = (e) => {
+    if (isDragging) {
+      setIsDragging(false);
+      
+      const reactTrelloBoard = document.querySelector('.react-trello-board');
+      const scrollContainer = reactTrelloBoard || kanbanContainerRef.current;
+      
+      if (scrollContainer) {
+        scrollContainer.style.cursor = 'grab';
+      }
+      document.body.style.userSelect = ''; // Restaura seleção de texto
+      e.preventDefault();
+    }
+  };
+
+  const handleMouseLeave = (e) => {
+    if (isDragging) {
+      setIsDragging(false);
+      
+      const reactTrelloBoard = document.querySelector('.react-trello-board');
+      const scrollContainer = reactTrelloBoard || kanbanContainerRef.current;
+      
+      if (scrollContainer) {
+        scrollContainer.style.cursor = 'grab';
+      }
+      document.body.style.userSelect = ''; // Restaura seleção de texto
+    }
+  };
+
+
+
+  // Adicionar event listeners para drag to scroll
+  React.useEffect(() => {
+    const container = kanbanContainerRef.current;
+    if (container) {
+      // Adicionar eventos no documento para capturar movimento global
+      const handleGlobalMouseMove = (e) => handleMouseMove(e);
+      const handleGlobalMouseUp = (e) => handleMouseUp(e);
+      
+      container.addEventListener('mousedown', handleMouseDown);
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      container.addEventListener('mouseleave', handleMouseLeave);
+      
+      // Definir cursor inicial apenas para áreas válidas
+      container.style.cursor = 'grab';
+      container.style.userSelect = 'none';
+      
+      return () => {
+        container.removeEventListener('mousedown', handleMouseDown);
+        document.removeEventListener('mousemove', handleGlobalMouseMove);
+        document.removeEventListener('mouseup', handleGlobalMouseUp);
+        container.removeEventListener('mouseleave', handleMouseLeave);
+      };
+    }
+  }, [isDragging, startX, scrollLeft]);
+
+  // Função para processar fila de atualizações em tempo real
+  const processUpdateQueue = async () => {
+    if (processingUpdates.current || updateQueueRef.current.length === 0) {
+      return;
+    }
+
+    processingUpdates.current = true;
+    
+    try {
+      const updates = [...updateQueueRef.current];
+      updateQueueRef.current = []; // Limpar fila
+      
+      // Agrupar updates por tipo
+      const creates = updates.filter(u => u.action === 'create');
+      const updatesData = updates.filter(u => u.action === 'update');
+      const deletes = updates.filter(u => u.action === 'delete');
+      
+      // Processar apenas se há mudanças significativas
+      if (creates.length > 0 || updatesData.length > 0 || deletes.length > 0) {
+        console.log(`🔄 Processando updates: ${creates.length} creates, ${updatesData.length} updates, ${deletes.length} deletes`);
+        
+        // Para mudanças complexas, fazer refresh completo mas otimizado
+        if (deletes.length > 0 || updatesData.length > 3) {
+          await fetchTickets();
+          popularCards();
+        } else {
+          // Para novos tickets, adicionar incrementalmente
+          await handleIncrementalUpdates(creates, updatesData);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao processar updates:', error);
+      // Fallback para refresh completo
+      await fetchTickets();
+      popularCards();
+    } finally {
+      processingUpdates.current = false;
+    }
+  };
+
+  // Função para lidar com updates incrementais
+  const handleIncrementalUpdates = async (creates, updates) => {
+    if (creates.length === 0 && updates.length === 0) return;
+    
+    try {
+      // Buscar apenas os tickets novos/atualizados
+      const ticketIds = [...creates, ...updates].map(u => u.ticket?.id).filter(Boolean);
+      
+      if (ticketIds.length > 0) {
+        // Fazer uma busca otimizada apenas dos tickets específicos
+        const response = await api.get(`/tickets/kanban-incremental`, {
+          params: {
+            ticketIds: ticketIds.join(','),
+            startDate,
+            endDate,
+            tags: selectedTags.map(tag => tag.id),
+            users: selectedUsers.map(user => user.id),
+            funnel: selectedFunnel
+          }
+        });
+        
+        const newTickets = response.data.tickets || [];
+        
+        if (newTickets.length > 0) {
+          // Adicionar novos tickets ao estado existente
+          setTickets(prevTickets => {
+            const existingIds = new Set(prevTickets.map(t => t.id));
+            const ticketsToAdd = newTickets.filter(t => !existingIds.has(t.id));
+            
+            if (ticketsToAdd.length > 0) {
+              console.log(`✨ Adicionando ${ticketsToAdd.length} novos tickets`);
+              // Adicionar animação suave para novos cards
+              setNewCards(ticketsToAdd.map(t => t.id));
+              setTimeout(() => setNewCards([]), 3000); // Remove animação após 3s
+              
+              return [...prevTickets, ...ticketsToAdd];
+            }
+            return prevTickets;
+          });
+          
+          // Atualizar cards sem recarregar tudo
+          setTimeout(() => popularCards(), 100);
+        }
+      }
+    } catch (error) {
+      console.error('Erro no update incremental:', error);
+      // Fallback para refresh completo
+      await fetchTickets();
+      popularCards();
+    }
+  };
+
   // Função para obter todas as tags normais (não kanban) do ticket
   const getNormalTags = (ticket) => {
     let normalTags = [];
@@ -878,11 +1165,22 @@ const Kanban = () => {
     
 
 
-    const createCardContent = (ticket) => ({
-      id: ticket.id.toString(),
-      title: "",
-      description: (
-        <div className={classes.card}>
+    const createCardContent = (ticket) => {
+      const isNewCard = newCards.includes(ticket.id);
+      
+      return {
+        id: ticket.id.toString(),
+        title: "",
+        description: (
+          <div 
+            className={classes.card}
+            style={{
+              animation: isNewCard ? 'slideInFromRight 0.5s ease-out' : 'none',
+              border: isNewCard ? '2px solid #4CAF50' : 'none',
+              boxShadow: isNewCard ? '0 4px 12px rgba(76, 175, 80, 0.3)' : 'none',
+              transition: 'all 0.3s ease'
+            }}
+          >
           <div className={classes.cardHeader}>
             <div className={classes.contactInfo}>
               <div className={classes.iconChannel}>
@@ -975,7 +1273,8 @@ const Kanban = () => {
       ),
       draggable: true,
       href: "/tickets/" + ticket.uuid,
-    });
+    };
+  };
 
     const lanes = [
       {
@@ -1085,6 +1384,116 @@ const Kanban = () => {
 
   return (
     <div className={classes.root}>
+      {/* Estilos para animações dos novos cards */}
+      <style jsx global>{`
+        @keyframes slideInFromRight {
+          0% {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          100% {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes pulse {
+          0% {
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+          }
+          50% {
+            box-shadow: 0 6px 16px rgba(76, 175, 80, 0.5);
+          }
+          100% {
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+          }
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        /* Forçar scroll horizontal no react-trello */
+        .react-trello-board {
+          overflow-x: auto !important;
+          overflow-y: visible !important;
+          width: 100% !important;
+          cursor: grab !important;
+        }
+        
+        .react-trello-board:active {
+          cursor: grabbing !important;
+        }
+        
+        /* Garantir que as lanes tenham largura adequada */
+        .react-trello-lane {
+          min-width: 220px !important;
+          flex-shrink: 0 !important;
+        }
+        
+        /* Garantir que cards não sejam cortados */
+        .react-trello-lane .react-trello-card:last-child {
+          margin-bottom: 20px !important;
+        }
+        
+        /* Melhorar scroll das colunas */
+        .react-trello-lane {
+          padding-bottom: 40px !important;
+          box-sizing: border-box !important;
+          overflow-y: auto !important;
+          max-height: calc(100vh - 180px) !important;
+        }
+        
+        /* Garantir que cada coluna tenha sua própria barra de rolagem */
+        .react-trello-lane .react-trello-card-wrapper {
+          overflow-y: auto !important;
+          max-height: calc(100vh - 220px) !important;
+          padding-right: 5px !important;
+        }
+        
+        /* Melhorar visibilidade das barras de rolagem das colunas */
+        .react-trello-lane::-webkit-scrollbar {
+          width: 8px !important;
+          display: block !important;
+        }
+        
+        .react-trello-lane::-webkit-scrollbar-track {
+          background: #f1f1f1 !important;
+          border-radius: 4px !important;
+        }
+        
+        .react-trello-lane::-webkit-scrollbar-thumb {
+          background: #888 !important;
+          border-radius: 4px !important;
+        }
+        
+        .react-trello-lane::-webkit-scrollbar-thumb:hover {
+          background: #555 !important;
+        }
+        
+        /* Para Firefox */
+        .react-trello-lane {
+          scrollbar-width: thin !important;
+          scrollbar-color: #888 #f1f1f1 !important;
+        }
+        
+        /* Garantir bordas completas nos cards */
+        .react-trello-card {
+          border: 1px solid #e0e0e0 !important;
+          border-top: 1px solid #e0e0e0 !important;
+          border-radius: 8px !important;
+          background-color: #fff !important;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+          margin-bottom: 10px !important;
+        }
+        
+        /* Garantir que o conteúdo do card não sobreponha a borda */
+        .react-trello-card > div {
+          border-top: none !important;
+          padding-top: 8px !important;
+        }
+      `}</style>
       <div className={classes.controlsContainer}>
         <div className={classes.dateContainer}>
           <TextField
@@ -1298,7 +1707,16 @@ const Kanban = () => {
           </Button>
         )} />
       </div>
-      <div className={classes.kanbanContainer}>
+      <div 
+        className={classes.kanbanContainer}
+        ref={kanbanContainerRef}
+        style={{
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          cursor: 'grab',
+          userSelect: 'none'
+        }}
+      >
         <div style={{ position: 'relative' }}>
           {(isFilterLoading || isReordering) && (
             <div style={{
@@ -1345,58 +1763,87 @@ const Kanban = () => {
             style={{
               backgroundColor: 'transparent',
               height: 'calc(100vh - 160px)',
-              borderBottom: 'none !important'
+              borderBottom: 'none !important',
+              overflowX: 'auto !important',
+              width: '100%'
             }}
             laneStyle={{
               backgroundColor: '#ffffff',
-              borderRadius: '12px',
-              padding: '10px',
+              borderRadius: '8px',
+              padding: '0', // Remove padding para que a linha colorida fique na borda
               marginRight: '10px',
               minWidth: window.innerWidth <= 600 ? '220px' : '220px',
               maxWidth: window.innerWidth <= 600 ? '240px' : '240px',
               boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-              border: 'none',
-              borderTop: 'none',
-              borderBottom: 'none',
+              border: '1px solid #e0e0e0',
+              borderTop: 'none', // Remove borda superior para que a linha colorida apareça
               minHeight: '400px',
-              maxHeight: 'calc(100vh - 200px)',
-              overflowY: 'auto',
+              maxHeight: 'calc(100vh - 180px)', // Aumentar altura disponível
+              overflowY: 'auto !important',
+              // Melhorar visibilidade da barra de rolagem vertical
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#888 #f1f1f1',
+              '&::-webkit-scrollbar': {
+                width: '8px',
+                display: 'block !important',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: '#f1f1f1',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: '#888',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb:hover': {
+                background: '#555',
+              },
+              // Garantir que o conteúdo não seja cortado
+              paddingBottom: '40px', // Espaço extra aumentado no final
+              paddingTop: '10px', // Espaço no topo após o header
+              boxSizing: 'border-box',
             }}
             cardStyle={{
               padding: 0,
-              marginBottom: '4px',
-              border: 'none',
-              boxShadow: 'none',
-              backgroundColor: 'transparent',
-              borderTop: 'none',
+              marginBottom: '8px',
+              border: '1px solid #e0e0e0',
+              borderTop: '1px solid #e0e0e0',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
               display: 'block',
               visibility: 'visible',
-              opacity: 1,
-              '& > div': {
-                borderTop: 'none !important'
-              }
+              opacity: 1
             }}
             hideCardDeleteIcon
             tagStyle={{ display: 'none' }}
             laneDragClass="lane-dragging"
             laneDropClass="lane-dropping"
-            components={{
-              LaneHeader: ({ title, label, funilName, funilColor, ...props }) => (
-                <div 
-                  {...props}
-                  style={{
-                    padding: '0',
-                    marginBottom: '0',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    borderTop: 'none !important',
-                    cursor: 'grab',
-                    userSelect: 'none',
-                    ...props.style
-                  }}
-                  title="" // Remove tooltip
-                >
+                          components={{
+                LaneHeader: ({ title, label, funilName, funilColor, ...props }) => (
+                  <div 
+                    {...props}
+                    style={{
+                      padding: '0',
+                      paddingLeft: '10px',
+                      paddingRight: '10px',
+                      paddingTop: '15px', // Espaço interno após a linha
+                      paddingBottom: '10px',
+                      marginBottom: '10px', // Espaço após a linha colorida
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      borderTop: `5px solid ${funilColor || '#ddd'}`, // Linha colorida de 5px
+                      borderTopLeftRadius: '8px',
+                      borderTopRightRadius: '8px',
+                      backgroundColor: '#f9f9f9',
+                      cursor: 'grab',
+                      userSelect: 'none',
+                      position: 'relative',
+                      ...props.style
+                    }}
+                    title="" // Remove tooltip
+                  >
                   <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 

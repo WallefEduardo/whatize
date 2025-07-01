@@ -30,7 +30,7 @@ export function TagsFilter({ onFiltered }) {
   };
 
   return (
-    <Box style={{ padding: 0, minWidth: "100px !important" }}>
+    <Box style={{ padding: "0px 10px 10px" }}>
       <Autocomplete
         multiple
         size="small"
