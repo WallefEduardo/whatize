@@ -23,7 +23,11 @@ import {
   Typography,
   Menu,
   MenuItem,
-  Box
+  Box,
+  Checkbox,
+  Chip,
+  CircularProgress,
+  LinearProgress
 } from "@material-ui/core";
 
 import {
@@ -41,6 +45,8 @@ import {
   Instagram,
   WhatsApp,
   CloudDownload,
+  SelectAll as SelectAllIcon,
+  Clear as ClearIcon
 } from "@material-ui/icons";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -62,6 +68,7 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import formatSerializedId from "../../utils/formatSerializedId";
 import useCompanySettings from "../../hooks/useSettings/companySettings";
+import useContactSelection from "../../hooks/useContactSelection";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTS") {
@@ -187,6 +194,54 @@ const useStyles = makeStyles(theme => ({
     width: 150,
     textAlign: "center",
   },
+  selectionCell: {
+    width: 50,
+    padding: theme.spacing(1),
+  },
+  bulkActionsContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(2),
+    padding: theme.spacing(1),
+    backgroundColor: "#e8f5e8",
+    borderRadius: theme.spacing(1),
+    marginBottom: theme.spacing(2),
+    animation: "slideDown 0.3s ease-in-out",
+  },
+  selectedChip: {
+    backgroundColor: "#00C307",
+    color: "white",
+    fontWeight: 600,
+    "& .MuiChip-label": {
+      color: "white",
+    },
+  },
+  "@keyframes slideDown": {
+    from: { opacity: 0, transform: "translateY(-10px)" },
+    to: { opacity: 1, transform: "translateY(0)" },
+  },
+  bulkDeleteButton: {
+    backgroundColor: "#f44336",
+    color: "white",
+    "&:hover": {
+      backgroundColor: "#d32f2f",
+    },
+    "&:disabled": {
+      backgroundColor: "#ffcdd2",
+      color: "#e57373",
+    },
+  },
+  clearSelectionButton: {
+    color: "#666",
+    "&:hover": {
+      backgroundColor: "#f5f5f5",
+    },
+  },
+  selectedChip: {
+    backgroundColor: "#2196f3",
+    color: "white",
+    fontWeight: "bold",
+  },
   iconButton: {
     padding: theme.spacing(0),
     "&.new-ticket": {
@@ -270,7 +325,24 @@ const Contacts = () => {
   const [enableLGPD, setEnableLGPD] = useState(false);
   const [warningOpen, setWarningOpen] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkProgressOpen, setBulkProgressOpen] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(0);
+  const [bulkProgressText, setBulkProgressText] = useState("");
   const fileUploadRef = useRef(null);
+
+  // Hook para seleção de contatos
+  const {
+    selectedContacts,
+    selectAll,
+    toggleContact,
+    toggleSelectAll,
+    clearSelection,
+    isSelected,
+    getSelectedCount,
+    getSelectedIds
+  } = useContactSelection();
 
   // Effects
   useEffect(() => {
@@ -404,6 +476,96 @@ const Contacts = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    setBulkDeleteLoading(true);
+    setBulkConfirmOpen(false);
+    setBulkProgressOpen(true);
+    setBulkProgress(0);
+    setBulkProgressText("Iniciando exclusão em massa...");
+    
+    try {
+      const contactIds = getSelectedIds();
+      const totalContacts = contactIds.length;
+      
+      // Simular progresso gradual mais realista
+      const simulateProgress = () => {
+        return new Promise((resolve) => {
+          let currentProgress = 0;
+          const increment = Math.random() * 3 + 1; // Incremento aleatório entre 1-4%
+          
+          const progressInterval = setInterval(() => {
+            currentProgress += increment;
+            
+            if (currentProgress <= 20) {
+              setBulkProgressText("Validando contatos selecionados...");
+            } else if (currentProgress <= 40) {
+              setBulkProgressText("Verificando tickets abertos...");
+            } else if (currentProgress <= 60) {
+              setBulkProgressText(`Processando ${totalContacts} contato(s)...`);
+            } else if (currentProgress <= 80) {
+              setBulkProgressText("Executando exclusões...");
+            } else if (currentProgress <= 95) {
+              setBulkProgressText("Finalizando operação...");
+            }
+            
+            setBulkProgress(Math.min(currentProgress, 95));
+            
+            if (currentProgress >= 95) {
+              clearInterval(progressInterval);
+              resolve();
+            }
+          }, Math.random() * 200 + 100); // Intervalo aleatório entre 100-300ms
+        });
+      };
+      
+      // Executar progresso gradual e requisição em paralelo
+      const [, response] = await Promise.all([
+        simulateProgress(),
+        api.post("/contacts/bulk-delete", { contactIds })
+      ]);
+      
+      const { data } = response;
+      const { deleted, skipped, errors } = data.results;
+      
+      setBulkProgress(100);
+      setBulkProgressText("Concluído!");
+      
+      // Aguardar um pouco para mostrar o progresso completo
+      setTimeout(() => {
+        setBulkProgressOpen(false);
+        
+        let message = "";
+        if (deleted.length > 0) {
+          message += `${deleted.length} contato(s) excluído(s) com sucesso. `;
+        }
+        if (skipped.length > 0) {
+          message += `${skipped.length} contato(s) pulado(s) (possuem tickets abertos). `;
+        }
+        if (errors.length > 0) {
+          message += `${errors.length} erro(s) durante a exclusão.`;
+        }
+        
+        toast.success(message);
+        clearSelection();
+        setSearchParam("");
+        setPageNumber(1);
+      }, 1500);
+      
+    } catch (err) {
+      setBulkProgressOpen(false);
+      toastError(err);
+    }
+    setBulkDeleteLoading(false);
+  };
+
+  const handleOpenBulkDelete = () => {
+    if (getSelectedCount() === 0) {
+      toast.warning("Selecione pelo menos um contato para excluir");
+      return;
+    }
+    setBulkConfirmOpen(true);
+  };
+
   const handleImportExcel = async () => {
     try {
       const formData = new FormData();
@@ -533,6 +695,95 @@ const Contacts = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Modal de confirmação para exclusão em massa */}
+      <ConfirmationModal
+        title={`Excluir ${getSelectedCount()} contato(s) selecionado(s)?`}
+        open={bulkConfirmOpen}
+        onClose={() => setBulkConfirmOpen(false)}
+        onConfirm={handleBulkDelete}
+      >
+        <div>
+          <Typography variant="body1" style={{ marginBottom: 16 }}>
+            Esta ação irá excluir permanentemente os contatos selecionados.
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            <strong>Importante:</strong> Contatos com tickets abertos não serão excluídos.
+          </Typography>
+        </div>
+      </ConfirmationModal>
+
+      {/* Modal de progresso para exclusão em massa */}
+      <Dialog
+        open={bulkProgressOpen}
+        disableBackdropClick
+        disableEscapeKeyDown
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle style={{ textAlign: "center", paddingBottom: 8 }}>
+          <DeleteOutlineIcon style={{ fontSize: 48, color: "#f44336", marginBottom: 8 }} />
+          <Typography variant="h6">Excluindo Contatos</Typography>
+        </DialogTitle>
+        <DialogContent style={{ paddingTop: 0 }}>
+          <div style={{ textAlign: "center", marginBottom: 24 }}>
+            <Typography variant="body1" style={{ marginBottom: 16 }}>
+              {bulkProgressText}
+            </Typography>
+            
+            <div style={{ position: "relative", display: "inline-flex", marginBottom: 16 }}>
+              <CircularProgress
+                variant="determinate"
+                value={bulkProgress}
+                size={80}
+                thickness={4}
+                style={{ color: bulkProgress === 100 ? "#4caf50" : "#2196f3" }}
+              />
+              <div
+                style={{
+                  top: 0,
+                  left: 0,
+                  bottom: 0,
+                  right: 0,
+                  position: "absolute",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Typography variant="h6" component="div" color="textSecondary">
+                  {`${Math.round(bulkProgress)}%`}
+                </Typography>
+              </div>
+            </div>
+            
+            <LinearProgress
+              variant="determinate"
+              value={bulkProgress}
+              style={{
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: "#e0e0e0",
+              }}
+              classes={{
+                bar: {
+                  backgroundColor: bulkProgress === 100 ? "#4caf50" : "#2196f3",
+                  borderRadius: 4,
+                }
+              }}
+            />
+          </div>
+          
+          {bulkProgress === 100 && (
+            <div style={{ textAlign: "center" }}>
+              <CheckCircleIcon style={{ fontSize: 32, color: "#4caf50", marginBottom: 8 }} />
+              <Typography variant="body2" color="textSecondary">
+                Operação concluída com sucesso!
+              </Typography>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Conteúdo Principal */}
       <div className={classes.searchContainer}>
         <div style={{
@@ -627,10 +878,53 @@ const Contacts = () => {
       </div>
 
       <Paper className={classes.mainPaper} onScroll={handleScroll}>
+        {/* Barra de ações em massa */}
+        {getSelectedCount() > 0 && (
+          <div className={classes.bulkActionsContainer}>
+            <Chip 
+              label={`${getSelectedCount()} contato(s) selecionado(s)`}
+              className={classes.selectedChip}
+              size="small"
+            />
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<DeleteOutlineIcon />}
+              className={classes.bulkDeleteButton}
+              onClick={handleOpenBulkDelete}
+              disabled={bulkDeleteLoading}
+            >
+              {bulkDeleteLoading ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                "Excluir Selecionados"
+              )}
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<ClearIcon />}
+              className={classes.clearSelectionButton}
+              onClick={clearSelection}
+            >
+              Limpar Seleção
+            </Button>
+          </div>
+        )}
+
         <div className={classes.tableContainer}>
           <Table size="small" className={classes.customTable}>
             <TableHead>
               <TableRow>
+                <TableCell className={classes.selectionCell}>
+                  <Checkbox
+                    checked={selectAll}
+                    onChange={() => toggleSelectAll(contacts)}
+                    color="primary"
+                    size="small"
+                    title="Selecionar todos"
+                  />
+                </TableCell>
                 <TableCell className={classes.avatarCell}></TableCell>
                 <TableCell>{i18n.t("contacts.table.name")}</TableCell>
                 <TableCell>{i18n.t("contacts.table.whatsapp")}</TableCell>
@@ -645,6 +939,14 @@ const Contacts = () => {
             <TableBody>
               {contacts.map((contact) => (
                 <TableRow key={contact.id} hover>
+                  <TableCell className={classes.selectionCell}>
+                    <Checkbox
+                      checked={isSelected(contact.id)}
+                      onChange={() => toggleContact(contact.id)}
+                      color="primary"
+                      size="small"
+                    />
+                  </TableCell>
                   <TableCell className={classes.avatarCell}>
                     <Avatar
                       src={contact?.urlPicture}
@@ -759,7 +1061,7 @@ const Contacts = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton avatar columns={7} />}
+              {loading && <TableRowSkeleton avatar columns={8} />}
             </TableBody>
           </Table>
         </div>

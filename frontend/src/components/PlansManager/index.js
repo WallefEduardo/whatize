@@ -189,11 +189,11 @@ export function PlanManagerForm(props) {
                                 placeholder="0,00"
                                 InputProps={{
                                     inputProps: {
-                                        maxLength: 10,
+                                        maxLength: 15,
                                         pattern: '[0-9]*[,.]?[0-9]+'
                                     }
                                 }}
-                                s
+    
                             />
                         </Grid>
 
@@ -579,11 +579,34 @@ export default function PlansManager() {
         setLoading(true)
         
         try {
-            // Converter valor com vírgula para ponto decimal
+            // Converter valor para formato decimal correto
             if (data.amount) {
-                // Se o valor estiver como string com vírgula, converte para número com ponto
                 if (typeof data.amount === 'string') {
-                    data.amount = parseFloat(data.amount.replace(/\./g, '').replace(',', '.'));
+                    // Remove espaços e caracteres especiais
+                    let cleanValue = data.amount.trim();
+                    
+                    // Se contém vírgula, assumimos formato brasileiro (127,00)
+                    if (cleanValue.includes(',')) {
+                        // Remove pontos (separadores de milhares) e substitui vírgula por ponto
+                        cleanValue = cleanValue.replace(/\./g, '').replace(',', '.');
+                    }
+                    // Se contém apenas ponto, verificamos se é separador decimal ou de milhares
+                    else if (cleanValue.includes('.')) {
+                        // Se tem mais de um ponto ou o ponto não está nas últimas 3 posições, é separador de milhares
+                        const pointIndex = cleanValue.lastIndexOf('.');
+                        const afterPoint = cleanValue.substring(pointIndex + 1);
+                        
+                        // Se após o ponto há exatamente 2 dígitos, é separador decimal
+                        if (afterPoint.length === 2) {
+                            // Mantém como está (formato 127.00)
+                            // cleanValue já está no formato correto
+                        } else {
+                            // Remove pontos (separadores de milhares)
+                            cleanValue = cleanValue.replace(/\./g, '');
+                        }
+                    }
+                    
+                    data.amount = parseFloat(cleanValue) || 0;
                 }
             }
             

@@ -299,6 +299,75 @@ export const remove = async (
   return res.status(200).json({ message: "Contact deleted" });
 };
 
+export const bulkDelete = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { contactIds } = req.body;
+  const { companyId } = req.user;
+
+  if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
+    throw new AppError("Lista de contatos é obrigatória");
+  }
+
+  // Importar o helper para verificar tickets abertos
+  const CheckContactOpenTickets = (await import("../helpers/CheckContactOpenTickets")).default;
+  
+  const results = {
+    deleted: [],
+    skipped: [],
+    errors: []
+  };
+
+  for (const contactId of contactIds) {
+    try {
+      // Verificar se o contato existe e pertence à empresa
+      const contact = await ShowContactService(contactId, companyId);
+      
+      // Verificar se o contato tem tickets abertos
+      try {
+        await CheckContactOpenTickets(contactId, contact.whatsappId, companyId);
+      } catch (error) {
+        if (error.message === "ERR_OTHER_OPEN_TICKET") {
+          results.skipped.push({
+            contactId,
+            name: contact.name,
+            reason: "Contato possui tickets abertos"
+          });
+          continue;
+        }
+        throw error;
+      }
+
+      // Deletar o contato
+      await DeleteContactService(contactId);
+      results.deleted.push({
+        contactId,
+        name: contact.name
+      });
+
+      // Emitir evento de socket
+      const io = getIO();
+      io.of(String(companyId))
+        .emit(`company-${companyId}-contact`, {
+          action: "delete",
+          contactId
+        });
+
+    } catch (error) {
+      results.errors.push({
+        contactId,
+        reason: error.message
+      });
+    }
+  }
+
+  return res.status(200).json({
+    message: "Exclusão em massa processada",
+    results
+  });
+};
+
 export const list = async (req: Request, res: Response): Promise<Response> => {
   const { name } = req.query as unknown as SearchContactParams;
   const { companyId } = req.user;
