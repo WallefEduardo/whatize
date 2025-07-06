@@ -153,7 +153,7 @@ class RaceConditionLogger {
     };
 
     this.writeLog(logData);
-    contact(`${action}: ${contactNumber}@company${companyId} via ${source}`);
+    console.log(`${action}: ${contactNumber}@company${companyId} via ${source}`);
   }
 
   public logBaileysEvent(

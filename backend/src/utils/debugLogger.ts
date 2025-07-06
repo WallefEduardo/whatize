@@ -54,7 +54,6 @@ class DebugLogger {
    */
   auth(...args: any[]) {
     if (this.isDebugEnabled) {
-      console.log('🔐 [DEBUG]', ...args);
     }
   }
 
@@ -63,7 +62,6 @@ class DebugLogger {
    */
   request(...args: any[]) {
     if (this.isDebugEnabled) {
-      console.log('🌐 [DEBUG]', ...args);
     }
   }
 
@@ -72,7 +70,6 @@ class DebugLogger {
    */
   baileys(...args: any[]) {
     if (this.isDebugEnabled) {
-      console.debug('📡 BAILEYS EVENT:', ...args);
     }
   }
 

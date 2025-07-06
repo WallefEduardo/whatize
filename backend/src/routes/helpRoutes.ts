@@ -7,6 +7,8 @@ const routes = express.Router();
 
 routes.get("/helps/list", isAuth, HelpController.findList);
 
+routes.get("/helps/categories", isAuth, HelpController.getCategories);
+
 routes.get("/helps", isAuth, HelpController.index);
 
 routes.get("/helps/:id", isAuth, HelpController.show);

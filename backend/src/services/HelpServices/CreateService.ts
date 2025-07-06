@@ -7,6 +7,8 @@ interface Data {
   description?: string;
   video?: string;
   link?: string;
+  category?: string;
+  categoryIcon?: string;
 }
 
 const CreateService = async (data: Data): Promise<Help> => {
@@ -16,12 +18,14 @@ const CreateService = async (data: Data): Promise<Help> => {
     title: Yup.string()
       .min(3, "ERR_HELP_INVALID_NAME")
       .required("ERR_HELP_REQUIRED"),
-    description: Yup.string().min(3, "ERR_HELP_INVALID_NAME")
+    description: Yup.string()
+      .nullable()
+      .optional()
   });
 
   try {
     await helpSchema.validate({ title, description });
-  } catch (err) {
+  } catch (err: any) {
     throw new AppError(err.message);
   }
 

@@ -15,7 +15,6 @@ import uploadConfig from "./config/upload";
 import AppError from "./errors/AppError";
 import routes from "./routes";
 import logger from "./utils/logger";
-import { request } from "./utils/debugLogger";
 import { messageQueue, sendScheduledMessages } from "./queues";
 import BullQueue from "./libs/queue"
 import BullBoard from 'bull-board';
@@ -46,7 +45,13 @@ app.set("queues", {
   sendScheduledMessages
 });
 
-const allowedOrigins = [process.env.FRONTEND_URL || "https://whatize.pro"];
+const allowedOrigins = [
+  process.env.FRONTEND_URL || "https://whatize.pro",
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3001"
+];
 
 // Configuração do BullBoard
 if (String(process.env.BULL_BOARD).toLocaleLowerCase() === 'true' && process.env.REDIS_URI_ACK !== '') {
@@ -100,15 +105,7 @@ app.use(express.json());
 app.use(Sentry.Handlers.requestHandler());
 app.use("/public", express.static(uploadConfig.directory));
 
-// Middleware de debug condicional - só ativo em desenvolvimento
-app.use((req, res, next) => {
-  request("Requisição recebida:");
-  request("   - URL:", req.originalUrl);
-  request("   - Método:", req.method);
-  request("   - Headers Auth:", req.headers.authorization ? "Presente" : "Ausente");
-  request("   - IP:", req.ip || req.connection.remoteAddress);
-  next();
-});
+// Middleware removido para evitar poluição de logs
 
 // Rotas
 app.use(routes);

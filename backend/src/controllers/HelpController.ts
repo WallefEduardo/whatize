@@ -8,6 +8,7 @@ import ShowService from "../services/HelpServices/ShowService";
 import UpdateService from "../services/HelpServices/UpdateService";
 import DeleteService from "../services/HelpServices/DeleteService";
 import FindService from "../services/HelpServices/FindService";
+import GetCategoriesService from "../services/HelpServices/GetCategoriesService";
 
 import Help from "../models/Help";
 
@@ -16,6 +17,7 @@ import AppError from "../errors/AppError";
 type IndexQuery = {
   searchParam: string;
   pageNumber: string;
+  category: string;
 };
 
 type StoreData = {
@@ -23,14 +25,17 @@ type StoreData = {
   description: string;
   video?: string;
   link?: string;
+  category?: string;
+  categoryIcon?: string;
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const { searchParam, pageNumber } = req.query as IndexQuery;
+  const { searchParam, pageNumber, category } = req.query as IndexQuery;
 
   const { records, count, hasMore } = await ListService({
     searchParam,
-    pageNumber
+    pageNumber,
+    category
   });
   return res.json({ records, count, hasMore });
 };
@@ -128,7 +133,31 @@ export const findList = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  const records: Help[] = await FindService();
+  const { searchParam, pageNumber, category } = req.query as IndexQuery;
 
-  return res.status(200).json(records);
+  const { records, count, hasMore } = await ListService({
+    searchParam,
+    pageNumber,
+    category
+  });
+  
+  return res.status(200).json({ records, count, hasMore });
+};
+
+export const getCategories = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  try {
+    console.log('🔍 HelpController.getCategories: Iniciando...');
+    const result = await GetCategoriesService();
+    console.log('✅ HelpController.getCategories: Sucesso', result);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('❌ HelpController.getCategories: Erro:', error);
+    return res.status(500).json({ 
+      error: "Erro ao buscar categorias",
+      details: error.message 
+    });
+  }
 };

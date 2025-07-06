@@ -7,8 +7,6 @@ import authConfig from "../config/auth";
 import { getIO } from "../libs/socket";
 import ShowUserService from "../services/UserServices/ShowUserService";
 import { updateUser } from "../helpers/updateUser";
-import { auth } from "../utils/debugLogger";
-// import { moment} from "moment-timezone"
 
 interface TokenPayload {
   id: string;
@@ -20,24 +18,11 @@ interface TokenPayload {
 }
 
 const isAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  // Logs condicionais - só aparecem em desenvolvimento
-  auth("Middleware isAuth executado");
-  auth("Rota:", req.originalUrl);
-  auth("Método:", req.method);
-  auth("Headers auth:", req.headers.authorization ? "Presente" : "Ausente");
-  
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-    auth("❌ Token de autorização ausente");
     throw new AppError("ERR_SESSION_EXPIRED", 401);
   }
-
-  // const check = await verifyHelper();
-
-  // if (!check) {
-  //   throw new AppError("ERR_SYSTEM_INVALID", 401);
-  // }
 
   const [, token] = authHeader.split(" ");
 

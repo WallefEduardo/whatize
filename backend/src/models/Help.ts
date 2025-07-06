@@ -29,6 +29,12 @@ class Help extends Model<Help> {
   @Column
   link: string;
 
+  @Column
+  category: string;
+
+  @Column
+  categoryIcon: string;
+
   @CreatedAt
   createdAt: Date;
 
