@@ -32,32 +32,45 @@ const useStyles = makeStyles(theme => ({
         borderRadius: '6px !important',
       },
     },
-    // Corrige barras de rolagem das lanes
+    // Corrige barras de rolagem e altura das lanes
     '.react-trello-lane': {
-      overflowY: 'auto !important',
-      scrollbarWidth: 'thin !important',
-      scrollbarColor: '#888 #f1f1f1 !important',
-      paddingBottom: '20px !important',
+      minHeight: '300px !important',
+      display: 'flex !important',
+      flexDirection: 'column !important',
       boxSizing: 'border-box !important',
-      '&::-webkit-scrollbar': {
-        width: '8px !important',
-        display: 'block !important',
-      },
-      '&::-webkit-scrollbar-track': {
-        background: '#f1f1f1 !important',
-        borderRadius: '4px !important',
-      },
-      '&::-webkit-scrollbar-thumb': {
-        background: '#888 !important',
-        borderRadius: '4px !important',
-      },
+    },
+    // Força o container dos cards a crescer
+    '.react-trello-lane > div:last-child': {
+      flex: '1 1 auto',
+      overflowY: 'auto',
     },
     '.dOlrNy': {
       overflowY: 'auto !important',
     },
     '@keyframes spin': {
       '0%': { transform: 'rotate(0deg)' },
-      '100%': { transform: 'rotate(360deg)' }
+      '100%': { transform: 'rotate(360deg)' },
+    },
+    '@keyframes slideInFromRight': {
+      '0%': {
+        transform: 'translateX(100%)',
+        opacity: 0,
+      },
+      '100%': {
+        transform: 'translateX(0)',
+        opacity: 1,
+      },
+    },
+    '@keyframes pulse': {
+      '0%': {
+        boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+      },
+      '50%': {
+        boxShadow: '0 6px 16px rgba(76, 175, 80, 0.5)',
+      },
+      '100%': {
+        boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+      },
     },
     // Remove tooltips do react-trello
     '.react-trello-lane-header, .react-trello-lane, [data-react-trello-lane-id]': {
@@ -136,6 +149,35 @@ const useStyles = makeStyles(theme => ({
       borderTop: 'none !important',
       border: 'none !important',
     },
+    // Estilos para melhorar o drag manual - APENAS para áreas de fundo
+    '.react-trello-board': {
+      cursor: 'grab !important',
+      '&.dragging': {
+        cursor: 'grabbing !important',
+        userSelect: 'none !important',
+      },
+    },
+    // Container horizontal principal (área de fundo)
+    '.smooth-dnd-container.horizontal': {
+      cursor: 'grab !important',
+      '&:hover': {
+        cursor: 'grab !important',
+      },
+    },
+    // Headers de coluna mantêm cursor padrão para drag de colunas
+    '.react-trello-lane-header': {
+      cursor: 'grab !important',
+      '&:active': {
+        cursor: 'grabbing !important',
+      },
+    },
+    // Cards mantêm cursor padrão para drag de cards
+    '.react-trello-card': {
+      cursor: 'grab !important',
+      '&:active': {
+        cursor: 'grabbing !important',
+      },
+    },
   },
   root: {
     display: "flex",
@@ -153,51 +195,50 @@ const useStyles = makeStyles(theme => ({
   kanbanContainer: {
     width: "100%",
     height: "calc(100vh - 80px)",
-    overflowX: "auto !important", // Força sempre aparecer
-    overflowY: "hidden",
-    padding: theme.spacing(1),
-    boxSizing: "border-box",
-    WebkitOverflowScrolling: "touch",
-    position: "relative",
-    minWidth: "100%", // Garante largura mínima
-    // Força barra de rolagem horizontal sempre visível
+    display: 'flex',
+    flexDirection: 'column',
+    // O container principal agora só serve para o drag e espaçamento
+    cursor: 'grab',
+    userSelect: 'none',
+    paddingBottom: '20px', // Espaço para a scrollbar não sobrepor
+    position: 'relative', // Para posicionamento dos elementos filhos
+  },
+  boardWrapper: {
+    // O wrapper interno terá a scrollbar
+    flex: 1,
+    overflowX: 'auto !important', // Força overflow
+    overflowY: 'hidden',
+    minHeight: '1px', // Truque para flexbox
     scrollbarWidth: "thin", // Firefox
-    scrollbarColor: "#888 #f1f1f1", // Firefox
+    scrollbarColor: "#888 #f1f1f1", // Firefox com cor cinza
+    cursor: 'grab', // Cursor padrão para drag
+    position: 'relative',
+    // Garantir que o scroll funcione
+    scrollBehavior: 'auto', // Sem smooth scroll para melhor performance
     '&::-webkit-scrollbar': {
-      height: '12px !important', // Aumenta altura para melhor visibilidade
-      display: 'block !important', // Força exibição
+      height: '14px !important',
+      display: 'block !important',
     },
     '&::-webkit-scrollbar-track': {
       background: '#f1f1f1',
       borderRadius: '6px',
-      display: 'block !important',
     },
     '&::-webkit-scrollbar-thumb': {
       background: '#888',
       borderRadius: '6px',
-      display: 'block !important',
     },
     '&::-webkit-scrollbar-thumb:hover': {
-      background: '#555',
+      background: '#666',
     },
-    // Garante visibilidade em diferentes resoluções
-    [theme.breakpoints.down('xl')]: {
-      overflowX: "auto !important",
-      minWidth: "100%",
-    },
-    [theme.breakpoints.down('lg')]: {
-      overflowX: "auto !important",
-      minWidth: "100%",
-    },
-    [theme.breakpoints.down('md')]: {
-      overflowX: "auto !important",
-      minWidth: "100%",
-    },
-    [theme.breakpoints.down('sm')]: {
-      overflowX: "auto !important",
-      minWidth: "100%",
-      height: "calc(100vh - 120px)", // Ajusta altura em telas menores
-    },
+  },
+  dragBackgroundArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: -1,
+    cursor: 'grab',
   },
   controlsContainer: {
     display: "flex",
@@ -481,6 +522,12 @@ const Kanban = () => {
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const kanbanContainerRef = React.useRef(null);
+  const boardWrapperRef = React.useRef(null); // Ref para o container com a scrollbar
+  
+  // Refs para valores atuais (evita problema de closure)
+  const isDraggingRef = React.useRef(false);
+  const startXRef = React.useRef(0);
+  const scrollLeftRef = React.useRef(0);
   
   // Estados para updates em tempo real
   const [newCards, setNewCards] = useState([]);
@@ -924,121 +971,226 @@ const Kanban = () => {
     }
   };
 
-  // Funções para drag to scroll
-  const handleMouseDown = (e) => {
-    // Verificar se o clique foi em uma área válida (não em cards ou headers)
+    // Funções para drag to scroll
+  const handleMouseDown = e => {
     const target = e.target;
+    const boardWrapper = boardWrapperRef.current;
+    if (!boardWrapper) return;
+
+
+
+    // 1. PRIMEIRA PRIORIDADE: Verifica se é clique na scrollbar
+    const rect = boardWrapper.getBoundingClientRect();
+    const scrollbarHeight = 15;
+    const isScrollbarClick = (
+      e.clientY >= rect.bottom - scrollbarHeight && 
+      e.clientY <= rect.bottom &&
+      e.clientX >= rect.left && 
+      e.clientX <= rect.right
+    );
     
-    // Elementos que NÃO devem ativar o drag to scroll
-    const invalidSelectors = [
-      '.react-trello-card',
-      '.react-trello-lane-header', 
-      'button',
-      'input',
-      'select',
-      '.MuiIconButton-root',
-      '[role="button"]',
-      '.react-trello-lane',
-      'a',
-      'svg',
-      '[draggable="true"]'
+    if (isScrollbarClick) {
+      return; // Deixa o navegador lidar com a scrollbar
+    }
+
+    // 2. SEGUNDA PRIORIDADE: Elementos que têm suas próprias funcionalidades de drag
+    const elementsWithOwnDrag = [
+      '.react-trello-card', // Cards têm drag próprio
+      '.react-trello-lane-header', // Headers de coluna têm drag próprio
+      '.smooth-dnd-draggable-wrapper', // Wrappers de drag da biblioteca
+      'button', 'input', 'select', 'textarea',
+      '.MuiIconButton-root', '[role="button"]',
+      'a', 'svg', 'path'
     ];
     
-    const isInvalidArea = invalidSelectors.some(selector => target.closest(selector));
-    
-    // Procurar pelo container correto do react-trello
-    const reactTrelloBoard = document.querySelector('.react-trello-board');
-    const scrollContainer = reactTrelloBoard || kanbanContainerRef.current;
-    
-    // Só ativar se não for área inválida E estiver dentro do container do kanban
-    if (!isInvalidArea && scrollContainer && scrollContainer.contains(target)) {
-      setIsDragging(true);
-      setStartX(e.pageX);
-      setScrollLeft(scrollContainer.scrollLeft);
-      scrollContainer.style.cursor = 'grabbing';
-      document.body.style.userSelect = 'none'; // Previne seleção de texto
-      e.preventDefault();
+    const hasOwnDragFunctionality = elementsWithOwnDrag.some(selector => target.closest(selector));
+    if (hasOwnDragFunctionality) {
+      return; // Deixa a biblioteca lidar com o drag
     }
+
+         // 3. TERCEIRA PRIORIDADE: Verifica se é uma área válida para drag manual
+     // Aceita apenas cliques em áreas de fundo vazias
+     
+     // Verifica se clicou em uma área que NÃO deve ativar drag manual
+     const isInForbiddenArea = (
+       // Dentro de uma lane (coluna)
+       target.closest('.react-trello-lane') ||
+       // Dentro de um card
+       target.closest('.react-trello-card') ||
+       // Headers de lane
+       target.closest('.react-trello-lane-header') ||
+       // Wrappers de drag
+       target.closest('.smooth-dnd-draggable-wrapper')
+     );
+     
+         if (isInForbiddenArea) {
+      return;
+    }
+     
+         // Se não está em área proibida e está dentro do board, pode fazer drag manual
+    const isInBoardArea = boardWrapper.contains(target);
+    if (!isInBoardArea) {
+      return;
+    }
+
+         // 4. Se chegou até aqui, é um clique válido para drag manual
+     
+     // Obter scroll atual do elemento correto (board filho se necessário)
+     let currentScrollLeft = boardWrapper.scrollLeft;
+     const boardElement = boardWrapper.querySelector('.react-trello-board');
+     if (currentScrollLeft === 0 && boardElement && boardElement.scrollLeft > 0) {
+       currentScrollLeft = boardElement.scrollLeft;
+     }
+     
+     // Atualizar tanto o estado quanto as refs
+     setIsDragging(true);
+     setStartX(e.pageX);
+     setScrollLeft(currentScrollLeft);
+     
+     isDraggingRef.current = true;
+     startXRef.current = e.pageX;
+     scrollLeftRef.current = currentScrollLeft;
+     
+
+     
+     // Aplicar estilos visuais para indicar que está arrastando
+     document.body.style.cursor = 'grabbing';
+     document.body.style.userSelect = 'none';
+     boardWrapper.style.cursor = 'grabbing';
+     
+     // Adicionar classe CSS para indicar estado de drag
+     const boardForClass = boardWrapper.querySelector('.react-trello-board');
+     if (boardForClass) {
+       boardForClass.classList.add('dragging');
+     }
+     
+     e.preventDefault(); // Previne seleção de texto e outros comportamentos
   };
 
-  const handleMouseMove = (e) => {
-    if (!isDragging) return;
-    e.preventDefault();
+  const handleMouseMove = e => {
+    if (!isDraggingRef.current) {
+      return;
+    }
     
-    // Usar o mesmo container que foi usado no mouseDown
-    const reactTrelloBoard = document.querySelector('.react-trello-board');
-    const scrollContainer = reactTrelloBoard || kanbanContainerRef.current;
-    
-    if (!scrollContainer) return;
-    
+    const boardWrapper = boardWrapperRef.current;
+    if (!boardWrapper) {
+      console.log('❌ boardWrapper não encontrado no handleMouseMove');
+      return;
+    }
+
     const x = e.pageX;
-    const walk = (x - startX) * 1.5; // Velocidade do scroll
-    const newScrollLeft = scrollLeft - walk;
-    
-    // Garantir que o valor está dentro dos limites
-    const maxScroll = scrollContainer.scrollWidth - scrollContainer.clientWidth;
-    const clampedScrollLeft = Math.max(0, Math.min(newScrollLeft, maxScroll));
-    
+    const walk = (x - startXRef.current) * 2; // Sensibilidade do scroll
+    const newScrollLeft = Math.max(0, scrollLeftRef.current - walk); // Não permitir valores negativos
+
+
+
     // Aplicar o scroll
-    scrollContainer.scrollLeft = clampedScrollLeft;
+    boardWrapper.scrollLeft = newScrollLeft;
+    
+    // Verificar se foi aplicado
+    const actualScrollLeft = boardWrapper.scrollLeft;
+    
+         // Se não funcionou, tentar no elemento filho (react-trello-board)
+     if (actualScrollLeft === 0 && newScrollLeft >= 0) {
+       const boardChild = boardWrapper.querySelector('.react-trello-board');
+       if (boardChild) {
+         boardChild.scrollLeft = newScrollLeft;
+       }
+     }
+    
+    
   };
 
-  const handleMouseUp = (e) => {
-    if (isDragging) {
+         const handleMouseUp = e => {
+    if (isDraggingRef.current) {
+      
+      // Atualizar tanto o estado quanto as refs
       setIsDragging(false);
+      isDraggingRef.current = false;
       
-      const reactTrelloBoard = document.querySelector('.react-trello-board');
-      const scrollContainer = reactTrelloBoard || kanbanContainerRef.current;
+      // Restaurar estilos
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = '';
       
-      if (scrollContainer) {
-        scrollContainer.style.cursor = 'grab';
+      const boardWrapper = boardWrapperRef.current;
+      if (boardWrapper) {
+        boardWrapper.style.cursor = 'grab';
+        
+        // Remover classe CSS de drag
+        const boardForMouseUp = boardWrapper.querySelector('.react-trello-board');
+        if (boardForMouseUp) {
+          boardForMouseUp.classList.remove('dragging');
+        }
       }
-      document.body.style.userSelect = ''; // Restaura seleção de texto
-      e.preventDefault();
     }
   };
 
-  const handleMouseLeave = (e) => {
-    if (isDragging) {
+         const handleMouseLeave = e => {
+    if (isDraggingRef.current) {
+      
+      // Atualizar tanto o estado quanto as refs
       setIsDragging(false);
+      isDraggingRef.current = false;
       
-      const reactTrelloBoard = document.querySelector('.react-trello-board');
-      const scrollContainer = reactTrelloBoard || kanbanContainerRef.current;
+      // Restaurar estilos
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = '';
       
-      if (scrollContainer) {
-        scrollContainer.style.cursor = 'grab';
+      const boardWrapper = boardWrapperRef.current;
+      if (boardWrapper) {
+        boardWrapper.style.cursor = 'grab';
+        
+        // Remover classe CSS de drag
+        const boardForMouseLeave = boardWrapper.querySelector('.react-trello-board');
+        if (boardForMouseLeave) {
+          boardForMouseLeave.classList.remove('dragging');
+        }
       }
-      document.body.style.userSelect = ''; // Restaura seleção de texto
     }
   };
-
-
 
   // Adicionar event listeners para drag to scroll
   React.useEffect(() => {
     const container = kanbanContainerRef.current;
-    if (container) {
-      // Adicionar eventos no documento para capturar movimento global
-      const handleGlobalMouseMove = (e) => handleMouseMove(e);
-      const handleGlobalMouseUp = (e) => handleMouseUp(e);
+    const boardWrapper = boardWrapperRef.current;
+    
+    if (container && boardWrapper) {
       
-      container.addEventListener('mousedown', handleMouseDown);
-      document.addEventListener('mousemove', handleGlobalMouseMove);
-      document.addEventListener('mouseup', handleGlobalMouseUp);
-      container.addEventListener('mouseleave', handleMouseLeave);
-      
-      // Definir cursor inicial apenas para áreas válidas
+      // Configurar cursor inicial
       container.style.cursor = 'grab';
-      container.style.userSelect = 'none';
+      boardWrapper.style.cursor = 'grab';
+      
+             // Funções locais para os event listeners
+       const handleMouseDownLocal = (e) => {
+         handleMouseDown(e);
+       };
+       
+       const handleMouseMoveLocal = (e) => {
+         handleMouseMove(e);
+       };
+       
+       const handleMouseUpLocal = (e) => {
+         handleMouseUp(e);
+       };
+       
+       const handleMouseLeaveLocal = (e) => {
+         handleMouseLeave(e);
+       };
+      
+      // Adicionar eventos
+      container.addEventListener('mousedown', handleMouseDownLocal, { passive: false });
+      document.addEventListener('mousemove', handleMouseMoveLocal, { passive: false });
+      document.addEventListener('mouseup', handleMouseUpLocal, { passive: false });
+      container.addEventListener('mouseleave', handleMouseLeaveLocal, { passive: false });
       
       return () => {
-        container.removeEventListener('mousedown', handleMouseDown);
-        document.removeEventListener('mousemove', handleGlobalMouseMove);
-        document.removeEventListener('mouseup', handleGlobalMouseUp);
-        container.removeEventListener('mouseleave', handleMouseLeave);
+        container.removeEventListener('mousedown', handleMouseDownLocal);
+        document.removeEventListener('mousemove', handleMouseMoveLocal);
+        document.removeEventListener('mouseup', handleMouseUpLocal);
+        container.removeEventListener('mouseleave', handleMouseLeaveLocal);
       };
     }
-  }, [isDragging, startX, scrollLeft]);
+  }, []); // Sem dependências - só executa uma vez
 
   // Função para processar fila de atualizações em tempo real
   const processUpdateQueue = async () => {
@@ -1156,6 +1308,18 @@ const Kanban = () => {
     return uniqueTags;
   };
 
+  useEffect(() => {
+    // Aplica a altura mínima diretamente no DOM após a renderização das lanes,
+    // garantindo que a biblioteca não sobrescreva o estilo.
+    const lanes = document.querySelectorAll('.react-trello-lane');
+    lanes.forEach(lane => {
+      // Força a altura mínima diretamente no style do elemento.
+      if (lane instanceof HTMLElement) {
+        lane.style.minHeight = '600px';
+      }
+    });
+  }, [file]); // Executa sempre que os dados do board mudarem.
+
   const popularCards = () => {
     if (!initialLoadComplete) return;
     
@@ -1217,19 +1381,7 @@ const Kanban = () => {
               </Typography>
             </div>
           </div>
-          <div className={classes.messageContent}>
-            {moreMessage === ticket.id ? (
-              <Typography variant="body2">
-                {ticket.lastMessage}
-              </Typography>
-            ) : (
-              <Typography variant="body2">
-                {ticket.lastMessage?.length > 70
-                  ? `${ticket.lastMessage.substring(0, 70)}...`
-                  : ticket.lastMessage}
-              </Typography>
-            )}
-          </div>
+
 
           <div className={classes.cardBottomActions}>
             {/* Botão de enviar mensagem */}
@@ -1253,10 +1405,19 @@ const Kanban = () => {
                   className={classes.tagButton}
                   style={{ 
                     borderColor: getNormalTags(ticket)[0].color,
-                    color: getNormalTags(ticket)[0].color 
+                    color: getNormalTags(ticket)[0].color,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '3px 8px',
+                    width: 'auto',
+                    minWidth: 'auto'
                   }}
                 >
                   <LocalOffer />
+                  <span style={{ fontSize: '0.7rem', fontWeight: '500' }}>
+                    {getNormalTags(ticket)[0].name}
+                  </span>
                 </div>
               </Tooltip>
             )}
@@ -1384,116 +1545,6 @@ const Kanban = () => {
 
   return (
     <div className={classes.root}>
-      {/* Estilos para animações dos novos cards */}
-      <style jsx global>{`
-        @keyframes slideInFromRight {
-          0% {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          100% {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        
-        @keyframes pulse {
-          0% {
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-          }
-          50% {
-            box-shadow: 0 6px 16px rgba(76, 175, 80, 0.5);
-          }
-          100% {
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-          }
-        }
-        
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        /* Forçar scroll horizontal no react-trello */
-        .react-trello-board {
-          overflow-x: auto !important;
-          overflow-y: visible !important;
-          width: 100% !important;
-          cursor: grab !important;
-        }
-        
-        .react-trello-board:active {
-          cursor: grabbing !important;
-        }
-        
-        /* Garantir que as lanes tenham largura adequada */
-        .react-trello-lane {
-          min-width: 220px !important;
-          flex-shrink: 0 !important;
-        }
-        
-        /* Garantir que cards não sejam cortados */
-        .react-trello-lane .react-trello-card:last-child {
-          margin-bottom: 20px !important;
-        }
-        
-        /* Melhorar scroll das colunas */
-        .react-trello-lane {
-          padding-bottom: 40px !important;
-          box-sizing: border-box !important;
-          overflow-y: auto !important;
-          max-height: calc(100vh - 180px) !important;
-        }
-        
-        /* Garantir que cada coluna tenha sua própria barra de rolagem */
-        .react-trello-lane .react-trello-card-wrapper {
-          overflow-y: auto !important;
-          max-height: calc(100vh - 220px) !important;
-          padding-right: 5px !important;
-        }
-        
-        /* Melhorar visibilidade das barras de rolagem das colunas */
-        .react-trello-lane::-webkit-scrollbar {
-          width: 8px !important;
-          display: block !important;
-        }
-        
-        .react-trello-lane::-webkit-scrollbar-track {
-          background: #f1f1f1 !important;
-          border-radius: 4px !important;
-        }
-        
-        .react-trello-lane::-webkit-scrollbar-thumb {
-          background: #888 !important;
-          border-radius: 4px !important;
-        }
-        
-        .react-trello-lane::-webkit-scrollbar-thumb:hover {
-          background: #555 !important;
-        }
-        
-        /* Para Firefox */
-        .react-trello-lane {
-          scrollbar-width: thin !important;
-          scrollbar-color: #888 #f1f1f1 !important;
-        }
-        
-        /* Garantir bordas completas nos cards */
-        .react-trello-card {
-          border: 1px solid #e0e0e0 !important;
-          border-top: 1px solid #e0e0e0 !important;
-          border-radius: 8px !important;
-          background-color: #fff !important;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-          margin-bottom: 10px !important;
-        }
-        
-        /* Garantir que o conteúdo do card não sobreponha a borda */
-        .react-trello-card > div {
-          border-top: none !important;
-          padding-top: 8px !important;
-        }
-      `}</style>
       <div className={classes.controlsContainer}>
         <div className={classes.dateContainer}>
           <TextField
@@ -1707,17 +1758,12 @@ const Kanban = () => {
           </Button>
         )} />
       </div>
-      <div 
+      <div
         className={classes.kanbanContainer}
         ref={kanbanContainerRef}
-        style={{
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          cursor: 'grab',
-          userSelect: 'none'
-        }}
       >
-        <div style={{ position: 'relative' }}>
+        <div className={classes.boardWrapper} ref={boardWrapperRef}>
+
           {(isFilterLoading || isReordering) && (
             <div style={{
               position: 'absolute',
@@ -1741,10 +1787,10 @@ const Kanban = () => {
                 borderRadius: '50%',
                 animation: 'spin 1s linear infinite'
               }}></div>
-              <Typography style={{ 
-                color: isReordering ? '#2196F3' : '#00C307', 
-                fontSize: '11px', 
-                fontWeight: 500 
+              <Typography style={{
+                color: isReordering ? '#2196F3' : '#00C307',
+                fontSize: '11px',
+                fontWeight: 500
               }}>
                 {isReordering ? 'Reordenando' : 'Atualizando'}
               </Typography>
@@ -1768,40 +1814,18 @@ const Kanban = () => {
               width: '100%'
             }}
             laneStyle={{
+              // Estilos essenciais que a biblioteca precisa
               backgroundColor: '#ffffff',
               borderRadius: '8px',
-              padding: '0', // Remove padding para que a linha colorida fique na borda
+              padding: '0',
               marginRight: '10px',
-              minWidth: window.innerWidth <= 600 ? '220px' : '220px',
-              maxWidth: window.innerWidth <= 600 ? '240px' : '240px',
+              minWidth: '220px',
+              maxWidth: '240px',
               boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
               border: '1px solid #e0e0e0',
-              borderTop: 'none', // Remove borda superior para que a linha colorida apareça
-              minHeight: '400px',
-              maxHeight: 'calc(100vh - 180px)', // Aumentar altura disponível
-              overflowY: 'auto !important',
-              // Melhorar visibilidade da barra de rolagem vertical
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#888 #f1f1f1',
-              '&::-webkit-scrollbar': {
-                width: '8px',
-                display: 'block !important',
-              },
-              '&::-webkit-scrollbar-track': {
-                background: '#f1f1f1',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: '#888',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb:hover': {
-                background: '#555',
-              },
-              // Garantir que o conteúdo não seja cortado
-              paddingBottom: '40px', // Espaço extra aumentado no final
-              paddingTop: '10px', // Espaço no topo após o header
-              boxSizing: 'border-box',
+              borderTop: 'none',
+              display: 'flex',
+              flexDirection: 'column',
             }}
             cardStyle={{
               padding: 0,
@@ -1819,31 +1843,29 @@ const Kanban = () => {
             tagStyle={{ display: 'none' }}
             laneDragClass="lane-dragging"
             laneDropClass="lane-dropping"
-                          components={{
-                LaneHeader: ({ title, label, funilName, funilColor, ...props }) => (
-                  <div 
-                    {...props}
-                    style={{
-                      padding: '0',
-                      paddingLeft: '10px',
-                      paddingRight: '10px',
-                      paddingTop: '15px', // Espaço interno após a linha
-                      paddingBottom: '10px',
-                      marginBottom: '10px', // Espaço após a linha colorida
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      borderTop: `5px solid ${funilColor || '#ddd'}`, // Linha colorida de 5px
-                      borderTopLeftRadius: '8px',
-                      borderTopRightRadius: '8px',
-                      backgroundColor: '#f9f9f9',
-                      cursor: 'grab',
-                      userSelect: 'none',
-                      position: 'relative',
-                      ...props.style
-                    }}
-                    title="" // Remove tooltip
-                  >
+            components={{
+              LaneHeader: ({ title, label, funilName, funilColor }) => (
+                <div
+                  style={{
+                    padding: '0',
+                    paddingLeft: '10px',
+                    paddingRight: '10px',
+                    paddingTop: '15px', // Espaço interno após a linha
+                    paddingBottom: '10px',
+                    marginBottom: '10px', // Espaço após a linha colorida
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderTop: `5px solid ${funilColor || '#ddd'}`, // Linha colorida de 5px
+                    borderTopLeftRadius: '8px',
+                    borderTopRightRadius: '8px',
+                    backgroundColor: '#f9f9f9',
+                    cursor: 'grab',
+                    userSelect: 'none',
+                    position: 'relative',
+                  }}
+                  title="" // Remove tooltip
+                >
                   <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 

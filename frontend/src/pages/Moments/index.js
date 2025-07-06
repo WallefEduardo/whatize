@@ -38,7 +38,18 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexWrap: "wrap",
     padding: "0px 6px 6px 6px",
-  }
+  },
+  titleContainer: {
+    textAlign: 'center',
+    paddingTop: theme.spacing(3),
+    paddingBottom: theme.spacing(3),
+    marginBottom: theme.spacing(2),
+    '& .MuiTypography-root': {
+      color: '#000',
+      fontWeight: 600,
+      fontSize: '1.5rem',
+    },
+  },
 }));
 
 const ChatMoments = () => {
@@ -52,7 +63,9 @@ const ChatMoments = () => {
       <MainHeader>
         <Grid style={{ width: "99.6%" }} container justifyContent="center" alignItems="flex-start">
           <Grid xs={12} sm={8} xl={4} item >
-            <Title>{"Painel de Atendimentos"}</Title>
+            <div className={classes.titleContainer}>
+              <Title>{"Painel de Atendimentos"}</Title>
+            </div>
           </Grid>
           <Grid style={{ width: "100%", height: "100vh" }} item >
             <Paper

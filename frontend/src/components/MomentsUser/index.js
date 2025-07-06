@@ -31,67 +31,183 @@ const useStyles = makeStyles((theme) => ({
     width: "380px",
     height: "78px",
     padding: 10,
-    backgroundColor: "#DCDCDC",
+    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+    borderRadius: theme.spacing(1, 1, 0, 0),
+    border: '1px solid #e0e0e0',
+    borderBottom: 'none',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    [theme.breakpoints.down('sm')]: {
+      width: '100%',
+      maxWidth: '380px',
+    },
+    '& .MuiCardHeader-root': {
+      padding: '8px 16px',
+      alignItems: 'center',
+    },
+    '& .MuiCardHeader-content': {
+      display: 'flex',
+      alignItems: 'center',
+    },
+    '& .MuiCardHeader-title': {
+      display: 'flex',
+      alignItems: 'center',
+      lineHeight: 1.2,
+    },
+    '&:hover': {
+      background: '#000',
+      '& .MuiCardHeader-title': {
+        color: '#fff',
+      },
+      '& .MuiCardHeader-subheader': {
+        color: '#f0f0f0',
+      },
+      transform: 'translateY(-2px)',
+      boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+    },
   },
   cardHeaderPending: {
     width: "380px",
     height: "78px",
     padding: 10,
-    backgroundColor: "#C0C0C0",
+    background: '#02c208',
+    borderRadius: theme.spacing(1, 1, 0, 0),
+    border: '1px solid #e0e0e0',
+    borderBottom: 'none',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    [theme.breakpoints.down('sm')]: {
+      width: '100%',
+      maxWidth: '380px',
+    },
+    '& .MuiCardHeader-root': {
+      padding: '8px 16px',
+      alignItems: 'center',
+    },
+    '& .MuiCardHeader-content': {
+      display: 'flex',
+      alignItems: 'center',
+    },
+    '& .MuiCardHeader-title': {
+      color: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      lineHeight: 1.2,
+    },
+    '&:hover': {
+      background: 'rgb(4, 170, 9)',
+      transform: 'translateY(-2px)',
+      boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+    },
   },
   card: {
     height: "300px",
     width: "380px",
-    margin: "3px",
-    borderRadius: 5,
+    borderRadius: theme.spacing(0, 0, 1, 1),
     flex: 1,
     maxHeight: "100%",
-    overflowY: "scroll",
-    ...theme.scrollbarStyles,
-    borderTop: "2px solid rgba(0, 0, 0, 0.12)",
+    overflowY: "auto",
+    overflowX: "hidden",
+    border: '1px solid #e0e0e0',
+    borderTop: 'none',
+    background: '#fff',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+    transition: 'all 0.3s ease',
+    [theme.breakpoints.down('sm')]: {
+      width: '100%',
+      maxWidth: '380px',
+      margin: "4px",
+    },
+    // Custom scrollbar styling
+    '&::-webkit-scrollbar': {
+      width: '8px',
+    },
+    '&::-webkit-scrollbar-track': {
+      background: '#f1f1f1',
+      borderRadius: '4px',
+    },
+    '&::-webkit-scrollbar-thumb': {
+      background: '#02c208',
+      borderRadius: '4px',
+      '&:hover': {
+        background: '#019a06',
+      },
+    },
+    '&:hover': {
+      boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+      transform: 'translateY(-2px)',
+    },
   },
   changeWarap: {
     width: '380px',
     padding: 0,
-    margin: 0
+    margin: 0,
+    borderRadius: theme.spacing(1),
+    overflow: 'hidden',
+    transition: 'all 0.3s ease',
+    [theme.breakpoints.down('sm')]: {
+      width: '100%',
+      maxWidth: '380px',
+    },
+    '&:hover': {
+      transform: 'scale(1.02)',
+    },
   },
   pending: {
     color: yellow[600],
     fontSize: '20px'
   },
   connectionTag: {
-    background: "green",
+    background: "linear-gradient(45deg, #02c208,rgb(4, 170, 9))",
     color: "#FFF",
-    marginRight: 1,
-    padding: 1,
+    marginRight: 4,
+    padding: '2px 8px',
     fontWeight: 'bold',
-    // paddingLeft: 5,
-    // paddingRight: 5,
-    borderRadius: 3,
-    fontSize: "0.6em",
-    // whiteSpace: "nowrap"
+    borderRadius: 12,
+    fontSize: "0.7em",
+    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      transform: 'scale(1.05)',
+    },
   },
   lastMessageTime: {
     justifySelf: "flex-end",
     textAlign: "right",
     position: "relative",
-    // top: -30,
     marginRight: "1px",
     color: grey[400],
+    fontSize: '0.75rem',
   },
-
   lastMessageTimeUnread: {
     justifySelf: "flex-end",
     textAlign: "right",
     position: "relative",
-    // top: -30,
-    color: "green",
+    color: "#02c208",
     fontWeight: "bold",
     marginRight: "1px",
+    fontSize: '0.75rem',
   },
-  pending: {
-    color: yellow[600],
-    fontSize: '20px'
+  listItem: {
+    borderRadius: theme.spacing(1),
+    margin: theme.spacing(0.5),
+    paddingLeft: theme.spacing(1),
+    paddingRight: theme.spacing(1),
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: 'rgba(0,0,0,0.04)',
+      transform: 'translateX(4px)',
+    },
+    '& .MuiListItemText-root': {
+      marginLeft: 0,
+      paddingLeft: 0,
+    },
+    '& .MuiListItemAvatar-root': {
+      minWidth: '40px',
+      marginRight: theme.spacing(1),
+    },
   },
 }));
 
@@ -204,7 +320,7 @@ const DashboardManage = () => {
               <Paper square elevation={0} className={classes.card}>
                 {group.userTickets.map((ticket) => (
                   <List style={{ paddingTop: 0 }} key={ticket.id}>
-                    <ListItem dense button>
+                    <ListItem dense button className={classes.listItem}>
                       <ListItemAvatar>
                         <Avatar alt={`${ticket.contact.urlPicture}`} src={`${ticket.contact.urlPicture}`} />
                       </ListItemAvatar>
@@ -292,7 +408,7 @@ const DashboardManage = () => {
               <Paper square elevation={0} className={classes.card}>
                 {pendingTickets.map((ticket) => (
                   <List style={{ paddingTop: 0 }} key={ticket.id}>
-                    <ListItem dense button>
+                    <ListItem dense button className={classes.listItem}>
                       <ListItemAvatar>
                         <Avatar alt={`${ticket.contact.urlPicture}`} src={`${ticket.contact.urlPicture}`} />
                       </ListItemAvatar>

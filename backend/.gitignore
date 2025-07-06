@@ -1,64 +1,41 @@
-node_modules
-dist
+# Dependências e builds
+node_modules/
+dist/
+coverage/
+tmp/
+temp/
+.cache/
+*.tmp
+
+# Configs e secrets
 .env
-yarn.lock
-yarn-error.log
-package-lock.json
+*.pem
+*.key
+*.crt
 
-/src/config/sentry.js
-
-# Ignore test-related files
-/coverage.data
-/coverage/
-public/*
-public/company*
-
-# ========================================
-# LOGS E ARQUIVOS DE MONITORAMENTO
-# ========================================
-# Logs do sistema
+# Logs
 logs/
 *.log
-race_conditions.log
-combined.log
-error.log
-access.log
-
-# Logs de monitoramento
 monitoring/logs/
-monitor-production.log
+*.out
 
-# ========================================
-# BACKUPS E DADOS TEMPORÁRIOS
-# ========================================
-# Backups do banco de dados
+# Backups e dumps
 backups/
 *.sql
 *.dump
 
-# Certificados e chaves privadas
+# Certificados e privados
 certs/
-*.pem
-*.key
-*.crt
 private/
 
-# ========================================
-# ARQUIVOS TEMPORÁRIOS E CACHE
-# ========================================
-# Arquivos temporários
-tmp/
-temp/
-*.tmp
-
-# Cache e uploads
-uploads/
-cache/
-
-# Arquivos do sistema
+# Outros
 .DS_Store
 Thumbs.db
 *.swp
-*.swo
 *~
 
+# Public (customize conforme necessidade)
+public/*
+public/company*
+
+/src/config/sentry.js

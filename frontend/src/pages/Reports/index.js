@@ -34,12 +34,12 @@ import { WhatsappsFilter } from "../../components/WhatsappsFilter";
 import { StatusFilter } from "../../components/StatusFilter";
 import useDashboard from "../../hooks/useDashboard";
 
-import QueueSelectCustom from "../../components/QueueSelectCustom";
+
 import moment from "moment";
 import ShowTicketLogModal from "../../components/ShowTicketLogModal";
 
 import { blue, green } from "@material-ui/core/colors";
-import { Facebook, Forward, History, Instagram, SaveAlt, Visibility, WhatsApp } from "@material-ui/icons";
+import { Facebook, FilterList as FilterListIcon, Forward, History, Instagram, SaveAlt, Visibility, WhatsApp } from "@material-ui/icons";
 import Autocomplete, { createFilterOptions } from "@material-ui/lab/Autocomplete";
 import { Field } from "formik";
 
@@ -47,6 +47,10 @@ const useStyles = makeStyles((theme) => ({
   mainContainer: {
     background: theme.palette.fancyBackground,
     maxWidth: "100%",
+    padding: theme.spacing(0, 3),
+    [theme.breakpoints.down('sm')]: {
+      padding: theme.spacing(0, 1),
+    },
   },
   formControl: {
     display: 'flex',
@@ -66,13 +70,22 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     overflow: 'auto',
     height: '68vh',
+    borderRadius: theme.spacing(2),
     ...theme.scrollbarStylesSoftBig,
   },
   mainPaperFilter: {
     flex: 1,
-    overflow: 'auto',
-    height: '20vh',
-    ...theme.scrollbarStylesSoftBig,
+    overflow: 'visible',
+    padding: theme.spacing(3),
+    borderRadius: theme.spacing(2),
+    background: '#fff',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+    [theme.breakpoints.down('md')]: {
+      padding: theme.spacing(2),
+    },
+    [theme.breakpoints.down('sm')]: {
+      padding: theme.spacing(1.5),
+    },
   },
   mainHeaderBlock: {
     [theme.breakpoints.down('md')]: {
@@ -84,6 +97,59 @@ const useStyles = makeStyles((theme) => ({
     width: 200,
     [theme.breakpoints.down('md')]: {
       width: '45%'
+    },
+  },
+  filterContainer: {
+    marginBottom: theme.spacing(2),
+  },
+  filterField: {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: theme.spacing(2),
+    },
+    '& .MuiFormControl-root': {
+      width: '100%',
+    },
+  },
+  dateField: {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: theme.spacing(2),
+    },
+    '& .MuiFormControl-root': {
+      width: '100%',
+    },
+  },
+
+  actionContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: '4px',
+    height: '56px',
+    '& > *': {
+      marginLeft: '4px',
+    },
+    [theme.breakpoints.down('sm')]: {
+      flexDirection: 'column',
+      gap: theme.spacing(1),
+      height: 'auto',
+    },
+  },
+  filterButton: {
+    borderRadius: theme.spacing(1),
+    textTransform: 'none',
+    fontWeight: 600,
+    padding: theme.spacing(1, 3),
+    height: '40px',
+  },
+  exportButton: {
+    borderRadius: theme.spacing(1),
+    backgroundColor: theme.palette.success.main,
+    color: '#fff',
+    height: '40px',
+    width: '40px',
+    '&:hover': {
+      backgroundColor: theme.palette.success.dark,
     },
   },
 }));
@@ -366,33 +432,54 @@ const Reports = () => {
       )}
       <Title>{i18n.t("reports.title")}</Title>
 
-      <MainHeader className={classes.mainHeaderFilter} style={{ display: 'flex' }}>
+      <MainHeader className={classes.mainHeaderFilter}>
         <Paper className={classes.mainPaperFilter}>
-          <div style={{ paddingTop: '15px' }} />
-          <Grid container spacing={1}>
-            <Grid item xs={12} md={3} xl={3}>
+          <Grid container spacing={2} className={classes.filterContainer}>
+            {/* Primeira linha - 4 campos principais */}
+            <Grid item xs={12} sm={6} md={3} className={classes.filterField}>
               {renderContactAutocomplete()}
             </Grid>
-            <Grid item xs={12} md={3} xl={3}>
+            <Grid item xs={12} sm={6} md={3} className={classes.filterField}>
               <WhatsappsFilter onFiltered={handleSelectedWhatsapps} />
             </Grid>
-            <Grid item xs={12} md={3} xl={3}>
+            <Grid item xs={12} sm={6} md={3} className={classes.filterField}>
               <StatusFilter onFiltered={handleSelectedStatus} />
             </Grid>
-            <Grid item xs={12} md={3} xl={3}>
+            <Grid item xs={12} sm={6} md={3} className={classes.filterField}>
               <UsersFilter onFiltered={handleSelectedUsers} />
             </Grid>
-            {/* <Grid item xs={12} md={4} xl={4}>
-              <TagsFilter onFiltered={handleSelectedTags} />
-            </Grid> */}
-            <Grid item xs={12} md={3} xl={3} style={{ marginTop: '-13px' }}>
-              <QueueSelectCustom
-                selectedQueueIds={queueIds}
-                onChange={values => setQueueIds(values)}
-              />
-            </Grid>
 
-            <Grid item xs={12} sm={3} md={3}>
+            {/* Segunda linha - 3 campos */}
+            <Grid item xs={12} sm={4} md={4} className={classes.dateField}>
+              <FormControl variant="outlined" fullWidth size="small">
+                <InputLabel>Filas</InputLabel>
+                <Select
+                  multiple
+                  value={queueIds}
+                  onChange={(e) => setQueueIds(e.target.value)}
+                  label="Filas"
+                  renderValue={(selected) => `${selected.length} selecionada(s)`}
+                  MenuProps={{
+                    anchorOrigin: {
+                      vertical: "bottom",
+                      horizontal: "left",
+                    },
+                    transformOrigin: {
+                      vertical: "top",
+                      horizontal: "left",
+                    },
+                    getContentAnchorEl: null,
+                  }}
+                >
+                  {user?.queues?.map((queue) => (
+                    <MenuItem key={queue.id} value={queue.id}>
+                      {queue.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={4} md={4} className={classes.dateField}>
               <TextField
                 label="Data Inicial"
                 type="date"
@@ -406,7 +493,7 @@ const Reports = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} sm={3} md={3}>
+            <Grid item xs={12} sm={4} md={4} className={classes.dateField}>
               <TextField
                 label="Data Final"
                 type="date"
@@ -420,33 +507,40 @@ const Reports = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} sm={3} md={3} style={{ display: 'flex', justifyContent: 'center' }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    color="primary"
-                    checked={onlyRated}
-                    onChange={() => setOnlyRated(!onlyRated)}
-                  />
-                }
 
-                label={i18n.t("reports.buttons.onlyRated")}
-              />
-              <IconButton onClick={exportarGridParaExcel} aria-label="Exportar para Excel">
-
-                <SaveAlt />
-              </IconButton>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => handleFilter(pageNumber)}
-                size="small"
-              >{i18n.t("reports.buttons.filter")}</Button>
+            {/* Terceira linha - Ações na mesma linha horizontal */}
+            <Grid item xs={12}>
+              <div className={classes.actionContainer}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      color="primary"
+                      checked={onlyRated}
+                      onChange={() => setOnlyRated(!onlyRated)}
+                    />
+                  }
+                  label={i18n.t("reports.buttons.onlyRated")}
+                />
+                <IconButton 
+                  onClick={exportarGridParaExcel} 
+                  aria-label="Exportar para Excel"
+                  className={classes.exportButton}
+                >
+                  <SaveAlt />
+                </IconButton>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => handleFilter(pageNumber)}
+                  className={classes.filterButton}
+                  startIcon={<FilterListIcon />}
+                >
+                  {i18n.t("reports.buttons.filter")}
+                </Button>
+              </div>
             </Grid>
           </Grid>
-
         </Paper>
-
       </MainHeader>
       <Paper
         className={classes.mainPaperTable}
