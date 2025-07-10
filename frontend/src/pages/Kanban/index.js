@@ -6,41 +6,78 @@ import Board from 'react-trello';
 import { toast } from "react-toastify";
 import { i18n } from "../../translate/i18n";
 import { useHistory } from 'react-router-dom';
-import { Facebook, Instagram, WhatsApp, Add, Send, Person } from "@material-ui/icons";
-import { Tooltip, Typography, Button, TextField, FormControl, InputLabel, Select, MenuItem, Box, IconButton, Badge } from "@material-ui/core";
+import { Facebook, Instagram, WhatsApp, Add, Send, Person, LocalOffer } from "@material-ui/icons";
+import { Tooltip, Typography, Button, TextField, FormControl, InputLabel, Select, MenuItem, Box, IconButton, Badge, Avatar } from "@material-ui/core";
 import { format, isSameDay, parseISO, subMonths } from "date-fns";
 import { Can } from "../../components/Can";
 import Swal from "sweetalert2";
 
 const useStyles = makeStyles(theme => ({
   '@global': {
-    // Força barras de rolagem sempre visíveis
+    // Força barras de rolagem sempre visíveis - MELHORADO PARA 1600x900
     '.react-trello-board': {
       overflowX: 'auto !important',
-      scrollbarWidth: 'thin !important',
+      overflowY: 'hidden !important',
+      scrollbarWidth: 'auto !important',
       scrollbarColor: '#888 #f1f1f1 !important',
+      minHeight: '600px !important',
+      maxHeight: 'calc(100vh - 200px) !important',
+      display: 'flex !important',
+      flexWrap: 'nowrap !important',
+      width: '100% !important',
       '&::-webkit-scrollbar': {
-        height: '12px !important',
+        height: '14px !important',
+        width: '14px !important',
         display: 'block !important',
+        visibility: 'visible !important',
       },
       '&::-webkit-scrollbar-track': {
         background: '#f1f1f1 !important',
-        borderRadius: '6px !important',
+        borderRadius: '8px !important',
       },
       '&::-webkit-scrollbar-thumb': {
         background: '#888 !important',
-        borderRadius: '6px !important',
+        borderRadius: '8px !important',
+        '&:hover': {
+          background: '#555 !important',
+        },
+      },
+      '&::-webkit-scrollbar-corner': {
+        background: '#f1f1f1 !important',
       },
     },
-    // Corrige barras de rolagem e altura das lanes - MELHORADO PARA RESPONSIVIDADE
+    // Corrige barras de rolagem e altura das lanes - REMOVENDO DUPLICATAS
     '.react-trello-lane': {
-      minHeight: '300px !important',
-      display: 'flex !important',
-      flexDirection: 'column !important',
-      boxSizing: 'border-box !important',
-      // Força scrollbar vertical sempre visível
-      '& > div:last-child': {
+      minWidth: '280px !important',
+      maxWidth: 'none !important', // Remove limite máximo para permitir expansão
+      width: 'auto !important', // Largura automática baseada no conteúdo
+      minHeight: '600px !important',
+      maxHeight: 'calc(100vh - 250px) !important',
+      margin: '0 8px !important',
+      flex: '0 0 auto !important',
+      '& .react-trello-lane-header': {
+        minHeight: '40px !important',
+        padding: '8px 12px !important',
+        whiteSpace: 'nowrap !important', // Impede quebra de linha no título
+        overflow: 'visible !important',
+        textOverflow: 'clip !important',
+        width: 'auto !important',
+        minWidth: '280px !important',
+        '& h3': {
+          whiteSpace: 'nowrap !important',
+          overflow: 'visible !important',
+          textOverflow: 'clip !important',
+          margin: '0 !important',
+          fontSize: '1rem !important',
+          fontWeight: '600 !important',
+        },
+      },
+      '& .smooth-dnd-container': {
+        minHeight: '500px !important',
+        maxHeight: 'calc(100vh - 320px) !important',
         overflowY: 'auto !important',
+        overflowX: 'hidden !important',
+        // Scrollbar customizada apenas para as colunas
         scrollbarWidth: 'thin !important',
         scrollbarColor: '#888 #f1f1f1 !important',
         '&::-webkit-scrollbar': {
@@ -54,6 +91,9 @@ const useStyles = makeStyles(theme => ({
         '&::-webkit-scrollbar-thumb': {
           background: '#888 !important',
           borderRadius: '4px !important',
+          '&:hover': {
+            background: '#555 !important',
+          },
         },
       },
     },
@@ -66,23 +106,9 @@ const useStyles = makeStyles(theme => ({
     '.dOlrNy': {
       overflowY: 'auto !important',
     },
-    // Força scrollbar em containers específicos do react-trello
+    // Força scrollbar em containers específicos do react-trello - MELHORADO PARA 1600x900
     '.smooth-dnd-container.vertical': {
-      overflowY: 'auto !important',
-      scrollbarWidth: 'thin !important',
-      scrollbarColor: '#888 #f1f1f1 !important',
-      '&::-webkit-scrollbar': {
-        width: '8px !important',
-        display: 'block !important',
-      },
-      '&::-webkit-scrollbar-track': {
-        background: '#f1f1f1 !important',
-        borderRadius: '4px !important',
-      },
-      '&::-webkit-scrollbar-thumb': {
-        background: '#888 !important',
-        borderRadius: '4px !important',
-      },
+      // Removido para evitar duplicação - agora controlado pelo .react-trello-lane
     },
     // Força scrollbar em todos os containers de cards
     '.react-trello-lane .smooth-dnd-container': {
@@ -245,6 +271,10 @@ const useStyles = makeStyles(theme => ({
         cursor: 'grabbing !important',
       },
     },
+    // Estilos específicos para lanes do Kanban - OTIMIZADO PARA 1600x900
+    '.react-trello-lane': {
+      // Removido duplicação - estilos movidos para a seção anterior
+    },
   },
   root: {
     display: "flex",
@@ -403,10 +433,10 @@ const useStyles = makeStyles(theme => ({
     border: "none !important"
   },
   contactInfo: {
-    display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(1),
-    justifyContent: "flex-start",
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    flex: 1,
     minWidth: 0,
   },
   contactName: {
@@ -416,6 +446,11 @@ const useStyles = makeStyles(theme => ({
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
+  },
+  contactDate: {
+    fontSize: "0.7rem",
+    color: "#666",
+    whiteSpace: "nowrap",
   },
   ticketInfo: {
     display: "flex",
@@ -468,35 +503,33 @@ const useStyles = makeStyles(theme => ({
   },
   // NOVOS ESTILOS PARA AS TAGS RESPONSIVAS
   tagsContainer: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "4px",
-    marginTop: theme.spacing(0.5),
-    maxWidth: "100%",
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '4px',
+    marginTop: '8px',
+    paddingTop: '8px',
+    borderTop: '1px solid rgba(0, 0, 0, 0.08)',
+    borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
+    paddingBottom: '8px',
   },
+  
   tagChip: {
-    fontSize: "0.6rem",
-    fontWeight: "600",
-    padding: "2px 6px",
-    borderRadius: "8px",
-    display: "inline-block",
-    maxWidth: "calc(50% - 2px)", // Máximo 2 por linha
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    lineHeight: "1.2",
-    minHeight: "16px",
-    boxSizing: "border-box",
-    // Responsividade para telas pequenas
-    [theme.breakpoints.down('sm')]: {
-      fontSize: "0.55rem",
-      padding: "1px 4px",
-      maxWidth: "calc(50% - 2px)",
-    },
-    [theme.breakpoints.down('xs')]: {
-      fontSize: "0.5rem",
-      padding: "1px 3px",
-      maxWidth: "100%", // Em telas muito pequenas, uma tag por linha
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '2px',
+    padding: '2px 6px',
+    borderRadius: '8px',
+    fontSize: '0.65rem',
+    fontWeight: 500,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    boxSizing: 'border-box',
+    // Garante que a tag não ultrapasse o limite
+    maxWidth: '100%',
+    minWidth: 'fit-content',
+    '& svg': {
+      flexShrink: 0,
     },
   },
   connectionTag: {
@@ -509,10 +542,13 @@ const useStyles = makeStyles(theme => ({
     whiteSpace: "nowrap",
   },
   iconChannel: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: "24px",
+    display: 'flex',
+    alignItems: 'center',
+    marginRight: '4px',
+    '& svg': {
+      width: 16,
+      height: 16,
+    },
   },
   sendMessageButton: {
     backgroundColor: "transparent",
@@ -572,6 +608,12 @@ const useStyles = makeStyles(theme => ({
     marginTop: "4px",
     paddingTop: "6px",
     borderTop: "1px solid rgba(0, 0, 0, 0.08)",
+  },
+  contactDetails: {
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+    minWidth: 0,
   },
 }));
 
@@ -1425,6 +1467,48 @@ const Kanban = () => {
     return luminance > 0.5 ? '#333' : '#fff';
   };
 
+  // Função para calcular distribuição inteligente das tags
+  const calculateTagDistribution = (tags) => {
+    const maxWidth = 270; // Largura máxima do container das tags (com margem de segurança)
+    const tagPadding = 12; // Padding interno da tag (6px * 2)
+    const tagMargin = 4; // Margem entre tags
+    const iconWidth = 16; // Largura do ícone
+    const iconMargin = 4; // Margem do ícone
+    
+    const rows = [];
+    let currentRow = [];
+    let currentRowWidth = 0;
+    
+    tags.forEach(tag => {
+      // Calcula largura estimada da tag (mais conservadora)
+      const textWidth = tag.name.length * 7; // Aproximação mais conservadora
+      const tagWidth = tagPadding + iconWidth + iconMargin + textWidth;
+      
+      // Verifica se a tag cabe na linha atual
+      const widthWithMargin = currentRowWidth + (currentRow.length > 0 ? tagMargin : 0) + tagWidth;
+      
+      if (widthWithMargin <= maxWidth && currentRow.length < 3) {
+        // Cabe na linha atual
+        currentRow.push(tag);
+        currentRowWidth = widthWithMargin;
+      } else {
+        // Não cabe, inicia nova linha
+        if (currentRow.length > 0) {
+          rows.push(currentRow);
+        }
+        currentRow = [tag];
+        currentRowWidth = tagWidth;
+      }
+    });
+    
+    // Adiciona a última linha se não estiver vazia
+    if (currentRow.length > 0) {
+      rows.push(currentRow);
+    }
+    
+    return rows;
+  };
+
   useEffect(() => {
     // Aplica a altura mínima diretamente no DOM após a renderização das lanes,
     // garantindo que a biblioteca não sobrescreva o estilo.
@@ -1464,20 +1548,27 @@ const Kanban = () => {
           >
           <div className={classes.cardHeader}>
             <div className={classes.contactInfo}>
+            <Avatar 
+              src={ticket.contact.urlPicture || undefined} 
+              alt={ticket.contact.name} 
+              style={{ marginRight: '8px', width: 40, height: 40 }} 
+            />
               <div className={classes.iconChannel}>
                 <Tooltip title={ticket.whatsapp?.name || ''}>
                   {IconChannel(ticket.channel)}
                 </Tooltip>
               </div>
-              <Typography className={classes.contactName}>
-                {ticket.contact.name}
-              </Typography>
+              <div className={classes.contactDetails}>
+                <Typography className={classes.contactName}>
+                  {ticket.contact.name}
+                </Typography>
+                <Typography className={classes.contactDate}>
+                  {isSameDay(parseISO(ticket.updatedAt), new Date())
+                    ? format(parseISO(ticket.updatedAt), "HH:mm")
+                    : format(parseISO(ticket.updatedAt), "dd/MM/yyyy")}
+                </Typography>
+              </div>
             </div>
-            <Typography className={classes.timeInfo}>
-              {isSameDay(parseISO(ticket.updatedAt), new Date())
-                ? format(parseISO(ticket.updatedAt), "HH:mm")
-                : format(parseISO(ticket.updatedAt), "dd/MM/yyyy")}
-            </Typography>
           </div>
 
           <div className={classes.ticketInfo}>
@@ -1502,18 +1593,32 @@ const Kanban = () => {
           {/* Container das tags - abaixo do número do ticket */}
           {getNormalTags(ticket).length > 0 && (
             <div className={classes.tagsContainer}>
-              {getNormalTags(ticket).map(tag => (
-                <span
-                  key={tag.id}
-                  className={classes.tagChip}
-                  style={{
-                    backgroundColor: tag.color || "#eee",
-                    color: getTextColor(tag.color),
-                  }}
-                  title={tag.name}
-                >
-                  {tag.name}
-                </span>
+              {calculateTagDistribution(getNormalTags(ticket)).map((row, rowIndex) => (
+                <div key={`row-${rowIndex}`} style={{ 
+                  display: 'flex', 
+                  gap: '4px', 
+                  width: '100%', 
+                  marginBottom: rowIndex < calculateTagDistribution(getNormalTags(ticket)).length - 1 ? '4px' : '0',
+                  justifyContent: 'flex-start',
+                  alignItems: 'center'
+                }}>
+                  {row.map(tag => (
+                    <span
+                      key={tag.id}
+                      className={classes.tagChip}
+                      style={{
+                        backgroundColor: tag.color || "#eee",
+                        color: getTextColor(tag.color),
+                        flex: row.length === 1 ? '1 1 auto' : '0 1 auto',
+                        maxWidth: row.length === 1 ? '100%' : `${Math.floor(100 / row.length) - 2}%`,
+                        minWidth: 'fit-content',
+                      }}
+                    >
+                      <LocalOffer style={{ fontSize: '0.7rem', marginRight: '2px' }} />
+                      {tag.name}
+                    </span>
+                  ))}
+                </div>
               ))}
             </div>
           )}
