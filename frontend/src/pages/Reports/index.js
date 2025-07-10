@@ -124,10 +124,12 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: '4px',
+    gap: '8px', // Aumenta gap já que temos mais espaço
     height: '56px',
+    flexWrap: 'nowrap', // Evita quebra
+    minWidth: 0, // Permite compressão
     '& > *': {
-      marginLeft: '4px',
+      flexShrink: 0, // Evita compressão dos filhos
     },
     [theme.breakpoints.down('sm')]: {
       flexDirection: 'column',
@@ -139,9 +141,13 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.spacing(1),
     textTransform: 'none',
     fontWeight: 600,
-    padding: theme.spacing(1, 2), // padding menor
+    padding: theme.spacing(1, 2.5), // Aumentando padding horizontal
     height: '40px',
+    minWidth: '140px', // Largura mínima para garantir que o texto caiba
     whiteSpace: 'nowrap', // IMPEDIR QUEBRA NO TEXTO
+    overflow: 'hidden', // Evita vazamento
+    textOverflow: 'ellipsis', // Adiciona ... se necessário
+    boxSizing: 'border-box', // Garante que padding seja incluído no tamanho total
   },
   exportButton: {
     borderRadius: theme.spacing(1),
@@ -151,12 +157,6 @@ const useStyles = makeStyles((theme) => ({
     width: '40px',
     '&:hover': {
       backgroundColor: theme.palette.success.dark,
-    },
-  },
-  // EVITA QUEBRA DO LABEL NO SWITCH
-  formControlLabel: {
-    '& .MuiFormControlLabel-label': {
-      whiteSpace: 'nowrap',
     },
   },
 }));
@@ -517,17 +517,14 @@ const Reports = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
             <div className={classes.actionContainer}>
-  <FormControlLabel
-    className={classes.formControlLabel} // <- ADICIONAR ESSA LINHA!
-    control={
-      <Switch
-        color="primary"
-        checked={onlyRated}
-        onChange={() => setOnlyRated(!onlyRated)}
-      />
-    }
-    label={i18n.t("reports.buttons.onlyRated")}
-  />
+  <Tooltip title={i18n.t("reports.buttons.onlyRated")} arrow placement="top">
+    <Switch
+      color="primary"
+      checked={onlyRated}
+      onChange={() => setOnlyRated(!onlyRated)}
+      size="medium" 
+    />
+  </Tooltip>
   <IconButton 
     onClick={exportarGridParaExcel} 
     aria-label="Exportar para Excel"
