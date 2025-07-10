@@ -139,8 +139,9 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.spacing(1),
     textTransform: 'none',
     fontWeight: 600,
-    padding: theme.spacing(1, 3),
+    padding: theme.spacing(1, 2), // padding menor
     height: '40px',
+    whiteSpace: 'nowrap', // IMPEDIR QUEBRA NO TEXTO
   },
   exportButton: {
     borderRadius: theme.spacing(1),
@@ -152,7 +153,14 @@ const useStyles = makeStyles((theme) => ({
       backgroundColor: theme.palette.success.dark,
     },
   },
+  // EVITA QUEBRA DO LABEL NO SWITCH
+  formControlLabel: {
+    '& .MuiFormControlLabel-label': {
+      whiteSpace: 'nowrap',
+    },
+  },
 }));
+
 
 const Reports = () => {
   const classes = useStyles();
@@ -430,10 +438,10 @@ const Reports = () => {
           ticketId={ticketOpen.id}
         />
       )}
-      <Title>{i18n.t("reports.title")}</Title>
 
       <MainHeader className={classes.mainHeaderFilter}>
         <Paper className={classes.mainPaperFilter}>
+          <Title>{i18n.t("reports.title")}</Title>
           <Grid container spacing={2} className={classes.filterContainer}>
             {/* Primeira linha - 4 campos principais */}
             <Grid item xs={12} sm={6} md={3} className={classes.filterField}>
@@ -449,8 +457,8 @@ const Reports = () => {
               <UsersFilter onFiltered={handleSelectedUsers} />
             </Grid>
 
-            {/* Segunda linha - 3 campos */}
-            <Grid item xs={12} sm={4} md={4} className={classes.dateField}>
+            {/* Segunda linha - 3 campos + ações */}
+            <Grid item xs={12} sm={6} md={3} className={classes.dateField}>
               <FormControl variant="outlined" fullWidth size="small">
                 <InputLabel>Filas</InputLabel>
                 <Select
@@ -479,7 +487,7 @@ const Reports = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={4} md={4} className={classes.dateField}>
+            <Grid item xs={12} sm={6} md={3} className={classes.dateField}>
               <TextField
                 label="Data Inicial"
                 type="date"
@@ -493,7 +501,7 @@ const Reports = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} sm={4} md={4} className={classes.dateField}>
+            <Grid item xs={12} sm={6} md={3} className={classes.dateField}>
               <TextField
                 label="Data Final"
                 type="date"
@@ -507,37 +515,36 @@ const Reports = () => {
                 }}
               />
             </Grid>
-
-            {/* Terceira linha - Ações na mesma linha horizontal */}
-            <Grid item xs={12}>
-              <div className={classes.actionContainer}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      color="primary"
-                      checked={onlyRated}
-                      onChange={() => setOnlyRated(!onlyRated)}
-                    />
-                  }
-                  label={i18n.t("reports.buttons.onlyRated")}
-                />
-                <IconButton 
-                  onClick={exportarGridParaExcel} 
-                  aria-label="Exportar para Excel"
-                  className={classes.exportButton}
-                >
-                  <SaveAlt />
-                </IconButton>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => handleFilter(pageNumber)}
-                  className={classes.filterButton}
-                  startIcon={<FilterListIcon />}
-                >
-                  {i18n.t("reports.buttons.filter")}
-                </Button>
-              </div>
+            <Grid item xs={12} sm={6} md={3}>
+            <div className={classes.actionContainer}>
+  <FormControlLabel
+    className={classes.formControlLabel} // <- ADICIONAR ESSA LINHA!
+    control={
+      <Switch
+        color="primary"
+        checked={onlyRated}
+        onChange={() => setOnlyRated(!onlyRated)}
+      />
+    }
+    label={i18n.t("reports.buttons.onlyRated")}
+  />
+  <IconButton 
+    onClick={exportarGridParaExcel} 
+    aria-label="Exportar para Excel"
+    className={classes.exportButton}
+  >
+    <SaveAlt />
+  </IconButton>
+  <Button
+    variant="contained"
+    color="primary"
+    onClick={() => handleFilter(pageNumber)}
+    className={classes.filterButton}
+    startIcon={<FilterListIcon />}
+  >
+    {i18n.t("reports.buttons.filter")}
+  </Button>
+</div>
             </Grid>
           </Grid>
         </Paper>

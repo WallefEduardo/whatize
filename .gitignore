@@ -128,3 +128,7 @@ ecosystem.config.js
 backend/monitoring/logs/
 monitoring/logs/
 start-monitor.sh.log 
+
+# Logs
+backend/logs/*
+backend/logs/**/*

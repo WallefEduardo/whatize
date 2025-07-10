@@ -89,10 +89,7 @@ const Helps = () => {
           list(),
           getCategories()
         ]);
-        console.log('🔍 Dados carregados:', { helps, categoriesData });
-        console.log('📊 Número de helps:', helps?.length || 0);
-        console.log('📂 Número de categorias:', categoriesData?.length || 0);
-        console.log('📋 Categorias detalhadas:', categoriesData);
+
         
         setRecords(helps);
         setCategories(categoriesData || []);
@@ -241,7 +238,7 @@ const Helps = () => {
   return (
     <MainContainer>
       <MainHeader>
-        <Title>{i18n.t("helps.title")} ({getTotalVideos()})</Title>
+        
         <MainHeaderButtonsWrapper></MainHeaderButtonsWrapper>
       </MainHeader>
       

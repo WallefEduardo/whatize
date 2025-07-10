@@ -6,8 +6,8 @@ import Board from 'react-trello';
 import { toast } from "react-toastify";
 import { i18n } from "../../translate/i18n";
 import { useHistory } from 'react-router-dom';
-import { Facebook, Instagram, WhatsApp, Add, Send, LocalOffer, Person } from "@material-ui/icons";
-import { Tooltip, Typography, Button, TextField, FormControl, InputLabel, Select, MenuItem, Chip, Box, IconButton, Badge } from "@material-ui/core";
+import { Facebook, Instagram, WhatsApp, Add, Send, Person } from "@material-ui/icons";
+import { Tooltip, Typography, Button, TextField, FormControl, InputLabel, Select, MenuItem, Box, IconButton, Badge } from "@material-ui/core";
 import { format, isSameDay, parseISO, subMonths } from "date-fns";
 import { Can } from "../../components/Can";
 import Swal from "sweetalert2";
@@ -32,20 +32,87 @@ const useStyles = makeStyles(theme => ({
         borderRadius: '6px !important',
       },
     },
-    // Corrige barras de rolagem e altura das lanes
+    // Corrige barras de rolagem e altura das lanes - MELHORADO PARA RESPONSIVIDADE
     '.react-trello-lane': {
       minHeight: '300px !important',
       display: 'flex !important',
       flexDirection: 'column !important',
       boxSizing: 'border-box !important',
+      // Força scrollbar vertical sempre visível
+      '& > div:last-child': {
+        overflowY: 'auto !important',
+        scrollbarWidth: 'thin !important',
+        scrollbarColor: '#888 #f1f1f1 !important',
+        '&::-webkit-scrollbar': {
+          width: '8px !important',
+          display: 'block !important',
+        },
+        '&::-webkit-scrollbar-track': {
+          background: '#f1f1f1 !important',
+          borderRadius: '4px !important',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: '#888 !important',
+          borderRadius: '4px !important',
+        },
+      },
     },
     // Força o container dos cards a crescer
     '.react-trello-lane > div:last-child': {
       flex: '1 1 auto',
-      overflowY: 'auto',
+      overflowY: 'auto !important',
+      minHeight: '200px !important', // Altura mínima para forçar scrollbar
     },
     '.dOlrNy': {
       overflowY: 'auto !important',
+    },
+    // Força scrollbar em containers específicos do react-trello
+    '.smooth-dnd-container.vertical': {
+      overflowY: 'auto !important',
+      scrollbarWidth: 'thin !important',
+      scrollbarColor: '#888 #f1f1f1 !important',
+      '&::-webkit-scrollbar': {
+        width: '8px !important',
+        display: 'block !important',
+      },
+      '&::-webkit-scrollbar-track': {
+        background: '#f1f1f1 !important',
+        borderRadius: '4px !important',
+      },
+      '&::-webkit-scrollbar-thumb': {
+        background: '#888 !important',
+        borderRadius: '4px !important',
+      },
+    },
+    // Força scrollbar em todos os containers de cards
+    '.react-trello-lane .smooth-dnd-container': {
+      overflowY: 'auto !important',
+      scrollbarWidth: 'thin !important',
+      scrollbarColor: '#888 #f1f1f1 !important',
+      '&::-webkit-scrollbar': {
+        width: '8px !important',
+        display: 'block !important',
+      },
+      '&::-webkit-scrollbar-track': {
+        background: '#f1f1f1 !important',
+        borderRadius: '4px !important',
+      },
+      '&::-webkit-scrollbar-thumb': {
+        background: '#888 !important',
+        borderRadius: '4px !important',
+      },
+    },
+    // Força scrollbar em diferentes breakpoints
+    '@media (max-width: 1200px)': {
+      '.react-trello-lane > div:last-child, .smooth-dnd-container.vertical': {
+        overflowY: 'scroll !important',
+        scrollbarWidth: 'thin !important',
+        scrollbarColor: '#888 #f1f1f1 !important',
+        '&::-webkit-scrollbar': {
+          width: '8px !important',
+          display: 'block !important',
+        },
+      },
     },
     '@keyframes spin': {
       '0%': { transform: 'rotate(0deg)' },
@@ -399,8 +466,39 @@ const useStyles = makeStyles(theme => ({
     borderTop: "1px solid rgba(0, 0, 0, 0.08)",
     wordBreak: "break-word",
   },
-
-
+  // NOVOS ESTILOS PARA AS TAGS RESPONSIVAS
+  tagsContainer: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "4px",
+    marginTop: theme.spacing(0.5),
+    maxWidth: "100%",
+  },
+  tagChip: {
+    fontSize: "0.6rem",
+    fontWeight: "600",
+    padding: "2px 6px",
+    borderRadius: "8px",
+    display: "inline-block",
+    maxWidth: "calc(50% - 2px)", // Máximo 2 por linha
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    lineHeight: "1.2",
+    minHeight: "16px",
+    boxSizing: "border-box",
+    // Responsividade para telas pequenas
+    [theme.breakpoints.down('sm')]: {
+      fontSize: "0.55rem",
+      padding: "1px 4px",
+      maxWidth: "calc(50% - 2px)",
+    },
+    [theme.breakpoints.down('xs')]: {
+      fontSize: "0.5rem",
+      padding: "1px 3px",
+      maxWidth: "100%", // Em telas muito pequenas, uma tag por linha
+    },
+  },
   connectionTag: {
     backgroundColor: "#343a40",
     color: "#FFFFFF",
@@ -1308,6 +1406,25 @@ const Kanban = () => {
     return uniqueTags;
   };
 
+  // Função para calcular cor do texto baseada na cor de fundo
+  const getTextColor = (backgroundColor) => {
+    if (!backgroundColor) return '#333';
+    
+    // Remove # se existir
+    const hex = backgroundColor.replace('#', '');
+    
+    // Converte para RGB
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // Calcula luminância
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    
+    // Retorna cor do texto baseada na luminância
+    return luminance > 0.5 ? '#333' : '#fff';
+  };
+
   useEffect(() => {
     // Aplica a altura mínima diretamente no DOM após a renderização das lanes,
     // garantindo que a biblioteca não sobrescreva o estilo.
@@ -1382,6 +1499,24 @@ const Kanban = () => {
             </div>
           </div>
 
+          {/* Container das tags - abaixo do número do ticket */}
+          {getNormalTags(ticket).length > 0 && (
+            <div className={classes.tagsContainer}>
+              {getNormalTags(ticket).map(tag => (
+                <span
+                  key={tag.id}
+                  className={classes.tagChip}
+                  style={{
+                    backgroundColor: tag.color || "#eee",
+                    color: getTextColor(tag.color),
+                  }}
+                  title={tag.name}
+                >
+                  {tag.name}
+                </span>
+              ))}
+            </div>
+          )}
 
           <div className={classes.cardBottomActions}>
             {/* Botão de enviar mensagem */}
@@ -1397,30 +1532,6 @@ const Kanban = () => {
                 <Send />
               </IconButton>
             </Tooltip>
-
-            {/* Botão da tag (se existir) */}
-            {getNormalTags(ticket).length > 0 && (
-              <Tooltip title={getNormalTags(ticket)[0].name}>
-                <div 
-                  className={classes.tagButton}
-                  style={{ 
-                    borderColor: getNormalTags(ticket)[0].color,
-                    color: getNormalTags(ticket)[0].color,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '3px 8px',
-                    width: 'auto',
-                    minWidth: 'auto'
-                  }}
-                >
-                  <LocalOffer />
-                  <span style={{ fontSize: '0.7rem', fontWeight: '500' }}>
-                    {getNormalTags(ticket)[0].name}
-                  </span>
-                </div>
-              </Tooltip>
-            )}
 
             {/* Badge do usuário responsável */}
             {ticket?.user && (
@@ -1625,17 +1736,22 @@ const Kanban = () => {
                   {selected.map((tagId) => {
                     const tag = allTags.find(t => t.id === tagId);
                     return tag ? (
-                      <Chip
+                      <span
                         key={tagId}
-                        label={tag.name}
-                        size="small"
                         style={{
                           backgroundColor: tag.color || "#eee",
-                          color: "white",
+                          color: getTextColor(tag.color),
                           fontSize: "0.75rem",
-                          height: "24px"
+                          height: "24px",
+                          padding: "2px 8px",
+                          borderRadius: "12px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          fontWeight: "500"
                         }}
-                      />
+                      >
+                        {tag.name}
+                      </span>
                     ) : null;
                   })}
                 </div>
@@ -1700,17 +1816,22 @@ const Kanban = () => {
                     {selected.map((userId) => {
                       const user = allUsers.find(u => u.id === userId);
                       return user ? (
-                        <Chip
+                        <span
                           key={userId}
-                          label={user.name}
-                          size="small"
                           style={{
                             backgroundColor: "#f5f5f5",
                             color: "#333",
                             fontSize: "0.75rem",
-                            height: "24px"
+                            height: "24px",
+                            padding: "2px 8px",
+                            borderRadius: "12px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            fontWeight: "500"
                           }}
-                        />
+                        >
+                          {user.name}
+                        </span>
                       ) : null;
                     })}
                   </div>
