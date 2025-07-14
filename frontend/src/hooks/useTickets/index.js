@@ -32,6 +32,7 @@ const useTickets = ({
       const fetchTickets = async () => {
         if (userFilter === undefined || userFilter === null) {
           try {            
+
             const { data } = await api.get("/tickets", {
               params: {
                 searchParam,

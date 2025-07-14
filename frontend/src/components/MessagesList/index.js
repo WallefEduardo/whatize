@@ -283,7 +283,7 @@ const useStyles = makeStyles((theme) => ({
 
   messageMedia: {
     objectFit: "cover",
-    width: 400,
+    width: 300,
     height: "auto",
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
@@ -367,7 +367,7 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     alignItems: "center",
     padding: "12px 16px",
-    backgroundColor: "transparent",
+    backgroundColor: "#c5deb2",
     borderRadius: "8px",
     maxWidth: "350px",
     minWidth: "250px",
@@ -747,18 +747,20 @@ const checkMessageMedia = (message) => {
             );
           } else if (message.mediaType === "application" || isDocumentFile(message.body)) {
             // Layout estilo WhatsApp para documentos
-            const fileName = getOriginalFileName(message.body);
+            // Usar mediaUrl se disponível, senão usar body para extrair nome do arquivo
+            const fileSource = message.mediaUrl || message.body;
+            const fileName = getOriginalFileName(fileSource);
             return (
               <div className={classes.documentContainer}>
                 <div className={classes.documentIcon}>
-                  {getDocumentIcon(message.body)}
+                  {getDocumentIcon(fileSource)}
                 </div>
                 <div className={classes.documentInfo}>
                   <div className={classes.documentName}>
                     {fileName}
                   </div>
                   <div className={classes.documentSize}>
-                    <FileSize fileName={message.body} mediaUrl={message.mediaUrl} />
+                    <FileSize fileName={fileSource} mediaUrl={message.mediaUrl} />
                   </div>
                 </div>
                 <GetApp 
@@ -921,6 +923,11 @@ const isDocumentFile = (fileName) => {
 // Função para extrair o nome original do arquivo removendo os timestamps
 const getOriginalFileName = (fileName) => {
   if (!fileName) return fileName;
+  
+  // Se é uma URL, extrair apenas o nome do arquivo
+  if (fileName.startsWith('http') || fileName.includes('/')) {
+    fileName = path.basename(fileName);
+  }
   
   // Remove extensão temporariamente
   const extension = path.extname(fileName);
@@ -1292,6 +1299,7 @@ const renderMessages = () => {
                 {
                   (
                     (message.mediaUrl !== null && (message.mediaType === "image" || message.mediaType === "video") && path.basename(message.mediaUrl).trim() !== message.body.trim()) ||
+                    (message.mediaType === "application" || isDocumentFile(message.body)) && message.body && !isDocumentFile(message.body) ||
                     (message.mediaType !== "audio" &&
                     message.mediaType !== "image" &&
                     message.mediaType !== "video" &&
@@ -1398,8 +1406,11 @@ const renderMessages = () => {
                 {message.quotedMsg && renderQuotedMessage(message)}
 
                 {
-                  ((message.mediaType === "image" || message.mediaType === "video") && path.basename(message.mediaUrl) === message.body) ||
-                  (message.mediaType !== "audio" && message.mediaType !== "application" && !isDocumentFile(message.body) && message.mediaType != "reactionMessage" && message.mediaType != "locationMessage" && message.mediaType !== "contactMessage" && message.mediaType !== "template" && message.mediaType !== "adMetaPreview") && (
+                  (
+                    ((message.mediaType === "image" || message.mediaType === "video") && path.basename(message.mediaUrl) !== message.body) ||
+                    ((message.mediaType === "application" || isDocumentFile(message.body)) && message.body && !isDocumentFile(message.body)) ||
+                    (message.mediaType !== "audio" && message.mediaType !== "application" && !isDocumentFile(message.body) && message.mediaType != "reactionMessage" && message.mediaType != "locationMessage" && message.mediaType !== "contactMessage" && message.mediaType !== "template" && message.mediaType !== "adMetaPreview")
+                  ) && (
                     <>
                       {xmlRegex.test(message.body) && (
                         <div>{formatXml(message.body)}</div>

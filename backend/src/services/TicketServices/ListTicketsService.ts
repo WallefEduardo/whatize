@@ -71,6 +71,7 @@ const ListTicketsService = async ({
   sortTickets = "DESC",
   searchOnMessages = "false"
 }: Request): Promise<Response> => {
+
   const user = await ShowUserService(userId, companyId);
 
   const showTicketAllQueues = user.allHistoric === "enabled";
@@ -252,6 +253,54 @@ const ListTicketsService = async ({
     };
   }
 
+  // Aplicar busca para todos os status (não apenas search)
+  if (searchParam && status !== "search") {
+    console.log('🔍 Backend - Aplicando busca para status:', status);
+    const sanitizedSearchParam = removeAccents(searchParam.toLocaleLowerCase().trim());
+    console.log('🔍 Backend - Termo sanitizado:', sanitizedSearchParam);
+    
+    if (searchOnMessages === "true") {
+      includeCondition = [
+        ...includeCondition,
+        {
+          model: Message,
+          as: "messages",
+          attributes: ["id", "body"],
+          where: {
+            body: where(
+              fn("LOWER", fn('unaccent', col("body"))),
+              "LIKE",
+              `%${sanitizedSearchParam}%`
+            )
+          },
+          required: false,
+          duplicating: false
+        }
+      ];
+    }
+
+    whereCondition = {
+      ...whereCondition,
+      [Op.or]: [
+        {
+          "$contact.name$": where(
+            fn("LOWER", fn('unaccent', col("contact.name"))),
+            "LIKE",
+            `%${sanitizedSearchParam}%`
+          )
+        },
+        { "$contact.number$": { [Op.like]: `%${sanitizedSearchParam}%` } },
+        ...(searchOnMessages === "true" ? [{
+          "$messages.body$": where(
+            fn("LOWER", fn('unaccent', col("messages.body"))),
+            "LIKE",
+            `%${sanitizedSearchParam}%`
+          )
+        }] : [])
+      ]
+    };
+  }
+
 
   if (status === "closed") {
     let latestTickets;
@@ -396,6 +445,7 @@ const ListTicketsService = async ({
       // }
 
 
+      // Aplicar filtros específicos da aba search
       if (searchParam) {
         const sanitizedSearchParam = removeAccents(searchParam.toLocaleLowerCase().trim());
         if (searchOnMessages === "true") {
@@ -459,48 +509,6 @@ const ListTicketsService = async ({
             ]
           };
         }
-
-      }
-
-      if (Array.isArray(tags) && tags.length > 0) {
-        const contactTagFilter: any[] | null = [];
-        // for (let tag of tags) {
-        const contactTags = await ContactTag.findAll({
-          where: { tagId: tags }
-        });
-        if (contactTags) {
-          contactTagFilter.push(contactTags.map(t => t.contactId));
-        }
-        // }
-
-        const contactsIntersection: number[] = intersection(...contactTagFilter);
-
-        whereCondition = {
-          ...whereCondition,
-          contactId: contactsIntersection
-        };
-      }
-
-      if (Array.isArray(users) && users.length > 0) {
-        whereCondition = {
-          ...whereCondition,
-          userId: users
-        };
-      }
-
-
-      if (Array.isArray(whatsappIds) && whatsappIds.length > 0) {
-        whereCondition = {
-          ...whereCondition,
-          whatsappId: whatsappIds
-        };
-      }
-
-      if (Array.isArray(statusFilters) && statusFilters.length > 0) {
-        whereCondition = {
-          ...whereCondition,
-          status: { [Op.in]: statusFilters }
-        };
       }
 
     } else
@@ -533,10 +541,116 @@ const ListTicketsService = async ({
         }
       }
 
+  // Aplicar filtros adicionais para todas as abas (não apenas search)
+  
+  // Aplicar busca para todas as abas quando há searchParam
+  if (searchParam && status !== "search") {
+    const sanitizedSearchParam = removeAccents(searchParam.toLocaleLowerCase().trim());
+    
+    if (searchOnMessages === "true") {
+      includeCondition = [
+        ...includeCondition,
+        {
+          model: Message,
+          as: "messages",
+          attributes: ["id", "body"],
+          where: {
+            body: where(
+              fn("LOWER", fn('unaccent', col("body"))),
+              "LIKE",
+              `%${sanitizedSearchParam}%`
+            ),
+          },
+          required: false,
+          duplicating: false
+        }
+      ];
+      whereCondition = {
+        ...whereCondition,
+        [Op.or]: [
+          {
+            "$contact.name$": where(
+              fn("LOWER", fn("unaccent", col("contact.name"))),
+              "LIKE",
+              `%${sanitizedSearchParam}%`
+            )
+          },
+          { "$contact.number$": { [Op.like]: `%${sanitizedSearchParam}%` } },
+          {
+            "$message.body$": where(
+              fn("LOWER", fn("unaccent", col("body"))),
+              "LIKE",
+              `%${sanitizedSearchParam}%`
+            )
+          }
+        ]
+      };
+    } else {
+      whereCondition = {
+        ...whereCondition,
+        [Op.or]: [
+          {
+            "$contact.name$": where(
+              fn("LOWER", fn("unaccent", col("contact.name"))),
+              "LIKE",
+              `%${sanitizedSearchParam}%`
+            )
+          },
+          { "$contact.number$": { [Op.like]: `%${sanitizedSearchParam}%` } }
+        ]
+      };
+    }
+  }
+
+  if (Array.isArray(tags) && tags.length > 0) {
+    const contactTagFilter: any[] | null = [];
+    const contactTags = await ContactTag.findAll({
+      where: { tagId: tags }
+    });
+    if (contactTags) {
+      contactTagFilter.push(contactTags.map(t => t.contactId));
+    }
+
+    const contactsIntersection: number[] = intersection(...contactTagFilter);
+
+    whereCondition = {
+      ...whereCondition,
+      contactId: contactsIntersection
+    };
+  }
+
+  if (Array.isArray(users) && users.length > 0) {
+    // Se há filtro de usuários específicos, substituir a lógica de userId existente
+    if (whereCondition[Op.or]) {
+      // Remover condições de Op.or existentes que incluem userId
+      delete whereCondition[Op.or];
+    }
+    whereCondition = {
+      ...whereCondition,
+      userId: users
+    };
+  }
+
+  if (Array.isArray(whatsappIds) && whatsappIds.length > 0) {
+    whereCondition = {
+      ...whereCondition,
+      whatsappId: whatsappIds
+    };
+  }
+
+  if (Array.isArray(statusFilters) && statusFilters.length > 0) {
+    whereCondition = {
+      ...whereCondition,
+      status: { [Op.in]: statusFilters }
+    };
+  }
+
   whereCondition = {
     ...whereCondition,
     companyId
   };
+
+
 
   const limit = 40;
   const offset = limit * (+pageNumber - 1);
@@ -551,6 +665,8 @@ const ListTicketsService = async ({
     order: [["updatedAt", sortTickets]],
     subQuery: false
   });
+
+
 
   const hasMore = count > offset + tickets.length;
 

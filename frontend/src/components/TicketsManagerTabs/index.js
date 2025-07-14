@@ -159,8 +159,11 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     // background: "#fff",
     height: 40,
+    minHeight: 40,
+    maxHeight: 40,
     background: theme.palette.total,
     display: "flex",
+    alignItems: "center",
     borderRadius: 40,
     padding: 8,
     borderColor: "#aaa",
@@ -183,6 +186,10 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     border: "none",
     borderRadius: 30,
+    height: "auto",
+    minHeight: "auto",
+    maxHeight: "24px",
+    overflow: "hidden",
   },
 
   badge: {
@@ -385,17 +392,16 @@ const TicketsManagerTabs = () => {
     setForceSearch(!forceSearch);
   }, [tab]);
 
-  let searchTimeout;
+  const searchTimeoutRef = useRef(null);
 
   const handleSearch = (e) => {
     const searchedTerm = e.target.value.toLowerCase();
 
-    clearTimeout(searchTimeout);
+    clearTimeout(searchTimeoutRef.current);
 
     if (searchedTerm === "") {
-      setSearchParam(searchedTerm);
-      setForceSearch(!forceSearch);
-      // setFilter(false);
+      setSearchParam("");
+      setForceSearch(prev => !prev);
       setTab("open");
       return;
     } else if (tab !== "search") {
@@ -403,10 +409,10 @@ const TicketsManagerTabs = () => {
       setTab("search");
     }
 
-    searchTimeout = setTimeout(() => {
+    searchTimeoutRef.current = setTimeout(() => {
       setSearchParam(searchedTerm);
-      setForceSearch(!forceSearch);
-    }, 500);
+      setForceSearch(prev => !prev);
+    }, 200);
   };
 
   const handleBack = () => {
@@ -462,49 +468,33 @@ const TicketsManagerTabs = () => {
   const handleSelectedTags = (selecteds) => {
     const tags = selecteds.map((t) => t.id);
 
-    clearTimeout(searchTimeout);
-
-    // Não mudar a tab para "search", manter as tabs sempre visíveis
-    searchTimeout = setTimeout(() => {
-      setSelectedTags(tags);
-      setForceSearch(!forceSearch);
-    }, 500);
+    // Aplicar filtros imediatamente sem debounce
+    setSelectedTags(tags);
+    setForceSearch(!forceSearch);
   };
 
   const handleSelectedUsers = (selecteds) => {
     const users = selecteds.map((t) => t.id);
 
-    clearTimeout(searchTimeout);
-
-    // Não mudar a tab para "search", manter as tabs sempre visíveis
-    searchTimeout = setTimeout(() => {
-      setSelectedUsers(users);
-      setForceSearch(!forceSearch);
-    }, 500);
+    // Aplicar filtros imediatamente sem debounce
+    setSelectedUsers(users);
+    setForceSearch(!forceSearch);
   };
 
   const handleSelectedWhatsapps = (selecteds) => {
     const whatsapp = selecteds.map((t) => t.id);
 
-    clearTimeout(searchTimeout);
-
-    // Não mudar a tab para "search", manter as tabs sempre visíveis
-    searchTimeout = setTimeout(() => {
-      setSelectedWhatsapp(whatsapp);
-      setForceSearch(!forceSearch);
-    }, 500);
+    // Aplicar filtros imediatamente sem debounce
+    setSelectedWhatsapp(whatsapp);
+    setForceSearch(!forceSearch);
   };
 
   const handleSelectedStatus = (selecteds) => {
     const statusFilter = selecteds.map((t) => t.status);
 
-    clearTimeout(searchTimeout);
-
-    // Não mudar a tab para "search", manter as tabs sempre visíveis
-    searchTimeout = setTimeout(() => {
-      setSelectedStatus(statusFilter);
-      setForceSearch(!forceSearch);
-    }, 500);
+    // Aplicar filtros imediatamente sem debounce
+    setSelectedStatus(statusFilter);
+    setForceSearch(!forceSearch);
   };
 
   const handleFilter = () => {
@@ -986,10 +976,6 @@ const TicketsManagerTabs = () => {
               selectedQueueIds={selectedQueueIds}
               userQueues={user?.queues}
               onChange={(values) => {
-                console.log('🔄 TicketsManagerTabs onChange:', {
-                  oldValues: selectedQueueIds,
-                  newValues: values
-                });
                 setSelectedQueueIds(values);
               }}
             />
@@ -1124,13 +1110,13 @@ const TicketsManagerTabs = () => {
             updateCount={(val) => setOpenCount(val)}
             style={applyPanelStyle("open")}
             setTabOpen={setTabOpen}
-            tags={filter ? selectedTags : undefined}
-            users={filter ? selectedUsers : undefined}
-            whatsappIds={filter ? selectedWhatsapp : undefined}
-            statusFilter={filter ? selectedStatus : undefined}
-            searchParam={filter ? searchParam : undefined}
-            forceSearch={filter ? forceSearch : undefined}
-            searchOnMessages={filter ? searchOnMessages : undefined}
+            tags={selectedTags.length > 0 ? selectedTags : undefined}
+            users={selectedUsers.length > 0 ? selectedUsers : undefined}
+            whatsappIds={selectedWhatsapp.length > 0 ? selectedWhatsapp : undefined}
+            statusFilter={selectedStatus.length > 0 ? selectedStatus : undefined}
+            searchParam={searchParam || undefined}
+            forceSearch={forceSearch}
+            searchOnMessages={searchOnMessages}
           />
           <TicketsList
             status="pending"
@@ -1140,13 +1126,13 @@ const TicketsManagerTabs = () => {
             updateCount={(val) => setPendingCount(val)}
             style={applyPanelStyle("pending")}
             setTabOpen={setTabOpen}
-            tags={filter ? selectedTags : undefined}
-            users={filter ? selectedUsers : undefined}
-            whatsappIds={filter ? selectedWhatsapp : undefined}
-            statusFilter={filter ? selectedStatus : undefined}
-            searchParam={filter ? searchParam : undefined}
-            forceSearch={filter ? forceSearch : undefined}
-            searchOnMessages={filter ? searchOnMessages : undefined}
+            tags={selectedTags.length > 0 ? selectedTags : undefined}
+            users={selectedUsers.length > 0 ? selectedUsers : undefined}
+            whatsappIds={selectedWhatsapp.length > 0 ? selectedWhatsapp : undefined}
+            statusFilter={selectedStatus.length > 0 ? selectedStatus : undefined}
+            searchParam={searchParam || undefined}
+            forceSearch={forceSearch}
+            searchOnMessages={searchOnMessages}
           />
           {user.allowGroup && (
             <TicketsList
@@ -1157,13 +1143,13 @@ const TicketsManagerTabs = () => {
               updateCount={(val) => setGroupingCount(val)}
               style={applyPanelStyle("group")}
               setTabOpen={setTabOpen}
-              tags={filter ? selectedTags : undefined}
-              users={filter ? selectedUsers : undefined}
-              whatsappIds={filter ? selectedWhatsapp : undefined}
-              statusFilter={filter ? selectedStatus : undefined}
-              searchParam={filter ? searchParam : undefined}
-              forceSearch={filter ? forceSearch : undefined}
-              searchOnMessages={filter ? searchOnMessages : undefined}
+              tags={selectedTags.length > 0 ? selectedTags : undefined}
+              users={selectedUsers.length > 0 ? selectedUsers : undefined}
+              whatsappIds={selectedWhatsapp.length > 0 ? selectedWhatsapp : undefined}
+              statusFilter={selectedStatus.length > 0 ? selectedStatus : undefined}
+              searchParam={searchParam || undefined}
+              forceSearch={forceSearch}
+              searchOnMessages={searchOnMessages}
             />
           )}
         </Paper>
@@ -1174,13 +1160,13 @@ const TicketsManagerTabs = () => {
           showAll={showAllTickets}
           selectedQueueIds={selectedQueueIds}
           setTabOpen={setTabOpen}
-          tags={filter ? selectedTags : undefined}
-          users={filter ? selectedUsers : undefined}
-          whatsappIds={filter ? selectedWhatsapp : undefined}
-          statusFilter={filter ? selectedStatus : undefined}
-          searchParam={filter ? searchParam : undefined}
-          forceSearch={filter ? forceSearch : undefined}
-          searchOnMessages={filter ? searchOnMessages : undefined}
+          tags={selectedTags.length > 0 ? selectedTags : undefined}
+          users={selectedUsers.length > 0 ? selectedUsers : undefined}
+          whatsappIds={selectedWhatsapp.length > 0 ? selectedWhatsapp : undefined}
+          statusFilter={selectedStatus.length > 0 ? selectedStatus : undefined}
+          searchParam={searchParam || undefined}
+          forceSearch={forceSearch}
+          searchOnMessages={searchOnMessages}
         />
       </TabPanel>
       {filter && (

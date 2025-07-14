@@ -76,40 +76,21 @@ const TicketsQueueSelect = ({
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, updateUser } = useContext(AuthContext);
   
-  console.log('🔄 TicketsQueueSelect renderizado:', {
-    selectedQueueIds: selectedQueueIds,
-    userQueues: userQueues?.length,
-    user: user?.id
-  });
+
 
   // Função para salvar no banco de dados
   const saveToDatabase = async (queueIds) => {
     if (!user?.id) return;
-    
-    console.log('🔄 Salvando filas no banco:', {
-      userId: user.id,
-      profile: user.profile,
-      queueIdsLength: queueIds.length
-    });
     
     try {
       const { data } = await api.put(`/users/${user.id}/selected-queues`, {
         selectedQueueIds: queueIds
       });
       
-      console.log('📦 Dados recebidos do backend:', {
-        hasQueues: !!data.queues,
-        queuesLength: data.queues?.length || 0,
-        selectedQueueIds: data.selectedQueueIds
-      });
-      
       // Atualiza o user no contexto com os dados completos
       if (updateUser && data) {
         updateUser(data);
-        console.log('🔄 Usuário atualizado no contexto');
       }
-      
-      console.log('✅ Filas salvas com sucesso!');
     } catch (err) {
       console.error('❌ Erro ao salvar filas:', err);
       toastError(err);
@@ -123,20 +104,12 @@ const TicketsQueueSelect = ({
     event.preventDefault();
     event.stopPropagation();
     
-    console.log('🔄 Toggle fila:', queueId);
-    
     let newSelectedQueueIds;
     if (selectedQueueIds.includes(queueId)) {
       newSelectedQueueIds = selectedQueueIds.filter(id => id !== queueId);
     } else {
       newSelectedQueueIds = [...selectedQueueIds, queueId];
     }
-    
-    console.log('📝 Novas filas selecionadas:', {
-      queueId: queueId,
-      oldSelected: selectedQueueIds,
-      newSelected: newSelectedQueueIds
-    });
     
     onChange(newSelectedQueueIds);
     

@@ -134,11 +134,6 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 				const { data } = await api.get("/funilkanban");
 				const loadedFunnels = data.funilKanbans || [];
 				setFunnels(loadedFunnels);
-				
-				// Selecionar automaticamente o primeiro funil se houver funis disponíveis
-				if (loadedFunnels.length > 0 && selectedFunnels.length === 0) {
-					setSelectedFunnels([loadedFunnels[0]]);
-				}
 			} catch (err) {
 				console.error("Erro ao carregar funis:", err);
 			}

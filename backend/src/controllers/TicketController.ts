@@ -114,6 +114,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     statusFilters = JSON.parse(statusStringfied);
   }
 
+
+
   const { tickets, count, hasMore } = await ListTicketsService({
     searchParam,
     tags: tagsIds,

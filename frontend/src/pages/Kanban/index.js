@@ -1015,9 +1015,7 @@ const Kanban = () => {
   
       if (result.isConfirmed) {
         await api.delete(`/ticket-tags/${targetLaneId}`);
-        toast.success('Removido com sucesso');
         await api.put(`/ticket-tags/${targetLaneId}/${sourceLaneId}`);
-        toast.success('Adicionado com sucesso');
         await fetchTickets();
         popularCards();
       } else {

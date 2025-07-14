@@ -239,9 +239,7 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
     const { get: getSetting } = useCompanySettings();
 
     useEffect(() => {
-        console.log("======== TicketListItemCustom ===========")
-        console.log(ticket)
-        console.log("=========================================")
+        // Debug removed
     }, [ticket])
 
     useEffect(() => {
@@ -249,12 +247,12 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
             const fetchTagsWithFunnel = async () => {
                 try {
                     const { data } = await api.get(`/tags-funnel/${ticket.id}`);
-                    console.log("Tags com funil recebidas:", data);
+
                     if (data && data.length > 0) {
                         setTagsWithFunnel(data);
                     }
                 } catch (err) {
-                    console.error("Erro ao buscar tags com funil:", err);
+                    // Error handling removed
                 }
             };
             fetchTagsWithFunnel();

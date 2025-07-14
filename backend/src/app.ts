@@ -50,7 +50,8 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
   "http://127.0.0.1:3000",
-  "http://127.0.0.1:3001"
+  "http://127.0.0.1:3001",
+  "https://9e34d27d0ab7.ngrok-free.app"
 ];
 
 // Configuração do BullBoard
