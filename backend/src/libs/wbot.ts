@@ -410,14 +410,52 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
             }
 
             if (connection === "open") {
+              const phoneNumber = wsocket.type === "md"
+                ? jidNormalizedUser((wsocket as WASocket).user.id).split("@")[0]
+                : "-";
+
+              // ✅ VALIDAÇÃO: Verificar se número já está em uso por outra empresa
+              if (phoneNumber !== "-") {
+                const { default: ValidateWhatsappConnectionService } = await import("../services/WhatsappService/ValidateWhatsappConnectionService");
+                try {
+                  await ValidateWhatsappConnectionService({
+                    name: whatsapp.name,
+                    number: phoneNumber,
+                    companyId: whatsapp.companyId,
+                    id: whatsapp.id
+                  });
+                } catch (validationError) {
+                  // Se a validação falhar, desconecta e define status como erro
+                  logger.error(`❌ Validação falhou para WhatsApp ${whatsapp.name}: ${validationError.message}`);
+                  
+                  await whatsapp.update({
+                    status: "DISCONNECTED",
+                    qrcode: "",
+                    retries: 0,
+                    number: ""
+                  });
+
+                  // Emitir erro para o frontend
+                  io.of(String(companyId))
+                    .emit(`company-${whatsapp.companyId}-whatsappSession`, {
+                      action: "validation_error",
+                      session: whatsapp,
+                      error: validationError.message
+                    });
+
+                  // Fechar conexão
+                  wsocket.logout();
+                  wsocket.ws.close();
+                  removeWbot(id, false);
+                  return;
+                }
+              }
+
               await whatsapp.update({
                 status: "CONNECTED",
                 qrcode: "",
                 retries: 0,
-                number:
-                  wsocket.type === "md"
-                    ? jidNormalizedUser((wsocket as WASocket).user.id).split("@")[0]
-                    : "-"
+                number: phoneNumber
               });
 
               io.of(String(companyId))

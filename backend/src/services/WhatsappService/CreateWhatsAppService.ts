@@ -5,6 +5,7 @@ import Whatsapp from "../../models/Whatsapp";
 import Company from "../../models/Company";
 import Plan from "../../models/Plan";
 import AssociateWhatsappQueue from "./AssociateWhatsappQueue";
+import ValidateWhatsappConnectionService from "./ValidateWhatsappConnectionService";
 
 interface Request {
   name: string;
@@ -146,6 +147,15 @@ const CreateWhatsAppService = async ({
     await schema.validate({ name, status, isDefault });
   } catch (err: any) {
     throw new AppError(err.message);
+  }
+
+  // Validação para múltiplas empresas usando o mesmo número
+  // Nota: Como o número não é fornecido na criação, a validação principal será na atualização
+  if (channel === "whatsapp") {
+    await ValidateWhatsappConnectionService({
+      name,
+      companyId
+    });
   }
 
   const whatsappFound = await Whatsapp.findOne({ where: { companyId } });

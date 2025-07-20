@@ -352,8 +352,16 @@ const CreateOrUpdateContactService = async ({
         contact.name = name;
       }
 
-      await contact.save(); // Ensure save() is called to trigger updatedAt
-      await contact.reload();
+      if (typeof contact.save === 'function') {
+        await contact.save(); // Ensure save() is called to trigger updatedAt
+        await contact.reload();
+      } else {
+        // Se contact não é uma instância Sequelize, busca novamente
+        contact = await Contact.findByPk(contact.id);
+        if (contact) {
+          await contact.update({ name, profilePicUrl });
+        }
+      }
 
     } else if (wbot && ['whatsapp'].includes(channel)) {
       const settings = await CompaniesSettings.findOne({ where: { companyId } });

@@ -678,7 +678,6 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
 
     try {
       await api.post(`/messages/${ticketId}`, message); // Ajuste a URL conforme necessário
-      toast.success("Mensagem enviada com sucesso!");
       setInputMessage("");
       setShowEmoji(false);
       setReplyingMessage(null);

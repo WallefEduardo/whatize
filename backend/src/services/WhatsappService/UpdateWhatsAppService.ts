@@ -5,9 +5,11 @@ import AppError from "../../errors/AppError";
 import Whatsapp from "../../models/Whatsapp";
 import ShowWhatsAppService from "./ShowWhatsAppService";
 import AssociateWhatsappQueue from "./AssociateWhatsappQueue";
+import ValidateWhatsappConnectionService from "./ValidateWhatsappConnectionService";
 
 interface WhatsappData {
   name?: string;
+  number?: string;
   status?: string;
   session?: string;
   isDefault?: boolean;
@@ -71,6 +73,7 @@ const UpdateWhatsAppService = async ({
 
   const {
     name,
+    number,
     status,
     isDefault,
     session,
@@ -136,9 +139,20 @@ const UpdateWhatsAppService = async ({
   }
   const whatsapp = await ShowWhatsAppService(whatsappId, companyId);
 
+  // Validação para múltiplas empresas usando o mesmo número
+  if (number && whatsapp.channel === "whatsapp") {
+    await ValidateWhatsappConnectionService({
+      name: name || whatsapp.name,
+      number,
+      companyId,
+      id: whatsapp.id
+    });
+  }
+
 
   await whatsapp.update({
     name,
+    number,
     status,
     session,
     greetingMessage,

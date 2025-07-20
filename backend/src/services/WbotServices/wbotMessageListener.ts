@@ -1,7 +1,6 @@
 import path, { join } from "path";
-import { promisify } from "util";
-import { readFile, writeFile } from "fs";
-import fs from "fs";
+import { writeFile } from "fs/promises";
+import fs, { readFile } from "fs";
 import * as Sentry from "@sentry/node";
 import { isNil, isNull } from "lodash";
 import { REDIS_URI_MSG_CONN } from "../../config/redis";
@@ -47,7 +46,9 @@ import Queue from "../../models/Queue";
 import QueueOption from "../../models/QueueOption";
 import FindOrCreateATicketTrakingService from "../TicketServices/FindOrCreateATicketTrakingService";
 import raceConditionLogger from "../../utils/raceConditionLogger";
+// REMOVIDO: Imports do sistema de múltiplas empresas
 import contactCache from "../../libs/contactCache";
+import CleanupOrphanDataService from "../MaintenanceService/CleanupOrphanDataService";
 import VerifyCurrentSchedule from "../CompanyService/VerifyCurrentSchedule";
 import Campaign from "../../models/Campaign";
 import CampaignShipping from "../../models/CampaignShipping";
@@ -127,7 +128,7 @@ interface SessionOpenAi extends OpenAI {
 }
 const sessionsOpenAi: SessionOpenAi[] = [];
 
-const writeFileAsync = promisify(writeFile);
+// writeFile já é uma Promise no Node.js moderno
 
 function removeFile(directory) {
   fs.unlink(directory, (error) => {
@@ -138,6 +139,15 @@ function removeFile(directory) {
 const getTimestampMessage = (msgTimestamp: any) => {
   return msgTimestamp * 1
 }
+
+const msgAdMetaPreview = (image, title, body, sourceUrl, messageUser) => {
+  if (image) {
+    var b64 = Buffer.from(image).toString("base64");
+
+    let data = `data:image/png;base64, ${b64} | ${sourceUrl} | ${title} | ${body} | ${messageUser}`;
+    return data;
+  }
+};
 
 const multVecardGet = function (param: any) {
   let output = " "
@@ -288,22 +298,16 @@ export const getBodyMessage = (msg: proto.IWebMessageInfo): string | null => {
         new Error("Novo Tipo de Mensagem em getTypeMessage")
       );
     }
-    return types[type];
+    return types[type] || "Mensagem não suportada";
   } catch (error) {
     Sentry.setExtra("Error getTypeMessage", { msg, BodyMsg: msg.message });
     Sentry.captureException(error);
     console.error('Erro getTypeMessage:', error);
+    return "Erro ao processar mensagem";
   }
 };
 
-const msgAdMetaPreview = (image, title, body, sourceUrl, messageUser) => {
-  if (image) {
-    var b64 = Buffer.from(image).toString("base64");
 
-    let data = `data:image/png;base64, ${b64} | ${sourceUrl} | ${title} | ${body} | ${messageUser}`;
-    return data;
-  }
-};
 
 export const getQuotedMessage = (msg: proto.IWebMessageInfo) => {
   const body = extractMessageContent(msg.message)[
@@ -813,7 +817,7 @@ export const verifyMediaMessage = async (
         fs.chmodSync(folder, 0o777)
       }
 
-      await writeFileAsync(join(folder, media.filename), media.data.toString('base64'), "base64") // Correção adicionada por Altemir 16-08-2023
+              await writeFile(join(folder, media.filename), Buffer.from(media.data.toString('base64'), 'base64')) // Correção adicionada por Altemir 16-08-2023
 
         .then(() => {
 
@@ -861,7 +865,7 @@ export const verifyMediaMessage = async (
       wid: msg.key.id,
       ticketId: ticket.id,
       contactId: msg.key.fromMe ? undefined : contact.id,
-      body: body || media.filename,
+      body: body || media.filename || "Arquivo de mídia",
       fromMe: msg.key.fromMe,
       read: msg.key.fromMe,
       mediaUrl: media.filename,
@@ -966,7 +970,7 @@ export const verifyMessage = async (
     wid: msg.key.id,
     ticketId: ticket.id,
     contactId: msg.key.fromMe ? undefined : contact.id,
-    body,
+    body: body || "Mensagem sem conteúdo de texto",
     fromMe: msg.key.fromMe,
     mediaType: getTypeMessage(msg),
     read: msg.key.fromMe,
@@ -2903,6 +2907,9 @@ const flowBuilderQueue = async (
 
 }
 
+// Flag para controlar se a limpeza já foi executada nesta sessão
+let cleanupExecuted = false;
+
 const handleMessage = async (
   msg: proto.IWebMessageInfo,
   wbot: Session,
@@ -2910,11 +2917,27 @@ const handleMessage = async (
   isImported: boolean = false,
 ): Promise<void> => {
 
+  // 🧹 Executar limpeza automática apenas uma vez por sessão
+  if (!cleanupExecuted && !isImported) {
+    logger.info("🧹 [DEBUG] Running automatic cleanup before processing messages");
+    try {
+      await CleanupOrphanDataService();
+      cleanupExecuted = true;
+    } catch (cleanupError) {
+      logger.error(`❌ [DEBUG] Cleanup failed: ${cleanupError.message}`);
+    }
+  }
+
   if (!isValidMsg(msg)) {
     return;
   }
+  
+  // 🐛 DEBUG: Log da mensagem recebida
+  logger.info(`📨 [DEBUG] Processing message: from=${msg.key.remoteJid}, fromMe=${msg.key.fromMe}, company=${companyId}`);
 
   try {
+    // REMOVIDO: Sistema de múltiplas empresas que causava loop infinito
+
     let msgContact: IMe;
     let groupContact: Contact | undefined;
     let queueId: number = null;
@@ -3000,6 +3023,9 @@ const handleMessage = async (
     }
 
     const contact = await verifyContact(msgContact, wbot, companyId);
+    
+    // 🐛 DEBUG: Log do contato verificado
+    logger.info(`👤 [DEBUG] Contact verified: id=${contact.id}, number=${contact.number}, name=${contact.name}, companyId=${contact.companyId}`);
 
     let unreadMessages = 0;
 
@@ -3034,10 +3060,13 @@ const handleMessage = async (
       order: [["id", "DESC"]]
     });
 
-
+    // 🐛 DEBUG: Log antes de buscar/criar ticket
+    logger.info(`🎫 [DEBUG] About to find/create ticket for contact ${contact.id}, company ${companyId}, whatsapp ${whatsapp.id}`);
+    
     const mutex = new Mutex();
     // Inclui a busca de ticket aqui, se realmente não achar um ticket, então vai para o findorcreate
     const ticket = await mutex.runExclusive(async () => {
+      logger.info(`🔒 [DEBUG] Mutex acquired for contact ${contact.id}`);
       const result = await FindOrCreateTicketService(
         contact,
         whatsapp,
@@ -3777,6 +3806,19 @@ const filterMessages = (msg: WAMessage): boolean => {
   return true;
 };
 
+// Cache para evitar processamento duplicado de mensagens muito próximas
+const messageProcessingCache = new Map<string, number>();
+
+// Limpar cache periodicamente
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of messageProcessingCache.entries()) {
+    if (now - timestamp > 30000) { // Remove entradas com mais de 30 segundos
+      messageProcessingCache.delete(key);
+    }
+  }
+}, 60000); // A cada minuto
+
 const wbotMessageListener = (wbot: Session, companyId: number): void => {
   wbot.ev.on("messages.upsert", async (messageUpsert: ImessageUpsert) => {
     const messages = messageUpsert.messages
@@ -3785,78 +3827,90 @@ const wbotMessageListener = (wbot: Session, companyId: number): void => {
 
     if (!messages) return;
 
-    // console.log("CIAAAAAAA WBOT " , companyId)
-    messages.forEach(async (message: proto.IWebMessageInfo) => {
+    // Processar mensagens em lote mas com controle de duplicação
+    const processedMessageIds = new Set<string>();
 
-      if (message?.messageStubParameters?.length && message.messageStubParameters[0].includes('absent')) {
-        const msg = {
-          companyId: companyId,
-          whatsappId: wbot.id,
-          message: message
-        }
-        logger.warn("MENSAGEM PERDIDA", JSON.stringify(msg));
-      }
-      const messageExists = await Message.count({
-        where: { wid: message.key.id!, companyId }
-      });
-
-      if (!messageExists) {
-        let isCampaign = false
-        let body = await getBodyMessage(message);
-        const fromMe = message?.key?.fromMe;
-        if (fromMe) {
-          isCampaign = /\u200c/.test(body)
-        } else {
-          if (/\u200c/.test(body))
-            body = body.replace(/\u200c/, '')
-          logger.debug('Validação de mensagem de campanha enviada por terceiros: ' + body)
+    for (const message of messages) {
+      try {
+        const messageKey = `${message.key.id}-${companyId}-${wbot.id}`;
+        
+        // Verificar se já processamos esta mensagem recentemente
+        if (messageProcessingCache.has(messageKey) || processedMessageIds.has(messageKey)) {
+          continue;
         }
 
-        if (!isCampaign) {
-          if (REDIS_URI_MSG_CONN !== '') {//} && (!message.key.fromMe || (message.key.fromMe && !message.key.id.startsWith('BAE')))) {
-            try {
-              await BullQueues.add(`${process.env.DB_NAME}-handleMessage`, { message, wbot: wbot.id, companyId }, {
-                priority: 1,
-                jobId: `${wbot.id}-handleMessage-${message.key.id}`
+        // Marcar como processando
+        messageProcessingCache.set(messageKey, Date.now());
+        processedMessageIds.add(messageKey);
 
-              });
-            } catch (e) {
-              Sentry.captureException(e);
-            }
+        if (message?.messageStubParameters?.length && message.messageStubParameters[0].includes('absent')) {
+          const msg = {
+            companyId: companyId,
+            whatsappId: wbot.id,
+            message: message
+          }
+          logger.warn("MENSAGEM PERDIDA", JSON.stringify(msg));
+        }
+
+        const messageExists = await Message.count({
+          where: { wid: message.key.id!, companyId }
+        });
+
+        if (!messageExists) {
+          let isCampaign = false
+          let body = await getBodyMessage(message);
+          const fromMe = message?.key?.fromMe;
+          if (fromMe) {
+            isCampaign = /\u200c/.test(body)
           } else {
-            
-            await handleMessage(message, wbot, companyId);
+            if (/\u200c/.test(body))
+              body = body.replace(/\u200c/, '')
+            logger.debug('Validação de mensagem de campanha enviada por terceiros: ' + body)
+          }
+
+          if (!isCampaign) {
+            if (REDIS_URI_MSG_CONN !== '') {
+              try {
+                await BullQueues.add(`${process.env.DB_NAME}-handleMessage`, { message, wbot: wbot.id, companyId }, {
+                  priority: 1,
+                  jobId: `${wbot.id}-handleMessage-${message.key.id}`,
+                  removeOnComplete: 50, // Manter apenas 50 jobs completos
+                  removeOnFail: 100, // Manter apenas 100 jobs falhados
+                  attempts: 3, // Máximo 3 tentativas
+                  backoff: {
+                    type: 'exponential',
+                    delay: 1000,
+                  }
+                });
+              } catch (e) {
+                Sentry.captureException(e);
+                logger.error(`Erro ao adicionar mensagem à fila: ${e.message}`);
+              }
+            } else {
+              await handleMessage(message, wbot, companyId);
+            }
+          }
+
+          await verifyRecentCampaign(message, companyId);
+          await verifyCampaignMessageAndCloseTicket(message, companyId, wbot);
+        }
+
+        if (message.key.remoteJid?.endsWith("@g.us")) {
+          if (REDIS_URI_MSG_CONN !== '') {
+            BullQueues.add(`${process.env.DB_NAME}-handleMessageAck`, { msg: message, chat: 2 }, {
+              priority: 1,
+              jobId: `${wbot.id}-handleMessageAck-${message.key.id}`
+            })
+          } else {
+            handleMsgAck(message, 2)
           }
         }
 
-        await verifyRecentCampaign(message, companyId);
-        await verifyCampaignMessageAndCloseTicket(message, companyId, wbot);
+      } catch (error) {
+        logger.error(`Erro ao processar mensagem ${message.key.id}: ${error.message}`);
+        Sentry.captureException(error);
       }
-
-      if (message.key.remoteJid?.endsWith("@g.us")) {
-        if (REDIS_URI_MSG_CONN !== '') {
-          BullQueues.add(`${process.env.DB_NAME}-handleMessageAck`, { msg: message, chat: 2 }, {
-            priority: 1,
-            jobId: `${wbot.id}-handleMessageAck-${message.key.id}`
-          })
-        } else {
-          handleMsgAck(message, 2)
-        }
-      }
-
-    });
-
-    // messages.forEach(async (message: proto.IWebMessageInfo) => {
-    //   const messageExists = await Message.count({
-    //     where: { id: message.key.id!, companyId }
-    //   });
-
-    //   if (!messageExists) {
-    //     await handleMessage(message, wbot, companyId);
-    //     await verifyRecentCampaign(message, companyId);
-    //     await verifyCampaignMessageAndCloseTicket(message, companyId);
-    //   }
-    // });
+    }
   });
 
   wbot.ev.on("messages.update", (messageUpdate: WAMessageUpdate[]) => {

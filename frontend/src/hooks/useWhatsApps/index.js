@@ -97,6 +97,26 @@ const useWhatsApps = () => {
         if (data.action === "update") {
           dispatch({ type: "UPDATE_SESSION", payload: data.session });
         }
+        
+        // ✅ TRATAMENTO DE ERRO DE VALIDAÇÃO
+        if (data.action === "validation_error") {
+          // Atualizar status da sessão como desconectada
+          dispatch({ type: "UPDATE_SESSION", payload: { 
+            ...data.session, 
+            status: "DISCONNECTED" 
+          }});
+          
+          // Mostrar toast de erro
+          const { toast } = require("react-toastify");
+          toast.error(`❌ ERRO DE CONEXÃO:\n\n${data.error}`, {
+            position: "top-center",
+            autoClose: 8000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true
+          });
+        }
       }
 
       socket.on(`company-${companyId}-whatsapp`, onCompanyWhatsapp);
