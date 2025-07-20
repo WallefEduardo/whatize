@@ -9,6 +9,8 @@ interface Request {
   kanbanSelectedFunnel?: number | null;
   kanbanSelectedTags?: number[] | null;
   kanbanSelectedUsers?: number[] | null;
+  kanbanCollapsedColumns?: string[] | null;
+  kanbanColumnOrder?: string[] | null;
   companyId: number;
 }
 
@@ -17,6 +19,8 @@ const UpdateKanbanFiltersService = async ({
   kanbanSelectedFunnel,
   kanbanSelectedTags,
   kanbanSelectedUsers,
+  kanbanCollapsedColumns,
+  kanbanColumnOrder,
   companyId
 }: Request): Promise<User> => {
   const user = await User.findOne({
@@ -59,6 +63,14 @@ const UpdateKanbanFiltersService = async ({
   
   if (kanbanSelectedUsers !== undefined) {
     updateData.kanbanSelectedUsers = kanbanSelectedUsers;
+  }
+  
+  if (kanbanCollapsedColumns !== undefined) {
+    updateData.kanbanCollapsedColumns = kanbanCollapsedColumns;
+  }
+  
+  if (kanbanColumnOrder !== undefined) {
+    updateData.kanbanColumnOrder = kanbanColumnOrder;
   }
 
   await user.update(updateData);

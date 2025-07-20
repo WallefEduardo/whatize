@@ -39,7 +39,9 @@ const ShowUserService = async (id: string | number, companyId: string | number):
         "selectedQueueIds",
         "kanbanSelectedFunnel",
         "kanbanSelectedTags",
-        "kanbanSelectedUsers"
+        "kanbanSelectedUsers",
+        "kanbanCollapsedColumns",
+        "kanbanColumnOrder"
       ],
       include: [
         { model: Queue, as: "queues", attributes: ["id", "name", "color"] },

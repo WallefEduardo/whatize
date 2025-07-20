@@ -10,7 +10,7 @@ import {
     Card,
     CardContent,
 } from '@mui/material';
-import { Cancel, Search, Send, SkipNext, SkipPrevious } from '@material-ui/icons';
+import { Cancel, Search, Send, SkipNext, SkipPrevious, Close } from '@material-ui/icons';
 import AudioModal from '../AudioModal';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { makeStyles } from "@material-ui/core/styles";
@@ -295,6 +295,24 @@ const MessageUploadMedias = ({ isOpen, files, onClose, onSend, onCancelSelection
                 maxWidth="md"
                 scroll="paper"
             >
+                {/* Ícone X no canto superior direito */}
+                <IconButton 
+                    onClick={onCancelSelection}
+                    style={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        zIndex: 1000,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        color: 'white',
+                        '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)'
+                        }
+                    }}
+                >
+                    <Close />
+                </IconButton>
+                
                 <DialogContent className={classes.modal}>
                     <Card>
                         {renderFileContent}
@@ -319,9 +337,6 @@ const MessageUploadMedias = ({ isOpen, files, onClose, onSend, onCancelSelection
                 <DialogActions className={classes.modal}>
                     <IconButton onClick={handlePrev} disabled={currentIndex === 0}>
                         <SkipPrevious className={currentIndex === 0 ? classes.buttonDisable : classes.buttonEnable} />
-                    </IconButton>
-                    <IconButton onClick={onCancelSelection} >
-                        <Cancel className={classes.buttonEnable} />
                     </IconButton>
                     <IconButton onClick={handleSend} >
                         <Send className={classes.buttonEnable} />

@@ -32,6 +32,8 @@ interface SerializedUser {
   kanbanSelectedFunnel: number;
   kanbanSelectedTags: number[];
   kanbanSelectedUsers: number[];
+  kanbanCollapsedColumns: string[];
+  kanbanColumnOrder: string[];
 }
 
 export const SerializeUser = async (user: User): Promise<SerializedUser> => {
@@ -70,6 +72,8 @@ export const SerializeUser = async (user: User): Promise<SerializedUser> => {
     selectedQueueIds: user.selectedQueueIds,
     kanbanSelectedFunnel: user.kanbanSelectedFunnel,
     kanbanSelectedTags: user.kanbanSelectedTags,
-    kanbanSelectedUsers: user.kanbanSelectedUsers
+    kanbanSelectedUsers: user.kanbanSelectedUsers,
+    kanbanCollapsedColumns: user.kanbanCollapsedColumns,
+    kanbanColumnOrder: user.kanbanColumnOrder
   };
 };

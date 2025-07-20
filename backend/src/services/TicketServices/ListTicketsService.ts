@@ -643,7 +643,7 @@ const ListTicketsService = async ({
       ...whereCondition,
       status: { [Op.in]: statusFilters }
     };
-  }
+      }
 
   whereCondition = {
     ...whereCondition,

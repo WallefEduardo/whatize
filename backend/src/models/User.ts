@@ -233,6 +233,32 @@ class User extends Model<User> {
   })
   kanbanSelectedUsers: number[];
 
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+    get() {
+      const value = this.getDataValue('kanbanCollapsedColumns' as any);
+      return value ? JSON.parse(value) : null;
+    },
+    set(value: string[] | null) {
+      this.setDataValue('kanbanCollapsedColumns' as any, value ? JSON.stringify(value) : null);
+    }
+  })
+  kanbanCollapsedColumns: string[];
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+    get() {
+      const value = this.getDataValue('kanbanColumnOrder' as any);
+      return value ? JSON.parse(value) : null;
+    },
+    set(value: string[] | null) {
+      this.setDataValue('kanbanColumnOrder' as any, value ? JSON.stringify(value) : null);
+    }
+  })
+  kanbanColumnOrder: string[];
+
   @BeforeDestroy
   static async updateChatbotsUsersReferences(user: User) {
     // Atualizar os registros na tabela Chatbots onde optQueueId é igual ao ID da fila que será excluída

@@ -737,7 +737,7 @@ export const updateSelectedQueues = async (req: Request, res: Response): Promise
 
 export const updateKanbanFilters = async (req: Request, res: Response): Promise<Response> => {
   const { userId } = req.params;
-  const { kanbanSelectedFunnel, kanbanSelectedTags, kanbanSelectedUsers } = req.body;
+  const { kanbanSelectedFunnel, kanbanSelectedTags, kanbanSelectedUsers, kanbanCollapsedColumns, kanbanColumnOrder } = req.body;
   const { companyId } = req.user;
 
   const user = await UpdateKanbanFiltersService({
@@ -745,6 +745,8 @@ export const updateKanbanFilters = async (req: Request, res: Response): Promise<
     kanbanSelectedFunnel,
     kanbanSelectedTags,
     kanbanSelectedUsers,
+    kanbanCollapsedColumns,
+    kanbanColumnOrder,
     companyId
   });
 

@@ -469,32 +469,32 @@ const TicketsManagerTabs = () => {
     const tags = selecteds.map((t) => t.id);
 
     // Aplicar filtros imediatamente sem debounce
-    setSelectedTags(tags);
-    setForceSearch(!forceSearch);
+      setSelectedTags(tags);
+      setForceSearch(!forceSearch);
   };
 
   const handleSelectedUsers = (selecteds) => {
     const users = selecteds.map((t) => t.id);
 
     // Aplicar filtros imediatamente sem debounce
-    setSelectedUsers(users);
-    setForceSearch(!forceSearch);
+      setSelectedUsers(users);
+      setForceSearch(!forceSearch);
   };
 
   const handleSelectedWhatsapps = (selecteds) => {
     const whatsapp = selecteds.map((t) => t.id);
 
     // Aplicar filtros imediatamente sem debounce
-    setSelectedWhatsapp(whatsapp);
-    setForceSearch(!forceSearch);
+      setSelectedWhatsapp(whatsapp);
+      setForceSearch(!forceSearch);
   };
 
   const handleSelectedStatus = (selecteds) => {
     const statusFilter = selecteds.map((t) => t.status);
 
     // Aplicar filtros imediatamente sem debounce
-    setSelectedStatus(statusFilter);
-    setForceSearch(!forceSearch);
+      setSelectedStatus(statusFilter);
+      setForceSearch(!forceSearch);
   };
 
   const handleFilter = () => {

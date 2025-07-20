@@ -47,6 +47,7 @@ import QueueIntegration from "../pages/QueueIntegration";
 import Files from "../pages/Files";
 import ToDoList from "../pages/ToDoList";
 import Kanban from "../pages/Kanban";
+import Kanban1 from "../pages/Kanban1";
 import TagsKanban from "../pages/TagsKanban";
 import RecoverPassword from "../pages/RecoverPassword";
 import ResetPassword from "../pages/ResetPassword";
@@ -116,6 +117,7 @@ const Routes = () => {
                 <Route exact path="/files" component={Files} isPrivate />
                 <Route exact path="/moments" component={ChatMoments} isPrivate />
                 <Route exact path="/Kanban" component={Kanban} isPrivate />
+                <Route exact path="/Kanban1" component={Kanban1} isPrivate />
                 <Route exact path="/TagsKanban" component={TagsKanban} isPrivate />
                 <Route exact path="/prompts" component={Prompts} isPrivate />
                 <Route exact path="/allConnections" component={AllConnections} isPrivate />
