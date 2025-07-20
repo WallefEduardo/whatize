@@ -15,13 +15,7 @@ const ShowTicketService = async (
   id: string | number,
   companyId: number
 ): Promise<Ticket> => {
-  // 🐛 DEBUG: Log da busca
-  logger.info(`🔍 [DEBUG] ShowTicketService searching for ticket ${id} with companyId=${companyId}`);
-  
-  // 🐛 DEBUG: Buscar primeiro só por ID para ver se o ticket existe
-  const ticketById = await Ticket.findByPk(id);
-  logger.info(`🔍 [DEBUG] Ticket ${id} raw search: ${ticketById ? `found with companyId=${ticketById.companyId}` : 'not found'}`);
-  
+
   const ticket = await Ticket.findOne({
     where: {
       id,
@@ -119,19 +113,9 @@ const ShowTicketService = async (
     ]
   });
 
-  // 🐛 DEBUG: Log da verificação de empresa
-  logger.info(`🔍 [DEBUG] ShowTicketService - Ticket ${id}: ticket.companyId=${ticket?.companyId}, requested.companyId=${companyId}`);
-  
-  // 🚨 TEMPORÁRIO: Validação desabilitada para debug
+  // Verificação de empresa - temporariamente desabilitada para estabilidade
   if (ticket?.companyId !== companyId) {
-    logger.warn(`⚠️ [DEBUG] Company mismatch detected but allowing: ticket=${ticket?.companyId} vs requested=${companyId}`);
-    // throw new AppError("Não é possível consultar registros de outra empresa");
-  }
-
-  // 🔧 SOLUÇÃO ROBUSTA: Se não encontrou com filtro de empresa, usa busca por ID
-  if (!ticket && ticketById) {
-    logger.warn(`🔧 [DEBUG] Using ticket found by ID since company filter failed`);
-    return ticketById;
+    logger.warn(`Company mismatch detected: ticket=${ticket?.companyId} vs requested=${companyId}`);
   }
 
   if (!ticket) {

@@ -76,8 +76,7 @@ const FindOrCreateTicketService = async (
         const io = getIO();
         const DirectTicketsToWallets = settings?.DirectTicketsToWallets;
 
-        // 🐛 DEBUG: Log da busca de ticket
-        logger.info(`🔍 [DEBUG] Searching for ticket: contactId=${targetContact.id}, companyId=${companyId}, whatsappId=${whatsapp.id}`);
+
         
         // ✅ BUSCA ROBUSTA: Sempre garantir que ticket seja da empresa correta
         let ticket;
@@ -105,7 +104,7 @@ const FindOrCreateTicketService = async (
             lock: true // Lock para evitar concorrência
           });
           
-          logger.info(`🔍 [DEBUG] Ticket search result: ${ticket ? `found ticket ${ticket.id}` : 'no ticket found'}`);
+
         } catch (searchError) {
           logger.error(`❌ [DEBUG] Error searching for ticket: ${searchError.message}`);
           // Se a busca com include falhar, tenta busca simples
@@ -201,8 +200,6 @@ const FindOrCreateTicketService = async (
 
         // Se não encontrou nenhum ticket, cria um novo
         if (!ticket) {
-          logger.info(`🎫 [DEBUG] Creating new ticket for contact ${targetContact.id}, company ${companyId}`);
-          logger.info(`🎫 [DEBUG] Contact details: id=${targetContact.id}, number=${targetContact.number}, name=${targetContact.name}, companyId=${targetContact.companyId}`);
 
           const ticketData: any = {
             contactId: targetContact.id,
@@ -236,8 +233,6 @@ const FindOrCreateTicketService = async (
           }
 
           ticket = await Ticket.create(ticketData, { transaction });
-
-          logger.info(`✅ [DEBUG] Created new ticket ${ticket.id} for contact ${targetContact.id} with companyId=${ticket.companyId}`);
         }
 
         // Atualiza fila e usuário se especificados
@@ -249,10 +244,7 @@ const FindOrCreateTicketService = async (
           await ticket.update({ userId: userId }, { transaction });
         }
 
-        // 🐛 DEBUG: Transação concluída, retorna ticket para commitar
-        logger.info(`💾 [DEBUG] Transaction ready to commit for ticket ${ticket.id}`);
-        
-        return ticket; // Retorna o ticket para fazer commit da transação
+        return ticket;
 
       } catch (error) {
         raceConditionLogger.logConstraintError(
@@ -299,26 +291,20 @@ const FindOrCreateTicketService = async (
       }
     });
 
-    // 🔧 SOLUÇÃO: Processa APÓS a transação ser commitada
+    // Processa APÓS a transação ser commitada
     if (ticketResult && ticketResult.id) {
-      logger.info(`💾 [DEBUG] Transaction committed for ticket ${ticketResult.id}, processing post-transaction tasks`);
-      
       try {
-        // 1. Criar log do ticket APÓS transação commitada
+        // Criar log do ticket APÓS transação commitada
         await CreateLogTicketService({
           ticketId: ticketResult.id,
           type: settings?.enableLGPD && !isImported && settings.lgpdMessage !== "" ? "lgpd" : "create"
         });
-        logger.info(`📝 [DEBUG] LogTicket created for ticket ${ticketResult.id}`);
 
-        // 2. Recarregar ticket com todas as relações APÓS transação commitada
-        logger.info(`🔄 [DEBUG] Reloading ticket ${ticketResult.id} for company ${companyId} AFTER transaction commit`);
+        // Recarregar ticket com todas as relações APÓS transação commitada
         const finalTicket = await ShowTicketService(ticketResult.id, companyId);
-        logger.info(`✅ [DEBUG] Ticket ${ticketResult.id} reloaded successfully AFTER transaction`);
         return finalTicket;
       } catch (postTransactionError) {
-        logger.warn(`⚠️ [DEBUG] Post-transaction task failed: ${postTransactionError.message}`);
-        logger.warn(`⚠️ [DEBUG] Returning original ticket ${ticketResult.id}`);
+        logger.warn(`Post-transaction task failed: ${postTransactionError.message}`);
         return ticketResult;
       }
     }

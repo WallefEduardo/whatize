@@ -263,7 +263,7 @@ const KanbanColumn = ({ column, children, isCollapsed, onToggleCollapse }) => {
         )}
         <div className="column-title-section">
           {!isCollapsed && (
-            <>
+            <div className="column-title-container">
               <Typography className="column-title">
                 {column.title}
               </Typography>
@@ -271,15 +271,17 @@ const KanbanColumn = ({ column, children, isCollapsed, onToggleCollapse }) => {
                 <Chip
                   label={column.funnel}
                   size="small"
+                  className="funnel-badge"
                   style={{
                     backgroundColor: column.color,
                     color: '#fff',
-                    fontSize: '0.6rem',
-                    height: '18px',
+                    fontSize: '0.55rem',
+                    height: '16px',
+                    marginTop: '4px',
                   }}
                 />
               )}
-            </>
+            </div>
           )}
           {isCollapsed && (
             <Typography className="column-title-collapsed">
@@ -450,12 +452,32 @@ const useStyles = makeStyles(theme => ({
     
     '.column-title-section': {
       display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
+      alignItems: 'center', // Centralizado verticalmente
+      justifyContent: 'center', // Centralizado horizontalmente
+      flex: 1,
+    },
+    
+    '.column-title-container': {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center', // Centralizado horizontalmente
+      gap: '4px',
+      flex: 1,
+      textAlign: 'center',
+    },
+    
+    '.funnel-badge': {
+      alignSelf: 'center', // Centralizado
+      opacity: 0.9,
+      '&:hover': {
+        opacity: 1,
+      },
     },
     
     '.column-title': {
       fontWeight: '600',
+      textAlign: 'center', // Título centralizado
+      width: '100%',
       fontSize: '0.95rem',
       color: '#2c3e50',
     },
@@ -819,6 +841,8 @@ const Kanban = () => {
   // Estados para controle de inicialização
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [lastFilterState, setLastFilterState] = useState(null);
+  const [ticketsCache, setTicketsCache] = useState(null);
+  const [cacheTimestamp, setCacheTimestamp] = useState(0);
   
   // Paleta de cores para os badges dos funis
   const funnelColors = [
@@ -839,23 +863,32 @@ const Kanban = () => {
 
   // Função para buscar dados iniciais
   const fetchInitialData = useCallback(async () => {
+    const startTime = performance.now();
+    console.log('🎯 [KANBAN] Iniciando carregamento inicial da página...');
+    
     try {
       setLoading(true);
       
       // Buscar dados em paralelo
-          await Promise.all([
-            fetchFunnels(),
-            fetchAllTags(),
+      await Promise.all([
+        fetchFunnels(),
+        fetchAllTags(),
         user?.profile === 'admin' ? fetchAllUsers() : Promise.resolve(),
-          ]);
+      ]);
           
           // Preferências serão carregadas após definir as colunas no fetchTags
       
       // Marcar carregamento inicial como completo
       setInitialLoadComplete(true);
       
-        } catch (error) {
-      console.error("Erro ao buscar dados iniciais:", error);
+      const endTime = performance.now();
+      const loadTime = (endTime - startTime).toFixed(2);
+      console.log(`✅ [KANBAN] Carregamento inicial completo em ${loadTime}ms`);
+      
+    } catch (error) {
+      const endTime = performance.now();
+      const loadTime = (endTime - startTime).toFixed(2);
+      console.error(`❌ [KANBAN] Erro no carregamento inicial após ${loadTime}ms:`, error);
       toast.error("Erro ao carregar dados do Kanban");
     } finally {
       setLoading(false);
@@ -990,7 +1023,18 @@ const Kanban = () => {
 
 
   // Função para buscar tickets reais
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
+    const startTime = performance.now();
+    
+    // Cache inteligente - reutiliza por 10 segundos
+    const now = Date.now();
+    if (ticketsCache && (now - cacheTimestamp) < 10000) {
+      console.log('📦 [KANBAN] Usando cache de tickets - economia de tempo!');
+      return;
+    }
+    
+    console.log('🚀 [KANBAN] Iniciando carregamento de tickets...');
+    
     try {
       const jsonString = user?.queues?.map(queue => queue.UserQueue.queueId) || [];
       const params = {
@@ -1014,18 +1058,78 @@ const Kanban = () => {
       
       const { data } = await api.get("/ticket/kanban", { params });
       setTickets(data.tickets || []);
+      
+      // Atualizar cache
+      setTicketsCache(data.tickets || []);
+      setCacheTimestamp(Date.now());
+      
+      const endTime = performance.now();
+      const loadTime = (endTime - startTime).toFixed(2);
+      console.log(`✅ [KANBAN] Tickets carregados em ${loadTime}ms - Total: ${data.tickets?.length || 0} tickets`);
     } catch (err) {
-      console.error('❌ Erro ao buscar tickets:', err);
+      const endTime = performance.now();
+      const loadTime = (endTime - startTime).toFixed(2);
+      console.error(`❌ [KANBAN] Erro ao buscar tickets após ${loadTime}ms:`, err);
       setTickets([]);
+    }
+  }, [user?.queues, startDate, endDate, selectedFunnel, selectedTags, selectedUsers]);
+
+  // Função otimizada que retorna os tickets diretamente
+  const fetchTicketsAndReturn = async () => {
+    const startTime = performance.now();
+    console.log('🚀 [KANBAN] Buscando tickets com retorno direto...');
+    
+    try {
+      const jsonString = user?.queues?.map(queue => queue.UserQueue.queueId) || [];
+      const params = {
+        queueIds: JSON.stringify(jsonString),
+        startDate,
+        endDate
+      };
+
+      if (selectedFunnel) {
+        params.funilId = selectedFunnel;
+      }
+      
+      if (selectedTags.length > 0) {
+        params.tags = JSON.stringify(selectedTags.map(tag => tag.id));
+      }
+      
+      if (selectedUsers.length > 0) {
+        params.users = JSON.stringify(selectedUsers.map(user => user.id));
+      }
+
+      const { data } = await api.get("/ticket/kanban", { params });
+      const ticketsResult = data.tickets || [];
+      
+      // Atualizar estado também
+      setTickets(ticketsResult);
+      
+      const endTime = performance.now();
+      const loadTime = (endTime - startTime).toFixed(2);
+      console.log(`✅ [KANBAN] Tickets retornados em ${loadTime}ms - Total: ${ticketsResult.length} tickets`);
+      
+      return ticketsResult;
+      
+    } catch (err) {
+      const endTime = performance.now();
+      const loadTime = (endTime - startTime).toFixed(2);
+      console.error(`❌ [KANBAN] Erro ao buscar tickets após ${loadTime}ms:`, err);
+      setTickets([]);
+      return [];
     }
   };
 
   // Função para buscar tags do Kanban
-  const fetchTags = async () => {
+  const fetchTags = useCallback(async () => {
     // BLOQUEAR durante drag para evitar sobrescrever ordem
     if (isDragging) {
+      console.log('🔄 [KANBAN] Bloqueado durante drag, pulando fetchTags');
       return;
     }
+    
+    const startTime = performance.now();
+    console.log('🏷️ [KANBAN] Iniciando carregamento de tags...');
     
     try {
       if (initialLoadComplete) {
@@ -1039,11 +1143,106 @@ const Kanban = () => {
       const fetchedTags = response.data.lista || [];
       setTags(fetchedTags);
       
-      // Buscar tickets após carregar tags
-      await fetchTickets();
+      // Buscar tickets e processar imediatamente
+      const ticketsData = await fetchTicketsAndReturn();
       
       // Processar os dados e criar as colunas
-      const processedData = processKanbanData(fetchedTags);
+      const processStartTime = performance.now();
+      console.log('🔄 [KANBAN] Processando dados das colunas...');
+      
+      // Funções auxiliares inline
+      const formatPhoneNumberInline = (phoneNumber) => {
+        if (!phoneNumber) return '';
+        const cleanNumber = phoneNumber.replace(/\D/g, '');
+        if (cleanNumber.length === 10) {
+          return cleanNumber.slice(0, 2) + '9' + cleanNumber.slice(2);
+        }
+        if (cleanNumber.length === 11) {
+          return `(${cleanNumber.slice(0, 2)}) ${cleanNumber.slice(2, 7)}-${cleanNumber.slice(7)}`;
+        }
+        return phoneNumber;
+      };
+      
+      const getNormalTagsInline = (ticket) => {
+        let normalTags = [];
+        if (ticket.contact && ticket.contact.tags) {
+          const contactNormalTags = ticket.contact.tags.filter(tag => tag.kanban === 0);
+          normalTags = [...normalTags, ...contactNormalTags];
+        }
+        if (ticket.tags) {
+          const ticketNormalTags = ticket.tags.filter(tag => tag.kanban === 0);
+          normalTags = [...normalTags, ...ticketNormalTags];
+        }
+        const uniqueTags = normalTags.filter((tag, index, self) => 
+          index === self.findIndex(t => t.id === tag.id)
+        );
+        return uniqueTags;
+      };
+      
+      const lanes = [];
+      
+      // Tickets sem tags (Em aberto) - usando dados frescos
+      console.log('🐛 [DEBUG] Total tickets disponíveis:', ticketsData.length, ticketsData);
+      const filteredTickets = ticketsData.filter(ticket => ticket.tags.length === 0);
+      console.log('🐛 [DEBUG] Tickets sem tags:', filteredTickets.length, filteredTickets);
+      
+      const emptyLane = {
+        id: "lane0",
+        title: "Em aberto",
+        color: '#6c757d',
+        funnel: null,
+        cards: filteredTickets.map(ticket => ({
+          id: ticket.id.toString(),
+          title: ticket.contact.name,
+          description: '',
+          phone: formatPhoneNumberInline(ticket.contact.number),
+          ticketId: `#${ticket.id}`,
+          user: ticket.user?.name || '',
+          tags: getNormalTagsInline(ticket),
+          unread: ticket.unreadMessages || 0,
+          ticketData: ticket
+        }))
+      };
+      
+      lanes.push(emptyLane);
+      
+      // Processar tags com tickets reais
+      fetchedTags.forEach((tag) => {
+        const funilIndex = funnels.findIndex(f => f.id === tag.funilId);
+        const funilName = funnels[funilIndex]?.name;
+        const funilColor = funilIndex >= 0 ? funnelColors[funilIndex % funnelColors.length] : '#e0e0e0';
+        
+        // Tickets com esta tag
+        const tagTickets = ticketsData.filter(ticket =>
+          ticket.tags.some(ticketTag => ticketTag.id === tag.id)
+        );
+        
+        const lane = {
+          id: tag.id.toString(),
+          title: tag.name,
+          color: funilColor,
+          funnel: funilName || null,
+          cards: tagTickets.map(ticket => ({
+            id: ticket.id.toString(),
+            title: ticket.contact.name,
+            description: '',
+            phone: formatPhoneNumberInline(ticket.contact.number),
+            ticketId: `#${ticket.id}`,
+            user: ticket.user?.name || '',
+            tags: getNormalTagsInline(ticket),
+            unread: ticket.unreadMessages || 0,
+            ticketData: ticket
+          }))
+        };
+        
+        lanes.push(lane);
+      });
+      
+      const processEndTime = performance.now();
+      const processTime = (processEndTime - processStartTime).toFixed(2);
+      console.log(`✅ [KANBAN] Dados processados em ${processTime}ms - ${lanes.length} colunas, ${lanes.reduce((acc, lane) => acc + lane.cards.length, 0)} cards`);
+      
+      const processedData = { lanes };
       
       // As colunas serão processadas inicialmente sem ordem específica
       let newColumns = processedData.lanes;
@@ -1089,9 +1288,15 @@ const Kanban = () => {
       }
       
     } catch (error) {
-      console.error("Erro ao buscar tags:", error);
+      const endTime = performance.now();
+      const loadTime = (endTime - startTime).toFixed(2);
+      console.error(`❌ [KANBAN] Erro ao buscar tags após ${loadTime}ms:`, error);
       toast.error("Erro ao carregar dados do Kanban");
     } finally {
+      const endTime = performance.now();
+      const loadTime = (endTime - startTime).toFixed(2);
+      console.log(`✅ [KANBAN] Tags processadas em ${loadTime}ms - Total: ${columns.length} colunas`);
+      
       if (initialLoadComplete) {
         // Pequeno delay para mostrar que algo aconteceu
         setTimeout(() => {
@@ -1099,54 +1304,12 @@ const Kanban = () => {
         }, 200);
       }
     }
-  };
+  }, [isDragging, selectedFunnel, initialLoadComplete, user]);
 
-  // Função para processar dados do Kanban com dados reais
-  const processKanbanData = (fetchedTags) => {
-    const lanes = [];
-    
-    // Tickets sem tags (Em aberto)
-    const filteredTickets = tickets.filter(ticket => ticket.tags.length === 0);
-    
-    const emptyLane = {
-      id: "lane0",
-      title: "Em aberto",
-      color: '#6c757d',
-      funnel: null,
-      cards: filteredTickets.map(ticket => createCardFromTicket(ticket))
-    };
-    
-    lanes.push(emptyLane);
-    
-    // Processar tags com tickets reais
-    fetchedTags.forEach((tag) => {
-      const funilIndex = funnels.findIndex(f => f.id === tag.funilId);
-      const funilName = funnels[funilIndex]?.name;
-      const funilColor = funilIndex >= 0 ? funnelColors[funilIndex % funnelColors.length] : '#e0e0e0';
-      
-      // Tickets com esta tag
-      const tagTickets = tickets.filter(ticket =>
-        ticket.tags.some(ticketTag => ticketTag.id === tag.id)
-      );
-      
-      const lane = {
-        id: tag.id.toString(),
-        title: tag.name,
-        color: funilColor,
-        funnel: funilName || null,
-        cards: tagTickets.map(ticket => createCardFromTicket(ticket))
-      };
-      
-      lanes.push(lane);
-    });
-    
-    return {
-      lanes
-    };
-  };
 
-  // Função para criar card a partir de ticket real
-  const createCardFromTicket = (ticket) => {
+
+  // Função para criar card a partir de ticket real (otimizada)
+  const createCardFromTicket = useCallback((ticket) => {
     return {
       id: ticket.id.toString(),
       title: ticket.contact.name,
@@ -1158,7 +1321,7 @@ const Kanban = () => {
       unread: ticket.unreadMessages || 0,
       ticketData: ticket // Dados completos do ticket
     };
-  };
+  }, []);
 
   // Função para formatar telefone brasileiro
   const formatPhoneNumber = (phoneNumber) => {
@@ -1184,8 +1347,8 @@ const Kanban = () => {
     return phoneNumber;
   };
 
-  // Função para obter tags normais (não kanban) do ticket
-  const getNormalTags = (ticket) => {
+  // Função para obter tags normais (não kanban) do ticket (otimizada)
+  const getNormalTags = useCallback((ticket) => {
     let normalTags = [];
     
     if (ticket.contact && ticket.contact.tags) {
@@ -1204,7 +1367,7 @@ const Kanban = () => {
     );
     
     return uniqueTags;
-  };
+  }, []);
 
 
 
@@ -1668,9 +1831,9 @@ const Kanban = () => {
     }
   }, [allUsers, user]);
 
-  // Efeito para atualizar dados quando filtros mudarem
+  // Efeito para atualizar dados quando filtros mudarem (OTIMIZADO)
   useEffect(() => {
-    if (user && initialLoadComplete) {
+    if (user && initialLoadComplete && funnels.length > 0) {
       const currentFilterState = JSON.stringify({
         funnel: selectedFunnel,
         tags: selectedTags.map(t => t.id).sort(),
@@ -1681,17 +1844,19 @@ const Kanban = () => {
       
       // Só atualiza se realmente houve mudança
       if (lastFilterState === currentFilterState) {
+        console.log('🔄 [KANBAN] Filtros não mudaram, pulando atualização');
         return;
       }
       
       const timeoutId = setTimeout(() => {
         setLastFilterState(currentFilterState);
+        console.log('🔄 [KANBAN] Filtros mudaram, atualizando...');
         fetchTags();
-      }, 800);
+      }, 500); // Reduzido de 800ms para 500ms
       
       return () => clearTimeout(timeoutId);
     }
-  }, [selectedFunnel, selectedTags, selectedUsers, startDate, endDate, user, initialLoadComplete]);
+  }, [selectedFunnel, selectedTags, selectedUsers, startDate, endDate, user, initialLoadComplete, funnels.length]);
 
   // Efeito separado para salvar filtros (evita loops infinitos)
   useEffect(() => {
@@ -1705,12 +1870,13 @@ const Kanban = () => {
     }
   }, [selectedFunnel, selectedTags, selectedUsers, initialLoadComplete]);
 
-  // Effect para carregar tags após inicialização completa
+  // Effect para carregar tags após inicialização completa (EVITA DUPLICAÇÃO)
   useEffect(() => {
-    if (initialLoadComplete && funnels.length > 0) {
+    if (initialLoadComplete && funnels.length > 0 && columns.length === 0) {
+      console.log('🚀 [KANBAN] Carregamento inicial de tags...');
       fetchTags();
     }
-  }, [initialLoadComplete, funnels]);
+  }, [initialLoadComplete, funnels.length]);
 
   // Handlers para mudança de datas
   const handleStartDateChange = (event) => {

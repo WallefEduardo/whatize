@@ -2917,14 +2917,13 @@ const handleMessage = async (
   isImported: boolean = false,
 ): Promise<void> => {
 
-  // 🧹 Executar limpeza automática apenas uma vez por sessão
+  // Executar limpeza automática apenas uma vez por sessão
   if (!cleanupExecuted && !isImported) {
-    logger.info("🧹 [DEBUG] Running automatic cleanup before processing messages");
     try {
       await CleanupOrphanDataService();
       cleanupExecuted = true;
     } catch (cleanupError) {
-      logger.error(`❌ [DEBUG] Cleanup failed: ${cleanupError.message}`);
+      logger.error(`Cleanup failed: ${cleanupError.message}`);
     }
   }
 
@@ -2932,8 +2931,7 @@ const handleMessage = async (
     return;
   }
   
-  // 🐛 DEBUG: Log da mensagem recebida
-  logger.info(`📨 [DEBUG] Processing message: from=${msg.key.remoteJid}, fromMe=${msg.key.fromMe}, company=${companyId}`);
+
 
   try {
     // REMOVIDO: Sistema de múltiplas empresas que causava loop infinito
@@ -3025,7 +3023,7 @@ const handleMessage = async (
     const contact = await verifyContact(msgContact, wbot, companyId);
     
     // 🐛 DEBUG: Log do contato verificado
-    logger.info(`👤 [DEBUG] Contact verified: id=${contact.id}, number=${contact.number}, name=${contact.name}, companyId=${contact.companyId}`);
+
 
     let unreadMessages = 0;
 
