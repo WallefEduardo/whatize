@@ -153,23 +153,98 @@ const KanbanCard = ({ card, onSendMessage }) => {
         ) : 'Hoje'}
       </Typography>
 
-      {/* Tags */}
+      {/* Tags (organizadas inteligentemente para melhor aproveitamento do espaço) */}
       {card.tags && card.tags.length > 0 && (
         <div className="card-tags">
-          {card.tags.map((tag, index) => (
-            <Chip
-              key={index}
-              label={tag.name}
-              size="small"
-              style={{
-                backgroundColor: `${tag.color}1A` || '#e3f2fd1A', // 1A = 10% opacidade (90% transparente)
-                color: tag.color || '#1976d2', // Cor sólida sem transparência
-                fontSize: '0.65rem',
-                height: '20px',
-              }}
-              icon={<LocalOffer style={{ fontSize: '12px', color: tag.color || '#1976d2' }} />}
-            />
-          ))}
+          {(() => {
+                         // Algoritmo otimizado para maximizar aproveitamento do espaço
+             const organizeTagsOptimized = (tags) => {
+               // Classificar tags por tamanho mais refinado
+               const tiny = tags.filter(t => t.name.length <= 4);       // Muito pequenas
+               const small = tags.filter(t => t.name.length > 4 && t.name.length <= 8);  // Pequenas
+               const medium = tags.filter(t => t.name.length > 8 && t.name.length <= 15); // Médias  
+               const large = tags.filter(t => t.name.length > 15);      // Grandes
+               
+               // Estratégia inteligente: priorizar combinações que cabem juntas
+               const result = [];
+               
+               // Primeiro, adiciona todas as tiny + small (que cabem várias por linha)
+               let tinyIndex = 0, smallIndex = 0, mediumIndex = 0, largeIndex = 0;
+               
+               // Combinar tiny e small primeiro (até 3 por vez)
+               while (tinyIndex < tiny.length || smallIndex < small.length) {
+                 let lineLength = 0;
+                 
+                 // Adiciona até 3 tiny/small que cabem na linha
+                 for (let i = 0; i < 3; i++) {
+                   if (tinyIndex < tiny.length && lineLength + tiny[tinyIndex].name.length <= 25) {
+                     result.push(tiny[tinyIndex]);
+                     lineLength += tiny[tinyIndex].name.length;
+                     tinyIndex++;
+                   } else if (smallIndex < small.length && lineLength + small[smallIndex].name.length <= 25) {
+                     result.push(small[smallIndex]);
+                     lineLength += small[smallIndex].name.length;
+                     smallIndex++;
+                   } else {
+                     break;
+                   }
+                 }
+                 
+                 // Se não conseguiu adicionar nada, para o loop
+                 if (lineLength === 0) break;
+               }
+               
+               // Depois adiciona medium e large normalmente
+               while (mediumIndex < medium.length || largeIndex < large.length) {
+                 if (mediumIndex < medium.length) {
+                   result.push(medium[mediumIndex++]);
+                 }
+                 if (largeIndex < large.length) {
+                   result.push(large[largeIndex++]);
+                 }
+               }
+               
+               return result;
+             };
+            
+            const optimizedTags = organizeTagsOptimized(card.tags);
+            
+                         return optimizedTags.map((tag, index) => {
+               // Determina se a tag é muito longa (mais que 25 caracteres)
+               const isVeryLong = tag.name.length > 25;
+               const truncatedName = isVeryLong ? `${tag.name.substring(0, 22)}...` : tag.name;
+               
+               const chipElement = (
+                 <Chip
+                   key={`${tag.id}-${index}`}
+                   label={truncatedName}
+                   size="small"
+                   style={{
+                     backgroundColor: `${tag.color}1A` || '#e3f2fd1A',
+                     color: tag.color || '#1976d2',
+                     fontSize: '0.65rem',
+                     height: '20px',
+                     // Largura natural, sem forçar truncamento
+                     flexShrink: 0,
+                     flexGrow: 0,
+                     minWidth: 'auto',
+                     maxWidth: isVeryLong ? '160px' : 'fit-content',
+                     // Ajuste de padding baseado no tamanho
+                     paddingLeft: tag.name.length <= 6 ? '6px' : '8px',
+                     paddingRight: tag.name.length <= 6 ? '6px' : '8px',
+                   }}
+                   icon={<LocalOffer style={{ fontSize: '12px', color: tag.color || '#1976d2' }} />}
+                 />
+               );
+               
+               // Se a tag foi truncada, envolve com Tooltip
+               return isVeryLong ? (
+                 <Tooltip key={`${tag.id}-${index}`} title={tag.name} placement="top">
+                   {chipElement}
+                 </Tooltip>
+               ) : chipElement;
+             });
+          })()}
         </div>
       )}
 
@@ -603,12 +678,30 @@ const useStyles = makeStyles(theme => ({
       WebkitBoxOrient: 'vertical',
     },
     
-    // Tags do card
+    // Tags do card (empacotamento natural sem forçar truncamento)
     '.card-tags': {
-    display: 'flex',
+      display: 'flex',
       flexWrap: 'wrap',
-      gap: '4px',
+      gap: '3px',
       marginBottom: '8px',
+      alignItems: 'flex-start',
+      alignContent: 'flex-start',
+      justifyContent: 'flex-start',
+      // Permite que as tags usem o espaço natural
+      '& > *': {
+        flexGrow: 0,
+        flexShrink: 0,
+        // Só aplica maxWidth se a tag for muito longa (mais de 30 chars)
+        maxWidth: 'none',
+      },
+      // Tags muito longas podem truncar apenas se passarem de 90% da largura
+      '& .MuiChip-root': {
+        '& .MuiChip-label': {
+          overflow: 'visible',
+          textOverflow: 'initial',
+          whiteSpace: 'nowrap',
+        },
+      },
     },
     
     // Footer do card
@@ -863,9 +956,6 @@ const Kanban = () => {
 
   // Função para buscar dados iniciais
   const fetchInitialData = useCallback(async () => {
-    const startTime = performance.now();
-    console.log('🎯 [KANBAN] Iniciando carregamento inicial da página...');
-    
     try {
       setLoading(true);
       
@@ -881,14 +971,8 @@ const Kanban = () => {
       // Marcar carregamento inicial como completo
       setInitialLoadComplete(true);
       
-      const endTime = performance.now();
-      const loadTime = (endTime - startTime).toFixed(2);
-      console.log(`✅ [KANBAN] Carregamento inicial completo em ${loadTime}ms`);
-      
     } catch (error) {
-      const endTime = performance.now();
-      const loadTime = (endTime - startTime).toFixed(2);
-      console.error(`❌ [KANBAN] Erro no carregamento inicial após ${loadTime}ms:`, error);
+      console.error("Erro no carregamento inicial:", error);
       toast.error("Erro ao carregar dados do Kanban");
     } finally {
       setLoading(false);
@@ -1024,16 +1108,11 @@ const Kanban = () => {
 
   // Função para buscar tickets reais
   const fetchTickets = useCallback(async () => {
-    const startTime = performance.now();
-    
     // Cache inteligente - reutiliza por 10 segundos
     const now = Date.now();
     if (ticketsCache && (now - cacheTimestamp) < 10000) {
-      console.log('📦 [KANBAN] Usando cache de tickets - economia de tempo!');
       return;
     }
-    
-    console.log('🚀 [KANBAN] Iniciando carregamento de tickets...');
     
     try {
       const jsonString = user?.queues?.map(queue => queue.UserQueue.queueId) || [];
@@ -1063,22 +1142,14 @@ const Kanban = () => {
       setTicketsCache(data.tickets || []);
       setCacheTimestamp(Date.now());
       
-      const endTime = performance.now();
-      const loadTime = (endTime - startTime).toFixed(2);
-      console.log(`✅ [KANBAN] Tickets carregados em ${loadTime}ms - Total: ${data.tickets?.length || 0} tickets`);
     } catch (err) {
-      const endTime = performance.now();
-      const loadTime = (endTime - startTime).toFixed(2);
-      console.error(`❌ [KANBAN] Erro ao buscar tickets após ${loadTime}ms:`, err);
+      console.error("Erro ao buscar tickets:", err);
       setTickets([]);
     }
   }, [user?.queues, startDate, endDate, selectedFunnel, selectedTags, selectedUsers]);
 
   // Função otimizada que retorna os tickets diretamente
   const fetchTicketsAndReturn = async () => {
-    const startTime = performance.now();
-    console.log('🚀 [KANBAN] Buscando tickets com retorno direto...');
-    
     try {
       const jsonString = user?.queues?.map(queue => queue.UserQueue.queueId) || [];
       const params = {
@@ -1105,16 +1176,10 @@ const Kanban = () => {
       // Atualizar estado também
       setTickets(ticketsResult);
       
-      const endTime = performance.now();
-      const loadTime = (endTime - startTime).toFixed(2);
-      console.log(`✅ [KANBAN] Tickets retornados em ${loadTime}ms - Total: ${ticketsResult.length} tickets`);
-      
       return ticketsResult;
       
     } catch (err) {
-      const endTime = performance.now();
-      const loadTime = (endTime - startTime).toFixed(2);
-      console.error(`❌ [KANBAN] Erro ao buscar tickets após ${loadTime}ms:`, err);
+      console.error("Erro ao buscar tickets:", err);
       setTickets([]);
       return [];
     }
@@ -1124,12 +1189,8 @@ const Kanban = () => {
   const fetchTags = useCallback(async () => {
     // BLOQUEAR durante drag para evitar sobrescrever ordem
     if (isDragging) {
-      console.log('🔄 [KANBAN] Bloqueado durante drag, pulando fetchTags');
       return;
     }
-    
-    const startTime = performance.now();
-    console.log('🏷️ [KANBAN] Iniciando carregamento de tags...');
     
     try {
       if (initialLoadComplete) {
@@ -1147,9 +1208,6 @@ const Kanban = () => {
       const ticketsData = await fetchTicketsAndReturn();
       
       // Processar os dados e criar as colunas
-      const processStartTime = performance.now();
-      console.log('🔄 [KANBAN] Processando dados das colunas...');
-      
       // Funções auxiliares inline
       const formatPhoneNumberInline = (phoneNumber) => {
         if (!phoneNumber) return '';
@@ -1182,9 +1240,7 @@ const Kanban = () => {
       const lanes = [];
       
       // Tickets sem tags (Em aberto) - usando dados frescos
-      console.log('🐛 [DEBUG] Total tickets disponíveis:', ticketsData.length, ticketsData);
       const filteredTickets = ticketsData.filter(ticket => ticket.tags.length === 0);
-      console.log('🐛 [DEBUG] Tickets sem tags:', filteredTickets.length, filteredTickets);
       
       const emptyLane = {
         id: "lane0",
@@ -1238,10 +1294,6 @@ const Kanban = () => {
         lanes.push(lane);
       });
       
-      const processEndTime = performance.now();
-      const processTime = (processEndTime - processStartTime).toFixed(2);
-      console.log(`✅ [KANBAN] Dados processados em ${processTime}ms - ${lanes.length} colunas, ${lanes.reduce((acc, lane) => acc + lane.cards.length, 0)} cards`);
-      
       const processedData = { lanes };
       
       // As colunas serão processadas inicialmente sem ordem específica
@@ -1288,14 +1340,9 @@ const Kanban = () => {
       }
       
     } catch (error) {
-      const endTime = performance.now();
-      const loadTime = (endTime - startTime).toFixed(2);
-      console.error(`❌ [KANBAN] Erro ao buscar tags após ${loadTime}ms:`, error);
+      console.error("Erro ao buscar tags:", error);
       toast.error("Erro ao carregar dados do Kanban");
     } finally {
-      const endTime = performance.now();
-      const loadTime = (endTime - startTime).toFixed(2);
-      console.log(`✅ [KANBAN] Tags processadas em ${loadTime}ms - Total: ${columns.length} colunas`);
       
       if (initialLoadComplete) {
         // Pequeno delay para mostrar que algo aconteceu
@@ -1486,7 +1533,7 @@ const Kanban = () => {
       
       // Envia para o servidor
       await api.post(`/messages/${selectedTicket.id}`, messageData);
-      toast.success("Mensagem enviada com sucesso!");
+      // Toast removido - sem necessidade de notificação no Kanban
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
       toast.error("Erro ao enviar mensagem");
@@ -1844,13 +1891,11 @@ const Kanban = () => {
       
       // Só atualiza se realmente houve mudança
       if (lastFilterState === currentFilterState) {
-        console.log('🔄 [KANBAN] Filtros não mudaram, pulando atualização');
         return;
       }
       
       const timeoutId = setTimeout(() => {
         setLastFilterState(currentFilterState);
-        console.log('🔄 [KANBAN] Filtros mudaram, atualizando...');
         fetchTags();
       }, 500); // Reduzido de 800ms para 500ms
       
@@ -1873,7 +1918,6 @@ const Kanban = () => {
   // Effect para carregar tags após inicialização completa (EVITA DUPLICAÇÃO)
   useEffect(() => {
     if (initialLoadComplete && funnels.length > 0 && columns.length === 0) {
-      console.log('🚀 [KANBAN] Carregamento inicial de tags...');
       fetchTags();
     }
   }, [initialLoadComplete, funnels.length]);
@@ -1939,6 +1983,53 @@ const Kanban = () => {
       socket.off(`company-${user.companyId}-appMessage`, handleNewMessage);
     };
   }, [selectedTicket, socket, user.companyId]);
+
+  // WebSocket para atualizar mensagens não lidas em tempo real no Kanban
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    const handleTicketUpdate = (data) => {
+      if (data.action === "update" && data.ticket) {
+        // Atualizar contadores de mensagens não lidas nos cards
+        setColumns(prevColumns => 
+          prevColumns.map(column => ({
+            ...column,
+            cards: column.cards.map(card => 
+              card.ticketId === `#${data.ticket.id}` 
+                ? { ...card, unread: data.ticket.unreadMessages || 0 }
+                : card
+            )
+          }))
+        );
+      }
+    };
+
+    const handleNewMessage = (data) => {
+      if (data.action === "create" && data.ticket && !data.fromMe) {
+        // Incrementar contador de mensagens não lidas
+        setColumns(prevColumns => 
+          prevColumns.map(column => ({
+            ...column,
+            cards: column.cards.map(card => 
+              card.ticketId === `#${data.ticket.id}` 
+                ? { ...card, unread: (card.unread || 0) + 1 }
+                : card
+            )
+          }))
+        );
+      }
+    };
+
+    // Registrar listeners
+    socket.on(`company-${user.companyId}-ticket`, handleTicketUpdate);
+    socket.on(`company-${user.companyId}-appMessage`, handleNewMessage);
+
+    // Cleanup
+    return () => {
+      socket.off(`company-${user.companyId}-ticket`, handleTicketUpdate);
+      socket.off(`company-${user.companyId}-appMessage`, handleNewMessage);
+    };
+  }, [socket, user, setColumns]);
 
   // Cleanup quando componente é desmontado
   useEffect(() => {
