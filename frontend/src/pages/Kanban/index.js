@@ -907,17 +907,10 @@ const Kanban = () => {
     if (!user?.id) return;
     
     try {
-      console.log('Salvando preferências:', {
-        kanbanCollapsedColumns: Array.from(collapsedColumns),
-        kanbanColumnOrder: columnOrder
-      });
-      
       await api.put(`/users/${user.id}/kanban-filters`, {
         kanbanCollapsedColumns: Array.from(collapsedColumns),
         kanbanColumnOrder: columnOrder
       });
-      
-      console.log('Preferências salvas com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar preferências de colunas:', error);
     }
@@ -933,13 +926,9 @@ const Kanban = () => {
         kanbanColumnOrder: columnOrder
       };
       
-      console.log('💾 Salvando preferências com estado:', data);
-      
       await api.put(`/users/${user.id}/kanban-filters`, data);
-      
-      console.log('✅ Preferências salvas com sucesso!');
     } catch (error) {
-      console.error('❌ Erro ao salvar preferências de colunas:', error);
+      console.error('Erro ao salvar preferências de colunas:', error);
     }
   };
 
@@ -1033,11 +1022,8 @@ const Kanban = () => {
 
   // Função para buscar tags do Kanban
   const fetchTags = async () => {
-    console.log('🔄 fetchTags CHAMADO!', { initialLoadComplete, selectedFunnel, hasColumns: columns.length, isDragging });
-    
     // BLOQUEAR durante drag para evitar sobrescrever ordem
     if (isDragging) {
-      console.log('🚫 fetchTags BLOQUEADO - Drag em andamento');
       return;
     }
     
@@ -1066,18 +1052,9 @@ const Kanban = () => {
       
       // Carregar preferências do usuário após definir as colunas
       if (user && newColumns.length > 0) {
-        console.log('🔄 Carregando preferências após definir colunas...');
-        console.log('🔍 Estado atual columnOrder:', columnOrder);
-        console.log('👤 Dados do usuário:', {
-          hasCollapsed: user.hasOwnProperty('kanbanCollapsedColumns'),
-          collapsedValue: user.kanbanCollapsedColumns,
-          hasOrder: user.hasOwnProperty('kanbanColumnOrder'),
-          orderValue: user.kanbanColumnOrder
-        });
         
         // Carregar colunas colapsadas
         if (user.hasOwnProperty('kanbanCollapsedColumns') && user.kanbanCollapsedColumns) {
-          console.log('📂 Carregando colunas colapsadas do banco:', user.kanbanCollapsedColumns);
           setCollapsedColumns(new Set(user.kanbanCollapsedColumns));
         }
         
@@ -1085,17 +1062,12 @@ const Kanban = () => {
         let finalOrder = null;
         
         if (columnOrder.length > 0) {
-          console.log('🔄 Usando ordem atual (já definida):', columnOrder);
           finalOrder = columnOrder;
         } else if (user.hasOwnProperty('kanbanColumnOrder') && user.kanbanColumnOrder?.length > 0) {
-          console.log('📂 Carregando ordem das colunas do banco:', user.kanbanColumnOrder);
           finalOrder = user.kanbanColumnOrder;
         }
         
         if (finalOrder) {
-          // DEBUG: Ver os dados ANTES da ordenação
-          console.log('🔍 ANTES da ordenação - newColumns:', newColumns.map(col => ({ id: col.id, title: col.title })));
-          
           // Aplicar ordem das colunas
           const reorderedColumns = [...newColumns].sort((a, b) => {
             const indexA = finalOrder.indexOf(a.id);
@@ -1107,14 +1079,11 @@ const Kanban = () => {
             return indexA - indexB;
           });
           
-          console.log('🔍 DEPOIS da ordenação - reorderedColumns:', reorderedColumns.map(col => ({ id: col.id, title: col.title })));
-          console.log('🔄 Aplicando ordem:', reorderedColumns.map(col => col.title));
           setColumns(reorderedColumns);
           setColumnOrder(finalOrder);
         } else {
           // Inicializar ordem se não existir
           const currentOrder = newColumns.map(col => col.id);
-          console.log('🆕 Inicializando nova ordem:', currentOrder);
           setColumnOrder(currentOrder);
         }
       }
@@ -1619,22 +1588,15 @@ const Kanban = () => {
 
   // Função para alternar colapso das colunas
   const toggleColumnCollapse = (columnId) => {
-    console.log('🔄 Toggle coluna:', columnId);
-    
     setCollapsedColumns(prev => {
       const newSet = new Set(prev);
       if (newSet.has(columnId)) {
-        console.log('🔓 Expandindo coluna:', columnId);
         newSet.delete(columnId);
       } else {
-        console.log('🔒 Colapsando coluna:', columnId);
         newSet.add(columnId);
       }
       
-      console.log('📋 Colunas colapsadas:', Array.from(newSet));
-      
       // Salvar preferências imediatamente
-      console.log('💾 Salvando preferências de colapso...');
       saveColumnPreferencesWithState(newSet);
       
       return newSet;
@@ -1860,7 +1822,6 @@ const Kanban = () => {
     setActiveId(active.id);
     setDraggedItem(active);
     setIsDragging(true);
-    console.log('🎯 DRAG INICIADO - Bloqueando fetchTags');
   };
 
   const handleDragEnd = (event) => {
@@ -1925,19 +1886,13 @@ const Kanban = () => {
       }
     } else if (activeType === 'column') {
       // Mover colunas
-      console.log('🔄 Movendo coluna:', { activeId: active.id, overId: over.id });
-      
       const activeColumnIndex = columns.findIndex(col => col.id === active.id);
       const overColumnIndex = columns.findIndex(col => col.id === over.id);
-      
-      console.log('📍 Índices:', { activeColumnIndex, overColumnIndex });
       
       if (activeColumnIndex !== -1 && overColumnIndex !== -1 && activeColumnIndex !== overColumnIndex) {
         const newColumns = [...columns];
         const [movedColumn] = newColumns.splice(activeColumnIndex, 1);
         newColumns.splice(overColumnIndex, 0, movedColumn);
-        
-        console.log('✅ Nova ordem:', newColumns.map(col => col.title));
         
         setColumns(newColumns);
         
@@ -1946,20 +1901,14 @@ const Kanban = () => {
         setColumnOrder(newOrder);
         
         // Salvar no banco com a NOVA ORDEM (não o estado antigo)
-        console.log('💾 Salvando ordem das colunas com NOVA ORDEM:', newOrder);
-        
         const saveData = {
           kanbanCollapsedColumns: Array.from(collapsedColumns),
           kanbanColumnOrder: newOrder  // ← USAR A NOVA ORDEM, NÃO O ESTADO
         };
         
-        api.put(`/users/${user.id}/kanban-filters`, saveData).then(() => {
-          console.log('✅ Ordem salva com sucesso - Drag finalizado');
-        }).catch(error => {
-          console.error('❌ Erro ao salvar ordem:', error);
+        api.put(`/users/${user.id}/kanban-filters`, saveData).catch(error => {
+          console.error('Erro ao salvar ordem:', error);
         });
-      } else {
-        console.log('❌ Não foi possível mover - índices inválidos ou iguais');
       }
     }
 
@@ -1969,7 +1918,6 @@ const Kanban = () => {
     // Liberar drag após um delay para evitar fetchTags imediato
     setTimeout(() => {
       setIsDragging(false);
-      console.log('✅ DRAG FINALIZADO - Liberando fetchTags');
     }, 500);
   };
 

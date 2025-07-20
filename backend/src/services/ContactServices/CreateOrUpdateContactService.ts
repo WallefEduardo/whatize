@@ -103,6 +103,50 @@ const ensureImageDirectory = (companyId: number): string => {
 };
 
 /**
+ * Tenta download direto com fetch nativo do Node.js para URLs específicas do WhatsApp
+ */
+const downloadWithFetch = async (url: string): Promise<Buffer> => {
+  const https = require('https');
+  const http = require('http');
+  
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const protocol = urlObj.protocol === 'https:' ? https : http;
+    
+    const options = {
+      hostname: urlObj.hostname,
+      port: urlObj.port,
+      path: urlObj.pathname + urlObj.search,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'image/*',
+        'Connection': 'keep-alive'
+      },
+      timeout: 30000
+    };
+
+    const req = protocol.request(options, (res) => {
+      if (res.statusCode !== 200) {
+        reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
+        return;
+      }
+
+      const chunks: Buffer[] = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Request timeout'));
+    });
+    req.end();
+  });
+};
+
+/**
  * Baixa a imagem de perfil do contato
  * Retorna o nome do arquivo salvo ou null em caso de erro
  */
@@ -126,20 +170,41 @@ const downloadProfileImage = async ({
   // Implementar retry com backoff
   for (let attempt = 1; attempt <= IMAGE_CONFIG.RETRY.MAX_ATTEMPTS; attempt++) {
     try {
-      const response = await axios.get(profilePicUrl, {
-        responseType: 'arraybuffer',
-        timeout: IMAGE_CONFIG.DOWNLOAD_TIMEOUT,
-        validateStatus: (status) => status < 400,
-        headers: {
-          'User-Agent': IMAGE_CONFIG.USER_AGENT
-        },
-        maxContentLength: IMAGE_CONFIG.MAX_FILE_SIZE
-      });
+      let responseData: Buffer;
+      
+      try {
+        // Primeiro tenta com axios
+        const response = await axios.get(profilePicUrl, {
+          responseType: 'arraybuffer',
+          timeout: IMAGE_CONFIG.DOWNLOAD_TIMEOUT,
+          validateStatus: (status) => status < 400,
+          headers: {
+            'User-Agent': IMAGE_CONFIG.USER_AGENT,
+            'Accept': 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+            'Cache-Control': 'no-cache',
+            'Referer': 'https://web.whatsapp.com/',
+            'Sec-Fetch-Dest': 'image',
+            'Sec-Fetch-Mode': 'no-cors',
+            'Sec-Fetch-Site': 'cross-site'
+          },
+          maxContentLength: IMAGE_CONFIG.MAX_FILE_SIZE,
+          maxRedirects: 5,
+          httpAgent: false,
+          httpsAgent: false
+        });
+        
+        responseData = Buffer.from(response.data);
+        
+      } catch (axiosError) {
+        // Se axios falhar, tenta com fetch nativo
+        responseData = await downloadWithFetch(profilePicUrl);
+      }
 
       const filename = generateImageFilename();
       const filePath = join(folder, filename);
       
-      fs.writeFileSync(filePath, response.data);
+      fs.writeFileSync(filePath, responseData);
       
       // Log de sucesso apenas no arquivo
       imageDownloadLogger.logSuccess({
@@ -148,7 +213,7 @@ const downloadProfileImage = async ({
         companyId,
         filename,
         attempt,
-        fileSize: response.data.length
+        fileSize: responseData.length
       });
       
       return filename;
@@ -182,23 +247,11 @@ const downloadProfileImage = async ({
       });
 
       if (isLastAttempt) {
-        console.error(`❌ Falha final ao baixar imagem (${attempt}/${IMAGE_CONFIG.RETRY.MAX_ATTEMPTS}):`, errorDetails);
-        
-        // Alertas específicos para diferentes tipos de erro
-        if (error.response?.status === 502) {
-          console.warn(`🚨 Erro 502 (Bad Gateway) - Possível problema de infraestrutura no servidor de imagens`);
-        } else if (error.response?.status === 403) {
-          console.warn(`🚨 Erro 403 (Forbidden) - Acesso negado à imagem`);
-        } else if (error.response?.status === 404) {
-          console.warn(`🚨 Erro 404 (Not Found) - Imagem não encontrada`);
-        } else if (error.code === 'ECONNABORTED') {
-          console.warn(`🚨 Timeout - Servidor demorou mais de ${IMAGE_CONFIG.DOWNLOAD_TIMEOUT}ms para responder`);
-        }
-        
         return null;
       } else {
-        // Retry silencioso - log apenas no arquivo
-        await new Promise(resolve => setTimeout(resolve, IMAGE_CONFIG.RETRY.DELAY_MS * attempt));
+        // Retry com delay progressivo
+        const delay = IMAGE_CONFIG.RETRY.DELAY_MS * attempt;
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }
@@ -279,11 +332,16 @@ const CreateOrUpdateContactService = async ({
       if (!fs.existsSync(fileName) || contact.profilePicUrl === "") {
         if (wbot && ['whatsapp'].includes(channel)) {
           try {
-    
-            profilePicUrl = await wbot.profilePictureUrl(remoteJid, "image");
+            // Se já temos uma URL válida do WhatsApp, não sobrescrever
+            if (!profilePicUrl || profilePicUrl.includes('nopicture.png')) {
+              profilePicUrl = await wbot.profilePictureUrl(remoteJid, "image");
+            }
           } catch (e) {
             Sentry.captureException(e);
-            profilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+            // Só define placeholder se não tínhamos uma URL válida antes
+            if (!profilePicUrl || profilePicUrl.includes('nopicture.png')) {
+              profilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+            }
           }
           contact.profilePicUrl = profilePicUrl;
           updateImage = true;
@@ -307,10 +365,16 @@ const CreateOrUpdateContactService = async ({
       }
 
       try {
-        profilePicUrl = await wbot.profilePictureUrl(remoteJid, "image");
+        // Se já temos uma URL válida do WhatsApp, não sobrescrever
+        if (!profilePicUrl || profilePicUrl.includes('nopicture.png')) {
+          profilePicUrl = await wbot.profilePictureUrl(remoteJid, "image");
+        }
       } catch (e) {
         Sentry.captureException(e);
-        profilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+        // Só define placeholder se não tínhamos uma URL válida antes
+        if (!profilePicUrl || profilePicUrl.includes('nopicture.png')) {
+          profilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+        }
       }
 
       contact = await Contact.create({
@@ -345,22 +409,25 @@ const CreateOrUpdateContactService = async ({
 
 
     if (updateImage) {
-      let filename = await downloadProfileImage({
-        profilePicUrl,
-        companyId,
-        contact
-      });
-
-      // Só atualizar se conseguiu baixar a imagem
-      if (filename) {
-        await contact.update({
-          urlPicture: filename,
-          pictureUpdated: true
+      // Só tentar download se for uma URL válida do WhatsApp
+      if (profilePicUrl && 
+          !profilePicUrl.includes('nopicture.png') &&
+          (profilePicUrl.includes('whatsapp.net') || profilePicUrl.includes('pps.whatsapp.net'))) {
+        
+        let filename = await downloadProfileImage({
+          profilePicUrl,
+          companyId,
+          contact
         });
-        await contact.reload();
-      } else {
-        // Se falhou ao baixar, manter o estado atual mas marcar como tentado
-        console.warn(`⚠️ Falha ao baixar imagem para contato ${contact.id}`);
+
+        // Só atualizar se conseguiu baixar a imagem
+        if (filename) {
+          await contact.update({
+            urlPicture: filename,
+            pictureUpdated: true
+          });
+          await contact.reload();
+        }
       }
     } else {
       if (['facebook', 'instagram'].includes(channel)) {

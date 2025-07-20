@@ -23,17 +23,20 @@ import BlockUnblockContactService from "../services/ContactServices/BlockUnblock
 import { ImportContactsService } from "../services/ContactServices/ImportContactsService";
 import NumberSimpleListService from "../services/ContactServices/NumberSimpleListService";
 import CreateOrUpdateContactServiceForImport from "../services/ContactServices/CreateOrUpdateContactServiceForImport";
+import CreateOrUpdateContactService from "../services/ContactServices/CreateOrUpdateContactService";
+import Contact from "../models/Contact";
+import GetDefaultWhatsApp from "../helpers/GetDefaultWhatsApp";
+import { getWbot } from "../libs/wbot";
 import UpdateContactWalletsService from "../services/ContactServices/UpdateContactWalletsService";
 
 import FindContactTags from "../services/ContactServices/FindContactTags";
 import { log } from "console";
 import ToggleDisableBotContactService from "../services/ContactServices/ToggleDisableBotContactService";
-import GetDefaultWhatsApp from "../helpers/GetDefaultWhatsApp";
-import Contact from "../models/Contact";
 import Tag from "../models/Tag";
 import ContactTag from "../models/ContactTag";
 import logger from "../utils/logger";
 import Ticket from "../models/Ticket";
+import { Op } from "sequelize";
 
 type IndexQuery = {
   searchParam: string;
@@ -437,11 +440,24 @@ export const getContactProfileURL = async (req: Request, res: Response) => {
   const { number } = req.params
   const { companyId } = req.user;
 
-  if (number) {
+  try {
+    if (!number) {
+      return res.status(400).json({ error: "Número não fornecido" });
+    }
+
+    // Validar se o número tem formato válido (mínimo 10 dígitos, máximo 15)
+    const cleanNumber = number.replace(/\D/g, "");
+    if (cleanNumber.length < 10 || cleanNumber.length > 15) {
+      return res.status(400).json({ error: "Número com formato inválido" });
+    }
+
+    // Validar número específico problemático
+    if (number === "253725780217903") {
+      return res.status(400).json({ error: "Número inválido ou corrompido" });
+    }
+
     const validNumber = await CheckContactNumber(number, companyId);
-
     const profilePicUrl = await GetProfilePicUrl(validNumber, companyId);
-
     const contact = await NumberSimpleListService({ number: validNumber, companyId: companyId })
 
     let obj: any;
@@ -457,6 +473,63 @@ export const getContactProfileURL = async (req: Request, res: Response) => {
       }
     }
     return res.status(200).json(obj);
+  } catch (error) {
+    console.error('Erro ao buscar perfil do contato:', error);
+    return res.status(400).json({ error: "Erro ao validar número do contato" });
+  }
+};
+
+export const diagnoseContactImage = async (req: Request, res: Response) => {
+  const { contactId } = req.params;
+  const { companyId } = req.user;
+
+  try {
+    const contact = await Contact.findOne({
+      where: { id: contactId, companyId }
+    });
+
+    if (!contact) {
+      return res.status(404).json({ error: "Contato não encontrado" });
+    }
+
+    const diagnosis = {
+      contactId: contact.id,
+      name: contact.name,
+      number: contact.number,
+      remoteJid: contact.remoteJid,
+      profilePicUrl: contact.profilePicUrl,
+      urlPicture: contact.urlPicture,
+      pictureUpdated: contact.pictureUpdated,
+      isGroup: contact.isGroup,
+      hasProfilePicUrl: !!contact.profilePicUrl && contact.profilePicUrl !== `${process.env.FRONTEND_URL}/nopicture.png`,
+      hasLocalImage: !!contact.urlPicture && contact.urlPicture !== "",
+      issues: []
+    };
+
+    // Verificar problemas comuns
+    if (!contact.remoteJid) {
+      diagnosis.issues.push("RemoteJid não definido");
+    }
+
+    if (contact.number === "253725780217903") {
+      diagnosis.issues.push("Número corrompido conhecido");
+    }
+
+    if (contact.number.length > 15 || contact.number.length < 10) {
+      diagnosis.issues.push(`Número com tamanho inválido: ${contact.number.length} dígitos`);
+    }
+
+    if (!contact.profilePicUrl) {
+      diagnosis.issues.push("ProfilePicUrl vazio");
+    }
+
+    return res.status(200).json(diagnosis);
+
+  } catch (error) {
+    console.error('Erro ao diagnosticar imagem do contato:', error);
+    return res.status(500).json({ 
+      error: "Erro ao diagnosticar contato" 
+    });
   }
 };
 
@@ -572,4 +645,155 @@ export const CheckContactQueueService = async (req: Request, res: Response): Pro
   }
 
   return res.json("available");
+};
+
+export const refreshContactImage = async (req: Request, res: Response) => {
+  const { contactId } = req.params;
+  const { companyId } = req.user;
+
+  try {
+    // Buscar o contato
+    const contact = await Contact.findOne({
+      where: { id: contactId, companyId }
+    });
+
+    if (!contact) {
+      return res.status(404).json({ error: "Contato não encontrado" });
+    }
+
+    // Tentar obter nova imagem via WhatsApp seguindo documentação Baileys
+    let newProfilePicUrl = "";
+    let hasRealImage = false;
+    
+    try {
+      const defaultWhatsapp = await GetDefaultWhatsApp(companyId);
+      const wbot = getWbot(defaultWhatsapp.id);
+      
+      // Determinar JID correto baseado no contact
+      let targetJid = contact.remoteJid;
+      if (!targetJid) {
+        targetJid = contact.isGroup ? `${contact.number}@g.us` : `${contact.number}@s.whatsapp.net`;
+      }
+      
+      // Primeiro verificar se o contato existe no WhatsApp
+      if (!contact.isGroup) {
+        const [result] = await wbot.onWhatsApp(targetJid);
+        if (!result?.exists) {
+          return res.status(400).json({ 
+            error: "Contato não existe no WhatsApp",
+            success: false 
+          });
+        }
+        targetJid = result.jid; // Usar JID canônico
+      }
+      
+      // Tentar obter imagem em alta resolução primeiro, depois baixa
+      try {
+        newProfilePicUrl = await wbot.profilePictureUrl(targetJid, "image");
+        hasRealImage = true;
+      } catch (hdError) {
+        try {
+          newProfilePicUrl = await wbot.profilePictureUrl(targetJid);
+          hasRealImage = true;
+        } catch (lowError) {
+          newProfilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+          hasRealImage = false;
+        }
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro geral ao obter imagem de perfil:', error);
+      newProfilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+      hasRealImage = false;
+    }
+
+    // Se não há imagem real disponível, retornar informação
+    if (!hasRealImage) {
+      return res.status(200).json({ 
+        success: false, 
+        message: "Nenhuma imagem de perfil disponível para este contato",
+        hasImage: false,
+        profilePicUrl: newProfilePicUrl
+      });
+    }
+
+    // Atualizar o contato diretamente no banco e forçar download
+    await contact.update({
+      profilePicUrl: newProfilePicUrl,
+      pictureUpdated: false // Força re-download
+    });
+
+    // Obter wbot para passar para o serviço
+    const defaultWhatsapp = await GetDefaultWhatsApp(companyId);
+    const wbot = getWbot(defaultWhatsapp.id);
+
+    // Usar CreateOrUpdateContactService para download da imagem
+    const updatedContact = await CreateOrUpdateContactService({
+      name: contact.name,
+      number: contact.number,
+      email: contact.email || "",
+      profilePicUrl: newProfilePicUrl,
+      isGroup: contact.isGroup,
+      companyId: contact.companyId,
+      remoteJid: contact.remoteJid,
+      whatsappId: contact.whatsappId,
+      wbot: wbot, // Passa o objeto wbot correto
+      channel: contact.channel || 'whatsapp'
+    });
+
+    return res.status(200).json({ 
+      success: true, 
+      message: "Imagem atualizada com sucesso",
+      hasImage: true,
+      contact: updatedContact 
+    });
+
+  } catch (error) {
+    console.error('Erro ao atualizar imagem do contato:', error);
+    return res.status(500).json({ 
+      error: "Erro interno do servidor ao atualizar imagem" 
+    });
+  }
+};
+
+export const investigateCorruptedNumbers = async (req: Request, res: Response) => {
+  const { companyId } = req.user;
+
+  try {
+    // Buscar contatos suspeitos
+    const suspiciousContacts = await Contact.findAll({
+      where: {
+        companyId,
+        [Op.or]: [
+          // Números muito longos
+          { number: { [Op.like]: '%253725780217903%' } },
+          // Números que não seguem padrão brasileiro ou internacional comum
+          { number: { [Op.not]: { [Op.regexp]: '^(55)?[1-9][0-9]{8,10}$' } } },
+        ]
+      },
+      limit: 50
+    });
+
+    const results = suspiciousContacts.map(contact => ({
+      id: contact.id,
+      name: contact.name,
+      number: contact.number,
+      remoteJid: contact.remoteJid,
+      profilePicUrl: contact.profilePicUrl,
+      urlPicture: contact.urlPicture,
+      createdAt: contact.createdAt
+    }));
+
+    return res.status(200).json({
+      found: results.length,
+      contacts: results,
+      message: `Encontrados ${results.length} contatos suspeitos`
+    });
+
+  } catch (error) {
+    console.error('Erro ao investigar números corrompidos:', error);
+    return res.status(500).json({ 
+      error: "Erro ao investigar números corrompidos" 
+    });
+  }
 };

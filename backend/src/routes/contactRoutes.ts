@@ -22,6 +22,9 @@ contactRoutes.post("/contacts/bulk-delete", isAuth, ContactController.bulkDelete
 contactRoutes.put("/contacts/toggleAcceptAudio/:contactId", isAuth, ContactController.toggleAcceptAudio);
 contactRoutes.get("/contacts", isAuth, ContactController.getContactVcard);
 contactRoutes.get("/contacts/profile/:number", isAuth, ContactController.getContactProfileURL);
+contactRoutes.put("/contacts/:contactId/refresh-image", isAuth, ContactController.refreshContactImage);
+contactRoutes.get("/contacts/investigate/corrupted", isAuth, ContactController.investigateCorruptedNumbers);
+contactRoutes.get("/contacts/:contactId/diagnose-image", isAuth, ContactController.diagnoseContactImage);
 
 contactRoutes.put("/contacts/block/:contactId", isAuth, ContactController.blockUnblock);
 contactRoutes.post("/contacts/upload", isAuth, upload.array("file"), ContactController.upload);

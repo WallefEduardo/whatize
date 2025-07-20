@@ -3,16 +3,16 @@
  */
 export const IMAGE_CONFIG = {
   // Timeout para download de imagens (em ms)
-  DOWNLOAD_TIMEOUT: 10000,
+  DOWNLOAD_TIMEOUT: 30000, // Aumentado para 30s
   
-  // Tamanho máximo do arquivo (em bytes) - 5MB
-  MAX_FILE_SIZE: 5 * 1024 * 1024,
+  // Tamanho máximo do arquivo (em bytes) - 10MB
+  MAX_FILE_SIZE: 10 * 1024 * 1024,
   
   // Extensões permitidas
   ALLOWED_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
   
-  // User Agent para requisições
-  USER_AGENT: 'WhatsApp-Business/2.0',
+  // User Agent para requisições (mais compatível)
+  USER_AGENT: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
   
   // URLs que devem ser ignoradas (não baixadas)
   PLACEHOLDER_PATTERNS: [

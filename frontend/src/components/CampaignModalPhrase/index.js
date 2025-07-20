@@ -197,21 +197,35 @@ const CampaignModalPhrase = ({ open, onClose, FlowCampaignId, onSave }) => {
 
   const detailsPhrase = async flows => {
     setLoading(true);
-    await api.get(`/flowcampaign/${FlowCampaignId}`).then(res => {
+    try {
+      const res = await api.get(`/flowcampaign/${FlowCampaignId}`);
       console.log("dete", res.data);
+      
+      // Carregar dados básicos
       setDataItem({
         name: res.data.details.name,
         phrase: res.data.details.phrase
       });
-      setActive(res.data.details.status)
+      setActive(res.data.details.status);
+      
+      // Carregar fluxo selecionado
       const nameFlow = flows.filter(
         itemFlows => itemFlows.id === res.data.details.flowId
       );
       if (nameFlow.length > 0) {
         setFlowSelected(nameFlow[0].name);
       }
+      
+      // Carregar conexão selecionada (CORREÇÃO DO BUG)
+      if (res.data.details.whatsappId) {
+        setSelectedWhatsapp(res.data.details.whatsappId);
+      }
+      
       setLoading(false);
-    });
+    } catch (error) {
+      console.error('Erro ao carregar detalhes da campanha:', error);
+      setLoading(false);
+    }
   };
 
   const handleClose = () => {
