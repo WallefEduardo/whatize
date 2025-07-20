@@ -210,9 +210,9 @@ const KanbanCard = ({ card, onSendMessage }) => {
             const optimizedTags = organizeTagsOptimized(card.tags);
             
                          return optimizedTags.map((tag, index) => {
-               // Determina se a tag é muito longa (mais que 25 caracteres)
-               const isVeryLong = tag.name.length > 25;
-               const truncatedName = isVeryLong ? `${tag.name.substring(0, 22)}...` : tag.name;
+               // Determina se a tag é muito longa (mais que 30 caracteres - mais permissivo)
+               const isVeryLong = tag.name.length > 30;
+               const truncatedName = isVeryLong ? `${tag.name.substring(0, 27)}...` : tag.name;
                
                const chipElement = (
                  <Chip
@@ -228,7 +228,7 @@ const KanbanCard = ({ card, onSendMessage }) => {
                      flexShrink: 0,
                      flexGrow: 0,
                      minWidth: 'auto',
-                     maxWidth: isVeryLong ? '160px' : 'fit-content',
+                     maxWidth: isVeryLong ? '250px' : '100%',
                      // Ajuste de padding baseado no tamanho
                      paddingLeft: tag.name.length <= 6 ? '6px' : '8px',
                      paddingRight: tag.name.length <= 6 ? '6px' : '8px',
@@ -691,8 +691,8 @@ const useStyles = makeStyles(theme => ({
       '& > *': {
         flexGrow: 0,
         flexShrink: 0,
-        // Só aplica maxWidth se a tag for muito longa (mais de 30 chars)
-        maxWidth: 'none',
+        // Garante espaço suficiente para tags normais
+        maxWidth: 'calc(100% - 10px)',
       },
       // Tags muito longas podem truncar apenas se passarem de 90% da largura
       '& .MuiChip-root': {
@@ -1427,15 +1427,37 @@ const Kanban = () => {
     history.push("/tagsKanban");
   };
 
+  // Função para atualizar contador de mensagens não lidas em tempo real
+  const updateCardUnreadCount = useCallback((ticketId, newCount) => {
+    setColumns(prevColumns => 
+      prevColumns.map(column => ({
+        ...column,
+        cards: column.cards.map(card => 
+          parseInt(card.id) === ticketId 
+            ? { ...card, unread: newCount }
+            : card
+        )
+      }))
+    );
+  }, []);
+
   // Handler para abrir modal de mensagem
   const handleOpenMessageModal = async (ticket) => {
     setSelectedTicket(ticket);
     setMessageModalOpen(true);
     await fetchMessages(ticket.id);
+    
+    // Zerar badge de mensagens não lidas em tempo real
+    updateCardUnreadCount(ticket.id, 0);
   };
 
   // Handler para fechar modal de mensagem
   const handleCloseMessageModal = () => {
+    // Zerar badge quando fechar modal (usuário viu as mensagens)
+    if (selectedTicket) {
+      updateCardUnreadCount(selectedTicket.id, 0);
+    }
+    
     setMessageModalOpen(false);
     setSelectedTicket(null);
     setMessageText("");

@@ -3058,13 +3058,9 @@ const handleMessage = async (
       order: [["id", "DESC"]]
     });
 
-    // 🐛 DEBUG: Log antes de buscar/criar ticket
-    logger.info(`🎫 [DEBUG] About to find/create ticket for contact ${contact.id}, company ${companyId}, whatsapp ${whatsapp.id}`);
-    
     const mutex = new Mutex();
     // Inclui a busca de ticket aqui, se realmente não achar um ticket, então vai para o findorcreate
     const ticket = await mutex.runExclusive(async () => {
-      logger.info(`🔒 [DEBUG] Mutex acquired for contact ${contact.id}`);
       const result = await FindOrCreateTicketService(
         contact,
         whatsapp,

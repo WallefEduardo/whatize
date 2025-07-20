@@ -106,9 +106,8 @@ const FindOrCreateTicketService = async (
           
 
         } catch (searchError) {
-          logger.error(`❌ [DEBUG] Error searching for ticket: ${searchError.message}`);
+          logger.error(`❌ Error searching for ticket: ${searchError.message}`);
           // Se a busca com include falhar, tenta busca simples
-          logger.info(`🔍 [DEBUG] Trying simple ticket search without include...`);
           
           ticket = await Ticket.findOne({
             where: {
@@ -123,8 +122,6 @@ const FindOrCreateTicketService = async (
             transaction,
             lock: true
           });
-          
-          logger.info(`🔍 [DEBUG] Simple search result: ${ticket ? `found ticket ${ticket.id}` : 'no ticket found'}`);
         }
 
         // Se encontrou ticket existente, atualiza e retorna
