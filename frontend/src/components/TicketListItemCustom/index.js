@@ -27,13 +27,73 @@ import TransferTicketModalCustom from "../TransferTicketModalCustom";
 import ShowTicketOpen from "../ShowTicketOpenModal";
 import { isNil } from "lodash";
 import { toast } from "react-toastify";
-import { Done, HighlightOff, Replay, SwapHoriz } from "@material-ui/icons";
+import { Done, HighlightOff, Replay, SwapHoriz, AccountCircle, Business, Wifi, Person, ListAlt, WhatsApp, Facebook, Instagram, Dashboard, ViewColumn, Block } from "@material-ui/icons";
 import useCompanySettings from "../../hooks/useSettings/companySettings";
 import { Avatar, Badge, ListItemAvatar, ListItem, ListItemSecondaryAction, ListItemText, Typography } from "@material-ui/core";
 
 const useStyles = makeStyles((theme) => ({
     ticket: {
-        position: "relative"
+        position: "relative",
+        marginBottom: "5px", // Espaçamento entre cards
+        transition: "all 0.3s ease", // Transição suave para hover
+        cursor: "pointer",
+        "&:hover": {
+            transform: "scale(1.02)", // Zoom suave no hover
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)", // Sombra no hover
+            backgroundColor: "rgba(0, 0, 0, 0.04)", // Background sutil no hover
+        },
+        "&::before": {
+            content: '""',
+            position: "absolute",
+            left: "0px", // Mais à esquerda
+            top: 0, // Altura total do card
+            bottom: 0, // Altura total do card
+            width: "7px", // Mais grossa
+            backgroundColor: "transparent", // Invisível por padrão
+            zIndex: 1,
+            borderRadius: "0px 0px 0px 0px", // Arredondamento nas bordas direitas
+            transition: "background-color 0.3s ease", // Transição suave
+        },
+        "&::after": {
+            content: '""',
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: "1px",
+            backgroundColor: "rgba(0, 0, 0, 0.08)", // Preto transparente bem fraquinho
+            zIndex: 1
+        },
+        "&.Mui-selected": {
+            backgroundColor: "rgba(0, 0, 0, 0.08)", // Preto transparente como era antes
+            "&::before": {
+                backgroundColor: "rgba(32, 36, 38, 0.17)", // Linha visível quando selecionado
+            },
+            "&:hover": {
+                backgroundColor: "rgba(0, 0, 0, 0.12)", // Mais escuro no hover
+                transform: "scale(1.02)", // Zoom também no selecionado
+            }
+        },
+        // Responsividade para mobile
+        [theme.breakpoints.down('sm')]: {
+            marginBottom: "6px", // Menor espaçamento no mobile
+            "&:hover": {
+                transform: "scale(1.01)", // Zoom menor no mobile
+            },
+            "&::before": {
+                left: "-6px", // Menos à esquerda no mobile
+                top: 0, // Altura total no mobile também
+                bottom: 0,
+                width: "4px", // Mais fina no mobile
+            }
+        },
+        // Responsividade para tablets
+        [theme.breakpoints.between('sm', 'md')]: {
+            "&::before": {
+                left: "-7px",
+                width: "5px",
+            }
+        }
     },
 
     pendingTicket: {
@@ -63,7 +123,7 @@ const useStyles = makeStyles((theme) => ({
         justifySelf: "flex-end",
         textAlign: "right",
         position: "relative",
-        top: 0,
+        top: 5, // Ajustado para 5 para melhor posicionamento geral
         color: "green",
         fontWeight: "bold",
         marginRight: "10px",
@@ -76,33 +136,105 @@ const useStyles = makeStyles((theme) => ({
         lineHeight: "1.4",
     },
     connectionTag: {
-        background: "green",
-        color: "#FFF",
-        marginRight: 1,
-        padding: 1,
-        fontWeight: 'bold',
-        // paddingLeft: 5,
-        // paddingRight: 5,
-        borderRadius: 3,
-        fontSize: "0.6em",
-        // whiteSpace: "nowrap"
+        marginRight: 1, // Reduzido para 1px
+        marginLeft: 0,
+        marginBottom: 1,
+        padding: "2px 5px", // Reduzido padding
+        fontWeight: 600,
+        borderRadius: 3, // Reduzido borderRadius
+        fontSize: "0.55em", // Reduzido fontSize
+        display: "flex",
+        alignItems: "center",
+        gap: "2px", // Reduzido gap
+        minHeight: "16px", // Reduzido minHeight
+        whiteSpace: "nowrap",
+        flexShrink: 0,
+        border: "1px solid rgba(255, 255, 255, 0.1)",
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
+        cursor: "pointer",
+        transition: "all 0.2s ease",
+        "&:hover": {
+            transform: "scale(1.05)",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
+        }
+    },
+    
+    // Estilos para indicador de status online/offline
+    statusIndicator: {
+        position: "absolute",
+        bottom: 2,
+        right: 2,
+        width: 12,
+        height: 12,
+        borderRadius: "50%",
+        border: "2px solid white",
+        zIndex: 10,
+    },
+    
+    statusOnline: {
+        backgroundColor: "#25D366",
+        animation: "$pulse 2s infinite",
+    },
+    
+    statusOffline: {
+        backgroundColor: "#dc3545",
+        animation: "$pulseSlow 3s infinite",
+    },
+    
+    statusTyping: {
+        backgroundColor: "#ffc107",
+        animation: "$pulse 1s infinite",
+    },
+    
+    // Animações para os indicadores de status
+    "@keyframes pulse": {
+        "0%": {
+            transform: "scale(1)",
+            opacity: 1,
+        },
+        "50%": {
+            transform: "scale(1.1)",
+            opacity: 0.7,
+        },
+        "100%": {
+            transform: "scale(1)",
+            opacity: 1,
+        },
+    },
+    
+    "@keyframes pulseSlow": {
+        "0%": {
+            opacity: 1,
+        },
+        "50%": {
+            opacity: 0.5,
+        },
+        "100%": {
+            opacity: 1,
+        },
     },
     funilTag: {
-        background: "#FCFCFC",
-        color: "#FFF",
         marginRight: 2,
-        marginBottom: 2,
-        padding: 2,
-        fontWeight: 'bold',
-        borderRadius: 3,
-        fontSize: "0.7em",
+        marginLeft: -1,
+        marginBottom: 1,
+        padding: "3px 6px",
+        fontWeight: 600,
+        borderRadius: 4,
+        fontSize: "0.6em",
+        display: "flex",
+        alignItems: "center",
+        gap: "3px",
+        minHeight: "18px",
         whiteSpace: "nowrap",
-        display: "inline-block",
-        maxWidth: "95%",
-        minWidth: "80%",
-        textAlign: "center",
-        overflow: "hidden",
-        textOverflow: "ellipsis"
+        flexShrink: 0,
+        border: "1px solid rgba(255, 255, 255, 0.1)",
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
+        cursor: "pointer",
+        transition: "all 0.2s ease",
+        "&:hover": {
+            transform: "scale(1.05)",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
+        }
     },
     noTicketsTitle: {
         textAlign: "center",
@@ -148,13 +280,13 @@ const useStyles = makeStyles((theme) => ({
     contactLastMessage: {
         paddingRight: "0%",
         marginLeft: "5px",
-        color: theme.mode === 'light' ? "black" : grey[400],
+        color: theme.mode === 'light' ? "#666" : grey[400], // Cinza claro no modo light
     },
 
     contactLastMessageUnread: {
         paddingRight: 20,
         fontWeight: "bold",
-        color: theme.mode === 'light' ? "black" : grey[400],
+        color: theme.mode === 'light' ? "#666" : grey[400], // Cinza claro no modo light
     },
 
     badgeStyle: {
@@ -167,14 +299,7 @@ const useStyles = makeStyles((theme) => ({
         right: "1px",
     },
 
-    ticketQueueColor: {
-        flex: "none",
-        // width: "8px",
-        height: "100%",
-        position: "absolute",
-        top: "0%",
-        left: "0%",
-    },
+
 
     ticketInfo: {
         position: "relative",
@@ -182,6 +307,7 @@ const useStyles = makeStyles((theme) => ({
     },
     secondaryContentSecond: {
         display: 'flex',
+        marginTop: "3px", // Espaço de 3px da última mensagem para os badges
         // marginBottom: 2,
         // marginLeft: "5px",
         alignItems: "flex-start",
@@ -215,6 +341,20 @@ const useStyles = makeStyles((theme) => ({
         marginRight: 2,
         marginLeft: 2,
         verticalAlign: "middle"
+    },
+
+    avatarHover: {
+        "&:hover": {
+            transform: "scale(1.15)", // Zoom maior no avatar
+            boxShadow: "0 6px 20px rgba(0, 0, 0, 0.25)", // Sombra mais pronunciada
+            zIndex: 10, // Garantir que fique acima de outros elementos
+        },
+        // Responsividade para mobile
+        [theme.breakpoints.down('sm')]: {
+            "&:hover": {
+                transform: "scale(1.1)", // Zoom menor no mobile
+            }
+        }
     }
 }));
 
@@ -230,17 +370,25 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
     const [openAlert, setOpenAlert] = useState(false);
     const [userTicketOpen, setUserTicketOpen] = useState("");
     const [queueTicketOpen, setQueueTicketOpen] = useState("");
+    // Estados de presence temporariamente desabilitados
+    // const [contactPresence, setContactPresence] = useState('unavailable'); // Estado do presence
+    // const [isCurrentChat, setIsCurrentChat] = useState(false); // Se este ticket é o chat atual
+    // const [lastActivity, setLastActivity] = useState(Date.now()); // Última atividade do usuário
 
     const { ticketId } = useParams();
     const isMounted = useRef(true);
     const { setCurrentTicket } = useContext(TicketsContext);
-    const { user } = useContext(AuthContext);
+    const { user, socket } = useContext(AuthContext);
 
     const { get: getSetting } = useCompanySettings();
 
+    // useEffect temporariamente desabilitado
+    /*
     useEffect(() => {
-        // Debug removed
-    }, [ticket])
+        // Verificar se este é o chat atual
+        setIsCurrentChat(ticketId === ticket.uuid);
+    }, [ticket, ticketId])
+    */
 
     useEffect(() => {
         if (ticket && ticket.id) {
@@ -264,6 +412,181 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
             isMounted.current = false;
         };
     }, []);
+
+    // useEffect para monitorar presence do contato - TEMPORARIAMENTE DESABILITADO
+    /*
+    useEffect(() => {
+        if (!ticket?.contact?.number || !ticket?.id) {
+            return;
+        }
+
+        const contactNumber = ticket.contact.number.replace(/\D/g, '');
+        
+        // Sistema de demonstração inteligente em tempo real
+        const startDemoPresenceSystem = () => {
+            // Estado inicial baseado no ID do ticket
+            const ticketIdMod = ticket.id % 3;
+            let currentStatus = ticketIdMod === 0 ? 'available' : 
+                              ticketIdMod === 1 ? 'composing' : 'unavailable';
+            
+            setContactPresence(currentStatus);
+
+            // Mudanças aleatórias a cada 10-15 segundos para simular tempo real
+            const changeInterval = setInterval(() => {
+                const statuses = ['available', 'composing', 'unavailable'];
+                const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+                setContactPresence(randomStatus);
+            }, Math.random() * 5000 + 10000); // Entre 10-15 segundos
+
+            // Simular digitação quando há nova mensagem
+            if (ticket.unreadMessages > 0) {
+                setContactPresence('composing');
+                setTimeout(() => {
+                    setContactPresence('available');
+                }, 3000);
+            }
+
+            return changeInterval;
+        };
+
+        // Tentar API real primeiro, fallback para demo
+        const subscribeToPresence = async () => {
+            try {
+                await api.post('/presence/subscribe', {
+                    contactNumber,
+                    whatsappId: ticket.whatsappId
+                });
+                
+                // Se API funcionar, configurar listener real
+                if (socket) {
+                    const handlePresenceUpdate = (data) => {
+                        const contactJid = `${contactNumber}@s.whatsapp.net`;
+                        if (data.contactJid === contactJid) {
+                            setContactPresence(data.presence);
+                        }
+                    };
+                    socket.on('presence-update', handlePresenceUpdate);
+                    return () => socket.off('presence-update', handlePresenceUpdate);
+                }
+            } catch (error) {
+                return startDemoPresenceSystem();
+            }
+        };
+
+        const cleanup = subscribeToPresence();
+
+        // Cleanup
+        return () => {
+            if (cleanup) {
+                if (typeof cleanup === 'function') {
+                    cleanup();
+                } else if (typeof cleanup === 'number') {
+                    clearInterval(cleanup);
+                }
+            }
+        };
+    }, [socket, ticket?.contact?.number, ticket?.whatsappId, ticket?.id, ticket?.unreadMessages]);
+    */
+
+    // useEffect para monitorar digitação no chat atual - TEMPORARIAMENTE DESABILITADO
+    /*
+    useEffect(() => {
+        if (!isCurrentChat) return;
+
+        // Simular que o contato está digitando quando você está no chat
+        const simulateTypingResponse = () => {
+            setContactPresence('composing');
+            
+            setTimeout(() => {
+                setContactPresence('available');
+            }, 2000 + Math.random() * 3000); // 2-5 segundos
+        };
+
+        // Listener para eventos de digitação
+        const handleUserTyping = () => {
+            setContactPresence('available');
+            
+            // Simular resposta do contato depois de um tempo
+            setTimeout(simulateTypingResponse, 1000 + Math.random() * 2000);
+        };
+
+        // Monitorar entrada de texto globalmente quando este chat está ativo
+        const inputElements = document.querySelectorAll('input[type="text"], textarea');
+        inputElements.forEach(input => {
+            input.addEventListener('keydown', handleUserTyping);
+        });
+
+        // Listener específico para mudanças no chat
+        const chatInput = document.querySelector('[placeholder*="Digite"]');
+        if (chatInput) {
+            chatInput.addEventListener('keydown', handleUserTyping);
+        }
+
+        return () => {
+            inputElements.forEach(input => {
+                input.removeEventListener('keydown', handleUserTyping);
+            });
+            if (chatInput) {
+                chatInput.removeEventListener('keydown', handleUserTyping);
+            }
+        };
+    }, [isCurrentChat, ticket?.contact?.name]);
+    */
+
+    // useEffect para simular "sair do WhatsApp" por inatividade - TEMPORARIAMENTE DESABILITADO
+    /*
+    useEffect(() => {
+        // Atualizar atividade em vários eventos
+        const updateActivity = () => {
+            setLastActivity(Date.now());
+        };
+
+        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+        events.forEach(event => {
+            document.addEventListener(event, updateActivity, true);
+        });
+
+        // Verificar inatividade a cada 30 segundos
+        const inactivityCheck = setInterval(() => {
+            const now = Date.now();
+            const timeSinceLastActivity = now - lastActivity;
+            
+            // Se inativo por mais de 2 minutos, simular offline
+            if (timeSinceLastActivity > 120000) { // 2 minutos
+                setContactPresence('unavailable');
+            }
+            // Se inativo por mais de 30 segundos, reduzir atividade  
+            else if (timeSinceLastActivity > 30000) { // 30 segundos
+                setContactPresence(prev => prev === 'composing' ? 'available' : prev);
+            }
+        }, 30000); // Verificar a cada 30 segundos
+
+        return () => {
+            events.forEach(event => {
+                document.removeEventListener(event, updateActivity, true);
+            });
+            clearInterval(inactivityCheck);
+        };
+    }, [lastActivity]);
+    */
+
+    // Função para determinar o estilo do indicador de status - TEMPORARIAMENTE DESABILITADA
+    /*
+    const getStatusIndicatorClass = () => {
+        const baseClass = classes.statusIndicator;
+        
+        switch (contactPresence) {
+            case 'available':
+                return `${baseClass} ${classes.statusOnline}`;
+            case 'composing':
+            case 'recording':
+                return `${baseClass} ${classes.statusTyping}`;
+            case 'unavailable':
+            default:
+                return `${baseClass} ${classes.statusOffline}`;
+        }
+    };
+    */
 
     const handleOpenAcceptTicketWithouSelectQueue = useCallback(() => {
         // console.log(ticket)
@@ -536,17 +859,21 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
                 })}
             >
                 <ListItemAvatar
-                    style={{ marginLeft: "-15px" }}
+                    style={{ marginLeft: "0px", position: "relative" }}
                 >
                     <Avatar
                         style={{
                             width: "50px",
                             height: "50px",
                             borderRadius: "50%",
+                            transition: "all 0.3s ease", // Transição suave
+                            cursor: "pointer",
                         }}
                         src={`${ticket?.contact?.urlPicture}`}
-
+                        className={classes.avatarHover}
                     />
+                    {/* Indicador de status online/offline - TEMPORARIAMENTE DESABILITADO */}
+                    {/* <div className={getStatusIndicatorClass()} /> */}
                 </ListItemAvatar>
                 <ListItemText
                     disableTypography
@@ -556,11 +883,16 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
                                 noWrap
                                 component="span"
                                 variant="body2"
-                            // color="textPrimary"
+                                style={{ fontWeight: 'bold', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}
                             >
-                                {ticket.isGroup && ticket.channel === "whatsapp" && <GroupIcon fontSize="small" style={{ color: grey[700], marginBottom: '-1px', marginLeft: '5px' }} />} &nbsp;
-                                {ticket.channel && <ConnectionIcon width="20" height="20" className={classes.connectionIcon} connectionType={ticket.channel} />} &nbsp;
-                                {truncate(ticket.contact?.name, 60)}
+                                <span>{truncate(ticket.contact?.name, 25)}</span>
+                                <span style={{ color: '#666', fontSize: '0.9em', fontWeight: 'normal' }}>|</span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#25D366', fontWeight: 'bold', fontSize: '0.7em' }}>
+                                    {ticket.channel === "whatsapp" && <WhatsApp style={{ fontSize: "12px", color: '#25D366' }} />}
+                                    {ticket.channel === "instagram" && <Instagram style={{ fontSize: "12px", color: '#E4405F' }} />}
+                                    {ticket.channel === "facebook" && <Facebook style={{ fontSize: "12px", color: '#1877F2' }} />}
+                                    {ticket.whatsapp?.name?.toUpperCase()}
+                                </span>
                                 {/* {profile === "admin"  && ( */}
                                 {/* <Tooltip title="Espiar Conversa">
                                         <VisibilityIcon
@@ -608,9 +940,32 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
                                     <br />
                                 )}
                                 <span className={classes.secondaryContentSecond} >
-                                    {ticket?.whatsapp ? <Badge className={classes.connectionTag} style={{ backgroundColor: ticket.channel === "whatsapp" ? "#25D366" : ticket.channel === "facebook" ? "#4267B2" : "#E1306C" }}>{ticket.whatsapp?.name.toUpperCase()}</Badge> : <br></br>}
-                                    {<Badge style={{ backgroundColor: ticket.queue?.color || "#7c7c7c" }} className={classes.connectionTag}>{ticket.queueId ? ticket.queue?.name.toUpperCase() : ticket.status === "lgpd" ? "LGPD" : "SEM FILA"}</Badge>}
-                                    {ticket?.user && (<Badge style={{ backgroundColor: "#000000" }} className={classes.connectionTag}>{ticket.user?.name.toUpperCase()}</Badge>)}
+
+                                    
+                                    <span 
+                                        className={classes.connectionTag}
+                                        style={{ 
+                                            backgroundColor: `${ticket.queue?.color || "#7c7c7c"}20`, // 20% opacidade
+                                            color: ticket.queue?.color || "#7c7c7c"
+                                        }}
+                                    >
+                                        <ListAlt style={{ fontSize: "10px" }} />
+                                        {ticket.queueId ? ticket.queue?.name?.toUpperCase() : "SEM FILA"}
+                                    </span>
+                                    
+                                    {ticket?.user && (
+                                        <span 
+                                            className={classes.connectionTag}
+                                            style={{ 
+                                                backgroundColor: "rgba(0, 0, 0, 0.2)",
+                                                color: "#000000"
+                                            }}
+                                        >
+                                            <Person style={{ fontSize: "10px" }} />
+                                            {ticket.user?.name?.toUpperCase()}
+                                        </span>
+                                    )}
+                                    
                                     {getNormalTags().map((tag, index) => (
                                         <Tooltip key={`normal-tag-${tag.id}`} title={tag.name}>
                                             <LocalOfferIcon 
@@ -736,8 +1091,8 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
                                 loading={loading}
                                 onClick={e => handleCloseTicket(ticket.id)}
                             >
-                                <Tooltip title={`${i18n.t("ticketsList.buttons.closed")}`}>
-                                    <HighlightOff />
+                                                            <Tooltip title={`${i18n.t("ticketsList.buttons.closed")}`}>
+                                <Block />
                                     {/*  */}
                                 </Tooltip>
                             </ButtonWithSpinner>
@@ -755,7 +1110,7 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
                                 onClick={e => handleCloseIgnoreTicket(ticket.id)}
                             >
                                 <Tooltip title={`${i18n.t("ticketsList.buttons.ignore")}`}>
-                                    <HighlightOff />
+                                    <Block />
                                 </Tooltip>
                             </ButtonWithSpinner>
                         )}

@@ -342,7 +342,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketChannel }) => {
+const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketChannel, ticket }) => {
 
   const classes = useStyles();
   const theme = useTheme();
@@ -370,6 +370,8 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
   const [privateMessageInputVisible, setPrivateMessageInputVisible] = useState(false);
   const [senVcardModalOpen, setSenVcardModalOpen] = useState(false);
   const [showModalMedias, setShowModalMedias] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef(null);
 
   const { list: listQuickMessages } = useQuickMessages();
 
@@ -471,6 +473,49 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
 
   const handleChangeInput = (e) => {
     setInputMessage(e.target.value);
+    
+    // Debounce para status de digitando
+    if (e.target.value.length > 0) {
+      if (!isTyping) {
+        setIsTyping(true);
+        handleSendTypingStatus('composing');
+      }
+      
+      // Limpar timeout anterior
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      // Definir novo timeout para parar de digitar após 3 segundos
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+        handleSendTypingStatus('paused');
+      }, 3000);
+    } else if (isTyping) {
+      setIsTyping(false);
+      handleSendTypingStatus('paused');
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    }
+  };
+
+  // Função para enviar status de digitando
+  const handleSendTypingStatus = async (type) => {
+    // Verificar se ticket e contact estão disponíveis
+    if (!ticket || !ticket.contact || !ticket.contact.number || !ticket.whatsappId) {
+      return;
+    }
+    
+    try {
+      await api.post('/presence/update', {
+        contactNumber: ticket.contact.number.replace(/\D/g, ''),
+        type,
+        whatsappId: ticket.whatsappId
+      });
+    } catch (error) {
+      console.log('Erro ao enviar status de digitando:', error);
+    }
   };
 
   const handlePrivateMessage = (e) => {
@@ -941,7 +986,13 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
 
     }, 1000);
 
-    return () => clearTimeout(typingTimeout);
+    return () => {
+      clearTimeout(typingTimeout);
+      // Cleanup do timeout de digitando
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
   }, [inputMessage]);
 
   if (mediasUpload.length > 0) {

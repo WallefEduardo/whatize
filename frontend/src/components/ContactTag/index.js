@@ -1,25 +1,31 @@
 import { makeStyles } from "@material-ui/styles";
 import React from "react";
 import { Tooltip } from "@material-ui/core";
+import { ViewColumn } from "@material-ui/icons";
 
 const useStyles = makeStyles(theme => ({
     tag: {
-        padding: "2px 5px",
-        borderRadius: "3px",
-        fontSize: "0.7em",
-        fontWeight: "bold",
-        color: "#FFF",
-        marginRight: "2px",
-        marginBottom: "2px",
-        whiteSpace: "nowrap",
-        maxWidth: "100%",
-        width: "auto",
-        minWidth: "auto",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        display: "inline-flex",
+        marginRight: 1, // Reduzido para 1px
+        marginLeft: 0,
+        marginBottom: 1,
+        padding: "2px 5px", // Reduzido padding
+        fontWeight: 600,
+        borderRadius: 3, // Reduzido borderRadius
+        fontSize: "0.55em", // Reduzido fontSize
+        display: "flex",
         alignItems: "center",
-        justifyContent: "center"
+        gap: "2px", // Reduzido gap
+        minHeight: "16px", // Reduzido minHeight
+        whiteSpace: "nowrap",
+        flexShrink: 0,
+        border: "1px solid rgba(255, 255, 255, 0.1)",
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
+        cursor: "pointer",
+        transition: "all 0.2s ease",
+        "&:hover": {
+            transform: "scale(1.05)",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
+        }
     },
     container: {
         display: "inline-block",
@@ -43,7 +49,14 @@ const ContactTag = ({ tag }) => {
     return (
         <div className={classes.container}>
             <Tooltip title={displayName.toUpperCase()} placement="top">
-                <div className={classes.tag} style={{ backgroundColor: tag.color }}>
+                <div 
+                    className={classes.tag} 
+                    style={{ 
+                        backgroundColor: `${tag.color}20`, // 20% opacidade
+                        color: tag.color // Cor sólida para o texto
+                    }}
+                >
+                    <ViewColumn style={{ fontSize: "10px" }} />
                     {displayName.toUpperCase()}
                 </div>
             </Tooltip>

@@ -4,6 +4,7 @@ import { wbotMessageListener } from "./wbotMessageListener";
 import { getIO } from "../../libs/socket";
 import wbotMonitor from "./wbotMonitor";
 import logger from "../../utils/logger";
+import PresenceService from "./PresenceService";
 import * as Sentry from "@sentry/node";
 
 export const StartWhatsAppSession = async (
@@ -25,6 +26,10 @@ export const StartWhatsAppSession = async (
     if (wbot.id) {
       wbotMessageListener(wbot, companyId);
       wbotMonitor(wbot, whatsapp, companyId);
+      
+      // Configurar listener de presence
+      PresenceService.setupPresenceListener(wbot, companyId);
+      logger.info(`Presence service initialized for company ${companyId}`);
     }
   } catch (err) {
     Sentry.captureException(err);

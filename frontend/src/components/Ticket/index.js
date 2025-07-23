@@ -183,6 +183,7 @@ const Ticket = () => {
           ticketChannel={ticket.channel}
           droppedFiles={dragDropFiles}
           contactId={contact.id}
+          ticket={ticket}
         />
       </>
     );

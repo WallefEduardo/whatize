@@ -30,6 +30,15 @@ const useStyles = makeStyles((theme) => ({
         ...theme.scrollbarStyles,
         borderTop: "1px solid rgba(0, 0, 0, 0.12)",
         padding: "12px",
+        paddingLeft: "20px", // Espaço extra à esquerda para a linha vertical
+        // Responsividade
+        [theme.breakpoints.down('sm')]: {
+            paddingLeft: "16px", // Menor no mobile
+            padding: "8px 12px 12px 16px", // Ajusta todo o padding no mobile
+        },
+        [theme.breakpoints.between('sm', 'md')]: {
+            paddingLeft: "18px", // Intermediário no tablet
+        }
     },
 
     ticketsListHeader: {

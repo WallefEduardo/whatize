@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import { Typography, Paper, Box, IconButton, Avatar, Chip, TextField, FormControl, InputLabel, Select, MenuItem, Button, Dialog, DialogTitle, DialogContent, DialogActions, Tooltip } from "@material-ui/core";
-import { WhatsApp, Person, LocalOffer, Send, MoreVert, Add, KeyboardArrowLeft, KeyboardArrowRight, Facebook, Instagram, AttachFile, EmojiEmotions, Mic, Event, Lock, VisibilityOff, Description, PermMedia, CameraAlt, Create, Comment, HighlightOff, CheckCircleOutline, GetApp, PictureAsPdf, Clear } from "@material-ui/icons";
+import { WhatsApp, Person, LocalOffer, Send, MoreVert, Add, KeyboardArrowLeft, KeyboardArrowRight, Facebook, Instagram, AttachFile, EmojiEmotions, Mic, Event, Lock, VisibilityOff, Description, PermMedia, CameraAlt, Create, Comment, HighlightOff, CheckCircleOutline, GetApp, PictureAsPdf, Clear, AccessTime, Done, DoneAll } from "@material-ui/icons";
 import { format, subMonths, isSameDay, parseISO } from "date-fns";
 
 import MainContainer from "../../components/MainContainer";
@@ -1082,6 +1082,29 @@ const useStyles = makeStyles((theme) => ({
     padding: '16px',
     overflow: "hidden",
   },
+  
+  // Estilos para ícones de confirmação (ack)
+  ackIcons: {
+    fontSize: 12,
+    verticalAlign: "middle",
+    marginLeft: 4,
+    color: '#666'
+  },
+  
+  ackDoneAllIcon: {
+    color: '#4fc3f7',
+    fontSize: 12,
+    verticalAlign: "middle",
+    marginLeft: 4,
+  },
+  
+  ackPlayedIcon: {
+    color: '#25D366',
+    fontSize: 12,
+    verticalAlign: "middle",
+    marginLeft: 4,
+  },
+  
   boardContainer: {
     flex: 1,
     minHeight: 0,
@@ -2585,6 +2608,18 @@ const formatPhoneNumber = (phoneNumber) => {
     setEndDate(event.target.value);
   };
 
+  // Atualização periódica das mensagens para status de ack
+  useEffect(() => {
+    if (!selectedTicket || !messageModalOpen) return;
+
+    const interval = setInterval(() => {
+      // Busca mensagens atualizadas sem loading (para não interferir na UI)
+      fetchMessages(selectedTicket.id, false);
+    }, 3000); // Atualiza a cada 3 segundos
+
+    return () => clearInterval(interval);
+  }, [selectedTicket, messageModalOpen]);
+
   // WebSocket para tempo real de mensagens
   useEffect(() => {
     if (!selectedTicket || !socket) return;
@@ -2619,10 +2654,10 @@ const formatPhoneNumber = (phoneNumber) => {
       }
       
       if (data.action === "update" && isCurrentTicket) {
-        // Atualiza mensagem existente
+        // Atualiza mensagem existente (incluindo status de ack)
         setMessages(prev => 
           prev.map(msg => 
-            msg.id === data.message.id ? data.message : msg
+            msg.id === data.message.id ? { ...msg, ...data.message } : msg
           )
         );
       }
@@ -3589,7 +3624,7 @@ const formatPhoneNumber = (phoneNumber) => {
                                  style={{ 
                                    fontSize: '13px',
                                    fontWeight: 'bold',
-                                   color: isPrivate ? '#0066cc' : '#25D366',
+                                   color: isPrivate ? '#0066cc' : '#000000',
                                    marginBottom: '4px'
                                  }}
                                >
@@ -3700,8 +3735,9 @@ const formatPhoneNumber = (phoneNumber) => {
                                 style={{
                                   fontSize: '11px', 
                                   color: '#666',
-                                  display: 'block',
-                                  textAlign: 'right',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'flex-end',
                                   marginTop: '4px'
                                 }}
                               >
@@ -3711,6 +3747,7 @@ const formatPhoneNumber = (phoneNumber) => {
                                   hour: '2-digit',
                                   minute: '2-digit'
                                 })}
+                                {renderMessageAck(message, classes)}
                               </Typography>
                             </div>
 
@@ -4050,6 +4087,25 @@ const isDocumentFile = (fileName) => {
   const documentExtensions = ['pdf', 'doc', 'docx', 'txt', 'rtf', 'odt', 'xls', 'xlsx', 'ppt', 'pptx'];
   
   return documentExtensions.includes(extension);
+};
+
+// Função para renderizar ícones de confirmação (ack) das mensagens
+const renderMessageAck = (message, classes) => {
+  // Só mostra ack para mensagens enviadas por mim
+  if (!message.fromMe) return null;
+  
+  if (message.ack === 0) {
+    return <AccessTime fontSize="small" className={classes.ackIcons} />;
+  } else if (message.ack === 1) {
+    return <Done fontSize="small" className={classes.ackIcons} />;
+  } else if (message.ack === 2) {
+    return <DoneAll fontSize="small" className={classes.ackIcons} />;
+  } else if (message.ack === 3 || message.ack === 4) {
+    return <DoneAll fontSize="small" className={message.mediaType === "audio" ? classes.ackPlayedIcon : classes.ackDoneAllIcon} />;
+  } else if (message.ack === 5) {
+    return <DoneAll fontSize="small" className={classes.ackDoneAllIcon} />
+  }
+  return null;
 };
 
 // Função para formatar telefone brasileiro - usada no modal
