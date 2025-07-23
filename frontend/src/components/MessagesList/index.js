@@ -1299,7 +1299,8 @@ const renderMessages = () => {
                 {
                   (
                     (message.mediaUrl !== null && (message.mediaType === "image" || message.mediaType === "video") && path.basename(message.mediaUrl).trim() !== message.body.trim()) ||
-                    (message.mediaType === "application" || isDocumentFile(message.body)) && message.body && !isDocumentFile(message.body) ||
+                    (message.mediaType === "application" || isDocumentFile(message.body)) && message.body && !isDocumentFile(message.body) && 
+                    message.body.trim() !== 'Mensagem não suportada' && message.body.trim() !== 'MENSAGEM NÃO SUPORTADA' ||
                     (message.mediaType !== "audio" &&
                     message.mediaType !== "image" &&
                     message.mediaType !== "video" &&
@@ -1408,7 +1409,8 @@ const renderMessages = () => {
                 {
                   (
                     ((message.mediaType === "image" || message.mediaType === "video") && path.basename(message.mediaUrl) !== message.body) ||
-                    ((message.mediaType === "application" || isDocumentFile(message.body)) && message.body && !isDocumentFile(message.body)) ||
+                    ((message.mediaType === "application" || isDocumentFile(message.body)) && message.body && !isDocumentFile(message.body) && 
+                    message.body.trim() !== 'Mensagem não suportada' && message.body.trim() !== 'MENSAGEM NÃO SUPORTADA') ||
                     (message.mediaType !== "audio" && message.mediaType !== "application" && !isDocumentFile(message.body) && message.mediaType != "reactionMessage" && message.mediaType != "locationMessage" && message.mediaType !== "contactMessage" && message.mediaType !== "template" && message.mediaType !== "adMetaPreview")
                   ) && (
                     <>

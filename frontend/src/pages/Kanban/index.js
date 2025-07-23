@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import { Typography, Paper, Box, IconButton, Avatar, Chip, TextField, FormControl, InputLabel, Select, MenuItem, Button, Dialog, DialogTitle, DialogContent, DialogActions, Tooltip } from "@material-ui/core";
-import { WhatsApp, Person, LocalOffer, Send, MoreVert, Add, KeyboardArrowLeft, KeyboardArrowRight, Facebook, Instagram, AttachFile, EmojiEmotions, Mic, Event, Lock, VisibilityOff, Description, PermMedia, CameraAlt, Create, Comment, HighlightOff, CheckCircleOutline, GetApp, PictureAsPdf } from "@material-ui/icons";
+import { WhatsApp, Person, LocalOffer, Send, MoreVert, Add, KeyboardArrowLeft, KeyboardArrowRight, Facebook, Instagram, AttachFile, EmojiEmotions, Mic, Event, Lock, VisibilityOff, Description, PermMedia, CameraAlt, Create, Comment, HighlightOff, CheckCircleOutline, GetApp, PictureAsPdf, Clear } from "@material-ui/icons";
 import { format, subMonths, isSameDay, parseISO } from "date-fns";
 
 import MainContainer from "../../components/MainContainer";
@@ -19,6 +19,8 @@ import ContactSendModal from "../../components/ContactSendModal";
 import CameraModal from "../../components/CameraModal";
 import ScheduleModal from "../../components/ScheduleModal";
 import MessageUploadMedias from "../../components/MessageUploadMedias";
+import whatsappIcon from '../../assets/nopicture.png';
+import { getBackendUrl } from "../../config";
 // @dnd-kit imports
 import {
   DndContext,
@@ -45,6 +47,9 @@ import { CSS } from '@dnd-kit/utilities';
 
 // Instância do gravador de áudio (FORA do componente como no MessageInput)
 const Mp3Recorder = new MicRecorder({ bitRate: 128 });
+
+// URL do backend para as imagens
+const backendUrl = getBackendUrl();
 
 // Funções auxiliares
 const IconChannel = (channel) => {
@@ -114,36 +119,43 @@ const KanbanCard = ({ card, onSendMessage }) => {
       {...listeners}
       className="kanban-card"
     >
-      {/* Header do card com telefone e canal */}
-      <div className="card-header">
-        <div className="card-contact">
-          <div style={{ marginRight: '8px' }}>
-            <Avatar
-              src={card.ticketData?.contact?.urlPicture || undefined}
-              style={{ width: 30, height: 30 }}
-            >
-              {card.title.charAt(0)}
-            </Avatar>
-          </div>
-          <div style={{ marginRight: '6px' }}>
-            <Tooltip title={card.ticketData?.whatsapp?.name || ''}>
-              {IconChannel(card.ticketData?.channel)}
-            </Tooltip>
-          </div>
-          <Typography className="card-phone">
-            {card.phone}
-          </Typography>
-        </div>
-        <Typography className="card-ticket">
-          {card.ticketId}
-        </Typography>
+      {/* Header do card com telefone e canal - Layout responsivo */}
+<div className="card-header">
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      width: '100%',
+    }}
+  >
+    {/* Esquerda: avatar, canal, telefone */}
+    <div style={{ display: 'flex', alignItems: 'center' }}>
+      <div style={{ marginRight: '2px' }}>
+        <Avatar
+          src={card.ticketData?.contact?.urlPicture || undefined}
+          style={{ width: 30, height: 30 }}
+        >
+          {card.title.charAt(0)}
+        </Avatar>
       </div>
-
-      {/* Nome do contato */}
-      <Typography className="card-title">
-        {card.title}
-      </Typography>
       
+      <Typography className="card-phone" style={{ marginLeft: 4 }}>
+        {card.phone}
+      </Typography>
+    </div>
+    {/* Direita: número do ticket */}
+    <Typography className="card-ticket" style={{ marginLeft: 8 }}>
+      {card.ticketId}
+    </Typography>
+  </div>
+</div>
+
+{/* Nome do contato */}
+<Typography className="card-title">
+  {card.title}
+</Typography>
+
       {/* Data da última mensagem */}
       <Typography className="card-date" style={{ fontSize: '0.7rem', color: '#666', marginTop: '4px' }}>
         {card.ticketData ? (
@@ -153,100 +165,111 @@ const KanbanCard = ({ card, onSendMessage }) => {
         ) : 'Hoje'}
       </Typography>
 
-      {/* Tags (organizadas inteligentemente para melhor aproveitamento do espaço) */}
+      {/* Linha separadora ACIMA das tags */}
       {card.tags && card.tags.length > 0 && (
-        <div className="card-tags">
-          {(() => {
-                         // Algoritmo otimizado para maximizar aproveitamento do espaço
-             const organizeTagsOptimized = (tags) => {
-               // Classificar tags por tamanho mais refinado
-               const tiny = tags.filter(t => t.name.length <= 4);       // Muito pequenas
-               const small = tags.filter(t => t.name.length > 4 && t.name.length <= 8);  // Pequenas
-               const medium = tags.filter(t => t.name.length > 8 && t.name.length <= 15); // Médias  
-               const large = tags.filter(t => t.name.length > 15);      // Grandes
-               
-               // Estratégia inteligente: priorizar combinações que cabem juntas
-               const result = [];
-               
-               // Primeiro, adiciona todas as tiny + small (que cabem várias por linha)
-               let tinyIndex = 0, smallIndex = 0, mediumIndex = 0, largeIndex = 0;
-               
-               // Combinar tiny e small primeiro (até 3 por vez)
-               while (tinyIndex < tiny.length || smallIndex < small.length) {
-                 let lineLength = 0;
-                 
-                 // Adiciona até 3 tiny/small que cabem na linha
-                 for (let i = 0; i < 3; i++) {
-                   if (tinyIndex < tiny.length && lineLength + tiny[tinyIndex].name.length <= 25) {
-                     result.push(tiny[tinyIndex]);
-                     lineLength += tiny[tinyIndex].name.length;
-                     tinyIndex++;
-                   } else if (smallIndex < small.length && lineLength + small[smallIndex].name.length <= 25) {
-                     result.push(small[smallIndex]);
-                     lineLength += small[smallIndex].name.length;
-                     smallIndex++;
-                   } else {
-                     break;
-                   }
-                 }
-                 
-                 // Se não conseguiu adicionar nada, para o loop
-                 if (lineLength === 0) break;
-               }
-               
-               // Depois adiciona medium e large normalmente
-               while (mediumIndex < medium.length || largeIndex < large.length) {
-                 if (mediumIndex < medium.length) {
-                   result.push(medium[mediumIndex++]);
-                 }
-                 if (largeIndex < large.length) {
-                   result.push(large[largeIndex++]);
-                 }
-               }
-               
-               return result;
-             };
-            
-            const optimizedTags = organizeTagsOptimized(card.tags);
-            
-                         return optimizedTags.map((tag, index) => {
-               // Determina se a tag é muito longa (mais que 30 caracteres - mais permissivo)
-               const isVeryLong = tag.name.length > 30;
-               const truncatedName = isVeryLong ? `${tag.name.substring(0, 27)}...` : tag.name;
-               
-               const chipElement = (
-                 <Chip
-                   key={`${tag.id}-${index}`}
-                   label={truncatedName}
-                   size="small"
-                   style={{
-                     backgroundColor: `${tag.color}1A` || '#e3f2fd1A',
-                     color: tag.color || '#1976d2',
-                     fontSize: '0.65rem',
-                     height: '20px',
-                     // Largura natural, sem forçar truncamento
-                     flexShrink: 0,
-                     flexGrow: 0,
-                     minWidth: 'auto',
-                     maxWidth: isVeryLong ? '250px' : '100%',
-                     // Ajuste de padding baseado no tamanho
-                     paddingLeft: tag.name.length <= 6 ? '6px' : '8px',
-                     paddingRight: tag.name.length <= 6 ? '6px' : '8px',
-                   }}
-                   icon={<LocalOffer style={{ fontSize: '12px', color: tag.color || '#1976d2' }} />}
-                 />
-               );
-               
-               // Se a tag foi truncada, envolve com Tooltip
-               return isVeryLong ? (
-                 <Tooltip key={`${tag.id}-${index}`} title={tag.name} placement="top">
-                   {chipElement}
-                 </Tooltip>
-               ) : chipElement;
-             });
-          })()}
-        </div>
+        <div style={{
+          width: '100%',
+          height: '1px',
+          backgroundColor: '#f1f3f4',
+          margin: '8px 0 6px 0'
+        }} />
       )}
+
+      {/* Tags (organizadas inteligentemente para melhor aproveitamento do espaço) */}
+{card.tags && card.tags.length > 0 && (
+  <div className="card-tags">
+    {(() => {
+      // Algoritmo otimizado para maximizar aproveitamento do espaço
+      const organizeTagsOptimized = (tags) => {
+        // Classificar tags por tamanho mais refinado
+        const tiny = tags.filter(t => t.name.length <= 4);       // Muito pequenas
+        const small = tags.filter(t => t.name.length > 4 && t.name.length <= 8);  // Pequenas
+        const medium = tags.filter(t => t.name.length > 8 && t.name.length <= 15); // Médias  
+        const large = tags.filter(t => t.name.length > 15);      // Grandes
+        
+        // Estratégia inteligente: priorizar combinações que cabem juntas
+        const result = [];
+        
+        // Primeiro, adiciona todas as tiny + small (que cabem várias por linha)
+        let tinyIndex = 0, smallIndex = 0, mediumIndex = 0, largeIndex = 0;
+        
+        // Combinar tiny e small primeiro (até 3 por vez)
+        while (tinyIndex < tiny.length || smallIndex < small.length) {
+          let lineLength = 0;
+          
+          // Adiciona até 3 tiny/small que cabem na linha
+          for (let i = 0; i < 3; i++) {
+            if (tinyIndex < tiny.length && lineLength + tiny[tinyIndex].name.length <= 25) {
+              result.push(tiny[tinyIndex]);
+              lineLength += tiny[tinyIndex].name.length;
+              tinyIndex++;
+            } else if (smallIndex < small.length && lineLength + small[smallIndex].name.length <= 25) {
+              result.push(small[smallIndex]);
+              lineLength += small[smallIndex].name.length;
+              smallIndex++;
+            } else {
+              break;
+            }
+          }
+          
+          // Se não conseguiu adicionar nada, para o loop
+          if (lineLength === 0) break;
+        }
+        
+        // Depois adiciona medium e large normalmente
+        while (mediumIndex < medium.length || largeIndex < large.length) {
+          if (mediumIndex < medium.length) {
+            result.push(medium[mediumIndex++]);
+          }
+          if (largeIndex < large.length) {
+            result.push(large[largeIndex++]);
+          }
+        }
+        
+        return result;
+      };
+    
+      const optimizedTags = organizeTagsOptimized(card.tags);
+    
+      return optimizedTags.map((tag, index) => {
+        // Determina se a tag é muito longa (mais que 30 caracteres - mais permissivo)
+        const isVeryLong = tag.name.length > 30;
+        const truncatedName = isVeryLong ? `${tag.name.substring(0, 27)}...` : tag.name;
+        
+        const chipElement = (
+          <Chip
+            key={`${tag.id}-${index}`}
+            label={truncatedName}
+            size="small"
+            style={{
+              backgroundColor: `${tag.color}1A` || '#e3f2fd1A',
+              color: tag.color || '#1976d2',
+              fontSize: '0.65rem',
+              height: '20px',
+              // Largura natural, sem forçar truncamento
+              flexShrink: 0,
+              flexGrow: 0,
+              minWidth: 'auto',
+              maxWidth: isVeryLong ? '250px' : '100%',
+              // Ajuste de padding baseado no tamanho
+              paddingLeft: tag.name.length <= 6 ? '6px' : '8px',
+              paddingRight: tag.name.length <= 6 ? '6px' : '8px',
+            }}
+            icon={<LocalOffer style={{ fontSize: '12px', color: tag.color || '#1976d2' }} />}
+          />
+        );
+        
+        // Se a tag foi truncada, envolve com Tooltip
+        return isVeryLong ? (
+          <Tooltip key={`${tag.id}-${index}`} title={tag.name} placement="top">
+            {chipElement}
+          </Tooltip>
+        ) : chipElement;
+      });
+    })()}
+  </div>
+)}
+
 
       {/* Footer com usuário e botão */}
       <div className="card-footer">
@@ -389,7 +412,7 @@ const KanbanColumn = ({ column, children, isCollapsed, onToggleCollapse }) => {
   );
 };
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   '@global': {
     // Animação de spin
     '@keyframes spin': {
@@ -434,6 +457,19 @@ const useStyles = makeStyles(theme => ({
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
       transition: 'all 0.2s ease',
       minHeight: '100px',
+      
+      // Responsividade para 1600x900
+      '@media (max-width: 1600px)': {
+        minWidth: '240px',
+        maxWidth: '240px',
+      },
+      
+      // Responsividade para 1366x768
+      '@media (max-width: 1366px)': {
+        minWidth: '200px',
+        maxWidth: '200px',
+      },
+      
           '&:hover': {
         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
         transform: 'translateY(-2px)',
@@ -455,6 +491,24 @@ const useStyles = makeStyles(theme => ({
         minHeight: '220px',
         maxHeight: '220px',
         backgroundColor: '#fff', // Fundo branco para a coluna colapsada
+        
+        // Responsividade para colunas colapsadas
+        '@media (max-width: 1600px)': {
+          minWidth: '60px',
+          maxWidth: '120px',
+          height: '200px',
+          minHeight: '200px',
+          maxHeight: '200px',
+        },
+        
+        '@media (max-width: 1366px)': {
+          minWidth: '50px',
+          maxWidth: '100px',
+          height: '180px',
+          minHeight: '180px',
+          maxHeight: '180px',
+        },
+        
         '& .column-header': {
           padding: '8px 4px',
           flexDirection: 'column',
@@ -487,6 +541,17 @@ const useStyles = makeStyles(theme => ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          
+          // Responsividade para texto colapsado
+          '@media (max-width: 1600px)': {
+            fontSize: '0.7rem',
+            padding: '6px 3px',
+          },
+          
+          '@media (max-width: 1366px)': {
+            fontSize: '0.65rem',
+            padding: '4px 2px',
+          },
         },
         '& .column-header-actions': {
           marginTop: '8px',
@@ -507,6 +572,17 @@ const useStyles = makeStyles(theme => ({
       userSelect: 'none',
       borderBottom: '1px solid #e9ecef',
       flexShrink: 0,
+      
+      // Responsividade para 1600x900
+      '@media (max-width: 1600px)': {
+        padding: '12px',
+      },
+      
+      // Responsividade para 1366x768
+      '@media (max-width: 1366px)': {
+        padding: '10px',
+      },
+      
       '&:active': {
         cursor: 'grabbing',
       },
@@ -555,6 +631,16 @@ const useStyles = makeStyles(theme => ({
       width: '100%',
       fontSize: '0.95rem',
       color: '#2c3e50',
+      
+      // Responsividade para 1600x900
+      '@media (max-width: 1600px)': {
+        fontSize: '0.9rem',
+      },
+      
+      // Responsividade para 1366x768
+      '@media (max-width: 1366px)': {
+        fontSize: '0.85rem',
+      },
     },
     
     '.column-count': {
@@ -593,6 +679,17 @@ const useStyles = makeStyles(theme => ({
       scrollbarWidth: 'thin',
       scrollbarColor: '#c1c1c1 transparent',
       minHeight: 0,
+      
+      // Responsividade para 1600x900
+      '@media (max-width: 1600px)': {
+        padding: '10px',
+      },
+      
+      // Responsividade para 1366x768
+      '@media (max-width: 1366px)': {
+        padding: '8px',
+      },
+      
       '&::-webkit-scrollbar': {
         width: '4px',
       },
@@ -616,6 +713,19 @@ const useStyles = makeStyles(theme => ({
       transition: 'all 0.2s ease',
       position: 'relative',
       border: '1px solid #e9ecef',
+      
+      // Responsividade para 1600x900
+      '@media (max-width: 1600px)': {
+        padding: '10px',
+        marginBottom: '6px',
+      },
+      
+      // Responsividade para 1366x768
+      '@media (max-width: 1366px)': {
+        padding: '8px',
+        marginBottom: '5px',
+      },
+      
       '&:hover': {
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
         transform: 'translateY(-1px)',
@@ -626,32 +736,70 @@ const useStyles = makeStyles(theme => ({
       },
     },
     
-    // Header do card
+    // Header do card - Layout responsivo
     '.card-header': {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
       marginBottom: '8px',
       paddingBottom: '6px',
       borderBottom: '1px solid #f1f3f4',
+      
+      // Responsividade para 1600x900
+      '@media (max-width: 1600px)': {
+        marginBottom: '6px',
+        paddingBottom: '4px',
+      },
+      
+      // Responsividade para 1366x768
+      '@media (max-width: 1366px)': {
+        marginBottom: '5px',
+        paddingBottom: '3px',
+      },
+    },
+    
+    '.card-contact-wrapper': {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+      width: '100%',
     },
     
     '.card-contact': {
       display: 'flex',
       alignItems: 'center',
       gap: '6px',
+      flex: 1,
+      minWidth: 0, // Permite que o flex funcione corretamente
     },
     
     '.card-phone': {
       fontSize: '0.75rem',
       fontWeight: '600',
       color: '#495057',
+      
+      // Responsividade para 1600x900
+      '@media (max-width: 1600px)': {
+        fontSize: '0.7rem',
+      },
+      
+      // Responsividade para 1366x768
+      '@media (max-width: 1366px)': {
+        fontSize: '0.65rem',
+      },
     },
     
     '.card-ticket': {
       fontSize: '0.65rem',
       color: '#6c757d',
       fontWeight: '500',
+      
+      // Responsividade para 1600x900
+      '@media (max-width: 1600px)': {
+        fontSize: '0.6rem',
+      },
+      
+      // Responsividade para 1366x768
+      '@media (max-width: 1366px)': {
+        fontSize: '0.55rem',
+      },
     },
     
     // Título do card
@@ -663,6 +811,18 @@ const useStyles = makeStyles(theme => ({
       overflow: 'hidden',
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap',
+      
+      // Responsividade para 1600x900
+      '@media (max-width: 1600px)': {
+        fontSize: '0.8rem',
+        marginBottom: '5px',
+      },
+      
+      // Responsividade para 1366x768
+      '@media (max-width: 1366px)': {
+        fontSize: '0.75rem',
+        marginBottom: '4px',
+      },
     },
     
     // Descrição do card
@@ -676,9 +836,23 @@ const useStyles = makeStyles(theme => ({
       display: '-webkit-box',
       WebkitLineClamp: 2,
       WebkitBoxOrient: 'vertical',
+      
+      // Responsividade para 1600x900
+      '@media (max-width: 1600px)': {
+        fontSize: '0.7rem',
+        marginBottom: '6px',
+        lineHeight: '1.2',
+      },
+      
+      // Responsividade para 1366x768
+      '@media (max-width: 1366px)': {
+        fontSize: '0.65rem',
+        marginBottom: '5px',
+        lineHeight: '1.2',
+      },
     },
     
-    // Tags do card (empacotamento natural sem forçar truncamento)
+    // Tags do card (controle rigoroso de overflow)
     '.card-tags': {
       display: 'flex',
       flexWrap: 'wrap',
@@ -687,19 +861,46 @@ const useStyles = makeStyles(theme => ({
       alignItems: 'flex-start',
       alignContent: 'flex-start',
       justifyContent: 'flex-start',
-      // Permite que as tags usem o espaço natural
+      width: '100%',
+      overflow: 'hidden', // Garante que nada vaze
+      
+      // Responsividade para 1366x768 - controle mais rigoroso
+      '@media (max-width: 1366px)': {
+        gap: '2px',
+        marginBottom: '6px',
+      },
+      
+      // Permite que as tags usem o espaço natural mas com limites
       '& > *': {
         flexGrow: 0,
-        flexShrink: 0,
-        // Garante espaço suficiente para tags normais
-        maxWidth: 'calc(100% - 10px)',
+        flexShrink: 1, // Permite encolher se necessário
+        maxWidth: '100%', // Nunca pode passar da largura do container
+        minWidth: 0, // Permite encolher completamente se necessário
       },
-      // Tags muito longas podem truncar apenas se passarem de 90% da largura
+      
+      // Controle específico dos chips
       '& .MuiChip-root': {
+        maxWidth: '100%',
+        overflow: 'hidden',
+        
+        // Na resolução 1366x768, tags ficam menores
+        '@media (max-width: 1366px)': {
+          height: '18px',
+          fontSize: '0.6rem',
+          '& .MuiChip-label': {
+            paddingLeft: '4px',
+            paddingRight: '4px',
+          },
+          '& .MuiChip-icon': {
+            fontSize: '10px',
+          },
+        },
+        
         '& .MuiChip-label': {
-          overflow: 'visible',
-          textOverflow: 'initial',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
+          maxWidth: '100%',
         },
       },
     },
@@ -743,7 +944,7 @@ const useStyles = makeStyles(theme => ({
     
     // Badge de mensagens não lidas
     '.unread-badge': {
-    position: 'absolute',
+      position: 'absolute',
       top: '-4px',
       right: '-4px',
       backgroundColor: '#dc3545',
@@ -765,9 +966,8 @@ const useStyles = makeStyles(theme => ({
       opacity: 0.9,
       zIndex: 1000,
       filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))',
-    },
+    }
   },
-  
   mainContainer: {
     display: "flex",
     flexDirection: "column",
@@ -778,53 +978,80 @@ const useStyles = makeStyles(theme => ({
     overflowY: "auto",
     backgroundColor: "#f5f5f5",
   },
-  
-
-  
   addButton: {
     backgroundColor: "#00C307",
     color: "#ffffff",
     borderRadius: "12px",
     padding: "8px 16px",
+    fontSize: "0.875rem",
     "&:hover": {
       backgroundColor: "#00A006",
     },
+    
+    // Responsividade
+    '@media (max-width: 1600px)': {
+      padding: "6px 12px",
+      fontSize: "0.8rem",
+    },
+    
+    '@media (max-width: 1366px)': {
+      padding: "5px 10px",
+      fontSize: "0.75rem",
+    },
   },
-  
   header: {
     backgroundColor: "#fff",
     borderRadius: "12px",
-    padding: theme.spacing(2),
-    marginBottom: theme.spacing(2),
+    padding: '12px',
+    marginBottom: '12px',
     boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     position: "relative",
+    minHeight: "60px", // Altura mínima reduzida
+    
+    // Responsividade para resoluções menores
+    '@media (max-width: 1600px)': {
+      padding: '8px',
+      marginBottom: '8px',
+      minHeight: "50px",
+    },
+    
+    '@media (max-width: 1366px)': {
+      padding: '6px',
+      marginBottom: '6px',
+      minHeight: "45px",
+    },
   },
-  
   headerCenter: {
     position: 'absolute',
     left: '50%',
     transform: 'translateX(-50%)',
     display: 'flex',
     alignItems: 'center',
-    gap: '16px',
+    gap: '12px', // Reduzido de 16px para 12px
+    
+    // Responsividade
+    '@media (max-width: 1600px)': {
+      gap: '8px',
+    },
+    
+    '@media (max-width: 1366px)': {
+      gap: '6px',
+    },
   },
-  
   headerRight: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'flex-end',
     flex: 1,
   },
-  
   badgesContainer: {
     display: 'flex',
     gap: '6px',
     marginTop: '4px',
   },
-  
   smallBadge: {
     height: '18px',
     fontSize: '0.65rem',
@@ -833,19 +1060,16 @@ const useStyles = makeStyles(theme => ({
       paddingRight: '6px',
     },
   },
-  
   title: {
     fontWeight: "600",
     color: "#2c3e50",
     fontSize: "1.5rem",
   },
-  
   subtitle: {
     color: "#6c757d",
     fontSize: "0.9rem",
     marginTop: "4px",
   },
-  
   kanbanWrapper: {
     flex: 1,
     display: "flex",
@@ -855,14 +1079,222 @@ const useStyles = makeStyles(theme => ({
     backgroundColor: "#fff",
     borderRadius: "12px",
     boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-    padding: theme.spacing(2),
+    padding: '16px',
     overflow: "hidden",
   },
-  
   boardContainer: {
     flex: 1,
     minHeight: 0,
     overflow: "auto",
+    
+    // Responsividade para melhor aproveitamento do espaço
+    '@media (max-width: 1600px)': {
+      // Otimização para 1600x900
+    },
+    
+    '@media (max-width: 1366px)': {
+      // Otimização para 1366x768
+    },
+  },
+  // Estilos responsivos para campos de filtro (DINÂMICOS)
+  filterField: {
+    marginRight: 16,
+    minWidth: '160px',
+    width: 'auto', // Largura automática
+    display: 'flex',
+    
+    // Bordas mais arredondadas
+    '& .MuiOutlinedInput-root': {
+      borderRadius: '20px !important', // Mais arredondado
+    },
+    '& .MuiInputBase-root': {
+      borderRadius: '20px !important',
+    },
+    
+    // Garante espaço suficiente para a setinha
+    '& .MuiSelect-root': {
+      paddingRight: '32px !important', // Espaço extra para a setinha
+    },
+    '& .MuiSelect-select': {
+      paddingRight: '32px !important', // Garante espaço para a setinha
+      whiteSpace: 'nowrap', // Evita quebra de linha
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+    },
+    '& .MuiSelect-icon': {
+      right: '8px', // Posiciona a setinha corretamente
+    },
+    
+    // Responsividade para 1600x900
+    '@media (max-width: 1600px)': {
+      marginRight: 12,
+      minWidth: '140px !important',
+      '& .MuiInputBase-input': {
+        fontSize: '0.8rem',
+        padding: '8px 12px',
+        paddingRight: '28px !important',
+      },
+      '& .MuiInputLabel-root': {
+        fontSize: '0.8rem',
+      },
+      '& .MuiSelect-select': {
+        fontSize: '0.8rem',
+        padding: '8px 12px',
+        paddingRight: '28px !important',
+      },
+      '& .MuiSelect-icon': {
+        right: '6px',
+      },
+    },
+    
+    // Responsividade para 1366x768
+    '@media (max-width: 1366px)': {
+      marginRight: 8,
+      minWidth: '120px !important',
+      '& .MuiInputBase-input': {
+        fontSize: '0.75rem',
+        padding: '6px 10px',
+        paddingRight: '24px !important',
+      },
+      '& .MuiInputLabel-root': {
+        fontSize: '0.75rem',
+      },
+      '& .MuiSelect-select': {
+        fontSize: '0.75rem',
+        padding: '6px 10px',
+        paddingRight: '24px !important',
+      },
+      '& .MuiSelect-icon': {
+        right: '4px',
+      },
+      '& .MuiChip-root': {
+        fontSize: '0.6rem',
+        height: '16px',
+        padding: '1px 4px',
+      },
+    },
+  },
+  dateField: {
+    marginRight: 16,
+    width: '180px', // Aumentado de 160px para 180px
+    
+    // Bordas mais arredondadas
+    '& .MuiOutlinedInput-root': {
+      borderRadius: '20px !important', // Mais arredondado
+    },
+    '& .MuiInputBase-root': {
+      borderRadius: '20px !important',
+    },
+    
+    // Responsividade para 1600x900
+    '@media (max-width: 1600px)': {
+      marginRight: 12,
+      width: '160px', // Aumentado de 140px para 160px
+      '& .MuiInputBase-input': {
+        fontSize: '0.8rem',
+        padding: '8px 12px',
+      },
+      '& .MuiInputLabel-root': {
+        fontSize: '0.8rem',
+      },
+    },
+    
+    // Responsividade para 1366x768
+    '@media (max-width: 1366px)': {
+      marginRight: 8,
+      width: '140px', // Aumentado de 120px para 140px
+      '& .MuiInputBase-input': {
+        fontSize: '0.75rem',
+        padding: '6px 10px',
+      },
+      '& .MuiInputLabel-root': {
+        fontSize: '0.75rem',
+      },
+    },
+  },
+  // Estilos para o filtro de avatares
+  userAvatarFilter: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginRight: '16px',
+    flexWrap: 'nowrap', // Evita quebra de linha
+    flexDirection: 'row', // Força direção horizontal
+    
+    // Responsividade para 1600x900
+    '@media (max-width: 1600px)': {
+      gap: '6px',
+      marginRight: '12px',
+    },
+    
+    // Responsividade para 1366x768
+    '@media (max-width: 1366px)': {
+      gap: '4px',
+      marginRight: '8px',
+    },
+  },
+  userAvatar: {
+    width: '32px',
+    height: '32px',
+    cursor: 'pointer',
+    border: '2px solid transparent',
+    transition: 'all 0.2s ease',
+    fontSize: '0.8rem',
+    
+    '&:hover': {
+      transform: 'scale(1.1)',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+    },
+    
+    // Responsividade para 1600x900
+    '@media (max-width: 1600px)': {
+      width: '28px',
+      height: '28px',
+      fontSize: '0.75rem',
+    },
+    
+    // Responsividade para 1366x768
+    '@media (max-width: 1366px)': {
+      width: '24px',
+      height: '24px',
+      fontSize: '0.7rem',
+    },
+  },
+  userAvatarSelected: {
+    border: '2px solid #00C307',
+    boxShadow: '0 0 0 2px rgba(0, 195, 7, 0.2)',
+  },
+  clearFilterButton: {
+    minWidth: 'auto',
+    width: '32px',
+    height: '32px',
+    padding: '4px',
+    backgroundColor: '#f5f5f5',
+    color: '#666',
+    border: '1px solid #ddd',
+    marginLeft: '4px',
+    
+    '&:hover': {
+      backgroundColor: '#e0e0e0',
+      color: '#333',
+    },
+    
+    // Responsividade para 1600x900
+    '@media (max-width: 1600px)': {
+      width: '28px',
+      height: '28px',
+      padding: '3px',
+    },
+    
+    // Responsividade para 1366x768
+    '@media (max-width: 1366px)': {
+      width: '24px',
+      height: '24px',
+      padding: '2px',
+      '& .MuiSvgIcon-root': {
+        fontSize: '1rem',
+      },
+    },
   },
 }));
 
@@ -933,9 +1365,11 @@ const Kanban = () => {
   
   // Estados para controle de inicialização
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const [lastFilterState, setLastFilterState] = useState(null);
   const [ticketsCache, setTicketsCache] = useState(null);
   const [cacheTimestamp, setCacheTimestamp] = useState(0);
+  const [lastInstantFilter, setLastInstantFilter] = useState(null);
+  
+
   
   // Paleta de cores para os badges dos funis
   const funnelColors = [
@@ -1073,14 +1507,18 @@ const Kanban = () => {
     }
   };
 
-  // Função para buscar todos os usuários (apenas admin)
+  // Função para buscar todos os usuários (apenas admin) - Usando endpoint completo
   const fetchAllUsers = async () => {
     try {
-      const response = await api.get("/users/list");
-      setAllUsers(response.data || []);
-      return response.data || [];
+      // Usando o mesmo endpoint da página de usuários que funciona
+      const response = await api.get("/users/", {
+        params: { searchParam: "", pageNumber: 1 }
+      });
+      const users = response.data.users || [];
+      setAllUsers(users);
+      return users;
     } catch (error) {
-      console.log(error);
+      console.error('Erro ao buscar usuários:', error);
       return [];
     }
   };
@@ -1131,8 +1569,13 @@ const Kanban = () => {
         params.tags = JSON.stringify(selectedTags.map(tag => tag.id));
       }
       
+      // Se nenhum usuário estiver selecionado, filtra apenas pelo usuário logado
+      // Se houver usuários selecionados, usa a seleção
       if (selectedUsers.length > 0) {
         params.users = JSON.stringify(selectedUsers.map(user => user.id));
+      } else if (user?.id) {
+        // Filtra apenas pelo usuário logado quando nenhum avatar estiver selecionado
+        params.users = JSON.stringify([user.id]);
       }
       
       const { data } = await api.get("/ticket/kanban", { params });
@@ -1166,8 +1609,13 @@ const Kanban = () => {
         params.tags = JSON.stringify(selectedTags.map(tag => tag.id));
       }
       
+      // Se nenhum usuário estiver selecionado, filtra apenas pelo usuário logado
+      // Se houver usuários selecionados, usa a seleção
       if (selectedUsers.length > 0) {
         params.users = JSON.stringify(selectedUsers.map(user => user.id));
+      } else if (user?.id) {
+        // Filtra apenas pelo usuário logado quando nenhum avatar estiver selecionado
+        params.users = JSON.stringify([user.id]);
       }
 
       const { data } = await api.get("/ticket/kanban", { params });
@@ -1184,6 +1632,197 @@ const Kanban = () => {
       return [];
     }
   };
+
+
+
+    // ⚡ Função para filtro instantâneo (executa imediatamente com nova seleção)
+  const filterTicketsInstantly = useCallback(async (instantUserSelection) => {
+    try {
+      // Busca tickets com a nova seleção instantaneamente
+      const jsonString = user?.queues?.map(queue => queue.UserQueue.queueId) || [];
+      const params = {
+        queueIds: JSON.stringify(jsonString),
+        startDate,
+        endDate
+      };
+
+      if (selectedFunnel) {
+        params.funilId = selectedFunnel;
+      }
+      
+      if (selectedTags.length > 0) {
+        params.tags = JSON.stringify(selectedTags.map(tag => tag.id));
+      }
+      
+      // Aplica filtro com a nova seleção INSTANTÂNEA
+      if (instantUserSelection.length > 0) {
+        params.users = JSON.stringify(instantUserSelection.map(u => u.id));
+      } else if (user?.id) {
+        params.users = JSON.stringify([user.id]);
+      }
+
+      const { data } = await api.get("/ticket/kanban", { params });
+      const ticketsResult = data.tickets || [];
+      
+      // Processa as tags e colunas com os tickets filtrados
+      await processTagsWithTickets(ticketsResult);
+      
+    } catch (error) {
+      console.error('❌ Erro no filtro instantâneo:', error);
+    }
+  }, [user?.queues, startDate, endDate, selectedFunnel, selectedTags, user]);
+
+       // ⚡ Função para filtro instantâneo de TAGS
+    const filterTicketsInstantlyWithTags = useCallback(async (instantTagSelection) => {
+      try {
+        // Busca tickets com a nova seleção de tags instantaneamente
+        const jsonString = user?.queues?.map(queue => queue.UserQueue.queueId) || [];
+        const params = {
+          queueIds: JSON.stringify(jsonString),
+          startDate,
+          endDate
+        };
+
+        if (selectedFunnel) {
+          params.funilId = selectedFunnel;
+        }
+        
+        // Aplica filtro com a nova seleção INSTANTÂNEA de tags
+        if (instantTagSelection.length > 0) {
+          params.tags = JSON.stringify(instantTagSelection.map(tag => tag.id));
+        }
+        
+        // Filtro de usuários (usa o estado atual)
+        if (selectedUsers.length > 0) {
+          params.users = JSON.stringify(selectedUsers.map(u => u.id));
+        } else if (user?.id) {
+          params.users = JSON.stringify([user.id]);
+        }
+
+        const { data } = await api.get("/ticket/kanban", { params });
+        const ticketsResult = data.tickets || [];
+        
+        // Processa as tags e colunas com os tickets filtrados
+        await processTagsWithTickets(ticketsResult);
+        
+      } catch (error) {
+        console.error('❌ TAGS - Erro no filtro instantâneo:', error);
+      }
+    }, [user?.queues, startDate, endDate, selectedFunnel, selectedUsers, user]);
+
+   // Função auxiliar para processar tags com tickets específicos
+  const processTagsWithTickets = useCallback(async (ticketsData) => {
+    try {
+      const response = await api.get("/tag/kanban/", {
+        params: { funilId: selectedFunnel }
+      });
+      const fetchedTags = response.data.lista || [];
+      setTags(fetchedTags);
+      
+      // Funções auxiliares inline para processar dados
+      const formatPhoneNumberInline = (phoneNumber) => {
+        if (!phoneNumber) return '';
+        let cleanNumber = phoneNumber.replace(/^\+?55/, '').replace(/\D/g, '');
+        if (cleanNumber.length === 10 && ['6', '7', '8', '9'].includes(cleanNumber[2])) {
+          cleanNumber = cleanNumber.slice(0, 2) + '9' + cleanNumber.slice(2);
+        }
+        if (cleanNumber.length === 11) {
+          return `(${cleanNumber.slice(0, 2)}) ${cleanNumber.charAt(2)} ${cleanNumber.slice(3, 7)}-${cleanNumber.slice(7)}`;
+        }
+        if (cleanNumber.length === 10) {
+          return `(${cleanNumber.slice(0, 2)}) ${cleanNumber.slice(2, 6)}-${cleanNumber.slice(6)}`;
+        }
+        return phoneNumber;
+      };
+      
+      const getNormalTagsInline = (ticket) => {
+        let normalTags = [];
+        if (ticket.contact && ticket.contact.tags) {
+          const contactNormalTags = ticket.contact.tags.filter(tag => tag.kanban === 0);
+          normalTags = [...normalTags, ...contactNormalTags];
+        }
+        if (ticket.tags) {
+          const ticketNormalTags = ticket.tags.filter(tag => tag.kanban === 0);
+          normalTags = [...normalTags, ...ticketNormalTags];
+        }
+        return normalTags.filter((tag, index, self) => 
+          index === self.findIndex(t => t.id === tag.id)
+        );
+      };
+      
+      const lanes = [];
+      
+      // Tickets sem tags (Em aberto)
+      const filteredTickets = ticketsData.filter(ticket => ticket.tags.length === 0);
+      const emptyLane = {
+        id: "lane0",
+        title: "Em aberto",
+        color: '#6c757d',
+        funnel: null,
+        cards: filteredTickets.map(ticket => ({
+          id: ticket.id.toString(),
+          title: ticket.contact.name,
+          description: '',
+          phone: formatPhoneNumberInline(ticket.contact.number),
+          ticketId: `#${ticket.id}`,
+          user: ticket.user?.name || '',
+          tags: getNormalTagsInline(ticket),
+          unread: ticket.unreadMessages || 0,
+          ticketData: ticket
+        }))
+      };
+      lanes.push(emptyLane);
+      
+      // Processar tags com tickets
+      fetchedTags.forEach((tag) => {
+        const funilIndex = funnels.findIndex(f => f.id === tag.funilId);
+        const funilName = funnels[funilIndex]?.name;
+        const funilColor = funilIndex >= 0 ? funnelColors[funilIndex % funnelColors.length] : '#e0e0e0';
+        
+        const tagTickets = ticketsData.filter(ticket =>
+          ticket.tags.some(ticketTag => ticketTag.id === tag.id)
+        );
+        
+        const lane = {
+          id: tag.id.toString(),
+          title: tag.name,
+          color: funilColor,
+          funnel: funilName || null,
+          cards: tagTickets.map(ticket => ({
+            id: ticket.id.toString(),
+            title: ticket.contact.name,
+            description: '',
+            phone: formatPhoneNumberInline(ticket.contact.number),
+            ticketId: `#${ticket.id}`,
+            user: ticket.user?.name || '',
+            tags: getNormalTagsInline(ticket),
+            unread: ticket.unreadMessages || 0,
+            ticketData: ticket
+          }))
+        };
+        lanes.push(lane);
+      });
+      
+             // Aplicar ordem das colunas preservada para evitar mudança de posição
+       if (columnOrder.length > 0) {
+         const reorderedLanes = [...lanes].sort((a, b) => {
+           const indexA = columnOrder.indexOf(a.id);
+           const indexB = columnOrder.indexOf(b.id);
+           
+           if (indexA === -1) return 1;
+           if (indexB === -1) return -1;
+           
+           return indexA - indexB;
+         });
+         setColumns(reorderedLanes);
+       } else {
+         setColumns(lanes);
+       }
+      
+    } catch (error) {
+      console.error('❌ Erro ao processar tags:', error);
+    }
+  }, [selectedFunnel, funnels, funnelColors]);
 
   // Função para buscar tags do Kanban
   const fetchTags = useCallback(async () => {
@@ -1211,12 +1850,15 @@ const Kanban = () => {
       // Funções auxiliares inline
       const formatPhoneNumberInline = (phoneNumber) => {
         if (!phoneNumber) return '';
-        const cleanNumber = phoneNumber.replace(/\D/g, '');
-        if (cleanNumber.length === 10) {
-          return cleanNumber.slice(0, 2) + '9' + cleanNumber.slice(2);
+        let cleanNumber = phoneNumber.replace(/^\+?55/, '').replace(/\D/g, '');
+        if (cleanNumber.length === 10 && ['6', '7', '8', '9'].includes(cleanNumber[2])) {
+          cleanNumber = cleanNumber.slice(0, 2) + '9' + cleanNumber.slice(2);
         }
         if (cleanNumber.length === 11) {
-          return `(${cleanNumber.slice(0, 2)}) ${cleanNumber.slice(2, 7)}-${cleanNumber.slice(7)}`;
+          return `(${cleanNumber.slice(0, 2)}) ${cleanNumber.charAt(2)} ${cleanNumber.slice(3, 7)}-${cleanNumber.slice(7)}`;
+        }
+        if (cleanNumber.length === 10) {
+          return `(${cleanNumber.slice(0, 2)}) ${cleanNumber.slice(2, 6)}-${cleanNumber.slice(6)}`;
         }
         return phoneNumber;
       };
@@ -1370,29 +2012,34 @@ const Kanban = () => {
     };
   }, []);
 
-  // Função para formatar telefone brasileiro
-  const formatPhoneNumber = (phoneNumber) => {
-    if (!phoneNumber) return '';
-    
-    // Remove o código do país (55) se existir
-    let cleanNumber = phoneNumber.replace(/^\+?55/, '');
-    
-    // Remove caracteres não numéricos
-    cleanNumber = cleanNumber.replace(/\D/g, '');
-    
-    // Adiciona o 9 na frente se for celular e não tiver
-    if (cleanNumber.length === 10 && ['6', '7', '8', '9'].includes(cleanNumber[2])) {
-      cleanNumber = cleanNumber.slice(0, 2) + '9' + cleanNumber.slice(2);
-    }
-    
-    // Formata no padrão (99) 99999-9999
-    if (cleanNumber.length === 11) {
-      return `(${cleanNumber.slice(0, 2)}) ${cleanNumber.slice(2, 7)}-${cleanNumber.slice(7)}`;
-    }
-    
-    // Se não conseguir formatar, retorna o número original
-    return phoneNumber;
-  };
+  // Função para formatar telefone brasileiro no padrão (98) 9 98136-4572
+const formatPhoneNumber = (phoneNumber) => {
+  if (!phoneNumber) return '';
+  
+  // Remove o código do país (55) se existir
+  let cleanNumber = phoneNumber.replace(/^\+?55/, '');
+  
+  // Remove caracteres não numéricos
+  cleanNumber = cleanNumber.replace(/\D/g, '');
+  
+  // Adiciona o 9 na frente se for celular e não tiver
+  if (cleanNumber.length === 10 && ['6', '7', '8', '9'].includes(cleanNumber[2])) {
+    cleanNumber = cleanNumber.slice(0, 2) + '9' + cleanNumber.slice(2);
+  }
+  
+  // Formata no padrão brasileiro (98) 9 98136-4572
+  if (cleanNumber.length === 11) {
+    return `(${cleanNumber.slice(0, 2)}) ${cleanNumber.charAt(2)} ${cleanNumber.slice(3, 7)}-${cleanNumber.slice(7)}`;
+  }
+  
+  // Para números fixos de 10 dígitos: (98) 3123-4567
+  if (cleanNumber.length === 10) {
+    return `(${cleanNumber.slice(0, 2)}) ${cleanNumber.slice(2, 6)}-${cleanNumber.slice(6)}`;
+  }
+  
+  // Se não conseguir formatar, retorna o número original
+  return phoneNumber;
+};
 
   // Função para obter tags normais (não kanban) do ticket (otimizada)
   const getNormalTags = useCallback((ticket) => {
@@ -1798,15 +2445,13 @@ const Kanban = () => {
   // Handler para mover cards entre colunas (APENAS backend - estado local já foi atualizado)
   const handleCardMove = async (cardId, sourceLaneId, targetLaneId) => {
     try {
-      // ✅ Faz APENAS a requisição para o backend (estado local já atualizado)
+      // ✅ Remove todas as tags do ticket primeiro
       await api.delete(`/ticket-tags/${cardId}`);
       
-      // Adiciona nova tag se não for coluna padrão (Em aberto)
-      if (targetLaneId !== 'em-aberto') {
+      // Adiciona nova tag se não for coluna "Em aberto" (lane0)
+      if (targetLaneId !== 'lane0' && targetLaneId !== 'em-aberto') {
         await api.put(`/ticket-tags/${cardId}/${targetLaneId}`);
       }
-      
-      // toast.success('Ticket movido com sucesso!'); // Removido conforme solicitado
       
       // ❌ NÃO recarrega dados para não sobrescrever o estado local
       // await fetchTags();
@@ -1900,30 +2545,17 @@ const Kanban = () => {
     }
   }, [allUsers, user]);
 
-  // Efeito para atualizar dados quando filtros mudarem (OTIMIZADO)
+    // Efeito OTIMIZADO para atualizar dados quando filtros mudarem
   useEffect(() => {
-    if (user && initialLoadComplete && funnels.length > 0) {
-      const currentFilterState = JSON.stringify({
-        funnel: selectedFunnel,
-        tags: selectedTags.map(t => t.id).sort(),
-        users: selectedUsers.map(u => u.id).sort(),
-        startDate,
-        endDate
-      });
-      
-      // Só atualiza se realmente houve mudança
-      if (lastFilterState === currentFilterState) {
-        return;
-      }
-      
-      const timeoutId = setTimeout(() => {
-        setLastFilterState(currentFilterState);
-        fetchTags();
-      }, 500); // Reduzido de 800ms para 500ms
-      
-      return () => clearTimeout(timeoutId);
+    // Evita execução desnecessária logo após filtro instantâneo
+    if (lastInstantFilter && (Date.now() - lastInstantFilter) < 2000) {
+      return;
     }
-  }, [selectedFunnel, selectedTags, selectedUsers, startDate, endDate, user, initialLoadComplete, funnels.length]);
+    
+    if (user && initialLoadComplete && funnels.length > 0) {
+      fetchTags();
+    }
+  }, [selectedFunnel, selectedTags, selectedUsers, startDate, endDate, user, initialLoadComplete, funnels.length, lastInstantFilter]);
 
   // Efeito separado para salvar filtros (evita loops infinitos)
   useEffect(() => {
@@ -2201,32 +2833,11 @@ const Kanban = () => {
   };
 
   return (
+    <>
     <MainContainer>
       <Paper className={classes.mainContainer}>
         {/* Header modernizado */}
         <div className={classes.header}>
-          <div>
-            <Typography className={classes.title}>
-              CRM Kanban
-            </Typography>
-            <div className={classes.badgesContainer}>
-              <Chip 
-                label={`${columns.reduce((acc, col) => acc + col.cards.length, 0)} tickets`} 
-                color="primary" 
-                variant="outlined" 
-                size="small"
-                className={classes.smallBadge}
-              />
-              <Chip 
-                label={`${columns.length} colunas`} 
-                color="secondary" 
-                variant="outlined" 
-                size="small"
-                className={classes.smallBadge}
-              />
-            </div>
-          </div>
-          
           <div className={classes.headerCenter}>
           <TextField
               label="Data de Início"
@@ -2238,7 +2849,7 @@ const Kanban = () => {
               }}
             variant="outlined"
             size="small"
-              style={{ marginRight: 16 }}
+              className={classes.dateField}
           />
           <TextField
               label="Data de Fim"
@@ -2250,13 +2861,18 @@ const Kanban = () => {
               }}
             variant="outlined"
             size="small"
-              style={{ marginRight: 16 }}
+              className={classes.dateField}
           />
             
           <FormControl 
             variant="outlined" 
             size="small" 
-              style={{ minWidth: 200, marginRight: 16 }}
+              className={classes.filterField}
+              style={{ 
+                minWidth: 220, // Aumentado de 200 para 220
+                width: 'auto', // Largura automática baseada no conteúdo
+                maxWidth: 300  // Máximo para não crescer demais
+              }}
           >
             <InputLabel>Filtrar por Funil</InputLabel>
             <Select
@@ -2292,7 +2908,12 @@ const Kanban = () => {
           <FormControl 
             variant="outlined" 
             size="small" 
-              style={{ minWidth: 180, marginRight: 16 }}
+              className={classes.filterField}
+              style={{ 
+                minWidth: 200, // Aumentado de 180 para 200
+                width: 'auto', // Largura automática baseada no conteúdo
+                maxWidth: 280  // Máximo para não crescer demais
+              }}
           >
             <InputLabel>Filtrar por Tags</InputLabel>
             <Select
@@ -2302,33 +2923,22 @@ const Kanban = () => {
                 const selectedIds = event.target.value;
                 const selectedTagsArray = allTags.filter(tag => selectedIds.includes(tag.id));
                 setSelectedTags(selectedTagsArray);
+                
+                // ⚡ FILTRO INSTANTÂNEO DE TAGS
+                setLastInstantFilter(Date.now());
+                filterTicketsInstantlyWithTags(selectedTagsArray);
               }}
               label="Filtrar por Tags"
-              renderValue={(selected) => (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {selected.map((tagId) => {
-                    const tag = allTags.find(t => t.id === tagId);
-                    return tag ? (
-                      <span
-                        key={tagId}
-                        style={{
-                          backgroundColor: tag.color || "#eee",
-                          color: getTextColor(tag.color),
-                            fontSize: "0.65rem",
-                            height: "18px",
-                            padding: "2px 6px",
-                            borderRadius: "9px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          fontWeight: "500"
-                        }}
-                      >
-                        {tag.name}
-                      </span>
-                    ) : null;
-                  })}
-                </div>
-              )}
+              renderValue={(selected) => {
+                if (selected.length === 0) {
+                  return 'Selecionar tags';
+                } else if (selected.length === 1) {
+                  const tag = allTags.find(t => t.id === selected[0]);
+                  return tag?.name || 'Tag selecionada';
+                } else {
+                  return `${selected.length} tags selecionadas`;
+                }
+              }}
               MenuProps={{
                 anchorOrigin: {
                   vertical: "bottom",
@@ -2366,77 +2976,91 @@ const Kanban = () => {
             </Select>
           </FormControl>
 
-          {/* Filtro de Usuários - apenas para admin */}
-          {user?.profile === 'admin' && (
-            <FormControl 
-              variant="outlined" 
-              size="small" 
-                style={{ minWidth: 180 }}
-            >
-              <InputLabel>Filtrar por Usuário</InputLabel>
-              <Select
-                multiple
-                value={selectedUsers.map(user => user.id)}
-                onChange={(event) => {
-                  const selectedIds = event.target.value;
-                  const selectedUsersArray = allUsers.filter(user => selectedIds.includes(user.id));
-                  setSelectedUsers(selectedUsersArray);
-                }}
-                label="Filtrar por Usuário"
-                renderValue={(selected) => (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                    {selected.map((userId) => {
-                      const user = allUsers.find(u => u.id === userId);
-                      return user ? (
-                        <span
-                          key={userId}
-                          style={{
-                            backgroundColor: "#f5f5f5",
-                            color: "#333",
-                              fontSize: "0.65rem",
-                              height: "18px",
-                              padding: "2px 6px",
-                              borderRadius: "9px",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            fontWeight: "500"
-                          }}
-                        >
-                          {user.name}
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
-                )}
-                MenuProps={{
-                  anchorOrigin: {
-                    vertical: "bottom",
-                    horizontal: "left"
-                  },
-                  transformOrigin: {
-                    vertical: "top",
-                    horizontal: "left"
-                  },
-                  getContentAnchorEl: null,
-                  PaperProps: {
-                    style: {
-                      backgroundColor: "#ffffff",
-                      marginTop: "4px",
-                      maxHeight: "200px"
-                    }
-                  }
-                }}
-              >
-                {allUsers.map(user => (
-                  <MenuItem key={user.id} value={user.id}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Person style={{ fontSize: 16, color: '#666' }} />
-                      {user.name}
+          {/* Filtro de Usuários por Avatares - apenas para admin */}
+          {user?.profile === 'admin' && allUsers.length > 0 && (
+            <div className={classes.userAvatarFilter}>
+              {allUsers.map(userItem => {
+                const isSelected = selectedUsers.some(su => su.id === userItem.id);
+                
+                // Avatar URL (mesma lógica da página Users)
+                const avatarUrl = userItem.id === user.id
+                  ? `${backendUrl}/public/company${userItem.companyId}/user/${user.profileImage || 'nopicture.png'}`
+                  : userItem.profileImage
+                    ? `${backendUrl}/public/company${userItem.companyId}/user/${userItem.profileImage}`
+                    : undefined;
+                
+                return (
+                  <Tooltip key={userItem.id} title={userItem.name} placement="top">
+                    <div
+                      onClick={() => {
+                        let newSelection;
+                        if (isSelected) {
+                          // Remove usuário da seleção
+                          newSelection = selectedUsers.filter(su => su.id !== userItem.id);
+                        } else {
+                          // Adiciona usuário à seleção
+                          newSelection = [...selectedUsers, userItem];
+                        }
+                        
+                        // Atualiza o estado
+                        setSelectedUsers(newSelection);
+                        
+                        // ⚡ FILTRO INSTANTÂNEO - Executa imediatamente com a nova seleção
+                        setLastInstantFilter(Date.now());
+                        filterTicketsInstantly(newSelection);
+                      }}
+                      style={{
+                        cursor: 'pointer',
+                        position: 'relative',
+                        transition: 'all 0.2s ease',
+                        transform: isSelected ? 'scale(1.1)' : 'scale(1)',
+                        filter: isSelected ? 'none' : 'grayscale(0.3)',
+                        opacity: isSelected ? 1 : 0.7,
+                      }}
+                    >
+                      <Avatar
+                        src={
+                          userItem.id === user.id
+                            ? `${backendUrl}/public/company${userItem.companyId}/user/${user.profileImage || 'nopicture.png'}`
+                            : userItem.profileImage
+                              ? `${backendUrl}/public/company${userItem.companyId}/user/${userItem.profileImage}`
+                              : undefined
+                        }
+                        className={classes.userAvatar}
+                        style={{
+                          border: isSelected ? '2px solid #00C307' : '2px solid transparent',
+                          boxShadow: isSelected ? '0 2px 8px rgba(0, 195, 7, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
+                          backgroundColor: isSelected ? '#00C307' : '#f5f5f5',
+                          color: isSelected ? '#fff' : '#666',
+                        }}
+                      >
+                        {userItem.name.charAt(0).toUpperCase()}
+                      </Avatar>
+                      {isSelected && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '-2px',
+                          right: '-2px',
+                          width: '12px',
+                          height: '12px',
+                          backgroundColor: '#00C307',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '8px',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          border: '1px solid white',
+                        }}>
+                          ✓
+                        </div>
+                      )}
                     </div>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                  </Tooltip>
+                );
+              })}
+            </div>
           )}
         </div>
           
@@ -2487,7 +3111,7 @@ const Kanban = () => {
                 fontSize: '11px',
                 fontWeight: 500
               }}>
-                  {loading ? 'Carregando' : 'Atualizando'}
+                  
               </Typography>
             </div>
           )}
@@ -2679,12 +3303,20 @@ const Kanban = () => {
                        const isDocument = message.mediaType === 'application' || message.mediaType?.startsWith('application/');
                        const isAudioMsg = message.mediaType === 'audio' || message.mediaType?.startsWith('audio/');
                        
-                       // Só remove se o texto for EXATAMENTE um nome de arquivo ou "Audio"
-                       if ((isMedia || isDocument || isAudioMsg) && messageText) {
+                       // Para documentos, sempre limpa o texto - a assinatura será mostrada separadamente
+                       if (isDocument && messageText) {
+                         // Para documentos, remove todo o texto do body (incluindo nome do arquivo)
+                         // A assinatura será extraída e mostrada separadamente
+                         messageText = '';
+                       }
+                       // Para outros tipos de mídia
+                       else if ((isMedia || isAudioMsg) && messageText) {
                          // Remove se for apenas nome de arquivo com timestamp ou texto padrão
                          if (/^\d+_.*\.\w+$/.test(messageText.trim()) || 
                              messageText.trim() === 'Audio' || 
                              messageText.trim() === 'Áudio' ||
+                             messageText.trim() === 'Mensagem não suportada' ||
+                             messageText.trim() === 'MENSAGEM NÃO SUPORTADA' ||
                              /^\d+\.(mp3|wav|m4a|ogg)$/i.test(messageText.trim())) {
                            messageText = '';
                          }
@@ -2707,7 +3339,17 @@ const Kanban = () => {
                            const isVideo = message.mediaType === 'video' || message.mediaType?.startsWith('video/');
                            const isAudio = message.mediaType === 'audio' || message.mediaType?.startsWith('audio/');
                            
-
+                           // Detectar documentos por mediaType ou pela URL
+                           const isDocumentByType = message.mediaType === 'application' || message.mediaType?.startsWith('application/');
+                           const isDocumentByUrl = message.mediaUrl && (
+                             message.mediaUrl.includes('.pdf') || 
+                             message.mediaUrl.includes('.doc') || 
+                             message.mediaUrl.includes('.txt') ||
+                             message.mediaUrl.includes('.xls') ||
+                             message.mediaUrl.includes('.zip') ||
+                             message.mediaUrl.includes('.rar')
+                           );
+                           const isDocument = isDocumentByType || isDocumentByUrl;
                            
                            if (isImage) {
                              return (
@@ -2748,25 +3390,47 @@ const Kanban = () => {
                                  <source src={message.mediaUrl} />
                                </audio>
                              );
-                                                       } else {
+                                                       } else if (isDocument) {
                               // Layout estilo WhatsApp para documentos
-                              // Extrair apenas o nome do arquivo, SEMPRE removendo assinatura
-                              let fileName = message.body || 'Documento';
+                              // Extrair APENAS o nome do arquivo, ignorando legenda e assinatura
+                              let fileName = 'Documento';
+                              let originalBody = message.body || '';
                               
-                              // Se tem assinatura ou quebra de linha, extrai só o nome do arquivo
-                              if (fileName.includes('\n')) {
-                                const lines = fileName.split('\n');
-                                // Procura pela linha que tem extensão de arquivo ou parece ser um arquivo
+                              // Primeira tentativa: extrair da URL se disponível
+                              if (message.mediaUrl) {
+                                const urlParts = message.mediaUrl.split('/');
+                                const lastPart = urlParts[urlParts.length - 1];
+                                if (lastPart && lastPart.includes('.')) {
+                                  fileName = decodeURIComponent(lastPart);
+                                }
+                              }
+                              
+                              // Se não conseguiu da URL, procura no body
+                              if ((!fileName || fileName === 'Documento') && originalBody) {
+                                // Remove assinatura se existir
+                                let bodyToSearch = originalBody;
+                                if (originalBody.includes('*') && originalBody.includes(':*')) {
+                                  bodyToSearch = originalBody.replace(/\*[^:]+:\*\s*/, '').trim();
+                                }
+                                
+                                // Procura por linhas que parecem ser nomes de arquivo
+                                const lines = bodyToSearch.split('\n').filter(line => line.trim());
                                 for (const line of lines) {
-                                  if (line && (line.includes('.') || line.match(/^\d+_.*$/))) {
-                                    fileName = line.trim();
+                                  const trimmedLine = line.trim();
+                                  // Verifica se é um nome de arquivo (contém extensão)
+                                  if (trimmedLine && /\.\w{2,4}$/.test(trimmedLine) && 
+                                      !trimmedLine.includes('Mensagem') && 
+                                      !trimmedLine.includes('suportada')) {
+                                    fileName = trimmedLine;
                                     break;
                                   }
                                 }
-                                // Se não encontrou, usa a primeira linha que não parece ser assinatura
-                                if (!fileName.includes('.') && lines.length > 0) {
-                                  fileName = lines.find(line => !line.includes('*') && line.trim()) || lines[0];
-                                }
+                              }
+                              
+                              // Fallback final
+                              if (!fileName || fileName === 'Documento' || fileName.trim() === '' || 
+                                  fileName === 'Mensagem não suportada' || fileName === 'MENSAGEM NÃO SUPORTADA') {
+                                fileName = 'Documento.pdf';
                               }
                               const getDocumentIcon = (fileName) => {
                                 if (!fileName) return <Description style={{ fontSize: 28, color: '#1976d2' }} />;
@@ -2782,11 +3446,23 @@ const Kanban = () => {
                                 }
                               };
                               
-                              const getOriginalFileName = (fileName) => {
-                                if (!fileName) return fileName;
-                                const cleanName = fileName.replace(/^\d+_/, '').replace(/_\d+\./, '.');
-                                return cleanName.replace(/_/g, ' ');
-                              };
+                                                             const getOriginalFileName = (fileName) => {
+                                 if (!fileName) return fileName;
+                                 
+                                 // Remove timestamps e caracteres desnecessários
+                                 let cleanName = fileName;
+                                 
+                                 // Remove timestamp do início (ex: 1750034602009_)
+                                 cleanName = cleanName.replace(/^\d+_/, '');
+                                 
+                                 // Remove timestamp antes da extensão (ex: _1750034602009.pdf)
+                                 cleanName = cleanName.replace(/_\d+(\.\w+)$/, '$1');
+                                 
+                                 // Substitui underscores por espaços para melhor legibilidade
+                                 cleanName = cleanName.replace(/_/g, ' ');
+                                 
+                                 return cleanName;
+                               };
                               
                               return (
                                 <div style={{
@@ -2828,7 +3504,15 @@ const Kanban = () => {
                                       fontSize: '12px',
                                       color: '#667781'
                                     }}>
-                                      {fileName.toLowerCase().split('.').pop()?.toUpperCase() || 'DOC'}
+                                      {(() => {
+                                        const extension = fileName.toLowerCase().split('.').pop()?.toUpperCase() || 'DOC';
+                                        // Tenta extrair tamanho do fileName se estiver no formato "nome • tamanho"
+                                        if (fileName.includes('•') && fileName.includes('KB')) {
+                                          const sizePart = fileName.split('•')[1]?.trim();
+                                          return `${extension} • ${sizePart}`;
+                                        }
+                                        return extension;
+                                      })()}
                                     </div>
                                   </div>
                                   <GetApp 
@@ -2847,116 +3531,190 @@ const Kanban = () => {
                                   />
                                 </div>
                               );
+                            } else {
+                              // Para outros tipos de mídia não reconhecidos, não renderizar nada
+                              // O texto da mensagem será mostrado normalmente abaixo
+                              return null;
                             }
                          }
                          return null;
                        };
                        
+                       // Extrair assinatura e legenda separadamente para documentos
+                       let documentSignature = '';
+                       let documentCaption = '';
+                       if (isDocument && message.body && message.body.includes('*') && message.body.includes(':*')) {
+                         const signatureMatch = message.body.match(/\*([^:]+):\*\n?(.*)/s);
+                         if (signatureMatch) {
+                           documentSignature = signatureMatch[1];
+                           // Extrair legenda (texto após a assinatura, excluindo nome do arquivo)
+                           let caption = signatureMatch[2] || '';
+                           if (caption) {
+                             // Remove nome do arquivo se estiver presente
+                             const lines = caption.split('\n').filter(line => line.trim());
+                             const cleanLines = lines.filter(line => 
+                               !(/^\d+_.*\.\w+$/.test(line.trim()) || 
+                                 /^\d+\.\w+$/.test(line.trim()) ||
+                                 line.trim() === 'Mensagem não suportada' ||
+                                 line.trim() === 'MENSAGEM NÃO SUPORTADA')
+                             );
+                             documentCaption = cleanLines.join('\n').trim();
+                           }
+                         }
+                       }
+
                        return (
                          <div 
                            key={message.id || index}
                            style={{
                              alignSelf: message.fromMe ? 'flex-end' : 'flex-start',
                              maxWidth: '70%',
+                             display: 'flex',
+                             flexDirection: 'column',
+                             gap: '4px'
+                           }}
+                         >
+                           {/* Container da mensagem */}
+                           <div style={{
                              padding: '8px 12px',
                              borderRadius: '12px',
                              backgroundColor: isPrivate ? '#afeaff' : (message.fromMe ? '#dcf8c6' : '#ffffff'),
                              border: message.fromMe ? 'none' : '1px solid #e0e0e0',
                              wordBreak: 'break-word'
-                           }}
-                         >
-                           {/* Nome do usuário em assinatura */}
-                           {displayName && (
-                             <Typography 
-                               variant="body2" 
-                               style={{ 
-                                 fontSize: '13px',
-                                 fontWeight: 'bold',
-                                 color: isPrivate ? '#0066cc' : '#25D366',
-                                 marginBottom: '4px'
-                               }}
-                             >
-                               {displayName}
-                             </Typography>
-                           )}
-                           
-                           {/* Mídia */}
-                           {renderMedia()}
-                           
-                           {/* Texto da mensagem */}
-                           {messageText && !message.body?.includes('BEGIN:VCARD') && (
-                             <Typography 
-                               variant="body2" 
-                               style={{ 
-                                 fontSize: '14px',
-                                 fontWeight: isPrivate ? 'bold' : 'normal',
-                                 color: isPrivate ? '#0066cc' : 'inherit'
-                               }}
-                             >
-                               {messageText}
-                             </Typography>
-                           )}
-                           
-                           {/* vCard ou contactMessage */}
-                           {(message.vCard || message.body?.includes('BEGIN:VCARD')) && (
-                  <div style={{ 
-                               padding: '12px',
-                               backgroundColor: '#f8f9fa',
-                               borderRadius: '12px',
-                               border: '1px solid #e9ecef',
-                    display: 'flex', 
-                    alignItems: 'center', 
-                               gap: '12px',
-                               minWidth: '200px',
-                               marginBottom: messageText ? '8px' : '0'
-                             }}>
-                               <div style={{
-                                 width: '40px',
-                                 height: '40px',
-                                 borderRadius: '50%',
-                                 backgroundColor: '#25D366',
-                                 display: 'flex',
-                                 alignItems: 'center',
-                                 justifyContent: 'center'
-                               }}>
-                                 <Person style={{ color: 'white', fontSize: '20px' }} />
-                               </div>
-                               <div>
-                                 <Typography variant="body2" style={{ fontWeight: 'bold', color: '#333' }}>
-                                   {(() => {
-                                     if (message.contact?.name) return message.contact.name;
-                                     if (message.body?.includes('FN:')) {
-                                       const fnMatch = message.body.match(/FN:([^\\n\\r]+)/);
-                                       return fnMatch ? fnMatch[1] : 'Contato';
-                                     }
-                                     return 'Contato';
-                                   })()}
-                                 </Typography>
-                                 <Typography variant="caption" style={{ color: '#666' }}>
-                                   CONVERSAR
-                                 </Typography>
-                               </div>
-                             </div>
-                           )}
-                           
-                           {/* Timestamp */}
-                                         <Typography 
-                             variant="caption" 
-                       style={{
-                               fontSize: '11px', 
-                               color: '#666',
-                               display: 'block',
-                               textAlign: 'right',
-                               marginTop: '4px'
-                             }}
-                           >
-                             {new Date(message.createdAt).toLocaleString('pt-BR', {
-                               day: '2-digit',
-                               month: '2-digit', 
-                               hour: '2-digit',
-                               minute: '2-digit'
-                             })}
-                           </Typography>
+                           }}>
+                             {/* Nome do usuário em assinatura (apenas para não-documentos) */}
+                             {displayName && !isDocument && (
+                               <Typography 
+                                 variant="body2" 
+                                 style={{ 
+                                   fontSize: '13px',
+                                   fontWeight: 'bold',
+                                   color: isPrivate ? '#0066cc' : '#25D366',
+                                   marginBottom: '4px'
+                                 }}
+                               >
+                                 {displayName}
+                               </Typography>
+                             )}
+                             
+                             {/* Mídia */}
+                             {renderMedia()}
+                             
+                                                           {/* Texto da mensagem */}
+                              {messageText && 
+                               !message.body?.includes('BEGIN:VCARD') && 
+                               messageText !== 'Mensagem não suportada' &&
+                               messageText !== 'MENSAGEM NÃO SUPORTADA' && (
+                                <Typography 
+                                  variant="body2" 
+                                  style={{ 
+                                    fontSize: '14px',
+                                    fontWeight: isPrivate ? 'bold' : 'normal',
+                                    color: isPrivate ? '#0066cc' : 'inherit'
+                                  }}
+                                >
+                                  {messageText}
+                                </Typography>
+                              )}
+                              
+                              {/* Para documentos: assinatura e legenda ABAIXO do documento (como no MessagesList) */}
+                              {((isDocument && message.body && !isDocumentFile(message.body)) || 
+                                (isDocument && documentSignature) || 
+                                (isDocument && documentCaption)) && (
+                                <div style={{ marginTop: '8px' }}>
+                                  {/* Assinatura do documento */}
+                                  {documentSignature && (
+                                    <Typography 
+                                      variant="body2" 
+                                      style={{ 
+                                        fontSize: '13px',
+                                        fontWeight: 'bold',
+                                        color: '#000',
+                                        marginBottom: '2px'
+                                      }}
+                                    >
+                                      {documentSignature}:
+                                    </Typography>
+                                  )}
+                                  
+                                  {/* Legenda do documento */}
+                                  {documentCaption && (
+                                    <Typography 
+                                      variant="body2" 
+                                      style={{ 
+                                        fontSize: '14px',
+                                        color: 'inherit'
+                                      }}
+                                    >
+                                      {documentCaption}
+                                    </Typography>
+                                  )}
+                                </div>
+                              )}
+                              
+                              {/* vCard ou contactMessage */}
+                              {(message.vCard || message.body?.includes('BEGIN:VCARD')) && (
+                                <div style={{ 
+                                  padding: '12px',
+                                  backgroundColor: '#f8f9fa',
+                                  borderRadius: '12px',
+                                  border: '1px solid #e9ecef',
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '12px',
+                                  minWidth: '200px',
+                                  marginBottom: messageText ? '8px' : '0'
+                                }}>
+                                  <div style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '50%',
+                                    backgroundColor: '#25D366',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}>
+                                    <Person style={{ color: 'white', fontSize: '20px' }} />
+                                  </div>
+                                  <div>
+                                    <Typography variant="body2" style={{ fontWeight: 'bold', color: '#333' }}>
+                                      {(() => {
+                                        if (message.contact?.name) return message.contact.name;
+                                        if (message.body?.includes('FN:')) {
+                                          const fnMatch = message.body.match(/FN:([^\\n\\r]+)/);
+                                          return fnMatch ? fnMatch[1] : 'Contato';
+                                        }
+                                        return 'Contato';
+                                      })()}
+                                    </Typography>
+                                    <Typography variant="caption" style={{ color: '#666' }}>
+                                      CONVERSAR
+                                    </Typography>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Timestamp */}
+                              <Typography 
+                                variant="caption" 
+                                style={{
+                                  fontSize: '11px', 
+                                  color: '#666',
+                                  display: 'block',
+                                  textAlign: 'right',
+                                  marginTop: '4px'
+                                }}
+                              >
+                                {new Date(message.createdAt).toLocaleString('pt-BR', {
+                                  day: '2-digit',
+                                  month: '2-digit', 
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </Typography>
+                            </div>
+
+
                          </div>
                        );
                      })}
@@ -2969,8 +3727,8 @@ const Kanban = () => {
                       Nenhuma mensagem encontrada neste ticket.
                     </Typography>
                   </div>
-                    )}
-                  </div>
+                )}
+              </div>
               
               {/* Input de Mensagem Avançado */}
               <div style={{ 
@@ -3280,7 +4038,18 @@ const Kanban = () => {
       )}
 
     </MainContainer>
+    </>
   );
+};
+
+// Função para verificar se é um documento baseado na extensão
+const isDocumentFile = (fileName) => {
+  if (!fileName) return false;
+  
+  const extension = fileName.toLowerCase().split('.').pop();
+  const documentExtensions = ['pdf', 'doc', 'docx', 'txt', 'rtf', 'odt', 'xls', 'xlsx', 'ppt', 'pptx'];
+  
+  return documentExtensions.includes(extension);
 };
 
 // Função para formatar telefone brasileiro - usada no modal
