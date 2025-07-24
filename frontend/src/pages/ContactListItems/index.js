@@ -41,6 +41,7 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../../components/Can";
 import useContactLists from "../../hooks/useContactLists";
 import { Grid } from "@material-ui/core";
+import { sanitizeFileForUpload } from "../../utils";
 
 import planilhaExemplo from "../../assets/planilha.xlsx";
 import ForbiddenPage from "../../components/ForbiddenPage";
@@ -214,7 +215,9 @@ const ContactListItems = () => {
   const handleImportContacts = async () => {
     try {
       const formData = new FormData();
-      formData.append("file", fileUploadRef.current.files[0]);
+      const file = fileUploadRef.current.files[0];
+      const sanitizedFile = sanitizeFileForUpload(file);
+      formData.append("file", sanitizedFile);
       await api.request({
         url: `contact-lists/${contactListId}/upload`,
         method: "POST",

@@ -97,6 +97,7 @@ import {CheckSettings1, CheckCompanySetting} from "../../helpers/CheckSettings";
 import ShowTicketService from "../TicketServices/ShowTicketService";
 import { json } from "body-parser";
 import { is } from "bluebird";
+import { sanitizeFileName } from "../../utils/sanitizeFileName";
 
 const os = require("os");
 
@@ -250,8 +251,8 @@ export const getBodyMessage = (msg: proto.IWebMessageInfo): string | null => {
 
     const types = {
       conversation: msg.message?.conversation,
-      imageMessage: msg.message?.imageMessage?.caption,
-      videoMessage: msg.message?.videoMessage?.caption,
+      imageMessage: msg.message?.imageMessage?.caption || "",
+      videoMessage: msg.message?.videoMessage?.caption || "",
       extendedTextMessage: msg?.message?.extendedTextMessage?.text,
       buttonsResponseMessage: msg.message?.buttonsResponseMessage?.selectedDisplayText,
       listResponseMessage: msg.message?.listResponseMessage?.title || msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId,
@@ -264,14 +265,14 @@ export const getBodyMessage = (msg: proto.IWebMessageInfo): string | null => {
       //locationMessage: `Latitude: ${msg.message.locationMessage?.degreesLatitude} - Longitude: ${msg.message.locationMessage?.degreesLongitude}`,
       locationMessage: msgLocation(msg.message?.locationMessage?.jpegThumbnail, msg.message?.locationMessage?.degreesLatitude, msg.message?.locationMessage?.degreesLongitude),
       liveLocationMessage: `Latitude: ${msg.message?.liveLocationMessage?.degreesLatitude} - Longitude: ${msg.message?.liveLocationMessage?.degreesLongitude}`,
-      documentMessage: msg.message?.documentMessage?.caption,
+      documentMessage: msg.message?.documentMessage?.caption || "",
       audioMessage: "Áudio",
       listMessage: getBodyButton(msg) || msg.message?.listResponseMessage?.title,
-      viewOnceMessage: getBodyButton(msg),
+      viewOnceMessage: getBodyButton(msg) || "",
       reactionMessage: msg.message?.reactionMessage?.text || "reaction",
       senderKeyDistributionMessage: msg?.message?.senderKeyDistributionMessage?.axolotlSenderKeyDistributionMessage,
-      documentWithCaptionMessage: msg.message?.documentWithCaptionMessage?.message?.documentMessage?.caption,
-      viewOnceMessageV2: msg.message?.viewOnceMessageV2?.message?.imageMessage?.caption,
+      documentWithCaptionMessage: msg.message?.documentWithCaptionMessage?.message?.documentMessage?.caption || "",
+      viewOnceMessageV2: msg.message?.viewOnceMessageV2?.message?.imageMessage?.caption || "",
       adMetaPreview: msgAdMetaPreview(
         msg.message?.extendedTextMessage?.contextInfo?.externalAdReply?.thumbnail,
         msg.message?.extendedTextMessage?.contextInfo?.externalAdReply?.title,
@@ -298,6 +299,13 @@ export const getBodyMessage = (msg: proto.IWebMessageInfo): string | null => {
         new Error("Novo Tipo de Mensagem em getTypeMessage")
       );
     }
+
+    // Para tipos de mídia conhecidos, retorna string vazia ao invés de "Mensagem não suportada"
+    const mediaTypes = ['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage', 'stickerMessage', 'viewOnceMessage', 'viewOnceMessageV2', 'documentWithCaptionMessage'];
+    if (mediaTypes.includes(type) && !types[type]) {
+      return "";
+    }
+
     return types[type] || "Mensagem não suportada";
   } catch (error) {
     Sentry.setExtra("Error getTypeMessage", { msg, BodyMsg: msg.message });
@@ -639,11 +647,11 @@ const downloadMedia = async (msg: proto.IWebMessageInfo, isImported: Date = null
     msg.message?.interactiveMessage?.header?.videoMessage;
 
   if (!filename) {
-    const ext = mineType.mimetype.split("/")[1].split(";")[0];
-    filename = `${new Date().getTime()}.${ext}`;
-  } else {
-    filename = `${new Date().getTime()}_${filename}`;
-  }
+      const ext = mineType.mimetype.split("/")[1].split(";")[0];
+      filename = `${new Date().getTime()}.${ext}`;
+    } else {
+      filename = `${new Date().getTime()}_${sanitizeFileName(filename)}`;  // <--- sanitização aqui!
+    }
 
   const media = {
     data: buffer,

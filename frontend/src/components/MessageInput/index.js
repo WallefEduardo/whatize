@@ -66,6 +66,7 @@ import MessageUploadMedias from "../MessageUploadMedias";
 import { EditMessageContext } from "../../context/EditingMessage/EditingMessageContext";
 import ScheduleModal from "../ScheduleModal";
 import { useParams } from "react-router-dom/cjs/react-router-dom.min";
+import { sanitizeFileForUpload } from "../../utils";
 
 
 const Mp3Recorder = new MicRecorder({ bitRate: 128 });
@@ -561,7 +562,7 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
     if (!e.target.files) {
       return;
     }
-    const selectedMedias = Array.from(e.target.files);
+    const selectedMedias = Array.from(e.target.files).map(file => sanitizeFileForUpload(file));
     setMediasUpload(selectedMedias);
     setShowModalMedias(true);
   };
@@ -600,7 +601,7 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
 
   const handleInputPaste = (e) => {
     if (e.clipboardData.files[0]) {
-      const selectedMedias = Array.from(e.clipboardData.files);
+      const selectedMedias = Array.from(e.clipboardData.files).map(file => sanitizeFileForUpload(file));
       setMediasUpload(selectedMedias);
       setShowModalMedias(true);
     }
@@ -609,7 +610,7 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
   const handleInputDrop = (e) => {
     e.preventDefault();
     if (e.dataTransfer.files[0]) {
-      const selectedMedias = Array.from(e.dataTransfer.files);
+      const selectedMedias = Array.from(e.dataTransfer.files).map(file => sanitizeFileForUpload(file));
       setMediasUpload(selectedMedias);
       setShowModalMedias(true);
     }
@@ -823,7 +824,7 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
     setLoading(true);
     try {
       const formData = new FormData();
-      const filename = `${new Date().getTime()}.png`;
+      const filename = `camera_${new Date().getTime()}.png`;
       formData.append("medias", blob, filename);
       formData.append("body", privateMessage ? `\u200d` : "");
       formData.append("fromMe", true);
@@ -845,7 +846,7 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
       const extension = blob.type.split("/")[1];
 
       const formData = new FormData();
-      const filename = `${new Date().getTime()}.${extension}`;
+      const filename = `quick_message_${new Date().getTime()}.${extension}`;
       formData.append("medias", blob, filename);
       formData.append("body", (signMessage || privateMessage) ? `*${userName}:*\n${message}` : message);
       formData.append("fromMe", true);
@@ -875,7 +876,7 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
       }
 
       const formData = new FormData();
-      const filename = ticketChannel === "whatsapp" ? `${new Date().getTime()}.mp3` : `${new Date().getTime()}.m4a`;
+      const filename = ticketChannel === "whatsapp" ? `audio_${new Date().getTime()}.mp3` : `audio_${new Date().getTime()}.m4a`;
       formData.append("medias", blob, filename);
       formData.append("body", filename);
       formData.append("fromMe", true);

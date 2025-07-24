@@ -19,6 +19,7 @@ import { messageQueue, sendScheduledMessages } from "./queues";
 import BullQueue from "./libs/queue"
 import BullBoard from 'bull-board';
 import basicAuth from 'basic-auth';
+import { sanitizeFileName } from "./utils/sanitizeFileName";
 
 // Função de middleware para autenticação básica
 export const isBullAuth = (req, res, next) => {
@@ -38,6 +39,11 @@ dotenvConfig();
 Sentry.init({ dsn: process.env.SENTRY_DSN });
 
 const app = express();
+
+// Configuração para evitar problemas de decodificação de parâmetros
+app.set('query parser', 'simple');
+app.set('strict routing', false);
+app.set('case sensitive routing', false);
 
 // Configuração de filas
 app.set("queues", {
@@ -81,7 +87,12 @@ if (String(process.env.BULL_BOARD).toLocaleLowerCase() === 'true' && process.env
 
 app.use(compression()); // Compressão HTTP
 app.use(bodyParser.json({ limit: '5mb' })); // Aumentar o limite de carga para 5 MB
-app.use(bodyParser.urlencoded({ limit: '5mb', extended: true }));
+app.use(bodyParser.urlencoded({ 
+  limit: '5mb', 
+  extended: true,
+  parameterLimit: 1000,
+  type: 'application/x-www-form-urlencoded'
+}));
 app.use((req, res, next) => {
     next();
 });
@@ -104,6 +115,34 @@ app.options('*', cors());
 app.use(cookieParser());
 app.use(express.json());
 app.use(Sentry.Handlers.requestHandler());
+
+// Middleware global para capturar erros de decodificação
+app.use((req, res, next) => {
+  try {
+    // Tenta decodificar a URL para detectar problemas antecipadamente
+    if (req.url.includes('%')) {
+      const originalUrl = req.url;
+      try {
+        decodeURIComponent(req.url);
+      } catch (decodeError) {
+        // Se a decodificação falhar, sanitiza a URL
+        req.url = req.url
+          .replace(/%20/g, '_')     // Substitui espaços codificados
+          .replace(/%\(/g, '_')     // Substitui parênteses codificados
+          .replace(/%\)/g, '_')     // Substitui parênteses codificados
+          .replace(/%/g, '')        // Remove % restantes
+          .replace(/[<>:"/\\|?*]/g, '_'); // Remove caracteres especiais
+        
+        logger.warn(`URL sanitized due to decode error: ${originalUrl} -> ${req.url}`);
+      }
+    }
+  } catch (error) {
+    logger.warn(`Error in URL sanitization middleware: ${error.message}`);
+  }
+  next();
+});
+
+
 app.use("/public", express.static(uploadConfig.directory));
 
 // Middleware removido para evitar poluição de logs
@@ -116,6 +155,25 @@ app.use(Sentry.Handlers.errorHandler());
 
 // Middleware de tratamento de erros
 app.use(async (err: Error, req: Request, res: Response, _: NextFunction) => {
+  // Tratamento específico para erros de decodificação de URI
+  if (err.name === 'URIError' || err.message.includes('Failed to decode param')) {
+    logger.warn(`URI decode error handled: ${err.message} for URL: ${req.url}`);
+    
+    // Tenta sanitizar a URL e redirecionar
+    try {
+      const sanitizedUrl = req.url
+        .replace(/%20/g, '_')     // Substitui espaços codificados
+        .replace(/%\(/g, '_')     // Substitui parênteses codificados
+        .replace(/%\)/g, '_')     // Substitui parênteses codificados
+        .replace(/%/g, '')        // Remove % restantes
+        .replace(/[<>:"/\\|?*]/g, '_'); // Remove caracteres especiais
+      
+      return res.redirect(sanitizedUrl);
+    } catch (sanitizeError) {
+      return res.status(400).json({ error: "Invalid file name" });
+    }
+  }
+
   if (err instanceof AppError) {
     logger.warn(err);
     return res.status(err.statusCode).json({ error: err.message });

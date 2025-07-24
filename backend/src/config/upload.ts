@@ -3,6 +3,7 @@ import multer from "multer";
 import fs from "fs";
 import Whatsapp from "../models/Whatsapp";
 import { isEmpty, isNil } from "lodash";
+import { sanitizeFileName } from "../utils/sanitizeFileName"; // <-- Usando o import global
 
 const publicFolder = path.resolve(__dirname, "..", "..", "public");
 
@@ -10,7 +11,6 @@ export default {
   directory: publicFolder,
   storage: multer.diskStorage({
     destination: async function (req, file, cb) {
-
       let companyId;
       companyId = req.user?.companyId
       const { typeArch, fileId } = req.body;
@@ -43,7 +43,14 @@ export default {
     filename(req, file, cb) {
       const { typeArch } = req.body;
 
-      const fileName = typeArch && typeArch !== "announcements" ? file.originalname.replace('/', '-').replace(/ /g, "_") : new Date().getTime() + '_' + file.originalname.replace('/', '-').replace(/ /g, "_");
+      // Usa função global importada para sanitizar nome do arquivo
+      const sanitizedOriginalName = sanitizeFileName(file.originalname);
+
+      // Aplica a lógica existente com o nome sanitizado
+      const fileName = typeArch && typeArch !== "announcements" 
+        ? sanitizedOriginalName 
+        : new Date().getTime() + '_' + sanitizedOriginalName;
+      
       return cb(null, fileName);
     }
   })

@@ -21,6 +21,7 @@ import ScheduleModal from "../../components/ScheduleModal";
 import MessageUploadMedias from "../../components/MessageUploadMedias";
 import whatsappIcon from '../../assets/nopicture.png';
 import { getBackendUrl } from "../../config";
+import { sanitizeFileForUpload } from "../../utils";
 // @dnd-kit imports
 import {
   DndContext,
@@ -2251,7 +2252,7 @@ const formatPhoneNumber = (phoneNumber) => {
   // Função para lidar com fotos e vídeos
   const handleChangePhotosVideos = (e) => {
     if (!e.target.files) return;
-    const selectedMedias = Array.from(e.target.files);
+    const selectedMedias = Array.from(e.target.files).map(file => sanitizeFileForUpload(file));
     setMediasUpload(selectedMedias);
     setShowModalMedias(true);
     handleMenuItemClick();
@@ -2260,7 +2261,7 @@ const formatPhoneNumber = (phoneNumber) => {
   // Função para lidar com documentos
   const handleChangeDocuments = (e) => {
     if (!e.target.files) return;
-    const selectedMedias = Array.from(e.target.files);
+    const selectedMedias = Array.from(e.target.files).map(file => sanitizeFileForUpload(file));
     setMediasUpload(selectedMedias);
     setShowModalMedias(true);
     handleMenuItemClick();
@@ -2342,7 +2343,7 @@ const formatPhoneNumber = (phoneNumber) => {
       }
 
       const formData = new FormData();
-      const filename = `${new Date().getTime()}.mp3`;
+      const filename = `audio_${new Date().getTime()}.mp3`;
       formData.append("medias", blob, filename);
       formData.append("body", filename);
       formData.append("fromMe", true);
@@ -2413,7 +2414,7 @@ const formatPhoneNumber = (phoneNumber) => {
     setLoadingMessages(true);
     try {
       const formData = new FormData();
-      const filename = `${new Date().getTime()}.png`;
+      const filename = `camera_${new Date().getTime()}.png`;
       formData.append("medias", imageData, filename);
       formData.append("body", privateMessage ? `\u200d` : "");
       formData.append("fromMe", true);
@@ -3350,8 +3351,6 @@ const formatPhoneNumber = (phoneNumber) => {
                          if (/^\d+_.*\.\w+$/.test(messageText.trim()) || 
                              messageText.trim() === 'Audio' || 
                              messageText.trim() === 'Áudio' ||
-                             messageText.trim() === 'Mensagem não suportada' ||
-                             messageText.trim() === 'MENSAGEM NÃO SUPORTADA' ||
                              /^\d+\.(mp3|wav|m4a|ogg)$/i.test(messageText.trim())) {
                            messageText = '';
                          }
@@ -3463,8 +3462,7 @@ const formatPhoneNumber = (phoneNumber) => {
                               }
                               
                               // Fallback final
-                              if (!fileName || fileName === 'Documento' || fileName.trim() === '' || 
-                                  fileName === 'Mensagem não suportada' || fileName === 'MENSAGEM NÃO SUPORTADA') {
+                              if (!fileName || fileName === 'Documento' || fileName.trim() === '') {
                                 fileName = 'Documento.pdf';
                               }
                               const getDocumentIcon = (fileName) => {
@@ -3589,9 +3587,7 @@ const formatPhoneNumber = (phoneNumber) => {
                              const lines = caption.split('\n').filter(line => line.trim());
                              const cleanLines = lines.filter(line => 
                                !(/^\d+_.*\.\w+$/.test(line.trim()) || 
-                                 /^\d+\.\w+$/.test(line.trim()) ||
-                                 line.trim() === 'Mensagem não suportada' ||
-                                 line.trim() === 'MENSAGEM NÃO SUPORTADA')
+                                 /^\d+\.\w+$/.test(line.trim()))
                              );
                              documentCaption = cleanLines.join('\n').trim();
                            }
@@ -3637,9 +3633,7 @@ const formatPhoneNumber = (phoneNumber) => {
                              
                                                            {/* Texto da mensagem */}
                               {messageText && 
-                               !message.body?.includes('BEGIN:VCARD') && 
-                               messageText !== 'Mensagem não suportada' &&
-                               messageText !== 'MENSAGEM NÃO SUPORTADA' && (
+                               !message.body?.includes('BEGIN:VCARD') && (
                                 <Typography 
                                   variant="body2" 
                                   style={{ 
