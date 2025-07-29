@@ -29,7 +29,7 @@ services:
     restart: unless-stopped
     command: redis-server --requirepass ZdG387FShYsm0SaaSoRlSAAsme09a754s1DHMSsIdS= --appendonly yes
     ports:
-      - '56380:6379'   # porta alterada para não conflitar com outro Redis local
+      - "60123:6379"  # porta alterada para não conflitar com outro Redis local
     volumes:
       - whatize_redis_data:/data
     networks:

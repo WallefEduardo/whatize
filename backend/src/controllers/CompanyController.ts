@@ -83,14 +83,74 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const newCompany: CompanyData = req.body;
 
   const schema = Yup.object().shape({
-    name: Yup.string().required(),
-    password: Yup.string().required().min(5)
+    name: Yup.string()
+      .required("Nome da empresa é obrigatório")
+      .min(2, "Nome da empresa deve ter pelo menos 2 caracteres")
+      .test(
+        "Check-unique-name",
+        "Já existe uma empresa com este nome",
+        async value => {
+          if (value) {
+            const companyWithSameName = await Company.findOne({
+              where: { name: value }
+            });
+            return !companyWithSameName;
+          }
+          return false;
+        }
+      ),
+    email: Yup.string()
+      .email("Email deve ter um formato válido")
+      .required("Email é obrigatório")
+      .test(
+        "Check-unique-email",
+        "Já existe uma empresa com este email",
+        async value => {
+          if (value) {
+            const companyWithSameEmail = await Company.findOne({
+              where: { email: value }
+            });
+            return !companyWithSameEmail;
+          }
+          return false;
+        }
+      ),
+    phone: Yup.string()
+      .required("Telefone é obrigatório")
+      .min(10, "Telefone deve ter pelo menos 10 dígitos"),
+    document: Yup.string()
+      .required("Documento é obrigatório")
+      .min(11, "Documento deve ter pelo menos 11 caracteres")
+      .max(14, "Documento deve ter no máximo 14 caracteres")
+      .test(
+        "Check-unique-document",
+        "Já existe uma empresa com este documento",
+        async value => {
+          if (value) {
+            const companyWithSameDocument = await Company.findOne({
+              where: { document: value }
+            });
+            return !companyWithSameDocument;
+          }
+          return false;
+        }
+      ),
+    planId: Yup.number()
+      .required("Plano é obrigatório")
+      .positive("Plano deve ser um número válido"),
+    status: Yup.boolean()
+      .required("Status é obrigatório"),
+    dueDate: Yup.string()
+      .required("Data de vencimento é obrigatória"),
+    password: Yup.string()
+      .required("Senha é obrigatória")
+      .min(5, "Senha deve ter pelo menos 5 caracteres")
   });
 
   try {
     await schema.validate(newCompany);
   } catch (err: any) {
-    throw new AppError(err.message);
+    throw new AppError(err.message, 400);
   }
 
   const company = await CreateCompanyService(newCompany);

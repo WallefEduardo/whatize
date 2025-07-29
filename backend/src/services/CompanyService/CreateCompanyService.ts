@@ -19,7 +19,6 @@ interface CompanyData {
   document?: string;
   paymentMethod?: string;
   password?: string;
-  companyUserName?: string;
   startWork?: string;
   endWork?: string;
   defaultTheme?: string;
@@ -38,29 +37,28 @@ const CreateCompanyService = async (
 ): Promise<User> => {
   try {
     const {
-      name,
-      email,
-      phone,
-      planId,
-      status,
-      dueDate,
-      recurrence,
-      document,
-      paymentMethod,
-      password,
-      companyUserName,
-      startWork,
-      endWork,
-      defaultTheme,
-      defaultMenu,
-      allowGroup,
-      allHistoric,
-      userClosePendingTicket,
-      showDashboard,
-      defaultTicketsManagerWidth,
-      allowRealTime,
-      allowConnections
-    } = companyData;
+    name,
+    email,
+    phone,
+    planId,
+    status,
+    dueDate,
+    recurrence,
+    document,
+    paymentMethod,
+    password,
+    startWork,
+    endWork,
+    defaultTheme,
+    defaultMenu,
+    allowGroup,
+    allHistoric,
+    userClosePendingTicket,
+    showDashboard,
+    defaultTicketsManagerWidth,
+    allowRealTime,
+    allowConnections
+  } = companyData;
 
     const companySchema = Yup.object().shape({
       name: Yup.string().required(),
@@ -70,8 +68,7 @@ const CreateCompanyService = async (
       status: Yup.boolean().required(),
       dueDate: Yup.string().required(),
       document: Yup.string().required(),
-      password: Yup.string().required(),
-      companyUserName: Yup.string().required()
+      password: Yup.string().required()
     });
 
     try {
@@ -96,7 +93,7 @@ const CreateCompanyService = async (
       }, { transaction });
 
       const user = await User.create({
-        name: companyUserName,
+        name: name, // Usa o nome da empresa como nome do usuário administrador
         email,
         password: password, // Remove a criptografia manual - o modelo User já faz isso automaticamente
         profile: "admin",

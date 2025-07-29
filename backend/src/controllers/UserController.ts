@@ -115,7 +115,6 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       document: document,
       paymentMethod: "",
       password: password,
-      companyUserName: name,
       startWork: "00:01",
       endWork: "23:59",
       defaultTheme: 'light',

@@ -229,9 +229,11 @@ export function CompanyForm(props) {
                   as={TextField}
                   label={i18n.t("compaies.table.password")}
                   name="password"
+                  type="password"
                   variant="outlined"
                   className={classes.fullWidth}
                   margin="dense"
+                  required
                 />
               </Grid>
               <Grid xs={12} sm={6} md={2} item>
@@ -582,9 +584,50 @@ export default function CompaniesManager() {
       handleCancel();
       toast.success("Operação realizada com sucesso!");
     } catch (e) {
-      toast.error(
-        "Não foi possível realizar a operação. Verifique se já existe uma empresa com o mesmo nome ou se os campos foram preenchidos corretamente"
-      );
+      console.error("Erro ao salvar empresa:", e);
+      
+      // Tratamento específico de erros
+      let errorMessage = "Não foi possível realizar a operação.";
+      
+      if (e.response && e.response.data && e.response.data.message) {
+        const backendMessage = e.response.data.message;
+        
+        // Mapeamento de erros específicos
+        if (backendMessage.includes("companyUserName is a required field")) {
+          errorMessage = "O campo 'Nome do Administrador' é obrigatório.";
+        } else if (backendMessage.includes("name must be unique")) {
+          errorMessage = "Já existe uma empresa com este nome. Escolha outro nome.";
+        } else if (backendMessage.includes("email must be unique")) {
+          errorMessage = "Já existe uma empresa com este e-mail. Use outro e-mail.";
+        } else if (backendMessage.includes("document must be unique")) {
+          errorMessage = "Já existe uma empresa com este documento. Verifique o CNPJ/CPF.";
+        } else if (backendMessage.includes("name is a required field")) {
+          errorMessage = "O campo 'Nome da Empresa' é obrigatório.";
+        } else if (backendMessage.includes("email is a required field")) {
+          errorMessage = "O campo 'E-mail' é obrigatório.";
+        } else if (backendMessage.includes("password is a required field")) {
+          errorMessage = "O campo 'Senha' é obrigatório.";
+        } else if (backendMessage.includes("password must be at least 5 characters")) {
+          errorMessage = "A senha deve ter pelo menos 5 caracteres.";
+        } else if (backendMessage.includes("planId is a required field")) {
+          errorMessage = "Selecione um plano para a empresa.";
+        } else if (backendMessage.includes("document is a required field")) {
+          errorMessage = "O campo 'Documento (CNPJ/CPF)' é obrigatório.";
+        } else if (backendMessage.includes("phone is a required field")) {
+          errorMessage = "O campo 'Telefone' é obrigatório.";
+        } else if (backendMessage.includes("email must be a valid email")) {
+          errorMessage = "Digite um e-mail válido.";
+        } else if (backendMessage.includes("document must be between 11 and 14 characters")) {
+          errorMessage = "O documento deve ter entre 11 e 14 caracteres (CPF ou CNPJ).";
+        } else {
+          // Se não conseguir mapear, usa a mensagem do backend
+          errorMessage = `Erro: ${backendMessage}`;
+        }
+      } else if (e.message) {
+        errorMessage = `Erro de conexão: ${e.message}`;
+      }
+      
+      toast.error(errorMessage);
     }
     setLoading(false);
   };

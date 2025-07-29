@@ -20,7 +20,7 @@ const ImportContactsService = async (companyId: number): Promise<void> => {
     phoneContacts = JSON.parse(JSON.stringify(contactsString.contacts));
 
     const publicFolder = path.resolve(__dirname, "..", "..", "..", "public");
-    const beforeFilePath = path.join(publicFolder,`company${companyId}`, 'contatos_antes.txt');
+    const beforeFilePath = path.join(publicFolder, `company${companyId}`, 'contatos_antes.txt');
     fs.writeFile(beforeFilePath, JSON.stringify(phoneContacts, null, 2), (err) => {
       if (err) {
         logger.error(`Failed to write contacts to file: ${err}`);
@@ -34,7 +34,7 @@ const ImportContactsService = async (companyId: number): Promise<void> => {
   }
 
   const publicFolder = path.resolve(__dirname, "..", "..", "..", "public");
-  const afterFilePath = path.join(publicFolder,`company${companyId}`, 'contatos_depois.txt');
+  const afterFilePath = path.join(publicFolder, `company${companyId}`, 'contatos_depois.txt');
   fs.writeFile(afterFilePath, JSON.stringify(phoneContacts, null, 2), (err) => {
     if (err) {
       logger.error(`Failed to write contacts to file: ${err}`);
@@ -56,9 +56,54 @@ const ImportContactsService = async (companyId: number): Promise<void> => {
       });
 
       if (existingContact) {
-        // Atualiza o nome do contato existente
+        // --- LOG DETALHADO ANTES DE SALVAR ---
+        logger.info(
+          `[ImportContactsService] Atualizando contato existente:`,
+          {
+            id: existingContact.id,
+            number: existingContact.number,
+            companyId: existingContact.companyId,
+            nomeNovo: name || notify,
+            typeof: typeof existingContact,
+            temSave: typeof existingContact.save === "function",
+            prototype: Object.getPrototypeOf(existingContact)?.constructor?.name,
+            keys: Object.keys(existingContact)
+          }
+        );
+
         existingContact.name = name || notify;
-        await existingContact.save();
+
+        // Checagem e log antes do save!
+        if (typeof existingContact.save === "function") {
+          await existingContact.save();
+          logger.info(
+            `[ImportContactsService] Contato salvo com sucesso:`,
+            {
+              id: existingContact.id,
+              number: existingContact.number,
+              companyId: existingContact.companyId
+            }
+          );
+        } else {
+          logger.error(
+            `[ImportContactsService] ERRO: existingContact.save não é função!`,
+            {
+              id: existingContact.id,
+              number: existingContact.number,
+              companyId: existingContact.companyId,
+              prototype: Object.getPrototypeOf(existingContact)?.constructor?.name
+            }
+          );
+          // Tenta recuperar se for bug de objeto puro:
+          /*
+          const recovered = await Contact.findByPk(existingContact.id);
+          if (recovered && typeof recovered.save === "function") {
+            logger.warn(`[ImportContactsService] Recuperado via findByPk!`);
+            recovered.name = name || notify;
+            await recovered.save();
+          }
+          */
+        }
       } else {
         // Criar um novo contato
         try {
@@ -67,6 +112,14 @@ const ImportContactsService = async (companyId: number): Promise<void> => {
             name: name || notify,
             companyId
           });
+          logger.info(
+            `[ImportContactsService] Novo contato criado:`,
+            {
+              number,
+              name: name || notify,
+              companyId
+            }
+          );
         } catch (error) {
           Sentry.captureException(error);
           logger.warn(
