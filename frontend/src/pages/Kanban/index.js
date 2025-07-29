@@ -1244,17 +1244,128 @@ const useStyles = makeStyles((theme) => ({
     marginRight: '16px',
     flexWrap: 'nowrap', // Evita quebra de linha
     flexDirection: 'row', // Força direção horizontal
+    position: 'relative',
+    height: '44px', // Altura aumentada para não cortar o efeito de crescimento
     
     // Responsividade para 1600x900
     '@media (max-width: 1600px)': {
       gap: '6px',
       marginRight: '12px',
+      height: '40px',
     },
     
     // Responsividade para 1366x768
     '@media (max-width: 1366px)': {
       gap: '4px',
       marginRight: '8px',
+      height: '36px',
+    },
+  },
+  avatarCarousel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px', // Aumentado de 8px para 12px para mais espaço entre setas e avatares
+    position: 'relative',
+    height: '44px', // Altura aumentada para não cortar o efeito de crescimento
+    
+    // Responsividade para 1600x900
+    '@media (max-width: 1600px)': {
+      gap: '10px', // Aumentado de 6px para 10px
+      height: '40px',
+    },
+    
+    // Responsividade para 1366x768
+    '@media (max-width: 1366px)': {
+      gap: '8px', // Aumentado de 4px para 8px
+      height: '36px',
+    },
+  },
+  avatarContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center', // Centraliza os avatares dentro do container
+    gap: '8px',
+    overflow: 'hidden',
+    transition: 'all 0.3s ease',
+    height: '44px', // Altura aumentada para não cortar o efeito de crescimento
+    width: '180px', // Largura fixa para mostrar 4 avatares completos (32px * 4 + gaps)
+    
+    // Responsividade para 1600x900
+    '@media (max-width: 1600px)': {
+      gap: '6px',
+      height: '40px',
+      width: '150px', // Ajustado para avatares menores (28px * 4 + gaps)
+    },
+    
+    // Responsividade para 1366x768
+    '@media (max-width: 1366px)': {
+      gap: '4px',
+      height: '36px',
+      width: '120px', // Ajustado para avatares menores (24px * 4 + gaps)
+    },
+  },
+  avatarNavButton: {
+    minWidth: '28px', // Aumentado para ficar redondo
+    width: '28px',
+    height: '28px', // Igual à largura para ficar redondo
+    maxWidth: '28px', // Força o tamanho exato
+    maxHeight: '28px', // Força o tamanho exato
+    padding: '0',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    color: '#666',
+    border: '1px solid rgba(0, 0, 0, 0.1)',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    flexShrink: 0, // Impede que o botão seja comprimido
+    
+    '&:hover': {
+      backgroundColor: 'rgba(0, 195, 7, 0.1)',
+      color: '#00C307',
+      borderColor: 'rgba(0, 195, 7, 0.3)',
+      transform: 'scale(1.1)',
+    },
+    
+    '&:disabled': {
+      opacity: 0.3,
+      cursor: 'not-allowed',
+      '&:hover': {
+        backgroundColor: 'rgba(0, 0, 0, 0.05)',
+        color: '#666',
+        borderColor: 'rgba(0, 0, 0, 0.1)',
+        transform: 'none',
+      },
+    },
+    
+    '& .MuiSvgIcon-root': {
+      fontSize: '14px',
+    },
+    
+    // Responsividade para 1600x900
+    '@media (max-width: 1600px)': {
+      minWidth: '24px',
+      width: '24px',
+      height: '24px', // Igual à largura para ficar redondo
+      maxWidth: '24px', // Força o tamanho exato
+      maxHeight: '24px', // Força o tamanho exato
+      '& .MuiSvgIcon-root': {
+        fontSize: '12px',
+      },
+    },
+    
+    // Responsividade para 1366x768
+    '@media (max-width: 1366px)': {
+      minWidth: '20px',
+      width: '20px',
+      height: '20px', // Igual à largura para ficar redondo
+      maxWidth: '20px', // Força o tamanho exato
+      maxHeight: '20px', // Força o tamanho exato
+      '& .MuiSvgIcon-root': {
+        fontSize: '10px',
+      },
     },
   },
   userAvatar: {
@@ -1287,6 +1398,47 @@ const useStyles = makeStyles((theme) => ({
   userAvatarSelected: {
     border: '2px solid #00C307',
     boxShadow: '0 0 0 2px rgba(0, 195, 7, 0.2)',
+  },
+  selectAllAvatar: {
+    width: '32px',
+    height: '32px',
+    cursor: 'pointer',
+    border: '2px solid #007bff',
+    transition: 'all 0.2s ease',
+    fontSize: '0.8rem',
+    backgroundColor: '#007bff',
+    color: '#fff',
+    marginRight: '8px',
+    
+    '&:hover': {
+      transform: 'scale(1.1)',
+      boxShadow: '0 2px 8px rgba(0, 123, 255, 0.3)',
+      backgroundColor: '#0056b3',
+    },
+    
+    // Responsividade para 1600x900
+    '@media (max-width: 1600px)': {
+      width: '28px',
+      height: '28px',
+      fontSize: '0.75rem',
+      marginRight: '6px',
+    },
+    
+    // Responsividade para 1366x768
+    '@media (max-width: 1366px)': {
+      width: '24px',
+      height: '24px',
+      fontSize: '0.7rem',
+      marginRight: '4px',
+    },
+  },
+  selectAllAvatarActive: {
+    backgroundColor: '#28a745',
+    borderColor: '#28a745',
+    
+    '&:hover': {
+      backgroundColor: '#1e7e34',
+    },
   },
   clearFilterButton: {
     minWidth: 'auto',
@@ -1392,6 +1544,10 @@ const Kanban = () => {
   const [ticketsCache, setTicketsCache] = useState(null);
   const [cacheTimestamp, setCacheTimestamp] = useState(0);
   const [lastInstantFilter, setLastInstantFilter] = useState(null);
+  
+  // Estados para carrossel de avatares
+  const [avatarStartIndex, setAvatarStartIndex] = useState(0);
+  const maxVisibleAvatars = 4;
   
 
   
@@ -1564,6 +1720,60 @@ const Kanban = () => {
     
     // Retorna cor do texto baseada na luminância
     return luminance > 0.5 ? '#333' : '#fff';
+  };
+
+  // Funções para navegação do carrossel de avatares
+  const handlePreviousAvatars = () => {
+    setAvatarStartIndex(prev => Math.max(0, prev - maxVisibleAvatars));
+  };
+
+  const handleNextAvatars = () => {
+    setAvatarStartIndex(prev => 
+      Math.min(allUsers.length - maxVisibleAvatars, prev + maxVisibleAvatars)
+    );
+  };
+
+  // Função para scroll do mouse nos avatares
+  const handleAvatarScroll = (event) => {
+    event.preventDefault();
+    const delta = event.deltaY;
+    
+    if (delta > 0) {
+      // Scroll para baixo = próximo
+      if (canNavigateNext) {
+        handleNextAvatars();
+      }
+    } else {
+      // Scroll para cima = anterior
+      if (canNavigatePrevious) {
+        handlePreviousAvatars();
+      }
+    }
+  };
+
+  const canNavigatePrevious = avatarStartIndex > 0;
+  const canNavigateNext = avatarStartIndex + maxVisibleAvatars < allUsers.length;
+  const shouldShowNavigation = allUsers.length > maxVisibleAvatars;
+
+  // Função para selecionar/deselecionar todos os usuários
+  const handleSelectAllUsers = () => {
+    const allSelected = selectedUsers.length === allUsers.length;
+    
+    let newSelection;
+    if (allSelected) {
+      // Deseleciona todos
+      newSelection = [];
+    } else {
+      // Seleciona todos
+      newSelection = [...allUsers];
+    }
+    
+    // Atualiza o estado
+    setSelectedUsers(newSelection);
+    
+    // ⚡ FILTRO INSTANTÂNEO - Executa imediatamente com a nova seleção
+    setLastInstantFilter(Date.now());
+    filterTicketsInstantly(newSelection);
   };
 
 
@@ -2569,6 +2779,11 @@ const formatPhoneNumber = (phoneNumber) => {
     }
   }, [allUsers, user]);
 
+  // Efeito para resetar o carrossel de avatares quando os usuários mudarem
+  useEffect(() => {
+    setAvatarStartIndex(0);
+  }, [allUsers]);
+
   // Efeito para carregar funil selecionado quando user e funnels estiverem disponíveis
   useEffect(() => {
     if (user && user.hasOwnProperty('kanbanSelectedFunnel') && funnels.length > 0) {
@@ -3035,7 +3250,139 @@ const formatPhoneNumber = (phoneNumber) => {
           {/* Filtro de Usuários por Avatares - apenas para admin */}
           {user?.profile === 'admin' && allUsers.length > 0 && (
             <div className={classes.userAvatarFilter}>
-              {allUsers.map(userItem => {
+              {/* Avatar de Selecionar/Deselecionar Todos */}
+              <Tooltip 
+                title={selectedUsers.length === allUsers.length ? "Deselecionar Todos" : "Selecionar Todos"} 
+                placement="top"
+              >
+                <div
+                  onClick={handleSelectAllUsers}
+                  style={{
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <Avatar
+                    className={`${classes.selectAllAvatar} ${
+                      selectedUsers.length === allUsers.length ? classes.selectAllAvatarActive : ''
+                    }`}
+                  >
+                    {selectedUsers.length === allUsers.length ? '✓' : '∀'}
+                  </Avatar>
+                </div>
+              </Tooltip>
+
+              {shouldShowNavigation && (
+                <div className={classes.avatarCarousel}>
+                  {/* Seta para voltar */}
+                  <button
+                    className={classes.avatarNavButton}
+                    onClick={handlePreviousAvatars}
+                    disabled={!canNavigatePrevious}
+                    title="Usuários anteriores"
+                  >
+                    <KeyboardArrowLeft />
+                  </button>
+                  
+                  {/* Container dos avatares visíveis */}
+                  <div 
+                    className={classes.avatarContainer}
+                    onWheel={handleAvatarScroll}
+                  >
+                    {allUsers
+                      .slice(avatarStartIndex, avatarStartIndex + maxVisibleAvatars)
+                      .map(userItem => {
+                        const isSelected = selectedUsers.some(su => su.id === userItem.id);
+                        
+                        // Avatar URL (mesma lógica da página Users)
+                        const avatarUrl = userItem.id === user.id
+                          ? `${backendUrl}/public/company${userItem.companyId}/user/${user.profileImage || 'nopicture.png'}`
+                          : userItem.profileImage
+                            ? `${backendUrl}/public/company${userItem.companyId}/user/${userItem.profileImage}`
+                            : undefined;
+                        
+                        return (
+                          <Tooltip key={userItem.id} title={userItem.name} placement="top">
+                            <div
+                              onClick={() => {
+                                let newSelection;
+                                if (isSelected) {
+                                  // Remove usuário da seleção
+                                  newSelection = selectedUsers.filter(su => su.id !== userItem.id);
+                                } else {
+                                  // Adiciona usuário à seleção
+                                  newSelection = [...selectedUsers, userItem];
+                                }
+                                
+                                // Atualiza o estado
+                                setSelectedUsers(newSelection);
+                                
+                                // ⚡ FILTRO INSTANTÂNEO - Executa imediatamente com a nova seleção
+                                setLastInstantFilter(Date.now());
+                                filterTicketsInstantly(newSelection);
+                              }}
+                              style={{
+                                cursor: 'pointer',
+                                position: 'relative',
+                                transition: 'all 0.2s ease',
+                                transform: isSelected ? 'scale(1.1)' : 'scale(1)',
+                                filter: isSelected ? 'none' : 'grayscale(0.3)',
+                                opacity: isSelected ? 1 : 0.7,
+                              }}
+                            >
+                              <Avatar
+                                src={avatarUrl}
+                                className={classes.userAvatar}
+                                style={{
+                                  border: isSelected ? '2px solid #00C307' : '2px solid transparent',
+                                  boxShadow: isSelected ? '0 2px 8px rgba(0, 195, 7, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
+                                  backgroundColor: isSelected ? '#00C307' : '#f5f5f5',
+                                  color: isSelected ? '#fff' : '#666',
+                                }}
+                              >
+                                {userItem.name.charAt(0).toUpperCase()}
+                              </Avatar>
+                              {isSelected && (
+                                <div style={{
+                                  position: 'absolute',
+                                  top: '-2px',
+                                  right: '-2px',
+                                  width: '12px',
+                                  height: '12px',
+                                  backgroundColor: '#00C307',
+                                  borderRadius: '50%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '8px',
+                                  color: 'white',
+                                  fontWeight: 'bold',
+                                  border: '1px solid white',
+                                }}>
+                                  ✓
+                                </div>
+                              )}
+                            </div>
+                          </Tooltip>
+                        );
+                      })}
+                  </div>
+                  
+                  {/* Seta para avançar */}
+                  <button
+                    className={classes.avatarNavButton}
+                    onClick={handleNextAvatars}
+                    disabled={!canNavigateNext}
+                    title="Próximos usuários"
+                  >
+                    <KeyboardArrowRight />
+                  </button>
+                </div>
+              )}
+              
+              {/* Exibição normal quando há 4 ou menos usuários */}
+              {!shouldShowNavigation && allUsers.map(userItem => {
                 const isSelected = selectedUsers.some(su => su.id === userItem.id);
                 
                 // Avatar URL (mesma lógica da página Users)
@@ -3075,13 +3422,7 @@ const formatPhoneNumber = (phoneNumber) => {
                       }}
                     >
                       <Avatar
-                        src={
-                          userItem.id === user.id
-                            ? `${backendUrl}/public/company${userItem.companyId}/user/${user.profileImage || 'nopicture.png'}`
-                            : userItem.profileImage
-                              ? `${backendUrl}/public/company${userItem.companyId}/user/${userItem.profileImage}`
-                              : undefined
-                        }
+                        src={avatarUrl}
                         className={classes.userAvatar}
                         style={{
                           border: isSelected ? '2px solid #00C307' : '2px solid transparent',
