@@ -2569,6 +2569,26 @@ const formatPhoneNumber = (phoneNumber) => {
     }
   }, [allUsers, user]);
 
+  // Efeito para carregar funil selecionado quando user e funnels estiverem disponíveis
+  useEffect(() => {
+    if (user && user.hasOwnProperty('kanbanSelectedFunnel') && funnels.length > 0) {
+      // Se o usuário tem um funil salvo, definir como selecionado
+      if (user.kanbanSelectedFunnel) {
+        // Verificar se o funil ainda existe na lista
+        const funnelExists = funnels.find(f => f.id === user.kanbanSelectedFunnel);
+        if (funnelExists) {
+          setSelectedFunnel(user.kanbanSelectedFunnel);
+        } else {
+          // Se o funil não existe mais, resetar para null (Todos os Funis)
+          setSelectedFunnel(null);
+        }
+      } else {
+        // Se kanbanSelectedFunnel é null, manter como "Todos os Funis"
+        setSelectedFunnel(null);
+      }
+    }
+  }, [user, funnels]);
+
     // Efeito OTIMIZADO para atualizar dados quando filtros mudarem
   useEffect(() => {
     // Evita execução desnecessária logo após filtro instantâneo
