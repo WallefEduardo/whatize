@@ -1771,6 +1771,11 @@ const Kanban = () => {
     // Atualiza o estado
     setSelectedUsers(newSelection);
     
+    // 💾 SALVA FILTROS IMEDIATAMENTE - Para persistir no usuário logado
+    if (user && initialLoadComplete) {
+      saveKanbanFilters(selectedFunnel, selectedTags, newSelection);
+    }
+    
     // ⚡ FILTRO INSTANTÂNEO - Executa imediatamente com a nova seleção
     setLastInstantFilter(Date.now());
     filterTicketsInstantly(newSelection);
@@ -3318,6 +3323,11 @@ const formatPhoneNumber = (phoneNumber) => {
                                 // Atualiza o estado
                                 setSelectedUsers(newSelection);
                                 
+                                // 💾 SALVA FILTROS IMEDIATAMENTE - Para persistir no usuário logado
+                                if (user && initialLoadComplete) {
+                                  saveKanbanFilters(selectedFunnel, selectedTags, newSelection);
+                                }
+                                
                                 // ⚡ FILTRO INSTANTÂNEO - Executa imediatamente com a nova seleção
                                 setLastInstantFilter(Date.now());
                                 filterTicketsInstantly(newSelection);
@@ -3407,6 +3417,11 @@ const formatPhoneNumber = (phoneNumber) => {
                         
                         // Atualiza o estado
                         setSelectedUsers(newSelection);
+                        
+                        // 💾 SALVA FILTROS IMEDIATAMENTE - Para persistir no usuário logado
+                        if (user && initialLoadComplete) {
+                          saveKanbanFilters(selectedFunnel, selectedTags, newSelection);
+                        }
                         
                         // ⚡ FILTRO INSTANTÂNEO - Executa imediatamente com a nova seleção
                         setLastInstantFilter(Date.now());
