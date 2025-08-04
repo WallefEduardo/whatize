@@ -12,14 +12,18 @@ import makeWASocket, {
   isJidGroup,
   jidNormalizedUser,
   makeCacheableSignalKeyStore
-} from "@whiskeysockets/baileys";
+} from "baileys";
+
 // Importação separada do makeInMemoryStore
-// import makeInMemoryStore from "@whiskeysockets/baileys/lib/Store/make-in-memory-store";
+// import makeInMemoryStore from "baileys/lib/Store/make-in-memory-store";
 
 import { FindOptions } from "sequelize/types";
 import Whatsapp from "../models/Whatsapp";
 import logger from "../utils/logger";
-import MAIN_LOGGER from "@whiskeysockets/baileys/lib/Utils/logger";
+import MAIN_LOGGER from "baileys/lib/Utils/logger";
+
+const loggerBaileys = MAIN_LOGGER.child({});
+loggerBaileys.level = "error";
 import { useMultiFileAuthState } from "../helpers/useMultiFileAuthState";
 import { Boom } from "@hapi/boom";
 import AppError from "../errors/AppError";
@@ -50,8 +54,7 @@ const msgCache = new NodeCache({
   useClones: false
 });
 
-const loggerBaileys = MAIN_LOGGER.child({});
-loggerBaileys.level = "error";
+// Removido: duplicação com linha 25
 
 type Session = WASocket & {
   id?: number;
@@ -93,12 +96,23 @@ export default function msg() {
 }
 
 export const getWbot = (whatsappId: number): Session => {
+  logger.info(`🔍 [WBOT-DEBUG] Tentando obter sessão WhatsApp: { whatsappId: ${whatsappId}, totalSessions: ${sessions.length} }`);
+  
+  // Log das sessões ativas
+  const activeSessions = sessions.map(s => ({ id: s.id, readyState: (s as any).readyState || 'unknown' }));
+  logger.info(`📱 [WBOT-DEBUG] Sessões ativas: ${JSON.stringify(activeSessions)}`);
+  
   const sessionIndex = sessions.findIndex(s => s.id === whatsappId);
 
   if (sessionIndex === -1) {
+    logger.error(`❌ [WBOT-ERROR] Sessão não encontrada: { whatsappId: ${whatsappId}, sessõesAtivas: ${JSON.stringify(activeSessions)} }`);
     throw new AppError("ERR_WAPP_NOT_INITIALIZED");
   }
-  return sessions[sessionIndex];
+  
+  const session = sessions[sessionIndex];
+  logger.info(`✅ [WBOT-DEBUG] Sessão encontrada: { whatsappId: ${whatsappId}, readyState: ${(session as any).readyState || 'unknown'} }`);
+  
+  return session;
 };
 
 export const restartWbot = async (
@@ -163,6 +177,8 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
   return new Promise(async (resolve, reject) => {
     try {
       (async () => {
+        logger.info(`Starting session ${whatsapp.name}`);
+        
         const io = getIO();
 
         const whatsappUpdate = await Whatsapp.findOne({
@@ -361,10 +377,13 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
         wsocket.ev.on(
           "connection.update",
           async ({ connection, lastDisconnect, qr }) => {
-            logger.info(
-              `Socket  ${name} Connection Update ${connection || ""} ${lastDisconnect ? lastDisconnect.error.message : ""
-              }`
-            );
+            logger.info(`🔌 [CONNECTION-UPDATE] INICIO: { connection: '${connection}', name: '${name}', hasError: ${!!lastDisconnect}, hasQr: ${!!qr} }`);
+            
+            try {
+              logger.info(
+                `Socket  ${name} Connection Update ${connection || ""} ${lastDisconnect ? lastDisconnect.error.message : ""
+                }`
+              );
 
             if (connection === "close") {
               console.log("DESCONECTOU", JSON.stringify(lastDisconnect, null, 2))
@@ -518,6 +537,12 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                   });
               }
             }
+            
+            logger.info(`🔌 [CONNECTION-UPDATE] CONCLUIDO: { connection: '${connection}', name: '${name}' }`);
+            } catch (error) {
+              logger.error(`❌ [CONNECTION-UPDATE] ERRO CRITICO: { name: '${name}', error: ${error.message}, stack: ${error.stack} }`);
+              throw error; // Re-throw para manter comportamento original
+            }
           }
         );
         // conect no whatsapp via code
@@ -537,7 +562,16 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
         //     process.exit(1);
         //   }
         // }
-        wsocket.ev.on("creds.update", saveCreds);
+        wsocket.ev.on("creds.update", async (creds) => {
+          logger.info(`🔑 [CREDS-UPDATE] INICIO: { name: '${name}', hasUpdate: ${!!creds} }`);
+          try {
+            await saveCreds();
+            logger.info(`🔑 [CREDS-UPDATE] CONCLUIDO: { name: '${name}' }`);
+          } catch (error) {
+            logger.error(`❌ [CREDS-UPDATE] ERRO CRITICO: { name: '${name}', error: ${error.message}, stack: ${error.stack} }`);
+            throw error;
+          }
+        });
         // wsocket.store = store;
         // store.bind(wsocket.ev);
       })();

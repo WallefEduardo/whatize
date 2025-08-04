@@ -56,6 +56,7 @@ import { WebhookModel } from "../models/Webhook";
 import FunilKanban from "../models/FunilKanban";
 import FunilUser from "../models/FunilUser";
 import UserKanbanColumnOrder from "../models/UserKanbanColumnOrder";
+import WhatsappLidMap from "../models/WhatsappLidMap";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -120,6 +121,7 @@ const models = [
   FunilUser,
   FunilKanban,
   UserKanbanColumnOrder,
+  WhatsappLidMap,
 ];
 
 sequelize.addModels(models);

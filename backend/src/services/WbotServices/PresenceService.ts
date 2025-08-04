@@ -1,4 +1,4 @@
-import { WASocket } from "@whiskeysockets/baileys";
+import { WASocket } from "baileys";
 import { getIO } from "../../libs/socket";
 import logger from "../../utils/logger";
 
@@ -101,6 +101,12 @@ class PresenceService {
   // Método para enviar presence update (quando usuário está digitando)
   async sendPresenceUpdate(sock: WASocket, toJid: string, type: 'available' | 'unavailable' | 'composing' | 'recording' | 'paused') {
     try {
+      // 🚨 PROTEÇÃO CRÍTICA: Não enviar presence para números LID (causa XML malformed)
+      if (toJid.endsWith("@lid")) {
+        logger.debug(`🛡️ [PRESENCE-PROTECTION] Bloqueando envio de presence para LID: ${toJid}`);
+        return;
+      }
+      
       await sock.sendPresenceUpdate(type, toJid);
       logger.debug(`Sent presence update: ${type} to ${toJid}`);
     } catch (error) {

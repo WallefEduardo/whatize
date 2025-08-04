@@ -1,4 +1,4 @@
-import { WAMessage, AnyMessageContent, delay } from "@whiskeysockets/baileys";
+import { WAMessage, AnyMessageContent, delay } from "baileys";
 import * as Sentry from "@sentry/node";
 import fs, { unlink, unlinkSync } from "fs";
 import { exec } from "child_process";
@@ -12,6 +12,7 @@ import Contact from "../../models/Contact";
 import { getWbot } from "../../libs/wbot";
 import CreateMessageService from "../MessageServices/CreateMessageService";
 import formatBody from "../../helpers/Mustache";
+import logger from "../../utils/logger";
 interface Request {
   media: Express.Multer.File;
   ticket: Ticket;
@@ -265,7 +266,13 @@ const SendWhatsAppMedia = async ({
     }
 
 
-    await wbot.sendPresenceUpdate('recording', `${contactNumber.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`);
+    // 🚨 PROTEÇÃO CRÍTICA: Não enviar presence para números LID (causa XML malformed)
+    const presenceJid = `${contactNumber.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`;
+    if (!presenceJid.endsWith("@lid")) {
+      await wbot.sendPresenceUpdate('recording', presenceJid);
+    } else {
+      logger.debug(`🛡️ [PRESENCE-PROTECTION] Bloqueando envio de presence para LID: ${presenceJid}`);
+    }
     await delay(500)
 
     const sentMessage = await wbot.sendMessage(

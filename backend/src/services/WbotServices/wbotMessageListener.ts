@@ -23,7 +23,7 @@ import {
   AnyMessageContent,
   generateWAMessageContent,
   generateWAMessageFromContent
-} from "@whiskeysockets/baileys";
+} from "baileys";
 import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
 import Message from "../../models/Message";
@@ -67,7 +67,11 @@ import { createDialogflowSessionWithModel } from "../QueueIntegrationServices/Cr
 import { queryDialogFlow } from "../QueueIntegrationServices/QueryDialogflow";
 import CompaniesSettings from "../../models/CompaniesSettings";
 import CreateLogTicketService from "../TicketServices/CreateLogTicketService";
+
+// 🚀 ETAPA 4: Mutex para controle de concorrência (estratégia Ticketz)
+const contactMutex = new Mutex();
 import Whatsapp from "../../models/Whatsapp";
+import { verifyContact } from "./verifyContact";
 import QueueIntegrations from "../../models/QueueIntegrations";
 import ShowFileService from "../FileServices/ShowService";
 
@@ -102,6 +106,20 @@ import { sanitizeFileName } from "../../utils/sanitizeFileName";
 const os = require("os");
 
 const request = require("request");
+
+// 🚨 PROTEÇÃO CRÍTICA: Função helper para envio seguro de presence (evita XML malformed em LID)
+const safePresenceUpdate = async (wbot: any, type: string, jid: string) => {
+  try {
+    if (jid.endsWith("@lid")) {
+      logger.debug(`🛡️ [PRESENCE-PROTECTION] Bloqueando envio de presence ${type} para LID: ${jid}`);
+      return;
+    }
+    await wbot.sendPresenceUpdate(type, jid);
+    logger.debug(`📤 [PRESENCE] ${type} enviado para: ${jid}`);
+  } catch (error) {
+    logger.error(`❌ [PRESENCE] Erro ao enviar ${type} para ${jid}: ${error.message}`);
+  }
+};
 
 
 let i = 0;
@@ -197,6 +215,45 @@ const getTypeMessage = (msg: proto.IWebMessageInfo): string => {
     return "viewOnceMessageV2"
   }
   return msgType
+};
+
+const getSafeMessageId = (msg: proto.IWebMessageInfo): string => {
+  if (msg.key.id) {
+    return msg.key.id;
+  }
+  const timestamp = getTimestampMessage(msg.messageTimestamp);
+  const remoteJid = msg.key.remoteJid || 'unknown';
+  const fallbackId = `fallback_${timestamp}_${remoteJid}_${Date.now()}`;
+  logger.warn(`getSafeMessageId: Generated fallback ID ${fallbackId} for message without key.id`);
+  return fallbackId;
+};
+
+const getJidOf = (reference: string | Contact | Ticket): string => {
+  console.log(`🔍 ETAPA 2 - getJidOf chamado com: { reference: '${reference}' }`);
+  
+  let address = reference;
+  let isGroup = false;
+  
+  if (reference instanceof Contact) {
+    isGroup = reference.isGroup;
+    address = reference.number;
+  } else if (reference instanceof Ticket) {
+    isGroup = reference.isGroup;
+    address = reference.contact.number;
+  }
+
+  if (typeof address !== "string") {
+    throw new Error("Invalid reference type");
+  }
+
+  if (address.includes("@")) {
+    console.log(`🔍 ETAPA 2 - getJidOf resultado (já tem @): ${address}`);
+    return address;
+  }
+
+  const result = `${address}@${isGroup ? "g.us" : "s.whatsapp.net"}`;
+  console.log(`🔍 ETAPA 2 - getJidOf resultado (construído): ${result}`);
+  return result;
 };
 const getAd = (msg: any): string => {
   if (msg.key.fromMe && msg.message?.listResponseMessage?.contextInfo?.externalAdReply) {
@@ -594,23 +651,48 @@ const downloadMedia = async (msg: proto.IWebMessageInfo, isImported: Date = null
     }
   }
 
-  let buffer
-  try {
-    buffer = await downloadMediaMessage(
-      msg,
-      'buffer',
-      {},
-      {
-        logger,
-        reuploadRequest: wbot.updateMediaMessage,
+  let buffer;
+  let contDownload = 0;
+  
+  // 🛡️ IMPLEMENTAÇÃO TICKETZ: Retry logic para download de mídia
+  while (contDownload < 10 && !buffer) {
+    try {
+      logger.info(`📥 [DOWNLOAD-MEDIA] Tentativa ${contDownload + 1} de download: { messageId: ${getSafeMessageId(msg)} }`);
+      
+      buffer = await downloadMediaMessage(
+        msg,
+        'buffer',
+        {},
+        {
+          logger,
+          reuploadRequest: wbot.updateMediaMessage,
+        }
+      );
+      
+      if (buffer) {
+        logger.info(`✅ [DOWNLOAD-MEDIA] Download bem-sucedido na tentativa ${contDownload + 1}`);
+        break;
       }
-    )
-  } catch (err) {
-    if (isImported) {
-
-    } else {
-      console.error('Erro ao baixar mídia:', err);
+    } catch (err) {
+      contDownload += 1;
+      logger.warn(`⚠️ [DOWNLOAD-MEDIA] Erro na tentativa ${contDownload}: ${err.message}`);
+      
+      if (err.message?.includes('Cannot derive from empty media key')) {
+        logger.error(`🚨 [DOWNLOAD-MEDIA] Erro crítico de media key vazia, pulando mensagem: { messageId: ${getSafeMessageId(msg)} }`);
+        break; // Não tenta mais vezes para este tipo de erro
+      }
+      
+      if (contDownload < 10) {
+        const delay = 1000 * contDownload * 2;
+        logger.info(`⏳ [DOWNLOAD-MEDIA] Aguardando ${delay}ms antes da próxima tentativa...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
+  }
+  
+  if (!buffer && !isImported) {
+    logger.error(`❌ [DOWNLOAD-MEDIA] Falha total no download após ${contDownload} tentativas: { messageId: ${getSafeMessageId(msg)} }`);
+    return null; // Retorna null em vez de crashar
   }
 
   let filename = msg.message?.documentMessage?.fileName || "";
@@ -662,61 +744,6 @@ const downloadMedia = async (msg: proto.IWebMessageInfo, isImported: Date = null
   return media;
 }
 
-const verifyContact = async (
-  msgContact: IMe,
-  wbot: Session,
-  companyId: number
-): Promise<Contact> => {
-  const number = msgContact.id.includes("g.us") 
-    ? msgContact.id.replace("@g.us", "")
-    : msgContact.id.replace(/\D/g, "");
-
-  // Log do evento de verificação de contato
-  raceConditionLogger.logBaileysEvent(
-    'messages.upsert',
-    number,
-    companyId,
-    wbot.id,
-    { contactName: msgContact.name, isGroup: msgContact.id.includes("g.us") }
-  );
-
-  // Primeiro tenta buscar no cache
-  const cachedContact = await contactCache.findOrFetch(number, companyId);
-  if (cachedContact) {
-    return cachedContact;
-  }
-
-  let profilePicUrl: string = "";
-  // try {
-  //   profilePicUrl = await wbot.profilePictureUrl(msgContact.id, "image");
-  // } catch (e) {
-  //   Sentry.captureException(e);
-  //   profilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
-  // }
-
-  const contactData = {
-    name: msgContact.name || number,
-    number: number,
-    profilePicUrl,
-    isGroup: msgContact.id.includes("g.us"),
-    companyId,
-    remoteJid: msgContact.id,
-    whatsappId: wbot.id,
-    wbot
-  };
-
-  try {
-    const contact = await CreateOrUpdateContactService(contactData);
-    return contact;
-  } catch (error) {
-    // Se falhar, tenta buscar novamente (pode ter sido criado por outro processo)
-    const existingContact = await contactCache.findOrFetch(number, companyId);
-    if (existingContact) {
-      return existingContact;
-    }
-    throw error;
-  }
-};
 
 const verifyQuotedMessage = async (
   msg: proto.IWebMessageInfo
@@ -758,7 +785,7 @@ export const verifyMediaMessage = async (
         "*System:* \nFalha no download da mídia verifique no dispositivo";
       const messageData = {
         //mensagem de texto
-        wid: msg.key.id,
+        wid: getSafeMessageId(msg),
         ticketId: ticket.id,
         contactId: msg.key.fromMe ? undefined : ticket.contactId,
         body,
@@ -789,6 +816,12 @@ export const verifyMediaMessage = async (
     }
 
     if (!media) {
+      logger.error(`❌ [VERIFY-MEDIA] Mídia não disponível, pulando processamento: { messageId: ${getSafeMessageId(msg)} }`);
+      throw new Error("ERR_WAPP_DOWNLOAD_MEDIA");
+    }
+    
+    if (!media.data) {
+      logger.error(`❌ [VERIFY-MEDIA] Dados da mídia não disponíveis: { messageId: ${getSafeMessageId(msg)} }`);
       throw new Error("ERR_WAPP_DOWNLOAD_MEDIA");
     }
 
@@ -870,7 +903,7 @@ export const verifyMediaMessage = async (
     const body = getBodyMessage(msg);
 
     const messageData = {
-      wid: msg.key.id,
+      wid: getSafeMessageId(msg),
       ticketId: ticket.id,
       contactId: msg.key.fromMe ? undefined : contact.id,
       body: body || media.filename || "Arquivo de mídia",
@@ -975,7 +1008,7 @@ export const verifyMessage = async (
   const companyId = ticket.companyId;
 
   const messageData = {
-    wid: msg.key.id,
+    wid: getSafeMessageId(msg),
     ticketId: ticket.id,
     contactId: msg.key.fromMe ? undefined : contact.id,
     body: body || "Mensagem sem conteúdo de texto",
@@ -1038,6 +1071,10 @@ export const verifyMessage = async (
 
 const isValidMsg = (msg: proto.IWebMessageInfo): boolean => {
   if (msg.key.remoteJid === "status@broadcast") return false;
+  if (!msg.key.id) {
+    logger.warn("isValidMsg: msg.key.id is undefined, skipping message processing");
+    return false;
+  }
   try {
     const msgType = getTypeMessage(msg);
     if (!msgType) {
@@ -1123,14 +1160,14 @@ const sendDialogflowAwswer = async (
   );
 
   if (!dialogFlowReply) {
-    wbot.sendPresenceUpdate("composing", contact.remoteJid);
+    await safePresenceUpdate(wbot, "composing", contact.remoteJid);
 
     const bodyDuvida = formatBody(`\u200e *${queueIntegration?.name}:* Não consegui entender sua dúvida.`)
 
 
     await delay(1000);
 
-    await wbot.sendPresenceUpdate('paused', contact.remoteJid)
+    await safePresenceUpdate(wbot, 'paused', contact.remoteJid);
 
     const sentMessage = await wbot.sendMessage(
       `${contact.number}@c.us`, {
@@ -1155,7 +1192,7 @@ const sendDialogflowAwswer = async (
 
   const audio = dialogFlowReply.encodedAudio.toString("base64") ?? undefined;
 
-  wbot.sendPresenceUpdate("composing", contact.remoteJid);
+  await safePresenceUpdate(wbot, "composing", contact.remoteJid);
   await delay(500);
 
   let lastMessage;
@@ -1213,9 +1250,9 @@ async function sendDelayedMessages(
   await verifyMessage(sentMessage, ticket, contact);
   if (message != lastMessage) {
     await delay(500);
-    wbot.sendPresenceUpdate("composing", contact.remoteJid);
+    await safePresenceUpdate(wbot, "composing", contact.remoteJid);
   } else if (audio) {
-    wbot.sendPresenceUpdate("recording", contact.remoteJid);
+    await safePresenceUpdate(wbot, "recording", contact.remoteJid);
     await delay(500);
 
 
@@ -1913,7 +1950,7 @@ const verifyQueue = async (
 
       let options = "";
 
-      wbot.sendPresenceUpdate("composing", contact.remoteJid);
+      await safePresenceUpdate(wbot, "composing", contact.remoteJid);
 
       queues.forEach((queue, index) => {
         options += `*[ ${index + 1} ]* - ${queue.name}\n`;
@@ -1932,7 +1969,7 @@ const verifyQueue = async (
 
       await delay(1000);
 
-      await wbot.sendPresenceUpdate('paused', contact.remoteJid)
+      await safePresenceUpdate(wbot, 'paused', contact.remoteJid);
 
       if (ticket.whatsapp.greetingMediaAttachment !== null) {
 
@@ -2423,7 +2460,7 @@ const flowbuilderIntegration = async (
 
   /*
   const messageData = {
-    wid: msg.key.id,
+    wid: getSafeMessageId(msg),
     ticketId: ticket.id,
     contactId: msg.key.fromMe ? undefined : contact.id,
     body: body,
@@ -2796,7 +2833,7 @@ export const handleMessageIntegration = async (
       };
       
       setTimeout(async () => {
-        await wbot.sendPresenceUpdate("composing", contact.remoteJid);
+        await safePresenceUpdate(wbot, "composing", contact.remoteJid);
         
         try {
           request(options, function (error, response) {
@@ -3025,10 +3062,30 @@ const handleMessage = async (
         id: grupoMeta.id,
         name: grupoMeta.subject
       };
-      groupContact = await verifyContact(msgGroupContact, wbot, companyId);
+      const isGroupLid = msgGroupContact.id.includes("@lid");
+      const isGroupType = msgGroupContact.id.includes("@g.us");
+      groupContact = await verifyContact(
+        msgGroupContact.id,
+        msgGroupContact.name,
+        companyId,
+        wbot.id,
+        isGroupLid,
+        isGroupType,
+        wbot
+      );
     }
 
-    const contact = await verifyContact(msgContact, wbot, companyId);
+    const isLid = msgContact.id.includes("@lid");
+    const isContactGroup = msgContact.id.includes("@g.us");
+    const contact = await verifyContact(
+      msgContact.id,
+      msgContact.name,
+      companyId,
+      wbot.id,
+      isLid,
+      isContactGroup,
+      wbot
+    );
     
     // 🐛 DEBUG: Log do contato verificado
 
@@ -3245,8 +3302,18 @@ const handleMessage = async (
     if (!useLGPD) {
       
       if (hasMedia) {
-        
-        mediaSent = await verifyMediaMessage(msg, ticket, contact, ticketTraking, isMsgForwarded, false, wbot);
+        try {
+          logger.info(`📥 [HANDLE-MESSAGE] Processando mensagem de mídia: { messageId: ${getSafeMessageId(msg)} }`);
+          mediaSent = await verifyMediaMessage(msg, ticket, contact, ticketTraking, isMsgForwarded, false, wbot);
+        } catch (error) {
+          logger.error(`❌ [HANDLE-MESSAGE] Erro ao processar mídia (não crítico): { messageId: ${getSafeMessageId(msg)}, error: ${error.message} }`);
+          // Em caso de erro na mídia, processar como mensagem de texto
+          try {
+            await verifyMessage(msg, ticket, contact, ticketTraking, false, isMsgForwarded);
+          } catch (fallbackError) {
+            logger.error(`❌ [HANDLE-MESSAGE] Erro no fallback de mensagem: { messageId: ${getSafeMessageId(msg)}, error: ${fallbackError.message} }`);
+          }
+        }
       } else {
         
         await verifyMessage(msg, ticket, contact, ticketTraking, false, isMsgForwarded);
@@ -3642,6 +3709,11 @@ const handleMsgAck = async (
   const io = getIO();
 
   try {
+    if (!msg.key.id) {
+      logger.warn("handleMsgAck: msg.key.id is undefined, skipping message ack update");
+      return;
+    }
+
     const messageToUpdate = await Message.findOne({
       where: {
         wid: msg.key.id,
@@ -3752,7 +3824,17 @@ const verifyCampaignMessageAndCloseTicket = async (message: proto.IWebMessageInf
   if (message.key.fromMe && isCampaign) {
     let msgContact: IMe;
     msgContact = await getContactMessage(message, wbot);
-    const contact = await verifyContact(msgContact, wbot, companyId);
+    const isLidContact = msgContact.id.includes("@lid");
+    const isGroupContact = msgContact.id.includes("@g.us");
+    const contact = await verifyContact(
+      msgContact.id,
+      msgContact.name,
+      companyId,
+      wbot.id,
+      isLidContact,
+      isGroupContact,
+      wbot
+    );
 
 
     const messageRecord = await Message.findOne({
@@ -3823,11 +3905,17 @@ setInterval(() => {
 
 const wbotMessageListener = (wbot: Session, companyId: number): void => {
   wbot.ev.on("messages.upsert", async (messageUpsert: ImessageUpsert) => {
-    const messages = messageUpsert.messages
-      .filter(filterMessages)
-      .map(msg => msg);
+    logger.info(`📨 [MESSAGES-UPSERT] INICIO: { companyId: ${companyId}, wbotId: ${wbot.id}, messagesCount: ${messageUpsert.messages?.length || 0} }`);
+    
+    try {
+      const messages = messageUpsert.messages
+        .filter(filterMessages)
+        .map(msg => msg);
 
-    if (!messages) return;
+      if (!messages) {
+        logger.info(`📨 [MESSAGES-UPSERT] SEM MENSAGENS: Filtro removeu todas as mensagens`);
+        return;
+      }
 
     // Processar mensagens em lote mas com controle de duplicação
     const processedMessageIds = new Set<string>();
@@ -3909,15 +3997,28 @@ const wbotMessageListener = (wbot: Session, companyId: number): void => {
         }
 
       } catch (error) {
-        logger.error(`Erro ao processar mensagem ${message.key.id}: ${error.message}`);
+        logger.error(`❌ [MESSAGES-UPSERT] ERRO NA MENSAGEM: { messageId: ${message.key.id}, error: ${error.message} }`);
         Sentry.captureException(error);
       }
+    }
+    
+    logger.info(`📨 [MESSAGES-UPSERT] CONCLUIDO: { companyId: ${companyId}, wbotId: ${wbot.id}, processedCount: ${messages.length} }`);
+    } catch (error) {
+      logger.error(`❌ [MESSAGES-UPSERT] ERRO CRITICO: { companyId: ${companyId}, wbotId: ${wbot.id}, error: ${error.message}, stack: ${error.stack} }`);
+      throw error;
     }
   });
 
   wbot.ev.on("messages.update", (messageUpdate: WAMessageUpdate[]) => {
-    if (messageUpdate.length === 0) return;
-    messageUpdate.forEach(async (message: WAMessageUpdate) => {
+    logger.info(`🔄 [MESSAGES-UPDATE] INICIO: { companyId: ${companyId}, wbotId: ${wbot.id}, updatesCount: ${messageUpdate.length} }`);
+    
+    try {
+      if (messageUpdate.length === 0) {
+        logger.info(`🔄 [MESSAGES-UPDATE] SEM UPDATES: Array vazio`);
+        return;
+      }
+      
+      messageUpdate.forEach(async (message: WAMessageUpdate) => {
 
       (wbot as WASocket)!.readMessages([message.key])
 
@@ -3944,6 +4045,12 @@ const wbotMessageListener = (wbot: Session, companyId: number): void => {
         handleMsgAck(message, ack);
       }
     });
+    
+    logger.info(`🔄 [MESSAGES-UPDATE] CONCLUIDO: { companyId: ${companyId}, wbotId: ${wbot.id} }`);
+    } catch (error) {
+      logger.error(`❌ [MESSAGES-UPDATE] ERRO CRITICO: { companyId: ${companyId}, wbotId: ${wbot.id}, error: ${error.message}, stack: ${error.stack} }`);
+      throw error;
+    }
   });
 
   // wbot.ev.on('message-receipt.update', (events: any) => {

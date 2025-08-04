@@ -10,6 +10,7 @@ import {
   Unique,
   Default,
   HasMany,
+  HasOne,
   ForeignKey,
   BelongsTo,
   BelongsToMany
@@ -23,6 +24,7 @@ import Tag from "./Tag";
 import ContactWallet from "./ContactWallet";
 import User from "./User";
 import Whatsapp from "./Whatsapp";
+import WhatsappLidMap from "./WhatsappLidMap";
 
 @Table
 class Contact extends Model<Contact> {
@@ -132,6 +134,9 @@ class Contact extends Model<Contact> {
 
   @BelongsTo(() => Whatsapp)
   whatsapp: Whatsapp;
+
+  @HasOne(() => WhatsappLidMap)
+  whatsappLidMap: WhatsappLidMap;
 }
 
 export default Contact;

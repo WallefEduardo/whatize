@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import AppError from "../errors/AppError";
 import fs from "fs";
+import logger from "../utils/logger";
 
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../libs/socket";
@@ -272,7 +273,14 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       );
     } else {
       if (ticket.channel === "whatsapp" && isPrivate === "false") {
-        await SendWhatsAppMessage({ body, ticket, quotedMsg, vCard });
+        logger.info(`🚀 [MSG-CONTROLLER] Chamando SendWhatsAppMessage: { ticketId: ${ticket.id}, contactId: ${ticket.contactId}, bodyLength: ${body?.length} }`);
+        try {
+          await SendWhatsAppMessage({ body, ticket, quotedMsg, vCard });
+          logger.info(`✅ [MSG-CONTROLLER] SendWhatsAppMessage executado com sucesso`);
+        } catch (error) {
+          logger.error(`❌ [MSG-CONTROLLER] Erro no SendWhatsAppMessage: ${error.message}`);
+          throw error;
+        }
       } else if (ticket.channel === "whatsapp" && isPrivate === "true") {
         const messageData = {
           wid: `PVT${ticket.updatedAt.toString().replace(" ", "")}`,

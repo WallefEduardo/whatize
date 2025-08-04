@@ -40,7 +40,7 @@ import CreateLogTicketService from "./services/TicketServices/CreateLogTicketSer
 import formatBody from "./helpers/Mustache";
 import TicketTag from "./models/TicketTag";
 import Tag from "./models/Tag";
-import { delay } from "@whiskeysockets/baileys";
+import { delay } from "baileys";
 import Plan from "./models/Plan";
 import Invoices from "./models/Invoices";
 

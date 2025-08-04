@@ -1,4 +1,4 @@
-import { WAMessage, AnyMessageContent, WAPresence } from "@whiskeysockets/baileys";
+import { WAMessage, AnyMessageContent, WAPresence } from "baileys";
 import * as Sentry from "@sentry/node";
 import fs from "fs";
 import { exec } from "child_process";
@@ -9,6 +9,7 @@ import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Ticket from "../../models/Ticket";
 import mime from "mime-types";
 import Contact from "../../models/Contact";
+import logger from "../../utils/logger";
 
 interface Request {
   media: Express.Multer.File;
@@ -72,9 +73,22 @@ export const typeSimulation = async (ticket: Ticket, presence: WAPresence) => {
     }
   });
 
-  await wbot.sendPresenceUpdate(presence, `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`);
-  await delay(5000);
-  await wbot.sendPresenceUpdate('paused', `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`);
+  // 🚨 PROTEÇÃO CRÍTICA: Usar remoteJid se existir (pode ser LID) ou construir JID padrão
+  let jid: string;
+  if (contact.remoteJid && contact.remoteJid.includes("@")) {
+    jid = contact.remoteJid;
+  } else {
+    jid = `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`;
+  }
+  
+  // 🛡️ PROTEÇÃO LID: Não enviar presence para números LID (causa XML malformed)
+  if (!jid.endsWith("@lid")) {
+    await wbot.sendPresenceUpdate(presence, jid);
+    await delay(5000);
+    await wbot.sendPresenceUpdate('paused', jid);
+  } else {
+    logger.debug(`🛡️ [PRESENCE-PROTECTION] Bloqueando envio de presence para LID: ${jid}`);
+  }
 
 }
 

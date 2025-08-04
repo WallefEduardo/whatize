@@ -1,4 +1,4 @@
-import { delay, WAMessage } from "@whiskeysockets/baileys";
+import { delay, WAMessage } from "baileys";
 import AppError from "../../errors/AppError";
 import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Message from "../../models/Message";
@@ -47,7 +47,10 @@ const SendWhatsAppMediaImage = async ({
     }
 
     try {
-        wbot.sendPresenceUpdate('available');
+        // 🚨 PROTEÇÃO CRÍTICA: Não enviar presence para números LID (causa XML malformed)
+        if (!number.endsWith("@lid")) {
+            wbot.sendPresenceUpdate('available');
+        }
         await delay(msdelay)
         const sentMessage = await wbot.sendMessage(
             `${number}`,
@@ -57,7 +60,9 @@ const SendWhatsAppMediaImage = async ({
                 mimetype: 'image/jpeg'
             }
         );
-        wbot.sendPresenceUpdate('unavailable');
+        if (!number.endsWith("@lid")) {
+            wbot.sendPresenceUpdate('unavailable');
+        }
 
         return sentMessage;
     } catch (err) {

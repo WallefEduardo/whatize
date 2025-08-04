@@ -1,7 +1,7 @@
 import axios from "axios";
 import Ticket from "../../models/Ticket";
 import QueueIntegrations from "../../models/QueueIntegrations";
-import { WASocket, delay, proto } from "@whiskeysockets/baileys";
+import { WASocket, delay, proto } from "baileys";
 import { getBodyMessage } from "../WbotServices/wbotMessageListener";
 import logger from "../../utils/logger";
 import { isNil } from "lodash";
@@ -19,6 +19,20 @@ interface Request {
     ticket: Ticket;
     typebot: QueueIntegrations;
 }
+
+// 🚨 PROTEÇÃO CRÍTICA: Função helper para envio seguro de presence (evita XML malformed em LID)
+const safePresenceUpdate = async (wbot: Session, type: 'unavailable' | 'available' | 'composing' | 'recording' | 'paused', jid: string) => {
+  try {
+    if (jid.endsWith("@lid")) {
+      logger.debug(`🛡️ [TYPEBOT-PRESENCE-PROTECTION] Bloqueando envio de presence ${type} para LID: ${jid}`);
+      return;
+    }
+    await wbot.sendPresenceUpdate(type, jid);
+    logger.debug(`📤 [TYPEBOT-PRESENCE] ${type} enviado para: ${jid}`);
+  } catch (error) {
+    logger.error(`❌ [TYPEBOT-PRESENCE] Erro ao enviar ${type} para ${jid}: ${error.message}`);
+  }
+};
 
 
 const typebotListener = async ({
@@ -295,9 +309,9 @@ const typebotListener = async ({
 
                         await wbot.presenceSubscribe(msg.key.remoteJid)
                         //await delay(2000)
-                        await wbot.sendPresenceUpdate('composing', msg.key.remoteJid)
+                        await safePresenceUpdate(wbot, 'composing', msg.key.remoteJid);
                         await delay(typebotDelayMessage)
-                        await wbot.sendPresenceUpdate('paused', msg.key.remoteJid)
+                        await safePresenceUpdate(wbot, 'paused', msg.key.remoteJid);
 
 
                         await wbot.sendMessage(msg.key.remoteJid, { text: formatBody(formattedText, ticket) });
@@ -306,9 +320,9 @@ const typebotListener = async ({
                     if (message.type === 'audio') {
                         await wbot.presenceSubscribe(msg.key.remoteJid)
                         //await delay(2000)
-                        await wbot.sendPresenceUpdate('composing', msg.key.remoteJid)
+                        await safePresenceUpdate(wbot, 'composing', msg.key.remoteJid);
                         await delay(typebotDelayMessage)
-                        await wbot.sendPresenceUpdate('paused', msg.key.remoteJid)
+                        await safePresenceUpdate(wbot, 'paused', msg.key.remoteJid);
                         const media = {
                             audio: {
                                 url: message.content.url
@@ -339,9 +353,9 @@ const typebotListener = async ({
                     if (message.type === 'image') {
                         await wbot.presenceSubscribe(msg.key.remoteJid)
                         //await delay(2000)
-                        await wbot.sendPresenceUpdate('composing', msg.key.remoteJid)
+                        await safePresenceUpdate(wbot, 'composing', msg.key.remoteJid);
                         await delay(typebotDelayMessage)
-                        await wbot.sendPresenceUpdate('paused', msg.key.remoteJid)
+                        await safePresenceUpdate(wbot, 'paused', msg.key.remoteJid);
                         const media = {
                             image: {
                                 url: message.content.url,
@@ -354,9 +368,9 @@ const typebotListener = async ({
                     if (message.type === 'video') {
                         await wbot.presenceSubscribe(msg.key.remoteJid)
                         //await delay(2000)
-                        await wbot.sendPresenceUpdate('composing', msg.key.remoteJid)
+                        await safePresenceUpdate(wbot, 'composing', msg.key.remoteJid);
                         await delay(typebotDelayMessage)
-                        await wbot.sendPresenceUpdate('paused', msg.key.remoteJid)
+                        await safePresenceUpdate(wbot, 'paused', msg.key.remoteJid);
                         const media = {
                             video: {
                                 url: message.content.url,
@@ -389,9 +403,9 @@ const typebotListener = async ({
                         formattedText = formattedText.replace(/\n$/, '');
                         await wbot.presenceSubscribe(msg.key.remoteJid)
                         //await delay(2000)
-                        await wbot.sendPresenceUpdate('composing', msg.key.remoteJid)
+                        await safePresenceUpdate(wbot, 'composing', msg.key.remoteJid);
                         await delay(typebotDelayMessage)
-                        await wbot.sendPresenceUpdate('paused', msg.key.remoteJid)
+                        await safePresenceUpdate(wbot, 'paused', msg.key.remoteJid);
                         await wbot.sendMessage(msg.key.remoteJid, { text: formattedText });
 
                     }

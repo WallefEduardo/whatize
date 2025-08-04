@@ -295,17 +295,44 @@ const CreateOrUpdateContactService = async ({
 
     try {
       return await retryWithBackoff(async () => {
+        console.log("🔍 ETAPA 4 DEBUG - Iniciando CreateOrUpdateContactService:", {
+          name,
+          number,
+          profilePicUrl: profilePicUrl?.substring(0, 50) + "...",
+          isGroup,
+          companyId,
+          channel,
+          whatsappId,
+          remoteJid
+        });
+
         let createContact = false;
         const publicFolder = path.resolve(__dirname, "..", "..", "..", "public");
         const io = getIO();
         let contact: Contact | null;
 
         // Primeiro tenta buscar no cache
+        console.log("🔍 ULTRA DEBUG 1 - Buscando no cache:", { number, companyId });
         contact = await contactCache.findOrFetch(number, companyId);
+        console.log("🔍 ULTRA DEBUG 2 - Resultado do cache:", {
+          contactExists: !!contact,
+          contactId: contact?.id,
+          contactType: typeof contact
+        });
 
         let updateImage = (!contact || contact?.profilePicUrl !== profilePicUrl && profilePicUrl !== "") && wbot || false;
 
+        console.log("🔍 ULTRA DEBUG 3 - Avaliando fluxos:", {
+          contactExists: !!contact,
+          channel,
+          wbotExists: !!wbot,
+          isWhatsappChannel: channel === 'whatsapp',
+          willEnterContactUpdateFlow: !!contact,
+          willEnterWhatsappCreateFlow: !contact && wbot && ['whatsapp'].includes(channel)
+        });
+
         if (contact) {
+          console.log("🔍 ULTRA DEBUG 4 - ENTRANDO no fluxo de ATUALIZAÇÃO de contato existente");
       contact.remoteJid = remoteJid;
       contact.profilePicUrl = profilePicUrl || null;
       contact.isGroup = isGroup;
@@ -364,20 +391,59 @@ const CreateOrUpdateContactService = async ({
       }
 
     } else if (wbot && ['whatsapp'].includes(channel)) {
+      console.log("🔍 ULTRA DEBUG 5 - ENTRANDO no fluxo de CRIAÇÃO WhatsApp");
       const settings = await CompaniesSettings.findOne({ where: { companyId } });
       const { acceptAudioMessageContact } = settings;
       let newRemoteJid = remoteJid;
 
-      if (!remoteJid && remoteJid !== "") {
-        newRemoteJid = isGroup ? `${rawNumber}@g.us` : `${rawNumber}@s.whatsapp.net`;
+      if (!remoteJid || remoteJid === "") {
+        // 🚀 CORREÇÃO CRÍTICA: Para LID, usar o rawNumber direto (já tem @lid)
+        if (rawNumber.includes('@lid')) {
+          newRemoteJid = rawNumber; // LID já vem com @lid, não adicionar @s.whatsapp.net
+        } else {
+          newRemoteJid = isGroup ? `${rawNumber}@g.us` : `${rawNumber}@s.whatsapp.net`;
+        }
+        console.log("🔍 ULTRA DEBUG 5.1 - remoteJid vazio, construindo newRemoteJid:", {
+          rawNumber,
+          isGroup,
+          isLid: rawNumber.includes('@lid'),
+          newRemoteJid
+        });
       }
+
+      console.log("🔍 ULTRA DEBUG 6 - Configurações para criação:", {
+        settings: !!settings,
+        acceptAudioMessageContact,
+        newRemoteJid,
+        originalRemoteJid: remoteJid
+      });
+
+      console.log("🔍 ULTRA DEBUG 6.1 - Tentando buscar profilePicUrl:", {
+        currentProfilePicUrl: profilePicUrl,
+        remoteJid,
+        newRemoteJid,
+        shouldFetchProfilePic: !profilePicUrl || profilePicUrl.includes('nopicture.png'),
+        remoteJidIsEmpty: !remoteJid,
+        newRemoteJidIsEmpty: !newRemoteJid
+      });
 
       try {
         // Se já temos uma URL válida do WhatsApp, não sobrescrever
         if (!profilePicUrl || profilePicUrl.includes('nopicture.png')) {
-          profilePicUrl = await wbot.profilePictureUrl(remoteJid, "image");
+          // 🚀 CORREÇÃO: Usar newRemoteJid se remoteJid estiver vazio
+          const jidToUse = remoteJid || newRemoteJid;
+          
+          if (jidToUse) {
+            console.log("🔍 ULTRA DEBUG 6.2 - Buscando foto do perfil com JID:", jidToUse);
+            profilePicUrl = await wbot.profilePictureUrl(jidToUse, "image");
+            console.log("🔍 ULTRA DEBUG 6.3 - Foto do perfil obtida com sucesso");
+          } else {
+            console.log("🔍 ULTRA DEBUG 6.4 - Nenhum JID válido, usando placeholder");
+            profilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+          }
         }
       } catch (e) {
+        console.log("🔍 ULTRA DEBUG 6.5 - Erro ao buscar foto, usando placeholder:", e.message);
         Sentry.captureException(e);
         // Só define placeholder se não tínhamos uma URL válida antes
         if (!profilePicUrl || profilePicUrl.includes('nopicture.png')) {
@@ -385,7 +451,7 @@ const CreateOrUpdateContactService = async ({
         }
       }
 
-      contact = await Contact.create({
+      console.log("🔍 ULTRA DEBUG 7 - CHAMANDO Contact.create com dados:", {
         name,
         number,
         email,
@@ -394,13 +460,48 @@ const CreateOrUpdateContactService = async ({
         channel,
         acceptAudioMessage: acceptAudioMessageContact === 'enabled' ? true : false,
         remoteJid: newRemoteJid,
-        profilePicUrl,
-        urlPicture: "",
+        profilePicUrl: profilePicUrl?.substring(0, 50) + "...",
         whatsappId
+      });
+
+      try {
+        console.log("🔍 ULTRA DEBUG 7.1 - Iniciando Contact.create...");
+        contact = await Contact.create({
+          name,
+          number,
+          email,
+          isGroup,
+          companyId,
+          channel,
+          acceptAudioMessage: acceptAudioMessageContact === 'enabled' ? true : false,
+          remoteJid: newRemoteJid,
+          profilePicUrl,
+          urlPicture: "",
+          whatsappId
+        });
+        console.log("🔍 ULTRA DEBUG 7.2 - Contact.create executado com sucesso");
+      } catch (createError) {
+        console.error("🚨 ULTRA DEBUG 7.3 - ERRO no Contact.create:", {
+          errorMessage: createError.message,
+          errorName: createError.name,
+          errorStack: createError.stack,
+          sqlMessage: createError.sql,
+          sqlErrorCode: createError.errno,
+          contactData: { name, number, email, isGroup, companyId, channel, whatsappId }
+        });
+        throw createError;
+      }
+
+      console.log("🔍 ULTRA DEBUG 8 - Contact.create CONCLUÍDO:", {
+        contactExists: !!contact,
+        contactId: contact?.id,
+        contactNumber: contact?.number,
+        contactName: contact?.name
       });
 
       createContact = true;
     } else if (['facebook', 'instagram'].includes(channel)) {
+      console.log("🔍 ULTRA DEBUG 9 - ENTRANDO no fluxo de CRIAÇÃO Facebook/Instagram");
       contact = await Contact.create({
         name,
         number,
@@ -412,6 +513,21 @@ const CreateOrUpdateContactService = async ({
         urlPicture: "",
         whatsappId
       });
+      console.log("🔍 ULTRA DEBUG 10 - Contact.create Facebook/Instagram CONCLUÍDO:", {
+        contactExists: !!contact,
+        contactId: contact?.id
+      });
+    } else {
+      console.error("🚨 ULTRA DEBUG 11 - CRÍTICO: NENHUM FLUXO FOI EXECUTADO!", {
+        channel,
+        wbotExists: !!wbot,
+        contactExists: !!contact,
+        isWhatsappChannel: channel === 'whatsapp',
+        isFacebookChannel: channel === 'facebook',
+        isInstagramChannel: channel === 'instagram',
+        allVariables: { name, number, email, isGroup, companyId, channel, whatsappId }
+      });
+      throw new Error(`No valid flow executed for channel: ${channel}, wbot: ${!!wbot}`);
     }
 
 
@@ -474,8 +590,37 @@ const CreateOrUpdateContactService = async ({
         
     }
 
+        // LOGS DETALHADOS antes do cache
+        console.log("🔍 ETAPA 4 DEBUG - Antes de contactCache.set:", {
+          contactExists: !!contact,
+          contactType: typeof contact,
+          contactId: contact?.id,
+          contactNumber: contact?.number,
+          contactName: contact?.name,
+          isNull: contact === null,
+          isUndefined: contact === undefined,
+          hasNumberProperty: contact && 'number' in contact
+        });
+
+        // Verificação crítica antes de set no cache
+        if (!contact) {
+          console.error("🚨 ETAPA 4 DEBUG - CRÍTICO: contact é NULL antes de cache.set!");
+          throw new Error("Contact is null before cache.set - this should never happen");
+        }
+
+        if (!contact.number) {
+          console.error("🚨 ETAPA 4 DEBUG - CRÍTICO: contact.number é NULL/UNDEFINED!", {
+            contact,
+            contactKeys: Object.keys(contact || {}),
+            numberValue: contact.number
+          });
+          throw new Error("Contact.number is null/undefined - cannot cache");
+        }
+
         // Atualiza o cache com o contato final
+        console.log("🔍 ETAPA 4 DEBUG - Chamando contactCache.set...");
         contactCache.set(contact);
+        console.log("🔍 ETAPA 4 DEBUG - contactCache.set concluído com sucesso");
 
         // Log do sucesso
         raceConditionLogger.logContactCreation(
@@ -486,6 +631,12 @@ const CreateOrUpdateContactService = async ({
           whatsappId,
           { finalName: contact.name, contactId: contact.id }
         );
+
+        console.log("🔍 ETAPA 4 DEBUG - RETORNANDO contato:", {
+          contactId: contact.id,
+          contactNumber: contact.number,
+          contactName: contact.name
+        });
 
         return contact;
       }, 3, 100, number, companyId); // retryWithBackoff
