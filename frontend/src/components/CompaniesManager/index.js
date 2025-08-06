@@ -16,6 +16,7 @@ import {
   Select,
 } from "@material-ui/core";
 import { Formik, Form, Field } from "formik";
+import * as Yup from "yup";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConfirmationModal from "../ConfirmationModal";
 
@@ -71,12 +72,39 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+// Schema de validação Yup
+const CompanySchema = Yup.object().shape({
+  name: Yup.string()
+    .min(2, "Nome deve ter pelo menos 2 caracteres")
+    .max(100, "Nome deve ter no máximo 100 caracteres")
+    .required("Nome da empresa é obrigatório"),
+  email: Yup.string()
+    .email("Digite um e-mail válido")
+    .required("E-mail é obrigatório"),
+  password: Yup.string().when("id", {
+    is: (id) => !id, // Se não tem ID (criação)
+    then: Yup.string()
+      .min(5, "Senha deve ter pelo menos 5 caracteres")
+      .required("Senha é obrigatória"),
+    otherwise: Yup.string().min(5, "Senha deve ter pelo menos 5 caracteres"),
+  }),
+  phone: Yup.string()
+    .min(10, "Telefone deve ter pelo menos 10 dígitos")
+    .required("Telefone é obrigatório"),
+  planId: Yup.string().required("Selecione um plano"),
+  document: Yup.string()
+    .min(11, "Documento deve ter pelo menos 11 caracteres")
+    .max(14, "Documento deve ter no máximo 14 caracteres")
+    .required("Documento (CPF/CNPJ) é obrigatório"),
+});
+
 export function CompanyForm(props) {
   const { onSubmit, onDelete, onCancel, initialValue, loading } = props;
   const classes = useStyles();
   const [plans, setPlans] = useState([]);
   const [modalUser, setModalUser] = useState(false);
   const [firstUser, setFirstUser] = useState({});
+  const [formErrors, setFormErrors] = useState({});
 
   const [record, setRecord] = useState({
     name: "",
@@ -88,6 +116,7 @@ export function CompanyForm(props) {
     dueDate: "",
     recurrence: "",
     password: "",
+    document: "",
     ...initialValue,
   });
 
@@ -116,12 +145,66 @@ export function CompanyForm(props) {
     });
   }, [initialValue]);
 
-  const handleSubmit = async (data) => {
-    if (data.dueDate === "" || moment(data.dueDate).isValid() === false) {
-      data.dueDate = null;
+  const handleSubmit = async (data, { setFieldError, setSubmitting, resetForm }) => {
+    try {
+      setFormErrors({});
+      if (data.dueDate === "" || moment(data.dueDate).isValid() === false) {
+        data.dueDate = null;
+      }
+      await onSubmit(data);
+      // Só reseta o formulário se a operação foi bem-sucedida
+      resetForm();
+      setRecord({ 
+        name: "",
+        email: "",
+        phone: "",
+        planId: "",
+        status: true,
+        dueDate: "",
+        recurrence: "",
+        password: "",
+        document: "",
+        ...initialValue 
+      });
+    } catch (error) {
+      // Trata erros específicos e destaca campos com problema
+      const errorData = error.response?.data;
+      const errorMessage = errorData?.message || error.message;
+      
+      // Mapeia erros para campos específicos
+      const fieldErrors = {};
+      
+      if (errorMessage.includes("name") || errorMessage.includes("Nome")) {
+        fieldErrors.name = "Erro no nome da empresa";
+      }
+      if (errorMessage.includes("email") || errorMessage.includes("E-mail")) {
+        fieldErrors.email = "Erro no e-mail";
+      }
+      if (errorMessage.includes("password") || errorMessage.includes("senha")) {
+        fieldErrors.password = "Erro na senha";
+      }
+      if (errorMessage.includes("phone") || errorMessage.includes("telefone")) {
+        fieldErrors.phone = "Erro no telefone";
+      }
+      if (errorMessage.includes("planId") || errorMessage.includes("plano")) {
+        fieldErrors.planId = "Erro no plano selecionado";
+      }
+      if (errorMessage.includes("document") || errorMessage.includes("documento")) {
+        fieldErrors.document = "Erro no documento";
+      }
+      
+      // Define erros nos campos
+      Object.keys(fieldErrors).forEach(field => {
+        setFieldError(field, fieldErrors[field]);
+      });
+      
+      setFormErrors(fieldErrors);
+      
+      // Re-throw o erro para que seja tratado pelo componente pai
+      throw error;
+    } finally {
+      setSubmitting(false);
     }
-    onSubmit(data);
-    setRecord({ ...initialValue, dueDate: "" });
   };
 
   const handleOpenModalUsers = async () => {
@@ -193,14 +276,10 @@ export function CompanyForm(props) {
         enableReinitialize
         className={classes.fullWidth}
         initialValues={record}
-        onSubmit={(values, { resetForm }) =>
-          setTimeout(() => {
-            handleSubmit(values);
-            resetForm();
-          }, 500)
-        }
+        validationSchema={CompanySchema}
+        onSubmit={handleSubmit}
       >
-        {(values, setValues) => (
+        {({ values, errors, touched, isSubmitting }) => (
           <Form className={classes.fullWidth}>
             <Grid spacing={1} justifyContent="center" container>
               <Grid xs={12} sm={6} md={3} item>
@@ -211,6 +290,9 @@ export function CompanyForm(props) {
                   variant="outlined"
                   className={classes.fullWidth}
                   margin="dense"
+                  error={touched.name && !!errors.name}
+                  helperText={touched.name && errors.name}
+                  required
                 />
               </Grid>
               <Grid xs={12} sm={6} md={2} item>
@@ -221,6 +303,8 @@ export function CompanyForm(props) {
                   variant="outlined"
                   className={classes.fullWidth}
                   margin="dense"
+                  error={touched.email && !!errors.email}
+                  helperText={touched.email && errors.email}
                   required
                 />
               </Grid>
@@ -234,6 +318,8 @@ export function CompanyForm(props) {
                   className={classes.fullWidth}
                   margin="dense"
                   placeholder="Deixe em branco para manter a senha atual"
+                  error={touched.password && !!errors.password}
+                  helperText={touched.password && errors.password}
                 />
               </Grid>
               <Grid xs={12} sm={6} md={2} item>
@@ -244,10 +330,18 @@ export function CompanyForm(props) {
                   variant="outlined"
                   className={classes.fullWidth}
                   margin="dense"
+                  error={touched.phone && !!errors.phone}
+                  helperText={touched.phone && errors.phone}
+                  required
                 />
               </Grid>
               <Grid xs={12} sm={6} md={2} item>
-                <FormControl margin="dense" variant="outlined" fullWidth>
+                <FormControl 
+                  margin="dense" 
+                  variant="outlined" 
+                  fullWidth
+                  error={touched.planId && !!errors.planId}
+                >
                   <InputLabel htmlFor="plan-selection">{i18n.t("compaies.table.plan")}</InputLabel>
                   <Field
                     as={Select}
@@ -264,6 +358,11 @@ export function CompanyForm(props) {
                       </MenuItem>
                     ))}
                   </Field>
+                  {touched.planId && errors.planId && (
+                    <div style={{ color: '#f44336', fontSize: '0.75rem', marginTop: '3px', marginLeft: '14px' }}>
+                      {errors.planId}
+                    </div>
+                  )}
                 </FormControl>
               </Grid>
               <Grid xs={12} sm={6} md={1} item>
@@ -307,6 +406,9 @@ export function CompanyForm(props) {
                   variant="outlined"
                   className={classes.fullWidth}
                   margin="dense"
+                  error={touched.document && !!errors.document}
+                  helperText={touched.document && errors.document}
+                  required
                 />
               </Grid>
               {/* <Grid xs={12} sm={6} md={2} item>
@@ -419,10 +521,11 @@ export function CompanyForm(props) {
                     <ButtonWithSpinner
                       className={classes.fullWidth}
                       style={{ marginTop: 7 }}
-                      loading={loading}
+                      loading={loading || isSubmitting}
                       type="submit"
                       variant="contained"
                       color="primary"
+                      disabled={isSubmitting}
                     >
                       {i18n.t("compaies.table.save")}
                     </ButtonWithSpinner>
@@ -588,48 +691,69 @@ export default function CompaniesManager() {
       
       // Tratamento específico de erros
       let errorMessage = "Não foi possível realizar a operação.";
+      let fieldErrors = {};
       
-      if (e.response && e.response.data && e.response.data.message) {
-        const backendMessage = e.response.data.message;
-        
-        // Mapeamento de erros específicos
+      // Verifica se há erro na resposta do backend (campo 'error' ou 'message')
+      const backendMessage = e.response?.data?.error || e.response?.data?.message;
+      
+      if (backendMessage) {
+        // Mapeamento de erros específicos com destaque nos campos
         if (backendMessage.includes("companyUserName is a required field")) {
           errorMessage = "O campo 'Nome do Administrador' é obrigatório.";
-        } else if (backendMessage.includes("name must be unique")) {
+          fieldErrors.name = "Nome do administrador é obrigatório";
+        } else if (backendMessage.includes("name must be unique") || backendMessage.includes("Já existe uma empresa com este nome")) {
           errorMessage = "Já existe uma empresa com este nome. Escolha outro nome.";
-        } else if (backendMessage.includes("email must be unique")) {
+          fieldErrors.name = "Já existe uma empresa com este nome";
+        } else if (backendMessage.includes("email must be unique") || backendMessage.includes("Já existe uma empresa com este email")) {
           errorMessage = "Já existe uma empresa com este e-mail. Use outro e-mail.";
-        } else if (backendMessage.includes("document must be unique")) {
+          fieldErrors.email = "Já existe uma empresa com este e-mail";
+        } else if (backendMessage.includes("document must be unique") || backendMessage.includes("Já existe uma empresa com este documento")) {
           errorMessage = "Já existe uma empresa com este documento. Verifique o CNPJ/CPF.";
-        } else if (backendMessage.includes("name is a required field")) {
+          fieldErrors.document = "Já existe uma empresa com este documento";
+        } else if (backendMessage.includes("name is a required field") || backendMessage.includes("Nome da empresa é obrigatório")) {
           errorMessage = "O campo 'Nome da Empresa' é obrigatório.";
-        } else if (backendMessage.includes("email is a required field")) {
+          fieldErrors.name = "Nome da empresa é obrigatório";
+        } else if (backendMessage.includes("email is a required field") || backendMessage.includes("Email é obrigatório")) {
           errorMessage = "O campo 'E-mail' é obrigatório.";
-        } else if (backendMessage.includes("password is a required field")) {
+          fieldErrors.email = "E-mail é obrigatório";
+        } else if (backendMessage.includes("password is a required field") || backendMessage.includes("Senha é obrigatória")) {
           errorMessage = "O campo 'Senha' é obrigatório.";
-        } else if (backendMessage.includes("password must be at least 5 characters")) {
+          fieldErrors.password = "Senha é obrigatória";
+        } else if (backendMessage.includes("password must be at least 5 characters") || backendMessage.includes("Senha deve ter pelo menos 5 caracteres")) {
           errorMessage = "A senha deve ter pelo menos 5 caracteres.";
-        } else if (backendMessage.includes("planId is a required field")) {
+          fieldErrors.password = "Senha deve ter pelo menos 5 caracteres";
+        } else if (backendMessage.includes("planId is a required field") || backendMessage.includes("Plano é obrigatório")) {
           errorMessage = "Selecione um plano para a empresa.";
-        } else if (backendMessage.includes("document is a required field")) {
+          fieldErrors.planId = "Selecione um plano";
+        } else if (backendMessage.includes("document is a required field") || backendMessage.includes("Documento é obrigatório")) {
           errorMessage = "O campo 'Documento (CNPJ/CPF)' é obrigatório.";
-        } else if (backendMessage.includes("phone is a required field")) {
+          fieldErrors.document = "Documento é obrigatório";
+        } else if (backendMessage.includes("phone is a required field") || backendMessage.includes("Telefone é obrigatório")) {
           errorMessage = "O campo 'Telefone' é obrigatório.";
-        } else if (backendMessage.includes("email must be a valid email")) {
+          fieldErrors.phone = "Telefone é obrigatório";
+        } else if (backendMessage.includes("email must be a valid email") || backendMessage.includes("Email deve ter um formato válido")) {
           errorMessage = "Digite um e-mail válido.";
-        } else if (backendMessage.includes("document must be between 11 and 14 characters")) {
+          fieldErrors.email = "Digite um e-mail válido";
+        } else if (backendMessage.includes("document must be between 11 and 14 characters") || backendMessage.includes("Documento deve ter pelo menos 11 caracteres")) {
           errorMessage = "O documento deve ter entre 11 e 14 caracteres (CPF ou CNPJ).";
+          fieldErrors.document = "Documento deve ter entre 11 e 14 caracteres";
         } else {
           // Se não conseguir mapear, usa a mensagem do backend
-          errorMessage = `Erro: ${backendMessage}`;
+          errorMessage = backendMessage;
         }
       } else if (e.message) {
         errorMessage = `Erro de conexão: ${e.message}`;
       }
       
+      // Os erros nos campos específicos são tratados no CompanyForm
+      
       toast.error(errorMessage);
+      
+      // Re-throw o erro para que seja tratado pelo formulário
+      throw e;
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleDelete = async () => {
