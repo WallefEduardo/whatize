@@ -107,6 +107,17 @@ export async function verifyContact(
   isGroup: ${isGroup}
 }`);
 
+  // 🚫 EARLY RETURN: Validação de segurança ANTES da lógica LID/JID
+  if (msgContactId.endsWith('@newsletter')) {
+    logger.warn(`🚫 [VERIFY-CONTACT] Tentativa de criar contato para newsletter: ${msgContactId}`);
+    throw new Error(`Newsletter contacts are not allowed: ${msgContactId}`);
+  }
+  
+  if (msgContactId.endsWith('@broadcast')) {
+    logger.warn(`🚫 [VERIFY-CONTACT] Tentativa de criar contato para broadcast: ${msgContactId}`);
+    throw new Error(`Broadcast contacts are not allowed: ${msgContactId}`);
+  }
+
   let profilePicUrl: string;
   const noPicture = `${process.env.FRONTEND_URL}/nopicture.png`;
 

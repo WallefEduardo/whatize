@@ -59,8 +59,9 @@ class FunilKanbanService {
     count: number;
     hasMore: boolean;
   }> {
-        const limit = 20;
-    const offset = (parseInt(pageNumber, 10) - 1) * limit;
+    // Remover limitação de paginação para buscar todos os funis
+    // const limit = 20;
+    // const offset = (parseInt(pageNumber, 10) - 1) * limit;
 
     let whereCondition: any = {
       companyId,
@@ -75,7 +76,7 @@ class FunilKanbanService {
 
     // Para usuários não-admin, usar uma abordagem diferente
     if (userProfile !== 'admin' && userId) {
-      // Buscar funis onde o usuário tem acesso OU que não têm usuários associados
+      // Buscar todos os funis onde o usuário tem acesso OU que não têm usuários associados
       const { count, rows: allFunnels } = await FunilKanban.findAndCountAll({
         where: whereCondition,
         include: [
@@ -94,9 +95,10 @@ class FunilKanbanService {
             required: false
           }
         ],
-        limit,
-        offset,
-        order: [["name", "ASC"]]
+        // Remover limit e offset para buscar todos
+        // limit,
+        // offset,
+        order: [["id", "ASC"]] // Ordenar por ID em vez de nome
       });
 
       // Filtrar funis após a consulta
@@ -109,11 +111,12 @@ class FunilKanbanService {
         return funnel.users.some(user => user.id === userId);
       });
 
-      const hasMore = count > offset + funilKanbans.length;
+      // Como não há mais paginação, hasMore sempre será false
+      const hasMore = false;
 
       return {
         funilKanbans,
-        count,
+        count: funilKanbans.length,
         hasMore
       };
     } else {
@@ -136,12 +139,14 @@ class FunilKanbanService {
             required: false
           }
         ],
-        limit,
-        offset,
-        order: [["name", "ASC"]]
+        // Remover limit e offset para buscar todos
+        // limit,
+        // offset,
+        order: [["id", "ASC"]] // Ordenar por ID em vez de nome
       });
 
-      const hasMore = count > offset + allFunnels.length;
+      // Como não há mais paginação, hasMore sempre será false
+      const hasMore = false;
 
       return {
         funilKanbans: allFunnels,

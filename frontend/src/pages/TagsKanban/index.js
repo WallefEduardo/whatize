@@ -231,20 +231,24 @@ const Tags = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [searchParam, pageNumber, selectedFunnelFilter]);
 
-  useEffect(() => {
-    const fetchFunnels = async () => {
-      try {
-        setLoadingFunnels(true);
-        const { data } = await api.get("/funilkanban");
-        setFunnels(data.funilKanbans || []);
-        setLoadingFunnels(false);
-      } catch (err) {
-        toastError(err);
-        setLoadingFunnels(false);
-      }
-    };
-    fetchFunnels();
+  // Função para buscar funis
+  const fetchFunnels = useCallback(async () => {
+    try {
+      setLoadingFunnels(true);
+      const { data } = await api.get("/funilkanban");
+      // Ordenar funis por ID para garantir ordem consistente
+      const sortedFunnels = (data.funilKanbans || []).sort((a, b) => a.id - b.id);
+      setFunnels(sortedFunnels);
+      setLoadingFunnels(false);
+    } catch (err) {
+      toastError(err);
+      setLoadingFunnels(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchFunnels();
+  }, [fetchFunnels]);
 
   useEffect(() => {
     // Buscar usuários apenas se o usuário for admin
@@ -280,12 +284,20 @@ const Tags = () => {
 
     const onFunnelEvent = (data) => {
       if (data.action === "create") {
-        setFunnels(prev => [...prev, data.funilKanban]);
+        setFunnels(prev => {
+          const newFunnels = [...prev, data.funilKanban];
+          // Ordenar por ID após adicionar
+          return newFunnels.sort((a, b) => a.id - b.id);
+        });
       }
       if (data.action === "update") {
-        setFunnels(prev => prev.map(funnel => 
-          funnel.id === data.funilKanban.id ? data.funilKanban : funnel
-        ));
+        setFunnels(prev => {
+          const updatedFunnels = prev.map(funnel => 
+            funnel.id === data.funilKanban.id ? data.funilKanban : funnel
+          );
+          // Manter ordenação por ID
+          return updatedFunnels.sort((a, b) => a.id - b.id);
+        });
       }
       if (data.action === "delete") {
         setFunnels(prev => prev.filter(funnel => funnel.id !== +data.funilKanbanId));
@@ -370,7 +382,8 @@ const Tags = () => {
         userIds: selectedUsers.map(user => user.id)
       });
       
-      setFunnels(prev => [...prev, data]);
+      // Recarregar lista completa para garantir que todos os funis sejam exibidos
+      await fetchFunnels();
       setFunnelName("");
       setSelectedUsers([]);
       toast.success("Funil criado com sucesso!");
@@ -397,9 +410,8 @@ const Tags = () => {
         userIds: selectedUsers.map(user => user.id)
       });
       
-      setFunnels(prev => prev.map(funnel => 
-        funnel.id === data.id ? data : funnel
-      ));
+      // Recarregar lista completa para garantir que todos os funis sejam exibidos
+      await fetchFunnels();
       
       setFunnelName("");
       setSelectedFunnel(null);
@@ -442,7 +454,8 @@ const Tags = () => {
     try {
       await api.delete(`/funilkanban/${deletingFunnel.id}`);
       
-      setFunnels(prev => prev.filter(funnel => funnel.id !== deletingFunnel.id));
+      // Recarregar lista completa para garantir que todos os funis sejam exibidos
+      await fetchFunnels();
       
       toast.success("Funil excluído com sucesso!");
       setConfirmDeleteFunnelOpen(false);

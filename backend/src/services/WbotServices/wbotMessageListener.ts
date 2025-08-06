@@ -1071,6 +1071,18 @@ export const verifyMessage = async (
 
 const isValidMsg = (msg: proto.IWebMessageInfo): boolean => {
   if (msg.key.remoteJid === "status@broadcast") return false;
+  
+  // 🚫 FILTRO PREVENTIVO: Bloquear newsletters e broadcasts antes de qualquer processamento
+  if (msg.key.remoteJid?.endsWith("@newsletter")) {
+    logger.debug(`🚫 [FILTER] Bloqueando newsletter: ${msg.key.remoteJid}`);
+    return false;
+  }
+  
+  if (msg.key.remoteJid?.endsWith("@broadcast")) {
+    logger.debug(`🚫 [FILTER] Bloqueando broadcast: ${msg.key.remoteJid}`);
+    return false;
+  }
+  
   if (!msg.key.id) {
     logger.warn("isValidMsg: msg.key.id is undefined, skipping message processing");
     return false;
@@ -3054,7 +3066,11 @@ const handleMessage = async (
 
     const whatsapp = await ShowWhatsAppService(wbot.id!, companyId);
 
-    if (!whatsapp.allowGroup && isGroup) return;
+    // 🚫 FILTRO MELHORADO: Bloquear grupos quando allowGroup = false, ANTES de qualquer processamento
+    if (!whatsapp.allowGroup && isGroup) {
+      logger.debug(`🚫 [FILTER] Grupo bloqueado (allowGroup=false): ${msg.key.remoteJid}`);
+      return;
+    }
 
     if (isGroup) {
       const grupoMeta = await wbot.groupMetadata(msg.key.remoteJid);
@@ -3077,6 +3093,13 @@ const handleMessage = async (
 
     const isLid = msgContact.id.includes("@lid");
     const isContactGroup = msgContact.id.includes("@g.us");
+    
+    // 🚫 FILTRO ADICIONAL: Se allowGroup = false e contato é de grupo, não processar
+    if (!whatsapp.allowGroup && isContactGroup) {
+      logger.debug(`🚫 [FILTER] Contato de grupo bloqueado (allowGroup=false): ${msgContact.id}`);
+      return;
+    }
+    
     const contact = await verifyContact(
       msgContact.id,
       msgContact.name,

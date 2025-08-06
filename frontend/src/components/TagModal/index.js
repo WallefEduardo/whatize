@@ -73,7 +73,17 @@ const useStyles = makeStyles(theme => ({
         '&:hover': {
             backgroundColor: "#333333",
         },
-    }
+    },
+	funnelSelect: {
+		'& .MuiSelect-select': {
+			maxHeight: '40px',
+			overflow: 'hidden'
+		},
+		'& .MuiMenu-paper': {
+			maxHeight: '250px',
+			marginTop: '30px'
+		}
+	}
 }));
 
 const TagSchema = Yup.object().shape({
@@ -370,7 +380,7 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 									</Grid>
 									{kanban ? (
 										<Grid item xs={6} md={3} xl={3} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-										<FormControl variant="outlined" margin="dense" fullWidth>
+										<FormControl variant="outlined" margin="dense" fullWidth className={classes.funnelSelect}>
                                               <InputLabel id="funnel-selection-label">Funil *</InputLabel>
                                               <Field
                                                 as={Select}
@@ -378,6 +388,22 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
                                                 labelId="funnel-selection-label"
                                                 id="funilId"
                                                 name="funilId"
+                                                MenuProps={{
+                                                   PaperProps: {
+                                                     style: {
+                                                       maxHeight: 250,
+                                                       marginTop: 50
+                                                     }
+                                                   },
+                                                   anchorOrigin: {
+                                                     vertical: 'bottom',
+                                                     horizontal: 'left'
+                                                   },
+                                                   transformOrigin: {
+                                                     vertical: 'top',
+                                                     horizontal: 'left'
+                                                   }
+                                                 }}
                                                 // Mantém value sempre como string ou vazio, evitando undefined/null
                                                 value={values.funilId !== undefined && values.funilId !== null ? String(values.funilId) : ''}
                                                 onChange={e => {

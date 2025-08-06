@@ -233,7 +233,7 @@ export function CompanyForm(props) {
                   variant="outlined"
                   className={classes.fullWidth}
                   margin="dense"
-                  required
+                  placeholder="Deixe em branco para manter a senha atual"
                 />
               </Grid>
               <Grid xs={12} sm={6} md={2} item>

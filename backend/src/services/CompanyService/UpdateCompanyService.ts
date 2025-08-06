@@ -63,7 +63,13 @@ const UpdateCompanyService = async (
     throw new AppError("ERR_NO_USER_FOUND", 404)
   }
   
-  await user.update({ email, password });
+  // Só atualiza a senha se ela foi fornecida (não vazia)
+  const updateData: any = { email };
+  if (password && password.trim() !== '') {
+    updateData.password = password;
+  }
+  
+  await user.update(updateData);
 
 
   await company.update({
