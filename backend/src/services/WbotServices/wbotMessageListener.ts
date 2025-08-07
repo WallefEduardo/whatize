@@ -3900,6 +3900,15 @@ const filterMessages = (msg: WAMessage): boolean => {
   if (msg.message?.protocolMessage?.editedMessage) return true;
   if (msg.message?.protocolMessage) return false;
 
+  // Permitir mensagens CIPHERTEXT apenas se vierem de origem LID
+  const isLidMessage = msg.key?.remoteJid?.includes("@lid");
+  const isCiphertext = msg.messageStubType === WAMessageStubType.CIPHERTEXT;
+  
+  if (isCiphertext && isLidMessage) {
+    // Mensagens LID com CIPHERTEXT são permitidas (comportamento normal do WhatsApp)
+    return true;
+  }
+
   if (
     [
       WAMessageStubType.REVOKE,
