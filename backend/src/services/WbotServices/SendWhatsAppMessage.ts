@@ -8,10 +8,12 @@ import Contact from "../../models/Contact";
 import WhatsappLidMap from "../../models/WhatsappLidMap";
 import Whatsapp from "../../models/Whatsapp";
 import { isNil } from "lodash";
+import { Session } from "../../libs/wbot";
 
 import formatBody from "../../helpers/Mustache";
 import logger from "../../utils/logger";
 import { getJidOf } from "./getJidOf";
+import { verifyMediaMessage, verifyMessage } from "./wbotMessageListener";
 
 interface Request {
   body: string;
@@ -50,7 +52,7 @@ const SendWhatsAppMessage = async ({
   let options = {};
   
   logger.info(`🔄 [SEND-MSG] Obtendo wbot para o ticket...`);
-  const wbot = await GetTicketWbot(ticket);
+  const wbot = await GetTicketWbot(ticket) as Session;
   
   // 🔧 SOLUÇÃO HÍBRIDA: Buscar contact diretamente como no original (que funcionava)
   const contactNumber = await Contact.findByPk(ticket.contactId);
@@ -179,6 +181,21 @@ const SendWhatsAppMessage = async ({
       const sentMessage = await wbot.sendMessage(number, messageData, sendOptions);
       
       logger.info(`✅ [SEND-MSG-INTERCEPT] DEPOIS do sendMessage: SUCESSO { messageId: ${sentMessage.key?.id} }`);
+      
+      // 🔥 CORREÇÃO TICKETZ: Persistir mensagem enviada no histórico
+      logger.info(`🔄 [SEND-MSG-PERSIST] Iniciando persistência da mensagem enviada`);
+
+      try {
+        // Cache local (espelhando Ticketz)
+        if (typeof wbot.cacheMessage === "function") {
+          wbot.cacheMessage(sentMessage);
+        }
+        await verifyMessage(sentMessage, ticket, ticket.contact);
+        logger.info(`✅ [SEND-MSG-PERSIST] Mensagem persistida com sucesso no histórico`);
+      } catch (persistError) {
+        logger.error(`❌ [SEND-MSG-PERSIST] Erro na persistência: ${persistError.message}`);
+      }
+      
       return sentMessage;
       
     } catch (sendError) {

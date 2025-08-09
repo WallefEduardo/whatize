@@ -35,9 +35,17 @@ module.exports = {
         type: DataTypes.DATE,
         allowNull: false
       }
-    }).then(() => {
-      return queryInterface.addIndex("WhatsappLidMaps", ["lid", "companyId"], {
-        name: "idx_whatsapp_lid_maps_lid_company"
+    }).then(async () => {
+      await queryInterface.addIndex("WhatsappLidMaps", ["companyId"], {
+        name: "idx_whatsapp_lid_maps_company"
+      });
+      await queryInterface.addIndex("WhatsappLidMaps", ["contactId"], {
+        name: "idx_whatsapp_lid_maps_contact"
+      });
+      // ✅ Alinhar com ticketz: unique (lid, companyId)
+      await queryInterface.addConstraint("WhatsappLidMaps", ["lid", "companyId"], {
+        type: "unique",
+        name: "unique_lid_companyId"
       });
     });
   },

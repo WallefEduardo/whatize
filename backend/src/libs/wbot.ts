@@ -56,9 +56,10 @@ const msgCache = new NodeCache({
 
 // Removido: duplicação com linha 25
 
-type Session = WASocket & {
+export type Session = WASocket & {
   id?: number;
   store?: Store;
+  cacheMessage?: (msg: WAMessage) => void;
 };
 
 const sessions: Session[] = [];
@@ -185,6 +186,8 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
           where: { id: whatsapp.id }
         });
 
+        // ✅ Expor cacheMessage como no Ticketz (após wsocket ser definido)
+
         if (!whatsappUpdate) return;
 
         const { id, name, allowGroup, companyId } = whatsappUpdate;
@@ -233,6 +236,15 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
           // keepAliveIntervalMs: 60_000,
           getMessage: msgDB.get,
         });
+
+        // Agora que wsocket existe, anexar cacheMessage
+        wsocket.cacheMessage = (msg: WAMessage) => {
+          try {
+            msgDB.save(msg);
+          } catch (e) {
+            logger.error(e);
+          }
+        };
 
 
 

@@ -22,8 +22,6 @@ export async function checkAndDedup(
   lid: string,
   companyId: number
 ): Promise<void> {
-  logger.info(`🔄 [LID-DEDUP] Iniciando deduplicação: contactId=${contact.id}, lid=${lid}`);
-  
   const lidContact = await Contact.findOne({
     where: {
       companyId,
@@ -34,12 +32,10 @@ export async function checkAndDedup(
   });
 
   if (!lidContact) {
-    logger.info(`✅ [LID-DEDUP] Nenhum contato duplicado encontrado para ${lid}`);
     return;
   }
 
-  logger.info(`🔄 [LID-DEDUP] Movendo mensagens de contactId=${lidContact.id} para contactId=${contact.id}`);
-  
+  // 1. Move mensagens para o contato principal
   await Message.update(
     { contactId: contact.id },
     {
@@ -50,6 +46,7 @@ export async function checkAndDedup(
     }
   );
 
+  // 2. ✅ CORREÇÃO TICKETZ: Fechar tickets não fechados do contato duplicado
   const notClosedTickets = await Ticket.findAll({
     where: {
       contactId: lidContact.id,
@@ -59,34 +56,34 @@ export async function checkAndDedup(
     }
   });
 
-  logger.info(`🔄 [LID-DEDUP] Fechando ${notClosedTickets.length} tickets ativos do contato duplicado`);
-
-  // eslint-disable-next-line no-restricted-syntax
+  // Fechar cada ticket aberto usando UpdateTicketService
   for (const ticket of notClosedTickets) {
-    // eslint-disable-next-line no-await-in-loop
-    await UpdateTicketService({
-      ticketData: { status: "closed" },
-      ticketId: ticket.id,
-      companyId: ticket.companyId
-    });
+    try {
+      await UpdateTicketService({
+        ticketData: { status: "closed" },
+        ticketId: ticket.id,
+        companyId: ticket.companyId
+      });
+    } catch (error) {
+      logger.error(`Erro ao fechar ticket ${ticket.id} na deduplicação: ${error.message}`);
+      // Continua o processo mesmo com erro
+    }
   }
 
-  logger.info(`🔄 [LID-DEDUP] Movendo tickets de contactId=${lidContact.id} para contactId=${contact.id}`);
-
+  // 3. ✅ CORREÇÃO TICKETZ: Mover TODOS os tickets (sem filtro de status)
   await Ticket.update(
     { contactId: contact.id },
     {
       where: {
         contactId: lidContact.id,
         companyId
+        // ✅ REMOVIDO: status: { [Op.not]: "closed" }
       }
     }
   );
 
-  logger.info(`🗑️ [LID-DEDUP] Removendo contato duplicado: contactId=${lidContact.id}`);
+  // 4. Remove contato duplicado
   await lidContact.destroy();
-  
-  logger.info(`✅ [LID-DEDUP] Deduplicação concluída com sucesso`);
 }
 
 export async function verifyContact(
@@ -98,41 +95,25 @@ export async function verifyContact(
   isGroup: boolean = false,
   wbot?: any
 ): Promise<Contact> {
-  logger.info(`🔍 ETAPA 1 - verifyContact chamado: {
-  msgContactId: '${msgContactId}',
-  msgContactName: '${msgContactName}',
-  companyId: ${companyId},
-  wbotId: ${wbotId},
-  isLid: ${isLid},
-  isGroup: ${isGroup}
-}`);
-
-  // 🚫 EARLY RETURN: Validação de segurança ANTES da lógica LID/JID
+  // Validação de segurança
   if (msgContactId.endsWith('@newsletter')) {
-    logger.warn(`🚫 [VERIFY-CONTACT] Tentativa de criar contato para newsletter: ${msgContactId}`);
     throw new Error(`Newsletter contacts are not allowed: ${msgContactId}`);
   }
   
   if (msgContactId.endsWith('@broadcast')) {
-    logger.warn(`🚫 [VERIFY-CONTACT] Tentativa de criar contato para broadcast: ${msgContactId}`);
     throw new Error(`Broadcast contacts are not allowed: ${msgContactId}`);
   }
 
-  let profilePicUrl: string;
-  const noPicture = `${process.env.FRONTEND_URL}/nopicture.png`;
-
-  try {
-    profilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
-  } catch (error) {
-    profilePicUrl = noPicture;
-  }
-
-  // Extrair número baseado no tipo
-  const number = isLid
-    ? msgContactId // Para LID, mantém o ID completo
-    : msgContactId.substring(0, msgContactId.indexOf("@")); // Para JID, extrai só o número
-
-  logger.info(`🔍 ETAPA 3 - Número extraído (${isLid ? 'LID' : 'JID'}): ${number}`);
+  const profilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+  
+  // ✅ ESTRATÉGIA TICKETZ: Detectar LID automaticamente e extrair número corretamente
+  const isLidContact = msgContactId.includes("@lid");
+  
+  // 🔥 CORREÇÃO CRÍTICA: Extrair número base consistente
+  const baseNumber = msgContactId.substring(0, msgContactId.indexOf("@"));
+  const number = isLidContact 
+    ? msgContactId  // Para LID, mantém completo: "123@lid"
+    : baseNumber;   // Para JID, extrai: "5511999999999"
 
   const contactData = {
     name: msgContactName || msgContactId.replace(/\D/g, ""),
@@ -146,374 +127,191 @@ export async function verifyContact(
 
   // Para grupos, criar/atualizar diretamente
   if (isGroup) {
-    logger.info(`👥 ETAPA 4 - Processando grupo, criando/atualizando diretamente`);
     return CreateOrUpdateContactService(contactData);
   }
 
-  logger.info(`🔍 ETAPA 4 - Iniciando busca inteligente Ticketz: {
-  number: '${number}',
-  isLid: ${isLid},
-  isGroup: ${isGroup},
-  msgContactId: '${msgContactId}',
-  msgContactName: '${msgContactName}'
-}`);
-
   // Usar mutex para evitar condições de corrida
   return lidUpdateMutex.runExclusive(async () => {
-    logger.info(`🔍 ETAPA 4.2 - Contato individual, usando mutex Ticketz`);
-    logger.info(`🔍 ETAPA 4.3 - Dentro do mutex, buscando contato existente`);
     
-    // Busca mais inteligente considerando variações de formato
-    const numberVariations = [];
-    if (isLid) {
-      // Para LID: buscar por número completo, parcial e JID equivalente
-      const partialNumber = number.substring(0, number.indexOf("@"));
-      numberVariations.push(number); // 253725780217903@lid
-      numberVariations.push(partialNumber); // 253725780217903
-      numberVariations.push(`${partialNumber}@s.whatsapp.net`); // 253725780217903@s.whatsapp.net
-    } else {
-      // Para JID: buscar por número completo, parcial e LID equivalente
-      const partialNumber = number; // já é o número limpo para JID
-      numberVariations.push(`${partialNumber}@s.whatsapp.net`); // 559881737884@s.whatsapp.net
-      numberVariations.push(partialNumber); // 559881737884
-      numberVariations.push(`${partialNumber}@lid`); // 559881737884@lid
-    }
-    
-    logger.info(`🔍 ETAPA 4.3.1 - Buscando contato com variações: [${numberVariations.join(', ')}]`);
-    
+    // ========== ESTÁGIO 1: BUSCA UNIFICADA POR MÚLTIPLOS FORMATOS ==========
+    // 🔥 CORREÇÃO CRÍTICA: Buscar contato por número base E formato LID
     const foundContact = await Contact.findOne({
       where: {
         companyId,
         number: {
-          [Op.or]: numberVariations
+          [Op.or]: [
+            number,                    // Formato atual (JID: "123" ou LID: "123@lid")
+            baseNumber,               // Número base: "123" 
+            `${baseNumber}@lid`       // Formato LID: "123@lid"
+          ]
         }
       },
       include: ["tags", "extraInfo", "whatsappLidMap"]
     });
 
-    if (isLid) {
-      // PROCESSAMENTO PARA LID
+    // ========== ESTÁGIO 2A: PROCESSAMENTO DE CONTATO LID ==========
+    if (isLidContact) {
       if (foundContact) {
-        logger.info(`🔍 ETAPA 4.4 - Contato ENCONTRADO (LID), atualizando: { contactId: ${foundContact.id}, contactNumber: '${foundContact.number}', isLid: ${isLid} }`);
+        // 2A.1 - Contato LID encontrado diretamente
+        await foundContact.update({
+          profilePicUrl: contactData.profilePicUrl,
+          name: contactData.name || foundContact.name
+        });
         
-        // Verificar se já existe mapeamento LID para este contato
+        // Garantir mapeamento LID
         const existingMapping = await WhatsappLidMap.findOne({
-          where: {
-            companyId,
-            contactId: foundContact.id
-          }
+          where: { companyId, contactId: foundContact.id }
         });
         
         if (!existingMapping) {
-          logger.info(`📝 ETAPA 4.4.1 - Criando mapeamento LID para contato existente: { contactId: ${foundContact.id}, lid: '${number}' }`);
           try {
             await WhatsappLidMap.create({
               companyId,
               lid: number,
               contactId: foundContact.id
             });
-            logger.info(`✅ ETAPA 4.4.2 - Mapeamento LID criado com sucesso para contato existente`);
           } catch (error) {
-            logger.error(`❌ ETAPA 4.4.2 - Erro ao criar mapeamento LID para contato existente: ${error.message}`);
+            // Ignorar erros de constraint única
           }
-        } else {
-          logger.info(`📋 ETAPA 4.4.1 - Mapeamento LID já existe para este contato: { mappingId: ${existingMapping.id} }`);
         }
         
-        // Contato LID já existe, apenas atualizar
-        await foundContact.update({
-          profilePicUrl: contactData.profilePicUrl,
-          name: contactData.name
-        });
         return foundContact;
       }
-
-      // Buscar mapeamento LID existente
+      
+      // 2A.2 - Buscar via WhatsappLidMap
       const foundMappedContact = await WhatsappLidMap.findOne({
-        where: {
-          companyId,
-          lid: number
-        },
-        include: [
-          {
-            model: Contact,
-            as: "contact",
-            include: ["tags", "extraInfo"]
-          }
-        ]
+        where: { companyId, lid: number },
+        include: [{
+          model: Contact,
+          as: "contact",
+          include: ["tags", "extraInfo"]
+        }]
       });
-
-      if (foundMappedContact) {
-        logger.info(`🔍 ETAPA 4.4.1 - Mapeamento LID encontrado, usando contato JID mapeado: { contactId: ${foundMappedContact.contact.id} }`);
-        // Atualizar contato mapeado
+      
+      if (foundMappedContact?.contact) {
         await foundMappedContact.contact.update({
-          profilePicUrl: contactData.profilePicUrl
+          profilePicUrl: contactData.profilePicUrl,
+          name: contactData.name || foundMappedContact.contact.name
         });
         return foundMappedContact.contact;
       }
-
-      // Buscar contato JID parcial (sem @s.whatsapp.net ou @lid) - Merge inteligente
-      const partialNumber = number.substring(0, number.indexOf("@"));
-      const jidNumber = `${partialNumber}@s.whatsapp.net`;
       
-      logger.info(`🔍 ETAPA 4.4.2 - Buscando contato JID parcial para merge: ${partialNumber} | JID: ${jidNumber}`);
-      
+      // 2A.3 - Busca parcial LID usando número base (fallback)
       const partialLidContact = await Contact.findOne({
-        where: {
-          companyId,
-          number: {
-            [Op.or]: [partialNumber, jidNumber]
-          }
-        },
-        include: ["tags", "extraInfo", "whatsappLidMap"]
+        where: { companyId, number: baseNumber },
+        include: ["tags", "extraInfo"]
       });
-
+      
       if (partialLidContact) {
-        logger.info(`🔍 ETAPA 4.4.2 - Contato JID parcial encontrado, realizando merge LID: { contactId: ${partialLidContact.id}, currentNumber: '${partialLidContact.number}' }`);
-        
-        // Criar mapeamento LID para este contato existente
-        const existingMapping = await WhatsappLidMap.findOne({
-          where: {
-            companyId,
-            contactId: partialLidContact.id
-          }
-        });
-        
-        if (!existingMapping) {
-          await WhatsappLidMap.create({
-            companyId,
-            lid: number, // número LID completo
-            contactId: partialLidContact.id
-          });
-          logger.info(`✅ ETAPA 4.4.2.1 - Mapeamento LID criado para contato existente: { contactId: ${partialLidContact.id}, lid: '${number}' }`);
-        }
-        
-        // Manter o número JID padrão mas atualizar perfil
+        // Alinhar ao ticketz: apenas atualizar para LID completo
         await partialLidContact.update({
-          number: jidNumber, // usar JID padrão para compatibilidade
+          number: contactData.number,
           profilePicUrl: contactData.profilePicUrl,
           name: contactData.name || partialLidContact.name
         });
-        
-        logger.info(`🔄 ETAPA 4.4.2.2 - Contato atualizado com merge LID: número mantido como '${jidNumber}'`);
         return partialLidContact;
       }
-
-      logger.info(`🔍 ETAPA 4.5 - Contato LID não encontrado, criando novo: {
-  number: '${number}',
-  isLid: ${isLid},
-  msgContactName: '${msgContactName}'
-}`);
-      
     } else {
-      // PROCESSAMENTO PARA JID
+      // ========== ESTÁGIO 2B: PROCESSAMENTO DE CONTATO JID ==========
       if (foundContact) {
-        logger.info(`🔍 ETAPA 4.4 - Contato ENCONTRADO (JID), processando LID mapping: { contactId: ${foundContact.id}, contactNumber: '${foundContact.number}', isLid: ${isLid} }`);
-        
-        // Verificar se já tem mapeamento LID
-        if (!foundContact.whatsappLidMap) {
-          logger.info(`🔍 ETAPA 4.4.3 - Contato JID sem mapeamento LID, tentando obter LID do WhatsApp`);
-          // Tentar obter LID do WhatsApp usando wbot.onWhatsApp()
+        // 2B.1 - Contato JID existente, verificar mapeamento LID
+        if (!foundContact.whatsappLidMap && wbot?.onWhatsApp) {
           try {
-            if (wbot && typeof wbot.onWhatsApp === 'function') {
-              logger.info(`🔍 ETAPA 4.4.3.1 - Chamando wbot.onWhatsApp para: ${msgContactId}`);
-              const [ow] = await wbot.onWhatsApp(msgContactId);
+            const [ow] = await wbot.onWhatsApp(msgContactId);
+            const lid = ow?.lid as string;
+            
+            if (lid) {
+              // Verificar deduplicação antes de criar mapeamento
+              await checkAndDedup(foundContact, lid, companyId);
               
-              if (ow?.exists && ow.lid) {
-                logger.info(`🎯 ETAPA 4.4.4 - LID descoberto pelo WhatsApp: ${ow.lid} para JID: ${msgContactId}`);
-                
-                // Verificar duplicação antes de criar mapeamento
-                await checkAndDedup(foundContact, ow.lid, companyId);
-                
-                // Criar mapeamento LID
+              // Criar mapeamento LID
+              try {
                 await WhatsappLidMap.create({
                   companyId,
-                  lid: ow.lid,
+                  lid,
                   contactId: foundContact.id
                 });
-                
-                logger.info(`✅ ETAPA 4.4.5 - Mapeamento LID criado automaticamente: { contactId: ${foundContact.id}, lid: '${ow.lid}' }`);
-              } else {
-                logger.info(`ℹ️ ETAPA 4.4.4 - WhatsApp não retornou LID para: ${msgContactId} (normal para números sem LID)`);
+              } catch (error) {
+                // Ignorar erros de constraint única
               }
-            } else {
-              logger.warn(`⚠️ ETAPA 4.4.3.1 - wbot.onWhatsApp não disponível ou wbot não fornecido`);
             }
           } catch (error) {
-            logger.warn(`⚠️ ETAPA 4.4.4 - Não foi possível obter LID do WhatsApp: ${error.message}`);
+            // Silenciar erros de API do WhatsApp
           }
         }
         
-        // Atualizar dados do contato
         await foundContact.update({
-          profilePicUrl: contactData.profilePicUrl
+          profilePicUrl: contactData.profilePicUrl,
+          name: contactData.name || foundContact.name
         });
+        
         return foundContact;
-      } else {
-        logger.info(`🔍 ETAPA 4.5 - Contato JID não encontrado, verificando se existe LID correspondente`);
-        
-        // Tentar encontrar contato LID correspondente usando estratégia avançada
-        const potentialLid = `${number}@lid`;
-        logger.info(`🔍 ETAPA 4.5 - Buscando contato LID correspondente: ${potentialLid}`);
-        
-        // Buscar por número LID exato ou mapeamento existente
-        const lidContact = await Contact.findOne({
-          where: {
-            companyId,
-            number: {
-              [Op.or]: [potentialLid, potentialLid.substring(0, potentialLid.indexOf("@"))]
-            }
-          },
-          include: ["tags", "extraInfo", "whatsappLidMap"]
-        });
-
-        if (lidContact) {
-          logger.info(`🔍 ETAPA 4.5.1 - Contato LID correspondente encontrado, realizando merge inteligente: { lidContactId: ${lidContact.id}, lidNumber: '${lidContact.number}' }`);
-          
-          // Verificar se já existe mapeamento
-          const existingMapping = await WhatsappLidMap.findOne({
-            where: {
-              companyId,
-              contactId: lidContact.id
-            }
-          });
-          
-          if (!existingMapping) {
-            // Criar mapeamento LID->JID
-            await WhatsappLidMap.create({
-              companyId,
-              lid: potentialLid,
-              contactId: lidContact.id
-            });
-            logger.info(`✅ ETAPA 4.5.1.1 - Mapeamento LID criado: { contactId: ${lidContact.id}, lid: '${potentialLid}' }`);
-          } else {
-            logger.info(`📋 ETAPA 4.5.1.1 - Mapeamento LID já existe: { mappingId: ${existingMapping.id} }`);
-          }
-          
-          // Atualizar contato para usar JID padrão (mais compatível)
-          await lidContact.update({
-            number: contactData.number,
-            profilePicUrl: contactData.profilePicUrl,
-            name: contactData.name || lidContact.name
-          });
-          
-          logger.info(`🔄 ETAPA 4.5.1.2 - Contato LID atualizado para JID: '${lidContact.number}' → '${contactData.number}'`);
-          return lidContact;
-        }
-
-        logger.info(`🔍 ETAPA 4.5 - Contato JID não encontrado, verificando LID via onWhatsApp: {
-  number: '${number}',
-  isLid: ${isLid},
-  msgContactName: '${msgContactName}'
-}`);
-        
-        // 🎯 ESTRATÉGIA TICKETZ: Usar wbot.onWhatsApp() para descobrir LID de JID
+      }
+      
+      // ========== ESTÁGIO 3: RESOLUÇÃO LID PARA NOVOS CONTATOS JID ==========
+      if (wbot?.onWhatsApp) {
         try {
-          if (wbot && typeof wbot.onWhatsApp === 'function') {
-            logger.info(`🔍 ETAPA 4.5.1 - Chamando wbot.onWhatsApp para JID não encontrado: ${msgContactId}`);
-            const [ow] = await wbot.onWhatsApp(msgContactId);
+          const [ow] = await wbot.onWhatsApp(msgContactId);
+          const lid = ow?.lid as string;
+          
+          if (lid) {
+            // 🔥 CORREÇÃO: Buscar contato existente usando número base e formato LID
+            const lidBaseNumber = lid.substring(0, lid.indexOf("@"));
+            const lidContact = await Contact.findOne({
+              where: {
+                companyId,
+                number: {
+                  [Op.or]: [
+                    lid,                    // Formato LID completo: "123@lid"
+                    lidBaseNumber,         // Número base: "123"
+                    `${lidBaseNumber}@lid` // Garantir formato LID
+                  ]
+                }
+              },
+              include: ["tags", "extraInfo"]
+            });
             
-            if (ow?.exists && ow.lid) {
-              logger.info(`🎯 ETAPA 4.5.1.1 - LID descoberto para JID novo: ${ow.lid} para JID: ${msgContactId}`);
-              
-              // Buscar se já existe contato com este LID
-              const existingLidContact = await Contact.findOne({
-                where: {
+            if (lidContact) {
+              // Alinhar ao ticketz: criar mapeamento e atualizar número para JID
+              try {
+                await WhatsappLidMap.create({
                   companyId,
-                  number: {
-                    [Op.or]: [ow.lid, ow.lid.substring(0, ow.lid.indexOf("@"))]
-                  }
-                },
-                include: ["tags", "extraInfo", "whatsappLidMap"]
+                  lid,
+                  contactId: lidContact.id
+                });
+              } catch (error) {
+                // Ignorar erros de constraint única
+              }
+              
+              // Atualizar para JID padrão
+              await lidContact.update({
+                number: contactData.number,
+                profilePicUrl: contactData.profilePicUrl,
+                name: contactData.name || lidContact.name
               });
               
-              if (existingLidContact) {
-                logger.info(`🔄 ETAPA 4.5.1.2 - Contato LID existente encontrado, realizando merge: { contactId: ${existingLidContact.id}, lidNumber: '${existingLidContact.number}' }`);
-                
-                // Criar mapeamento JID->LID no contato existente
-                const existingMapping = await WhatsappLidMap.findOne({
-                  where: {
-                    companyId,
-                    contactId: existingLidContact.id
-                  }
-                });
-                
-                if (!existingMapping) {
-                  await WhatsappLidMap.create({
-                    companyId,
-                    lid: ow.lid,
-                    contactId: existingLidContact.id
-                  });
-                  logger.info(`✅ ETAPA 4.5.1.3 - Mapeamento LID criado para contato existente: { contactId: ${existingLidContact.id}, lid: '${ow.lid}' }`);
-                }
-                
-                // Atualizar contato para usar JID padrão
-                await existingLidContact.update({
-                  number: contactData.number, // JID padrão
-                  profilePicUrl: contactData.profilePicUrl,
-                  name: contactData.name || existingLidContact.name
-                });
-                
-                logger.info(`🔄 ETAPA 4.5.1.4 - Contato existente atualizado para JID: '${existingLidContact.number}' → '${contactData.number}'`);
-                return existingLidContact;
-              } else {
-                logger.info(`ℹ️ ETAPA 4.5.1.2 - LID descoberto mas não há contato existente com esse LID, continuando criação normal`);
-              }
-            } else {
-              logger.info(`ℹ️ ETAPA 4.5.1.1 - WhatsApp não retornou LID para JID: ${msgContactId} (normal para números sem LID)`);
+              return lidContact;
             }
-          } else {
-            logger.warn(`⚠️ ETAPA 4.5.1 - wbot.onWhatsApp não disponível para JID não encontrado`);
           }
         } catch (error) {
-          logger.warn(`⚠️ ETAPA 4.5.1 - Erro ao obter LID para JID não encontrado: ${error.message}`);
+          // Silenciar erros de API do WhatsApp
         }
       }
     }
 
-    // Criar novo contato se chegou até aqui
-    logger.info(`🔍 ETAPA 4.5.1 - Dados do contato ANTES de chamar CreateOrUpdateContactService: {
-  contactData: {
-    name: '${contactData.name}',
-    number: '${contactData.number}',
-    profilePicUrl: '${contactData.profilePicUrl.substring(0, 35)}...',
-    isGroup: ${contactData.isGroup},
-    companyId: ${contactData.companyId},
-    whatsappId: ${contactData.whatsappId}
-  },
-  profilePicUrlLength: ${contactData.profilePicUrl.length},
-  nameNotEmpty: ${!!contactData.name},
-  numberNotEmpty: ${!!contactData.number},
-  companyIdValid: ${!!contactData.companyId},
-  wbotIdValid: ${!!contactData.whatsappId}
-}`);
-
-    logger.info(`🔍 ETAPA 4.5.2 - CHAMANDO CreateOrUpdateContactService...`);
+    // ========== ESTÁGIO 4: CRIAR NOVO CONTATO ==========
     const newContact = await CreateOrUpdateContactService(contactData);
     
-    logger.info(`🔍 ETAPA 4.5.3 - CreateOrUpdateContactService RETORNOU: {
-  contactExists: ${!!newContact},
-  contactType: '${typeof newContact}',
-  contactId: ${newContact?.id},
-  contactNumber: '${newContact?.number}',
-  contactName: '${newContact?.name}',
-  isNull: ${newContact === null},
-  isUndefined: ${newContact === undefined}${newContact?.number ? `,
-  hasNumberProperty: ${!!newContact.number}` : ''}
-}`);
-    
-    // Se é um contato LID, criar mapeamento para ele
-    if (isLid && newContact) {
-      logger.info(`🔍 ETAPA 4.5.4 - Criando mapeamento LID para novo contato: { contactId: ${newContact.id}, lid: '${number}' }`);
+    // Se é contato LID, criar mapeamento
+    if (isLidContact && newContact) {
       try {
         await WhatsappLidMap.create({
           companyId,
           lid: number,
           contactId: newContact.id
         });
-        logger.info(`✅ ETAPA 4.5.5 - Mapeamento LID criado com sucesso`);
       } catch (error) {
-        logger.error(`❌ ETAPA 4.5.5 - Erro ao criar mapeamento LID: ${error.message}`);
+        // Ignorar erros de constraint única
       }
     }
     

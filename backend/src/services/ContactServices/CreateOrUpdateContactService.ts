@@ -272,7 +272,9 @@ const CreateOrUpdateContactService = async ({
   whatsappId,
   wbot
 }: Request): Promise<Contact> => {
-  const number = isGroup ? rawNumber : rawNumber.replace(/[^0-9]/g, "");
+  // ✅ CORREÇÃO CRÍTICA: Preservar @lid nos números LID
+  const number = isGroup ? rawNumber : 
+    rawNumber.includes('@lid') ? rawNumber : rawNumber.replace(/[^0-9]/g, "");
   const mutex = getMutex(number, companyId);
   const startTime = Date.now();
 

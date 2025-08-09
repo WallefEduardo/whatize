@@ -191,7 +191,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     name: Yup.string().required(),
     number: Yup.string()
       .required()
-      .matches(/^\d+$/, "Formato de número inválido. Somente números são permitidos.")
+      // ✅ Alinhar com Ticketz: permitir sufixo opcional @lid
+      .matches(/^\d+(@lid)?$/, "Formato de número inválido. Use apenas dígitos ou sufixo @lid.")
   });
 
   try {
@@ -245,8 +246,8 @@ export const update = async (
   const schema = Yup.object().shape({
     name: Yup.string(),
     number: Yup.string().matches(
-      /^\d+$/,
-      "Formato de número inválido. Somente números são permitidos."
+      /^\d+(@lid)?$/,
+      "Formato de número inválido. Use apenas dígitos ou sufixo @lid."
     )
   });
 

@@ -17,27 +17,8 @@ import UpdateTicketService from "./UpdateTicketService";
 import raceConditionLogger from "../../utils/raceConditionLogger";
 import sequelize from "../../database";
 
-// Mutex por contato para evitar race conditions
-const contactMutexes = new Map<string, Mutex>();
-
-// Função para obter ou criar mutex por contato
-const getContactMutex = (contactId: number, companyId: number, whatsappId: number): Mutex => {
-  const key = `${contactId}-${companyId}-${whatsappId}`;
-  
-  if (!contactMutexes.has(key)) {
-    contactMutexes.set(key, new Mutex());
-  }
-  
-  return contactMutexes.get(key)!;
-};
-
-// Limpar mutexes antigos periodicamente para evitar vazamento de memória
-setInterval(() => {
-  if (contactMutexes.size > 1000) {
-    const keysToDelete = Array.from(contactMutexes.keys()).slice(0, 500);
-    keysToDelete.forEach(key => contactMutexes.delete(key));
-  }
-}, 300000); // A cada 5 minutos
+// Mutex global simples (padrão Ticketz)
+const createTicketMutex = new Mutex();
 
 const FindOrCreateTicketService = async (
   contact: Contact,
@@ -55,9 +36,8 @@ const FindOrCreateTicketService = async (
   isCampaign: boolean = false
 ): Promise<Ticket> => {
   const targetContact = groupContact || contact;
-  const mutex = getContactMutex(targetContact.id, companyId, whatsapp.id);
 
-  return await mutex.runExclusive(async () => {
+  return await createTicketMutex.runExclusive(async () => {
     const ticketResult = await sequelize.transaction(async (transaction: Transaction) => {
       try {
         // Log da busca de ticket
@@ -185,8 +165,13 @@ const FindOrCreateTicketService = async (
           if (ticket && ticket.status !== "nps") {
             logger.info(`♻️ Reusing recent ticket ${ticket.id} for contact ${targetContact.id}`);
 
+            // ✅ CORREÇÃO: Preservar status existente se ticket estiver em atendimento
+            const newStatus = (ticket.status === "open" || ticket.status === "group") 
+              ? ticket.status 
+              : "pending";
+
             await ticket.update({
-              status: "pending",
+              status: newStatus,
               unreadMessages,
               companyId,
             }, { transaction });
@@ -198,13 +183,21 @@ const FindOrCreateTicketService = async (
         // Se não encontrou nenhum ticket, cria um novo
         if (!ticket) {
 
+          // ✅ LÓGICA SIMPLIFICADA (padrão Ticketz)
+          let ticketStatus = "pending";
+          
+          // LGPD apenas se configurado
+          if (!isImported && openAsLGPD && !groupContact) {
+            ticketStatus = "lgpd";
+          }
+          // Grupo se for grupo e configurado
+          else if (groupContact && whatsapp.groupAsTicket !== "enabled") {
+            ticketStatus = "group";
+          }
+
           const ticketData: any = {
             contactId: targetContact.id,
-            status: (!isImported && !isNil(settings?.enableLGPD) && openAsLGPD && !groupContact) ? 
-              "lgpd" :  
-              (whatsapp.groupAsTicket === "enabled" || !groupContact) ? 
-                "pending" : 
-                "group",
+            status: ticketStatus,
             isGroup: !!groupContact,
             unreadMessages,
             whatsappId: whatsapp.id,
@@ -215,16 +208,12 @@ const FindOrCreateTicketService = async (
             isActiveDemand: false,
           };
 
-          // Configuração especial para DirectTicketsToWallets
+          // DirectTicketsToWallets - apenas se configurado
           if (DirectTicketsToWallets && contact.id) {
             const wallet: any = contact;
             const wallets = await wallet.getWallets();
             if (wallets && wallets[0]?.id) {
-              ticketData.status = (!isImported && !isNil(settings?.enableLGPD) && openAsLGPD && !groupContact) ? 
-                "lgpd" :  
-                (whatsapp.groupAsTicket === "enabled" || !groupContact) ? 
-                  "open" : 
-                  "group";
+              ticketData.status = openAsLGPD ? "lgpd" : "open";
               ticketData.userId = wallets[0].id;
             }
           }
