@@ -109,12 +109,13 @@ const request = require("request");
 // 🚨 PROTEÇÃO CRÍTICA: Função helper para envio seguro de presence (evita XML malformed em LID)
 const safePresenceUpdate = async (wbot: any, type: string, jid: string) => {
   try {
-    if (jid.endsWith("@lid")) {
-      logger.debug(`🛡️ [PRESENCE-PROTECTION] Bloqueando envio de presence ${type} para LID: ${jid}`);
-      return;
+    // 🚨 TEMPORARY FIX: sendPresenceUpdate está corrompendo XML stream - desabilitado completamente
+    if (false && !jid.endsWith("@lid")) {
+      await wbot.sendPresenceUpdate(type, jid);
+      logger.debug(`📤 [PRESENCE] ${type} enviado para: ${jid}`);
+    } else {
+      logger.debug(`🛡️ [PRESENCE-PROTECTION] sendPresenceUpdate desabilitado para evitar XML corruption: ${jid}`);
     }
-    await wbot.sendPresenceUpdate(type, jid);
-    logger.debug(`📤 [PRESENCE] ${type} enviado para: ${jid}`);
   } catch (error) {
     logger.error(`❌ [PRESENCE] Erro ao enviar ${type} para ${jid}: ${error.message}`);
   }

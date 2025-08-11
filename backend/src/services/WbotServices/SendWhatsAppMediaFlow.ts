@@ -81,13 +81,13 @@ export const typeSimulation = async (ticket: Ticket, presence: WAPresence) => {
     jid = `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`;
   }
   
-  // 🛡️ PROTEÇÃO LID: Não enviar presence para números LID (causa XML malformed)
-  if (!jid.endsWith("@lid")) {
+  // 🚨 TEMPORARY FIX: sendPresenceUpdate está corrompendo XML stream - desabilitado completamente
+  if (false && !jid.endsWith("@lid")) {
     await wbot.sendPresenceUpdate(presence, jid);
     await delay(5000);
     await wbot.sendPresenceUpdate('paused', jid);
   } else {
-    logger.debug(`🛡️ [PRESENCE-PROTECTION] Bloqueando envio de presence para LID: ${jid}`);
+    logger.debug(`🛡️ [PRESENCE-PROTECTION] sendPresenceUpdate desabilitado para evitar XML corruption: ${jid}`);
   }
 
 }
