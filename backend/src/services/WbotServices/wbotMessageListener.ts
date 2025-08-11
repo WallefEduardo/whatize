@@ -3954,7 +3954,10 @@ const wbotMessageListener = (wbot: Session, companyId: number): void => {
           // 🔍 ULTRA-DEBUG: Log específico do processamento da mensagem
           logger.info(`🔍 [ULTRA-DEBUG] MESSAGES-UPSERT - Processando mensagem: { messageId: ${message.key.id}, contactId: ${message.key.remoteJid}, companyId: ${companyId} }`);
 
-          await wbot.sendReceipts([message.key], undefined);
+          const jid = message.key?.remoteJid || "";
+          if (!jid.endsWith("@lid")) {
+            await wbot.sendReceipts([message.key], undefined);
+          }
 
           // Verificar campanha (sem parar o processamento - só registra)
           await verifyRecentCampaign(message, companyId);

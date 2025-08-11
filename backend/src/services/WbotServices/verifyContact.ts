@@ -104,21 +104,34 @@ export async function verifyContact(
     companyId: companyId
   });
 
+  console.log("🔍 [DEBUG-XML] STEP 1: Iniciando verifyContact - Stream OK");
+
   let profilePicUrl: string;
   const noPicture = `${process.env.FRONTEND_URL}/nopicture.png`;
 
+  console.log("🔍 [DEBUG-XML] STEP 2: Antes GetProfilePicUrl - Stream OK");
+
   try {
-    if (wbot && !msgContact.id.includes("g.us")) {
+    // 🚨 TEMPORARY FIX: GetProfilePicUrl está corrompendo XML stream - desabilitado
+    if (false && wbot && !msgContact.id.includes("g.us")) {
+      console.log("🔍 [DEBUG-XML] STEP 3: Chamando GetProfilePicUrl");
       profilePicUrl = await GetProfilePicUrl(msgContact.id, companyId) || noPicture;
+      console.log("🔍 [DEBUG-XML] STEP 4: GetProfilePicUrl concluído - Stream OK");
     } else {
       profilePicUrl = noPicture;
+      console.log("🔍 [DEBUG-XML] STEP 4-ALT: Usando noPicture - Stream OK");
     }
   } catch (error) {
     profilePicUrl = noPicture;
+    console.log("🔍 [DEBUG-XML] STEP 4-ERROR: GetProfilePicUrl erro, usando noPicture");
   }
 
+  console.log("🔍 [DEBUG-XML] STEP 5: Definindo flags LID/Group - Stream OK");
+  
   const isLidContact = msgContact.id.includes("@lid");
   const isGroupContact = msgContact.id.includes("@g.us");
+
+  console.log("🔍 [DEBUG-XML] STEP 6: Antes busca no banco - Stream OK");
 
   console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Contact type detection:", {
     contactId: msgContact.id,
@@ -156,6 +169,8 @@ export async function verifyContact(
       isLid: isLidContact
     });
 
+    console.log("🔍 [DEBUG-XML] STEP 7: Antes Contact.findOne - Stream OK");
+    
     const foundContact = await Contact.findOne({
       where: {
         companyId,
@@ -163,6 +178,8 @@ export async function verifyContact(
       },
       include: ["tags", "extraInfo", "whatsappLidMap"]
     });
+
+    console.log("🔍 [DEBUG-XML] STEP 8: Contact.findOne concluído - Stream OK");
 
     console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Contact search result:", {
       foundContact: !!foundContact,
@@ -253,7 +270,9 @@ export async function verifyContact(
         console.log("🔍 [WHATIZE-TICKETZ] verifyContact - No LID mapping found, checking onWhatsApp for LID:");
         
         try {
+          console.log("🔍 [DEBUG-XML] STEP 9-CRITICAL: ANTES onWhatsApp - Stream OK");
           const [ow] = await wbot.onWhatsApp(msgContact.id);
+          console.log("🔍 [DEBUG-XML] STEP 10-CRITICAL: DEPOIS onWhatsApp - Stream OK");
           if (ow?.exists) {
             const lid = ow.lid as string;
             
@@ -298,7 +317,9 @@ export async function verifyContact(
       
       if (wbot) {
         try {
+          console.log("🔍 [DEBUG-XML] STEP 9-CRITICAL: ANTES onWhatsApp - Stream OK");
           const [ow] = await wbot.onWhatsApp(msgContact.id);
+          console.log("🔍 [DEBUG-XML] STEP 10-CRITICAL: DEPOIS onWhatsApp - Stream OK");
           if (ow?.exists) {
             const lid = ow.lid as string;
 

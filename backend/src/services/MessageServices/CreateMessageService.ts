@@ -90,31 +90,30 @@ const CreateMessageService = async ({
     throw new Error("ERR_CREATING_MESSAGE");
   }
 
-  const io = getIO();
+const io = getIO();
+const ns = io.of(String(companyId)); // mesmo padrão do socket (namespaces dinâmicos)
 
-  if (!messageData?.ticketImported) {
-    // 🚀 CORREÇÃO CRITICAL: Socket.IO emission seguindo padrão Ticketz para garantir que frontend receba mensagens
-    io.to(message.ticketId.toString())
-      .to(`company-${companyId}-${message.ticket.status}`)
-      .to(`company-${companyId}-notification`)
-      .to(`queue-${message.ticket.queueId}-${message.ticket.status}`)
-      .to(`queue-${message.ticket.queueId}-notification`)
-      .emit(`company-${companyId}-appMessage`, {
-        action: "create",
-        message,
-        ticket: message.ticket,
-        contact: message.ticket.contact
-      });
+if (!messageData?.ticketImported) {
+  // ✅ REABILITADO: Socket.IO não estava causando XML corruption
+  const rooms = [
+    message.ticketId.toString(),
+    "notification",
+    message.ticket.status
+  ];
 
-    // 🔄 CORREÇÃO ADICIONAL: Emitir evento de atualização do contato (padrão Ticketz)
-    io.to(`company-${companyId}-mainchannel`).emit(
-      `company-${companyId}-contact`,
-      {
-        action: "update",
-        contact: message.ticket.contact
-      }
-    );
-  }
+  ns.to(rooms).emit(`company-${companyId}-appMessage`, {
+    action: "create",
+    message,
+    ticket: message.ticket,
+    contact: message.ticket.contact
+  });
+
+  ns.to("notification").emit(
+    `company-${companyId}-contact`,
+    { action: "update", contact: message.ticket.contact }
+  );
+}
+
 
 
   return message;
