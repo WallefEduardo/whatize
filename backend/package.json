@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "start": "node dist/server.js",
+    "start": "node --no-deprecation dist/server.js",
     "dev": "ts-node-dev --inspect=9229 --respawn --transpile-only src/server.ts",
     "dev:server": "ts-node-dev --respawn --transpile-only --ignore node_modules src/server.ts",
     "db:migrate": "npx sequelize db:migrate",

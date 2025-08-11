@@ -2,7 +2,9 @@ import { Mutex } from "async-mutex";
 import { Op } from "sequelize";
 import { WASocket } from "baileys";
 import Contact from "../../models/Contact";
-import CreateOrUpdateContactService from "../ContactServices/CreateOrUpdateContactService";
+import CreateOrUpdateContactService, {
+  updateContact
+} from "../ContactServices/CreateOrUpdateContactService";
 import WhatsappLidMap from "../../models/WhatsappLidMap";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
@@ -19,12 +21,11 @@ interface IMe {
 
 export async function checkAndDedup(
   contact: Contact,
-  lid: string,
-  companyId: number
+  lid: string
 ): Promise<void> {
   const lidContact = await Contact.findOne({
     where: {
-      companyId,
+      companyId: contact.companyId,
       number: {
         [Op.or]: [lid, lid.substring(0, lid.indexOf("@"))]
       }
@@ -35,18 +36,16 @@ export async function checkAndDedup(
     return;
   }
 
-  // 1. Move mensagens para o contato principal
   await Message.update(
     { contactId: contact.id },
     {
       where: {
         contactId: lidContact.id,
-        companyId
+        companyId: contact.companyId
       }
     }
   );
 
-  // 2. ✅ CORREÇÃO TICKETZ: Fechar tickets não fechados do contato duplicado
   const notClosedTickets = await Ticket.findAll({
     where: {
       contactId: lidContact.id,
@@ -56,11 +55,12 @@ export async function checkAndDedup(
     }
   });
 
-  // Fechar cada ticket aberto usando UpdateTicketService
+  // eslint-disable-next-line no-restricted-syntax
   for (const ticket of notClosedTickets) {
     try {
+      // eslint-disable-next-line no-await-in-loop
       await UpdateTicketService({
-        ticketData: { status: "closed" },
+        ticketData: { status: "closed", justClose: true }, // ✅ TICKETZ COMPAT: Evita mensagens na deduplicação
         ticketId: ticket.id,
         companyId: ticket.companyId
       });
@@ -70,19 +70,16 @@ export async function checkAndDedup(
     }
   }
 
-  // 3. ✅ CORREÇÃO TICKETZ: Mover TODOS os tickets (sem filtro de status)
   await Ticket.update(
     { contactId: contact.id },
     {
       where: {
         contactId: lidContact.id,
-        companyId
-        // ✅ REMOVIDO: status: { [Op.not]: "closed" }
+        companyId: contact.companyId
       }
     }
   );
 
-  // 4. Remove contato duplicado
   await lidContact.destroy();
 }
 
@@ -95,226 +92,304 @@ export async function verifyContact(
   isGroup: boolean = false,
   wbot?: any
 ): Promise<Contact> {
-  // Validação de segurança
-  if (msgContactId.endsWith('@newsletter')) {
-    throw new Error(`Newsletter contacts are not allowed: ${msgContactId}`);
-  }
   
-  if (msgContactId.endsWith('@broadcast')) {
-    throw new Error(`Broadcast contacts are not allowed: ${msgContactId}`);
-  }
-
-  const profilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
-  
-  // ✅ ESTRATÉGIA TICKETZ: Detectar LID automaticamente e extrair número corretamente
-  const isLidContact = msgContactId.includes("@lid");
-  
-  // 🔥 CORREÇÃO CRÍTICA: Extrair número base consistente
-  const baseNumber = msgContactId.substring(0, msgContactId.indexOf("@"));
-  const number = isLidContact 
-    ? msgContactId  // Para LID, mantém completo: "123@lid"
-    : baseNumber;   // Para JID, extrai: "5511999999999"
-
-  const contactData = {
-    name: msgContactName || msgContactId.replace(/\D/g, ""),
-    number,
-    profilePicUrl,
-    isGroup,
-    companyId,
-    whatsappId: wbotId,
-    wbot
+  const msgContact = {
+    id: msgContactId,
+    name: msgContactName
   };
 
-  // Para grupos, criar/atualizar diretamente
-  if (isGroup) {
+  console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Starting contact verification:", {
+    contactId: msgContact.id,
+    contactName: msgContact.name,
+    companyId: companyId
+  });
+
+  let profilePicUrl: string;
+  const noPicture = `${process.env.FRONTEND_URL}/nopicture.png`;
+
+  try {
+    if (wbot && !msgContact.id.includes("g.us")) {
+      profilePicUrl = await GetProfilePicUrl(msgContact.id, companyId) || noPicture;
+    } else {
+      profilePicUrl = noPicture;
+    }
+  } catch (error) {
+    profilePicUrl = noPicture;
+  }
+
+  const isLidContact = msgContact.id.includes("@lid");
+  const isGroupContact = msgContact.id.includes("@g.us");
+
+  console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Contact type detection:", {
+    contactId: msgContact.id,
+    isLid: isLidContact,
+    isGroup: isGroupContact
+  });
+
+  const number = isLidContact
+    ? msgContact.id
+    : msgContact.id.substring(0, msgContact.id.indexOf("@"));
+
+  console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Number extracted:", {
+    originalId: msgContact.id,
+    extractedNumber: number,
+    isLid: isLidContact
+  });
+
+  const contactData = {
+    name: msgContact?.name || msgContact.id.replace(/\D/g, ""),
+    number,
+    profilePicUrl,
+    isGroup: msgContact.id.includes("g.us"),
+    companyId,
+    whatsappId: wbotId
+  };
+
+  if (isGroupContact) {
     return CreateOrUpdateContactService(contactData);
   }
 
-  // Usar mutex para evitar condições de corrida
   return lidUpdateMutex.runExclusive(async () => {
-    
-    // ========== ESTÁGIO 1: BUSCA UNIFICADA POR MÚLTIPLOS FORMATOS ==========
-    // 🔥 CORREÇÃO CRÍTICA: Buscar contato por número base E formato LID
+    console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Searching for existing contact:", {
+      companyId: companyId,
+      number: number,
+      isLid: isLidContact
+    });
+
     const foundContact = await Contact.findOne({
       where: {
         companyId,
-        number: {
-          [Op.or]: [
-            number,                    // Formato atual (JID: "123" ou LID: "123@lid")
-            baseNumber,               // Número base: "123" 
-            `${baseNumber}@lid`       // Formato LID: "123@lid"
-          ]
-        }
+        number
       },
       include: ["tags", "extraInfo", "whatsappLidMap"]
     });
 
-    // ========== ESTÁGIO 2A: PROCESSAMENTO DE CONTATO LID ==========
+    console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Contact search result:", {
+      foundContact: !!foundContact,
+      contactId: foundContact?.id,
+      hasLidMap: !!foundContact?.whatsappLidMap
+    });
+
     if (isLidContact) {
-      if (foundContact) {
-        // 2A.1 - Contato LID encontrado diretamente
-        await foundContact.update({
-          profilePicUrl: contactData.profilePicUrl,
-          name: contactData.name || foundContact.name
-        });
-        
-        // Garantir mapeamento LID
-        const existingMapping = await WhatsappLidMap.findOne({
-          where: { companyId, contactId: foundContact.id }
-        });
-        
-        if (!existingMapping) {
-          try {
-            await WhatsappLidMap.create({
-              companyId,
-              lid: number,
-              contactId: foundContact.id
-            });
-          } catch (error) {
-            // Ignorar erros de constraint única
-          }
-        }
-        
-        return foundContact;
-      }
-      
-      // 2A.2 - Buscar via WhatsappLidMap
-      const foundMappedContact = await WhatsappLidMap.findOne({
-        where: { companyId, lid: number },
-        include: [{
-          model: Contact,
-          as: "contact",
-          include: ["tags", "extraInfo"]
-        }]
+      console.log("🚨 [WHATIZE-TICKETZ] verifyContact - Processing LID contact:", {
+        lidNumber: number,
+        foundDirectContact: !!foundContact
       });
-      
-      if (foundMappedContact?.contact) {
-        await foundMappedContact.contact.update({
-          profilePicUrl: contactData.profilePicUrl,
-          name: contactData.name || foundMappedContact.contact.name
+
+      if (foundContact) {
+        console.log("✅ [WHATIZE-TICKETZ] verifyContact - Found direct LID contact, updating profile pic");
+        return updateContact(foundContact, {
+          profilePicUrl: contactData.profilePicUrl
         });
-        return foundMappedContact.contact;
       }
-      
-      // 2A.3 - Busca parcial LID usando número base (fallback)
+
+      console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Searching for LID mapping:", {
+        lid: number,
+        companyId: companyId
+      });
+
+      const foundMappedContact = await WhatsappLidMap.findOne({
+        where: {
+          companyId,
+          lid: number
+        },
+        include: [
+          {
+            model: Contact,
+            as: "contact",
+            include: ["tags", "extraInfo"]
+          }
+        ]
+      });
+
+      console.log("🔍 [WHATIZE-TICKETZ] verifyContact - LID mapping search result:", {
+        foundMappedContact: !!foundMappedContact,
+        mappedContactId: foundMappedContact?.contact?.id,
+        mappedContactNumber: foundMappedContact?.contact?.number
+      });
+
+      if (foundMappedContact) {
+        console.log("✅ [WHATIZE-TICKETZ] verifyContact - Found mapped LID contact, updating profile pic");
+        return updateContact(foundMappedContact.contact, {
+          profilePicUrl: contactData.profilePicUrl
+        });
+      }
+
+      const partialLidNumber = number.substring(0, number.indexOf("@"));
+      console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Searching for partial LID contact:", {
+        partialLidNumber: partialLidNumber,
+        originalLid: number
+      });
+
       const partialLidContact = await Contact.findOne({
-        where: { companyId, number: baseNumber },
+        where: {
+          companyId,
+          number: partialLidNumber
+        },
         include: ["tags", "extraInfo"]
       });
-      
+
+      console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Partial LID search result:", {
+        foundPartialContact: !!partialLidContact,
+        partialContactId: partialLidContact?.id,
+        partialContactNumber: partialLidContact?.number
+      });
+
       if (partialLidContact) {
-        // Alinhar ao ticketz: apenas atualizar para LID completo
-        await partialLidContact.update({
+        console.log("✅ [WHATIZE-TICKETZ] verifyContact - Found partial LID contact, updating to full LID");
+        return updateContact(partialLidContact, {
           number: contactData.number,
-          profilePicUrl: contactData.profilePicUrl,
-          name: contactData.name || partialLidContact.name
+          profilePicUrl: contactData.profilePicUrl
         });
-        return partialLidContact;
       }
-    } else {
-      // ========== ESTÁGIO 2B: PROCESSAMENTO DE CONTATO JID ==========
-      if (foundContact) {
-        // 2B.1 - Contato JID existente, verificar mapeamento LID
-        if (!foundContact.whatsappLidMap && wbot?.onWhatsApp) {
-          try {
-            const [ow] = await wbot.onWhatsApp(msgContactId);
-            const lid = ow?.lid as string;
+    } else if (foundContact) {
+      console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Processing existing normal contact:", {
+        contactId: foundContact.id,
+        contactNumber: foundContact.number,
+        hasLidMap: !!foundContact.whatsappLidMap
+      });
+
+      if (!foundContact.whatsappLidMap && wbot) {
+        console.log("🔍 [WHATIZE-TICKETZ] verifyContact - No LID mapping found, checking onWhatsApp for LID:");
+        
+        try {
+          const [ow] = await wbot.onWhatsApp(msgContact.id);
+          if (ow?.exists) {
+            const lid = ow.lid as string;
             
+            console.log("🔍 [WHATIZE-TICKETZ] verifyContact - onWhatsApp result:", {
+              exists: ow.exists,
+              lid: lid,
+              hasLid: !!lid
+            });
+
             if (lid) {
-              // Verificar deduplicação antes de criar mapeamento
-              await checkAndDedup(foundContact, lid, companyId);
+              console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Creating LID mapping for existing contact:", {
+                contactId: foundContact.id,
+                lid: lid
+              });
               
-              // Criar mapeamento LID
-              try {
-                await WhatsappLidMap.create({
-                  companyId,
-                  lid,
-                  contactId: foundContact.id
-                });
-              } catch (error) {
-                // Ignorar erros de constraint única
-              }
+              await checkAndDedup(foundContact, lid);
+              await WhatsappLidMap.create({
+                companyId,
+                lid,
+                contactId: foundContact.id
+              });
+              
+              console.log("✅ [WHATIZE-TICKETZ] verifyContact - LID mapping created successfully");
             }
-          } catch (error) {
-            // Silenciar erros de API do WhatsApp
           }
+        } catch (error) {
+          console.log("⚠️ [WHATIZE-TICKETZ] verifyContact - Error checking onWhatsApp:", error.message);
         }
-        
-        await foundContact.update({
-          profilePicUrl: contactData.profilePicUrl,
-          name: contactData.name || foundContact.name
+      } else {
+        console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Contact already has LID mapping or no wbot:", {
+          lidMapId: foundContact.whatsappLidMap?.id,
+          mappedLid: foundContact.whatsappLidMap?.lid,
+          hasWbot: !!wbot
         });
-        
-        return foundContact;
       }
       
-      // ========== ESTÁGIO 3: RESOLUÇÃO LID PARA NOVOS CONTATOS JID ==========
-      if (wbot?.onWhatsApp) {
+      return updateContact(foundContact, {
+        profilePicUrl: contactData.profilePicUrl
+      });
+    } else {
+      console.log("🔍 [WHATIZE-TICKETZ] verifyContact - No existing contact found, creating new one");
+      
+      if (wbot) {
         try {
-          const [ow] = await wbot.onWhatsApp(msgContactId);
-          const lid = ow?.lid as string;
-          
-          if (lid) {
-            // 🔥 CORREÇÃO: Buscar contato existente usando número base e formato LID
-            const lidBaseNumber = lid.substring(0, lid.indexOf("@"));
-            const lidContact = await Contact.findOne({
-              where: {
-                companyId,
-                number: {
-                  [Op.or]: [
-                    lid,                    // Formato LID completo: "123@lid"
-                    lidBaseNumber,         // Número base: "123"
-                    `${lidBaseNumber}@lid` // Garantir formato LID
-                  ]
-                }
-              },
-              include: ["tags", "extraInfo"]
+          const [ow] = await wbot.onWhatsApp(msgContact.id);
+          if (ow?.exists) {
+            const lid = ow.lid as string;
+
+            console.log("🔍 [WHATIZE-TICKETZ] verifyContact - onWhatsApp result for new contact:", {
+              exists: ow.exists,
+              lid: lid,
+              hasLid: !!lid
             });
-            
-            if (lidContact) {
-              // Alinhar ao ticketz: criar mapeamento e atualizar número para JID
-              try {
+
+            if (lid) {
+              console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Searching for existing contact with this LID:", {
+                lid: lid,
+                lidWithoutAt: lid.substring(0, lid.indexOf("@"))
+              });
+
+              const lidContact = await Contact.findOne({
+                where: {
+                  companyId,
+                  number: {
+                    [Op.or]: [lid, lid.substring(0, lid.indexOf("@"))]
+                  }
+                },
+                include: ["tags", "extraInfo"]
+              });
+
+              console.log("🔍 [WHATIZE-TICKETZ] verifyContact - LID contact search result:", {
+                foundLidContact: !!lidContact,
+                lidContactId: lidContact?.id,
+                lidContactNumber: lidContact?.number
+              });
+
+              if (lidContact) {
+                console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Creating LID mapping for found contact:", {
+                  contactId: lidContact.id,
+                  lid: lid
+                });
+
                 await WhatsappLidMap.create({
                   companyId,
                   lid,
                   contactId: lidContact.id
                 });
-              } catch (error) {
-                // Ignorar erros de constraint única
+                
+                console.log("✅ [WHATIZE-TICKETZ] verifyContact - LID mapping created, updating contact number");
+                return updateContact(lidContact, {
+                  number: contactData.number,
+                  profilePicUrl: contactData.profilePicUrl
+                });
               }
-              
-              // Atualizar para JID padrão
-              await lidContact.update({
-                number: contactData.number,
-                profilePicUrl: contactData.profilePicUrl,
-                name: contactData.name || lidContact.name
-              });
-              
-              return lidContact;
             }
           }
         } catch (error) {
-          // Silenciar erros de API do WhatsApp
+          console.log("⚠️ [WHATIZE-TICKETZ] verifyContact - Error checking onWhatsApp for new contact:", error.message);
         }
       }
     }
 
-    // ========== ESTÁGIO 4: CRIAR NOVO CONTATO ==========
+    console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Creating new contact service:", {
+      contactData: contactData,
+      isLid: isLidContact
+    });
+
     const newContact = await CreateOrUpdateContactService(contactData);
     
-    // Se é contato LID, criar mapeamento
-    if (isLidContact && newContact) {
-      try {
-        await WhatsappLidMap.create({
-          companyId,
-          lid: number,
-          contactId: newContact.id
-        });
-      } catch (error) {
-        // Ignorar erros de constraint única
-      }
-    }
-    
+    console.log("✅ [WHATIZE-TICKETZ] verifyContact - Contact verification completed:", {
+      contactId: newContact.id,
+      contactNumber: newContact.number,
+      isLid: isLidContact
+    });
+
     return newContact;
   });
+}
+
+// ✅ TICKETZ COMPATIBILITY WRAPPER
+// Wrapper para manter compatibilidade com assinatura simplificada do Ticketz
+export async function verifyContactTicketzCompat(
+  msgContact: IMe,
+  wbot: any,
+  companyId: number
+): Promise<Contact> {
+  const isLid = msgContact.id.includes("@lid");
+  const isGroup = msgContact.id.includes("@g.us");
+  
+  return verifyContact(
+    msgContact.id,
+    msgContact.name,
+    companyId,
+    wbot?.id || 0,
+    isLid,
+    isGroup,
+    wbot
+  );
 }

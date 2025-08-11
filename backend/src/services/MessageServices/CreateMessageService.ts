@@ -93,16 +93,27 @@ const CreateMessageService = async ({
   const io = getIO();
 
   if (!messageData?.ticketImported) {
-    io.of(String(companyId))
-      // .to(message.ticketId.toString())
-      // .to(message.ticket.status)
-      // .to("notification")
+    // 🚀 CORREÇÃO CRITICAL: Socket.IO emission seguindo padrão Ticketz para garantir que frontend receba mensagens
+    io.to(message.ticketId.toString())
+      .to(`company-${companyId}-${message.ticket.status}`)
+      .to(`company-${companyId}-notification`)
+      .to(`queue-${message.ticket.queueId}-${message.ticket.status}`)
+      .to(`queue-${message.ticket.queueId}-notification`)
       .emit(`company-${companyId}-appMessage`, {
         action: "create",
         message,
         ticket: message.ticket,
         contact: message.ticket.contact
       });
+
+    // 🔄 CORREÇÃO ADICIONAL: Emitir evento de atualização do contato (padrão Ticketz)
+    io.to(`company-${companyId}-mainchannel`).emit(
+      `company-${companyId}-contact`,
+      {
+        action: "update",
+        contact: message.ticket.contact
+      }
+    );
   }
 
 
