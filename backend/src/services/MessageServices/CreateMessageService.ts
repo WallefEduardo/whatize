@@ -95,6 +95,35 @@ const ns = io.of(String(companyId)); // mesmo padrão do socket (namespaces din�
 
 if (!messageData?.ticketImported) {
   // ✅ REABILITADO: Socket.IO não estava causando XML corruption
+  
+  // 🛡️ ANTI-DUPLICAÇÃO: Cache simples para evitar emissões duplicadas em sequência
+  const messageKey = `${message.id}_${message.ticketId}`;
+  const now = Date.now();
+  
+  // Verificar se já emitimos essa mensagem nos últimos 2 segundos
+  if (!global.messageEmitCache) {
+    global.messageEmitCache = new Map();
+  }
+  
+  const lastEmit = global.messageEmitCache.get(messageKey);
+  if (lastEmit && (now - lastEmit) < 2000) {
+    console.log(`🛡️ [ANTI-DUP] Bloqueando emissão duplicada: ${messageKey}`);
+    return message;
+  }
+  
+  // Registrar emissão
+  global.messageEmitCache.set(messageKey, now);
+  
+  // Limpar cache antigo a cada 100 emissões
+  if (global.messageEmitCache.size > 100) {
+    const cutoff = now - 10000; // 10 segundos atrás
+    for (const [key, time] of global.messageEmitCache.entries()) {
+      if (time < cutoff) {
+        global.messageEmitCache.delete(key);
+      }
+    }
+  }
+
   const rooms = [
     message.ticketId.toString(),
     "notification",

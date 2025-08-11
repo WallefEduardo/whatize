@@ -269,12 +269,33 @@ export async function verifyContact(
       if (!foundContact.whatsappLidMap && wbot) {
         console.log("🔍 [WHATIZE-TICKETZ] verifyContact - No LID mapping found, checking onWhatsApp for LID:");
         
-        // 🚨 TICKETZ COMPAT: Remover onWhatsApp que corrompe XML - usar apenas se encontrado direto
-        console.log("🔍 [DEBUG-XML] STEP 9-CRITICAL: PULANDO onWhatsApp - Stream Safe");
+        const [ow] = await wbot.onWhatsApp(msgContact.id);
+        if (!ow?.exists) {
+          throw new Error("ERR_WAPP_CONTACT_NOT_FOUND");
+        }
+        const lid = ow.lid as string;
         
-        // No Ticketz, onWhatsApp só é chamado sem try/catch para novos contatos
-        // Para contatos existentes, não fazemos onWhatsApp para evitar corrupção XML
-        console.log("⚠️ [WHATIZE-TICKETZ] verifyContact - Skipping onWhatsApp for existing contact to avoid XML corruption");
+        console.log("🔍 [WHATIZE-TICKETZ] verifyContact - onWhatsApp result:", {
+          exists: ow.exists,
+          lid: lid,
+          hasLid: !!lid
+        });
+
+        if (lid) {
+          console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Creating LID mapping for existing contact:", {
+            contactId: foundContact.id,
+            lid: lid
+          });
+          
+          await checkAndDedup(foundContact, lid);
+          await WhatsappLidMap.create({
+            companyId,
+            lid,
+            contactId: foundContact.id
+          });
+          
+          console.log("✅ [WHATIZE-TICKETZ] verifyContact - LID mapping created successfully");
+        }
       } else {
         console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Contact already has LID mapping or no wbot:", {
           lidMapId: foundContact.whatsappLidMap?.id,
@@ -290,12 +311,59 @@ export async function verifyContact(
       console.log("🔍 [WHATIZE-TICKETZ] verifyContact - No existing contact found, creating new one");
       
       if (wbot) {
-        // 🚨 TICKETZ COMPAT: onWhatsApp SEM try/catch igual ao Ticketz - mas desabilitado por corrupção XML
-        console.log("🔍 [DEBUG-XML] STEP 9-CRITICAL: PULANDO onWhatsApp - Stream Safe");
-        
-        // No Ticketz, onWhatsApp é chamado aqui sem try/catch, mas está causando XML corruption
-        // Vamos desabilitar temporariamente e criar contato novo sem LID mapping
-        console.log("⚠️ [WHATIZE-TICKETZ] verifyContact - Skipping onWhatsApp for new contact to avoid XML corruption");
+        const [ow] = await wbot.onWhatsApp(msgContact.id);
+        if (!ow?.exists) {
+          throw new Error("ERR_WAPP_CONTACT_NOT_FOUND");
+        }
+        const lid = ow.lid as string;
+
+        console.log("🔍 [WHATIZE-TICKETZ] verifyContact - onWhatsApp result for new contact:", {
+          exists: ow.exists,
+          lid: lid,
+          hasLid: !!lid
+        });
+
+        if (lid) {
+          console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Searching for existing contact with this LID:", {
+            lid: lid,
+            lidWithoutAt: lid.substring(0, lid.indexOf("@"))
+          });
+
+          const lidContact = await Contact.findOne({
+            where: {
+              companyId,
+              number: {
+                [Op.or]: [lid, lid.substring(0, lid.indexOf("@"))]
+              }
+            },
+            include: ["tags", "extraInfo"]
+          });
+
+          console.log("🔍 [WHATIZE-TICKETZ] verifyContact - LID contact search result:", {
+            foundLidContact: !!lidContact,
+            lidContactId: lidContact?.id,
+            lidContactNumber: lidContact?.number
+          });
+
+          if (lidContact) {
+            console.log("🔍 [WHATIZE-TICKETZ] verifyContact - Creating LID mapping for found contact:", {
+              contactId: lidContact.id,
+              lid: lid
+            });
+
+            await WhatsappLidMap.create({
+              companyId,
+              lid,
+              contactId: lidContact.id
+            });
+            
+            console.log("✅ [WHATIZE-TICKETZ] verifyContact - LID mapping created, updating contact number");
+            return updateContact(lidContact, {
+              number: contactData.number,
+              profilePicUrl: contactData.profilePicUrl
+            });
+          }
+        }
       }
     }
 
