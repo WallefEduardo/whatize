@@ -25,6 +25,7 @@ contactRoutes.get("/contacts/profile/:number", isAuth, ContactController.getCont
 contactRoutes.put("/contacts/:contactId/refresh-image", isAuth, ContactController.refreshContactImage);
 contactRoutes.get("/contacts/investigate/corrupted", isAuth, ContactController.investigateCorruptedNumbers);
 contactRoutes.get("/contacts/:contactId/diagnose-image", isAuth, ContactController.diagnoseContactImage);
+contactRoutes.put("/contacts/:contactId/update-profile-pic", isAuth, ContactController.updateProfilePic);
 
 contactRoutes.put("/contacts/block/:contactId", isAuth, ContactController.blockUnblock);
 contactRoutes.post("/contacts/upload", isAuth, upload.array("file"), ContactController.upload);

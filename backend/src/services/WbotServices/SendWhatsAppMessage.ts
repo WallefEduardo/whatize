@@ -54,29 +54,13 @@ const SendWhatsAppMessage = async ({
   logger.info(`🔄 [SEND-MSG] Obtendo wbot para o ticket...`);
   const wbot = await GetTicketWbot(ticket) as Session;
   
-  // 🔧 SOLUÇÃO HÍBRIDA: Buscar contact diretamente como no original (que funcionava)
-  const contactNumber = await Contact.findByPk(ticket.contactId);
-  logger.info(`📱 [SEND-MSG] Contact encontrado: { contactId: ${contactNumber.id}, number: '${contactNumber.number}', remoteJid: '${contactNumber.remoteJid}' }`);
-
-  let number: string;
-  
-  // 🎯 ESTRATÉGIA TICKETZ: Usar remoteJid como está (sem conversões LID->JID)
-  if (contactNumber.remoteJid && contactNumber.remoteJid !== "" && contactNumber.remoteJid.includes("@")) {
-    number = contactNumber.remoteJid;
-    logger.info(`✅ [SEND-MSG] Usando remoteJid existente: '${number}'`);
-    
-    // 🚀 CORREÇÃO TICKETZ: NÃO converter LID para JID - deixar o Baileys processar nativamente
-    if (number.endsWith("@lid")) {
-      logger.info(`🎯 [SEND-MSG-LID] Número LID detectado, enviando direto para Baileys: '${number}'`);
-    }
-    
-  } else {
-    number = `${contactNumber.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`;
-    logger.info(`🔧 [SEND-MSG] Formatando number padrão: '${contactNumber.number}' → '${number}'`);
-  }
-  
-  // Log final do número que será usado para envio
-  logger.info(`📋 [SEND-MSG] Número final para envio: '${number}' { isGroup: ${ticket.isGroup} }`);
+  // ✅ TICKETZ COMPAT: Usar getJidOf para resolver JID corretamente
+  const targetJid = getJidOf(ticket);
+  logger.info(`📤 [WHATIZE-TICKETZ] SendWhatsAppMessage - Target JID resolved: {
+    targetJid: '${targetJid}',
+    isLidFormat: ${targetJid.includes("@lid")},
+    ticketContactNumber: '${ticket.contact.number}'
+  }`);
 
   if (quotedMsg) {
     const chatMessages = await Message.findOne({
@@ -126,7 +110,7 @@ const SendWhatsAppMessage = async ({
     try {
       await delay(msdelay)
       const sentMessage = await wbot.sendMessage(
-        number,
+        targetJid,
         {
           contacts: {
             displayName: `${vCard.name}`,
@@ -143,86 +127,71 @@ const SendWhatsAppMessage = async ({
     }
   };
   try {
-    logger.info(`🚀 [SEND-MSG] Tentando enviar mensagem: { number: '${number}', textLength: ${body?.length} }`);
-    
-    // 🔍 LOGS DETALHADOS: Capturar tudo antes do envio
-    logger.info(`🔍 [SEND-MSG-DEBUG] Parâmetros completos do envio: {
-      number: '${number}',
-      body: '${body?.substring(0, 100)}',
-      formattedBody: '${formatBody(body, ticket)?.substring(0, 100)}',
-      isForwarded: ${isForwarded},
-      options: ${JSON.stringify(options)},
-      wbotType: '${wbot.type}',
-      wbotUser: '${wbot.user?.id}',
-      contactId: ${contactNumber.id},
-      contactNumber: '${contactNumber.number}',
-      contactRemoteJid: '${contactNumber.remoteJid}'
+    logger.info(`📤 [WHATIZE-TICKETZ] SendWhatsAppMessage - Starting message send: {
+      ticketId: ${ticket.id},
+      contactNumber: '${ticket.contact.number}',
+      contactId: ${ticket.contact.id},
+      isGroup: ${ticket.isGroup},
+      hasQuotedMsg: ${!!quotedMsg}
     }`);
-    
-    // 🛡️ INTERCEPTAR TUDO: Preparar os dados que serão enviados
-    const messageData = {
-      text: formatBody(body, ticket),
-      contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded ? true : false }
-    };
-    
-    const sendOptions = {
-      ...options
-    };
-    
-    logger.info(`🚀 [SEND-MSG-INTERCEPT] ANTES do sendMessage: {
-      number: '${number}',
-      messageData: ${JSON.stringify(messageData)},
-      sendOptions: ${JSON.stringify(sendOptions)},
-      wbotId: ${wbot.id},
-      wbotType: '${wbot.type}'
-    }`);
-    
-    try {
-      const sentMessage = await wbot.sendMessage(number, messageData, sendOptions);
-      
-      logger.info(`✅ [SEND-MSG-INTERCEPT] DEPOIS do sendMessage: SUCESSO { messageId: ${sentMessage.key?.id} }`);
-      
-      // 🔥 CORREÇÃO TICKETZ: Persistir mensagem enviada no histórico
-      logger.info(`🔄 [SEND-MSG-PERSIST] Iniciando persistência da mensagem enviada`);
 
-      try {
-        // Cache local (espelhando Ticketz)
-        if (typeof wbot.cacheMessage === "function") {
-          wbot.cacheMessage(sentMessage);
-        }
-        await verifyMessage(sentMessage, ticket, ticket.contact);
-        logger.info(`✅ [SEND-MSG-PERSIST] Mensagem persistida com sucesso no histórico`);
-      } catch (persistError) {
-        logger.error(`❌ [SEND-MSG-PERSIST] Erro na persistência: ${persistError.message}`);
+    const formattedBody = formatBody(body, ticket);
+    
+    logger.info(`📤 [WHATIZE-TICKETZ] SendWhatsAppMessage - Formatted body: { 
+      originalBody: "${body?.substring(0, 50)}",
+      formattedBody: "${formattedBody?.substring(0, 50)}",
+      bodyLength: ${formattedBody?.length}
+    }`);
+
+    logger.info(`📤 [WHATIZE-TICKETZ] SendWhatsAppMessage - About to call wbot.sendMessage: {
+      jid: '${targetJid}',
+      messageOptions: {
+        text: "${formattedBody?.substring(0, 50)}",
+        quotedOptions: "${Object.keys(options).length > 0 ? 'has_quote' : 'none'}"
       }
-      
-      return sentMessage;
-      
-    } catch (sendError) {
-      logger.error(`❌ [SEND-MSG-INTERCEPT] ERRO no sendMessage: {
-        error: ${sendError.message},
-        stack: ${sendError.stack},
-        number: '${number}',
-        messageDataStringified: ${JSON.stringify(messageData)}
-      }`);
-      throw sendError;
+    }`);
+
+    const sentMessage = await wbot.sendMessage(
+      targetJid,
+      {
+        text: formattedBody
+      },
+      {
+        ...options
+      }
+    );
+
+    logger.info(`✅ [WHATIZE-TICKETZ] SendWhatsAppMessage - Message sent successfully: {
+      messageId: '${sentMessage.key?.id}',
+      messageKey: ${JSON.stringify(sentMessage.key)},
+      fromMe: ${sentMessage.key?.fromMe},
+      remoteJid: '${sentMessage.key?.remoteJid}'
+    }`);
+
+    if (typeof wbot.cacheMessage === "function") {
+      wbot.cacheMessage(sentMessage);
+    }
+
+    if (sentMessage?.message?.extendedTextMessage?.thumbnailDirectPath) {
+      logger.info("📤 [WHATIZE-TICKETZ] SendWhatsAppMessage - Processing as media message");
+      await verifyMediaMessage(sentMessage, ticket, ticket.contact);
+    } else {
+      logger.info("📤 [WHATIZE-TICKETZ] SendWhatsAppMessage - Processing as text message");
+      await verifyMessage(sentMessage, ticket, ticket.contact);
     }
     
-    await ticket.update({ lastMessage: formatBody(body, ticket), imported: null });
-    logger.info(`📝 [SEND-MSG] Ticket atualizado com última mensagem`);
-    
-    // Retorno já foi feito no try acima
+    logger.info("✅ [WHATIZE-TICKETZ] SendWhatsAppMessage - Message processing completed successfully");
+    return sentMessage;
   } catch (err) {
-    logger.error(`❌ [SEND-MSG] Erro ao enviar mensagem: { 
-      ticketId: ${ticket.id}, 
-      contactId: ${ticket.contactId}, 
-      companyId: ${ticket.companyId}, 
-      number: '${number}', 
-      error: ${err.message},
-      errorStack: ${err.stack}
+    logger.error(`❌ [WHATIZE-TICKETZ] SendWhatsAppMessage - ERROR occurred: {
+      error: '${err.message}',
+      errorStack: '${err.stack}',
+      ticketId: ${ticket.id},
+      contactNumber: '${ticket.contact.number}',
+      targetJid: '${targetJid}'
     }`);
-    console.error(`Erro ao enviar mensagem na company ${ticket.companyId}:`, err);
     Sentry.captureException(err);
+    console.log(err);
     throw new AppError("ERR_SENDING_WAPP_MSG");
   }
 };

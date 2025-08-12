@@ -41,6 +41,7 @@ interface TicketData {
   msgTransfer?: string;
   isTransfered?: boolean;
   chatbot?: boolean;
+  justClose?: boolean; // ✅ TICKETZ COMPAT: Evita mensagens de rating/completion na deduplicação
 }
 
 interface Request {
@@ -72,7 +73,8 @@ const UpdateTicketService = async ({
       unreadMessages,
       msgTransfer,
       isTransfered = false,
-      status
+      status,
+      justClose = false // ✅ TICKETZ COMPAT: Para deduplicação silenciosa
     } = ticketData;
     let isBot: boolean | null = ticketData.isBot || false;
     let queueOptionId: number | null = ticketData.queueOptionId || null;
@@ -155,7 +157,8 @@ const UpdateTicketService = async ({
       if (settings.userRating === "enabled" &&
         (sendFarewellMessage || sendFarewellMessage === undefined) &&
         (!isNil(ratingMessage) && ratingMessage !== "") &&
-        !ticket.isGroup) {
+        !ticket.isGroup &&
+        !justClose) { // ✅ TICKETZ COMPAT: Não enviar rating na deduplicação
 
         if (ticketTraking.ratingAt == null) {
           const ratingTxt = ratingMessage || "";
@@ -201,7 +204,8 @@ const UpdateTicketService = async ({
 
       if (((!isNil(user?.farewellMessage) && user?.farewellMessage !== "") ||
         (!isNil(complationMessage) && complationMessage !== "")) &&
-        (sendFarewellMessage || sendFarewellMessage === undefined)) {
+        (sendFarewellMessage || sendFarewellMessage === undefined) &&
+        !justClose) { // ✅ TICKETZ COMPAT: Não enviar farewell na deduplicação
 
         let body: any
 

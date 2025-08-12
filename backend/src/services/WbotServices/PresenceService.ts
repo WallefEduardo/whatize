@@ -101,14 +101,13 @@ class PresenceService {
   // Método para enviar presence update (quando usuário está digitando)
   async sendPresenceUpdate(sock: WASocket, toJid: string, type: 'available' | 'unavailable' | 'composing' | 'recording' | 'paused') {
     try {
-      // 🚨 PROTEÇÃO CRÍTICA: Não enviar presence para números LID (causa XML malformed)
-      if (toJid.endsWith("@lid")) {
-        logger.debug(`🛡️ [PRESENCE-PROTECTION] Bloqueando envio de presence para LID: ${toJid}`);
-        return;
+      // 🚨 TEMPORARY FIX: sendPresenceUpdate está corrompendo XML stream - desabilitado completamente
+      if (false && !toJid.endsWith("@lid")) {
+        await sock.sendPresenceUpdate(type, toJid);
+        logger.debug(`Sent presence update: ${type} to ${toJid}`);
+      } else {
+        logger.debug(`🛡️ [PRESENCE-PROTECTION] sendPresenceUpdate desabilitado para evitar XML corruption: ${toJid}`);
       }
-      
-      await sock.sendPresenceUpdate(type, toJid);
-      logger.debug(`Sent presence update: ${type} to ${toJid}`);
     } catch (error) {
       logger.error(`Error sending presence update: ${error}`);
     }

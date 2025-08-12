@@ -46,7 +46,6 @@ import Queue from "../../models/Queue";
 import QueueOption from "../../models/QueueOption";
 import FindOrCreateATicketTrakingService from "../TicketServices/FindOrCreateATicketTrakingService";
 import raceConditionLogger from "../../utils/raceConditionLogger";
-// REMOVIDO: Imports do sistema de múltiplas empresas
 import contactCache from "../../libs/contactCache";
 import CleanupOrphanDataService from "../MaintenanceService/CleanupOrphanDataService";
 import VerifyCurrentSchedule from "../CompanyService/VerifyCurrentSchedule";
@@ -68,10 +67,10 @@ import { queryDialogFlow } from "../QueueIntegrationServices/QueryDialogflow";
 import CompaniesSettings from "../../models/CompaniesSettings";
 import CreateLogTicketService from "../TicketServices/CreateLogTicketService";
 
-// 🚀 ETAPA 4: Mutex para controle de concorrência (estratégia Ticketz)
+// Mutex para controle de concorrência  
 const contactMutex = new Mutex();
 import Whatsapp from "../../models/Whatsapp";
-import { verifyContact } from "./verifyContact";
+import { verifyContact, verifyContactTicketzCompat } from "./verifyContact";
 import QueueIntegrations from "../../models/QueueIntegrations";
 import ShowFileService from "../FileServices/ShowService";
 
@@ -110,12 +109,13 @@ const request = require("request");
 // 🚨 PROTEÇÃO CRÍTICA: Função helper para envio seguro de presence (evita XML malformed em LID)
 const safePresenceUpdate = async (wbot: any, type: string, jid: string) => {
   try {
-    if (jid.endsWith("@lid")) {
-      logger.debug(`🛡️ [PRESENCE-PROTECTION] Bloqueando envio de presence ${type} para LID: ${jid}`);
-      return;
+    // 🚨 TEMPORARY FIX: sendPresenceUpdate está corrompendo XML stream - desabilitado completamente
+    if (false && !jid.endsWith("@lid")) {
+      await wbot.sendPresenceUpdate(type, jid);
+      logger.debug(`📤 [PRESENCE] ${type} enviado para: ${jid}`);
+    } else {
+      logger.debug(`🛡️ [PRESENCE-PROTECTION] sendPresenceUpdate desabilitado para evitar XML corruption: ${jid}`);
     }
-    await wbot.sendPresenceUpdate(type, jid);
-    logger.debug(`📤 [PRESENCE] ${type} enviado para: ${jid}`);
   } catch (error) {
     logger.error(`❌ [PRESENCE] Erro ao enviar ${type} para ${jid}: ${error.message}`);
   }
@@ -2267,7 +2267,11 @@ const handleOpenAi = async (
 
   if (!prompt) return;
 
-  if (msg.messageStubType) return;
+  // ✅ TICKETZ COMPAT: Permitir CIPHERTEXT para mensagens @lid, rejeitar outros messageStubTypes
+  const isLidMessage = msg.key?.remoteJid?.includes("@lid");
+  const isCiphertext = msg.messageStubType === WAMessageStubType.CIPHERTEXT;
+  
+  if (msg.messageStubType && !(isCiphertext && isLidMessage)) return;
 
   const publicFolder: string = path.resolve(
     __dirname,
@@ -3078,16 +3082,11 @@ const handleMessage = async (
         id: grupoMeta.id,
         name: grupoMeta.subject
       };
-      const isGroupLid = msgGroupContact.id.includes("@lid");
-      const isGroupType = msgGroupContact.id.includes("@g.us");
-      groupContact = await verifyContact(
-        msgGroupContact.id,
-        msgGroupContact.name,
-        companyId,
-        wbot.id,
-        isGroupLid,
-        isGroupType,
-        wbot
+      // ✅ TICKETZ COMPAT: Usar wrapper compatible
+      groupContact = await verifyContactTicketzCompat(
+        msgGroupContact,
+        wbot,
+        companyId
       );
     }
 
@@ -3100,14 +3099,11 @@ const handleMessage = async (
       return;
     }
     
-    const contact = await verifyContact(
-      msgContact.id,
-      msgContact.name,
-      companyId,
-      wbot.id,
-      isLid,
-      isContactGroup,
-      wbot
+    // ✅ TICKETZ COMPAT: Usar wrapper compatible
+    const contact = await verifyContactTicketzCompat(
+      msgContact,
+      wbot,
+      companyId
     );
     
     // 🐛 DEBUG: Log do contato verificado
@@ -3323,6 +3319,20 @@ const handleMessage = async (
     let mediaSent: Message | undefined;
 
     if (!useLGPD) {
+      // 🛡️ ANTI-DUPLICAÇÃO: Verificar se a mensagem já foi processada
+      if (msg.key.fromMe) {
+        const existingMessage = await Message.findOne({
+          where: {
+            wid: getSafeMessageId(msg),
+            companyId: companyId
+          }
+        });
+        
+        if (existingMessage) {
+          logger.info(`🛡️ [ANTI-DUP-HANDLER] Mensagem já existe, pulando processamento: { wid: ${getSafeMessageId(msg)}, ticketId: ${ticket.id} }`);
+          return;
+        }
+      }
       
       if (hasMedia) {
         try {
@@ -3847,16 +3857,11 @@ const verifyCampaignMessageAndCloseTicket = async (message: proto.IWebMessageInf
   if (message.key.fromMe && isCampaign) {
     let msgContact: IMe;
     msgContact = await getContactMessage(message, wbot);
-    const isLidContact = msgContact.id.includes("@lid");
-    const isGroupContact = msgContact.id.includes("@g.us");
-    const contact = await verifyContact(
-      msgContact.id,
-      msgContact.name,
-      companyId,
-      wbot.id,
-      isLidContact,
-      isGroupContact,
-      wbot
+    // ✅ TICKETZ COMPAT: Usar wrapper compatible
+    const contact = await verifyContactTicketzCompat(
+      msgContact,
+      wbot,
+      companyId
     );
 
 
@@ -3949,90 +3954,45 @@ const wbotMessageListener = (wbot: Session, companyId: number): void => {
         return;
       }
 
-    // Processar mensagens em lote mas com controle de duplicação
-    const processedMessageIds = new Set<string>();
-
-    for (const message of messages) {
-      try {
-        const messageKey = `${message.key.id}-${companyId}-${wbot.id}`;
-        
-        // Verificar se já processamos esta mensagem recentemente
-        if (messageProcessingCache.has(messageKey) || processedMessageIds.has(messageKey)) {
-          continue;
-        }
-
-        // Marcar como processando
-        messageProcessingCache.set(messageKey, Date.now());
-        processedMessageIds.add(messageKey);
-
-        if (message?.messageStubParameters?.length && message.messageStubParameters[0].includes('absent')) {
-          const msg = {
-            companyId: companyId,
-            whatsappId: wbot.id,
-            message: message
-          }
-          logger.warn("MENSAGEM PERDIDA", JSON.stringify(msg));
-        }
-
-        const messageExists = await Message.count({
-          where: { wid: message.key.id!, companyId }
-        });
-
-        if (!messageExists) {
-          let isCampaign = false
-          let body = await getBodyMessage(message);
-          const fromMe = message?.key?.fromMe;
-          if (fromMe) {
-            isCampaign = /\u200c/.test(body)
-          } else {
-            if (/\u200c/.test(body))
-              body = body.replace(/\u200c/, '')
-            logger.debug('Validação de mensagem de campanha enviada por terceiros: ' + body)
+      // 🔥 PROCESSAMENTO SIMPLIFICADO BASEADO NO TICKETZ - EVITA LOOP INFINITO
+      messages.forEach(async (message: proto.IWebMessageInfo) => {
+        try {
+          // ✅ TICKETZ COMPAT: Permitir mensagens CIPHERTEXT de @lid sem conteúdo
+          const isLidMessage = message.key?.remoteJid?.includes("@lid");
+          const isCiphertext = message.messageStubType === WAMessageStubType.CIPHERTEXT;
+          
+          if (!message?.message && !(isCiphertext && isLidMessage)) {
+            logger.warn({ message }, "📨 [MESSAGES-UPSERT] Mensagem sem conteúdo suportado");
+            return;
           }
 
-          if (!isCampaign) {
-            if (REDIS_URI_MSG_CONN !== '') {
-              try {
-                await BullQueues.add(`${process.env.DB_NAME}-handleMessage`, { message, wbot: wbot.id, companyId }, {
-                  priority: 1,
-                  jobId: `${wbot.id}-handleMessage-${message.key.id}`,
-                  removeOnComplete: 50, // Manter apenas 50 jobs completos
-                  removeOnFail: 100, // Manter apenas 100 jobs falhados
-                  attempts: 3, // Máximo 3 tentativas
-                  backoff: {
-                    type: 'exponential',
-                    delay: 1000,
-                  }
-                });
-              } catch (e) {
-                Sentry.captureException(e);
-                logger.error(`Erro ao adicionar mensagem à fila: ${e.message}`);
-              }
-            } else {
-              await handleMessage(message, wbot, companyId);
-            }
+          // 🔍 ULTRA-DEBUG: Log específico do processamento da mensagem
+          logger.info(`🔍 [ULTRA-DEBUG] MESSAGES-UPSERT - Processando mensagem: { messageId: ${message.key.id}, contactId: ${message.key.remoteJid}, companyId: ${companyId} }`);
+
+          const jid = message.key?.remoteJid || "";
+          if (!jid.endsWith("@lid")) {
+            await wbot.sendReceipts([message.key], undefined);
           }
 
+          // Verificar campanha (sem parar o processamento - só registra)
           await verifyRecentCampaign(message, companyId);
-          await verifyCampaignMessageAndCloseTicket(message, companyId, wbot);
-        }
 
-        if (message.key.remoteJid?.endsWith("@g.us")) {
-          if (REDIS_URI_MSG_CONN !== '') {
-            BullQueues.add(`${process.env.DB_NAME}-handleMessageAck`, { msg: message, chat: 2 }, {
-              priority: 1,
-              jobId: `${wbot.id}-handleMessageAck-${message.key.id}`
-            })
-          } else {
-            handleMsgAck(message, 2)
-          }
-        }
+          // 🔍 ULTRA-DEBUG: Log antes de chamar handleMessage
+          logger.info(`🔍 [ULTRA-DEBUG] MESSAGES-UPSERT - Chamando handleMessage: { messageId: ${message.key.id} }`);
+          
+          await handleMessage(message, wbot, companyId);
+          
+          // 🔍 ULTRA-DEBUG: Log após handleMessage bem-sucedido
+          logger.info(`🔍 [ULTRA-DEBUG] MESSAGES-UPSERT - handleMessage concluído com sucesso: { messageId: ${message.key.id} }`);
 
-      } catch (error) {
-        logger.error(`❌ [MESSAGES-UPSERT] ERRO NA MENSAGEM: { messageId: ${message.key.id}, error: ${error.message} }`);
-        Sentry.captureException(error);
-      }
-    }
+          // 🔍 ULTRA-DEBUG: Log de conclusão final da mensagem
+          logger.info(`✅ [ULTRA-DEBUG] MESSAGES-UPSERT - MENSAGEM PROCESSADA COMPLETAMENTE: { messageId: ${message.key.id} }`);
+
+        } catch (error) {
+          logger.error(`❌ [MESSAGES-UPSERT] ERRO NA MENSAGEM: { messageId: ${message.key.id}, error: ${error.message} }`);
+          Sentry.captureException(error);
+        }
+      });
     
     logger.info(`📨 [MESSAGES-UPSERT] CONCLUIDO: { companyId: ${companyId}, wbotId: ${wbot.id}, processedCount: ${messages.length} }`);
     } catch (error) {
