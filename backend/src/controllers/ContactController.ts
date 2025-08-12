@@ -28,6 +28,9 @@ import Contact from "../models/Contact";
 import GetDefaultWhatsApp from "../helpers/GetDefaultWhatsApp";
 import { getWbot } from "../libs/wbot";
 import UpdateContactWalletsService from "../services/ContactServices/UpdateContactWalletsService";
+import UpdateProfilePicService from "../services/ContactServices/UpdateProfilePicService";
+import DownloadProfilePicService from "../services/ContactServices/DownloadProfilePicService";
+import cacheLayer from "../libs/cache";
 
 import FindContactTags from "../services/ContactServices/FindContactTags";
 import { log } from "console";
@@ -672,33 +675,77 @@ export const refreshContactImage = async (req: Request, res: Response) => {
       
       // Determinar JID correto baseado no contact
       let targetJid = contact.remoteJid;
-      if (!targetJid) {
-        targetJid = contact.isGroup ? `${contact.number}@g.us` : `${contact.number}@s.whatsapp.net`;
-      }
       
       // Primeiro verificar se o contato existe no WhatsApp
       if (!contact.isGroup) {
-        const [result] = await wbot.onWhatsApp(targetJid);
-        if (!result?.exists) {
-          return res.status(400).json({ 
-            error: "Contato não existe no WhatsApp",
-            success: false 
-          });
+        // Para onWhatsApp, usar apenas o número sem @s.whatsapp.net e limpar caracteres especiais
+        let numberToCheck = contact.number
+          .replace('@s.whatsapp.net', '')
+          .replace('@lid', '')
+          .replace(/[^0-9]/g, ''); // Remove todos os caracteres não numéricos
+        
+        // Se não tem código de país brasileiro, adicionar
+        if (numberToCheck.length <= 11 && !numberToCheck.startsWith('55')) {
+          numberToCheck = '55' + numberToCheck;
         }
-        targetJid = result.jid; // Usar JID canônico
+        
+        logger.info(`📷 [REFRESH-IMAGE] Verificando contato no WhatsApp: ${numberToCheck} (original: ${contact.number})`);
+        
+        try {
+          const [result] = await wbot.onWhatsApp(numberToCheck);
+          if (!result?.exists) {
+            logger.warn(`📷 [REFRESH-IMAGE] Contato ${numberToCheck} não existe no WhatsApp`);
+            return res.status(400).json({ 
+              error: "Contato não existe no WhatsApp",
+              success: false,
+              hasImage: false
+            });
+          }
+          targetJid = result.jid; // Usar JID canônico retornado
+          logger.info(`📷 [REFRESH-IMAGE] Contato encontrado, JID: ${targetJid}`);
+        } catch (onWhatsAppError) {
+          logger.error(`📷 [REFRESH-IMAGE] Erro ao verificar contato: ${onWhatsAppError.message}`);
+          // Se falhar, tentar com o JID que temos
+          if (!targetJid) {
+            targetJid = `${contact.number}@s.whatsapp.net`;
+          }
+        }
+      } else {
+        // Para grupos, usar o JID do grupo
+        if (!targetJid) {
+          targetJid = `${contact.number}@g.us`;
+        }
       }
       
       // Tentar obter imagem em alta resolução primeiro, depois baixa
+      logger.info(`📷 [REFRESH-IMAGE] Tentando obter foto de perfil para JID: ${targetJid}`);
+      
       try {
-        newProfilePicUrl = await wbot.profilePictureUrl(targetJid, "image");
+        // Primeiro tentar com "preview" (mais rápido e confiável)
+        newProfilePicUrl = await wbot.profilePictureUrl(targetJid, "preview");
         hasRealImage = true;
-      } catch (hdError) {
+        logger.info(`📷 [REFRESH-IMAGE] Foto obtida com sucesso (preview): ${newProfilePicUrl.substring(0, 50)}...`);
+      } catch (previewError) {
+        logger.debug(`📷 [REFRESH-IMAGE] Falha ao obter preview: ${previewError.message}`);
+        
         try {
-          newProfilePicUrl = await wbot.profilePictureUrl(targetJid);
+          // Tentar com "image" (alta resolução)
+          newProfilePicUrl = await wbot.profilePictureUrl(targetJid, "image");
           hasRealImage = true;
-        } catch (lowError) {
-          newProfilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
-          hasRealImage = false;
+          logger.info(`📷 [REFRESH-IMAGE] Foto obtida com sucesso (image): ${newProfilePicUrl.substring(0, 50)}...`);
+        } catch (imageError) {
+          logger.debug(`📷 [REFRESH-IMAGE] Falha ao obter image: ${imageError.message}`);
+          
+          try {
+            // Última tentativa sem especificar tipo
+            newProfilePicUrl = await wbot.profilePictureUrl(targetJid);
+            hasRealImage = true;
+            logger.info(`📷 [REFRESH-IMAGE] Foto obtida com sucesso (default): ${newProfilePicUrl.substring(0, 50)}...`);
+          } catch (defaultError) {
+            logger.warn(`📷 [REFRESH-IMAGE] Nenhuma foto disponível para ${targetJid}: ${defaultError.message}`);
+            newProfilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+            hasRealImage = false;
+          }
         }
       }
       
@@ -718,41 +765,83 @@ export const refreshContactImage = async (req: Request, res: Response) => {
       });
     }
 
-    // Atualizar o contato diretamente no banco e forçar download
-    await contact.update({
-      profilePicUrl: newProfilePicUrl,
-      pictureUpdated: false // Força re-download
+    // Limpar cache antigo da foto
+    try {
+      const jidForCache = contact.remoteJid || `${contact.number}@s.whatsapp.net`;
+      const cacheKey = `profilepic:${companyId}:${jidForCache}`;
+      await cacheLayer.del(cacheKey);
+      logger.info(`📷 [REFRESH-IMAGE] Cache limpo para ${cacheKey}`);
+    } catch (cacheError) {
+      logger.debug(`📷 [REFRESH-IMAGE] Erro ao limpar cache: ${cacheError.message}`);
+    }
+
+    // Baixar e salvar a imagem localmente
+    logger.info(`📷 [REFRESH-IMAGE] Baixando imagem para salvar localmente...`);
+    const localFileName = await DownloadProfilePicService({
+      contact,
+      profilePicUrl: newProfilePicUrl
     });
 
-    // Obter wbot para passar para o serviço
-    const defaultWhatsapp = await GetDefaultWhatsApp(companyId);
-    const wbot = getWbot(defaultWhatsapp.id);
+    if (localFileName) {
+      // Atualizar o contato com a imagem local
+      await contact.update({
+        profilePicUrl: newProfilePicUrl,
+        urlPicture: localFileName,
+        pictureUpdated: true
+      });
+      logger.info(`📷 [REFRESH-IMAGE] Contato atualizado com imagem local: ${localFileName}`);
+    } else {
+      // Se falhou o download, apenas atualizar a URL do WhatsApp
+      await contact.update({
+        profilePicUrl: newProfilePicUrl,
+        pictureUpdated: false
+      });
+      logger.warn(`📷 [REFRESH-IMAGE] Download falhou, apenas URL do WhatsApp atualizada`);
+    }
 
-    // Usar CreateOrUpdateContactService para download da imagem
-    const updatedContact = await CreateOrUpdateContactService({
-      name: contact.name,
-      number: contact.number,
-      email: contact.email || "",
-      profilePicUrl: newProfilePicUrl,
-      isGroup: contact.isGroup,
-      companyId: contact.companyId,
-      remoteJid: contact.remoteJid,
-      whatsappId: contact.whatsappId,
-      wbot: wbot, // Passa o objeto wbot correto
-      channel: contact.channel || 'whatsapp'
-    });
+    // Recarregar o contato para pegar o campo virtual urlPicture atualizado
+    await contact.reload();
+
+    // Emitir evento Socket.IO para atualizar o frontend em tempo real
+    const io = getIO();
+    io.of(String(companyId))
+      .emit(`company-${companyId}-contact`, {
+        action: "update",
+        contact
+      });
+
+    logger.info(`📷 [REFRESH-IMAGE] Evento Socket.IO emitido para company-${companyId}-contact`);
 
     return res.status(200).json({ 
       success: true, 
       message: "Imagem atualizada com sucesso",
       hasImage: true,
-      contact: updatedContact 
+      contact: contact // Retorna o contato com urlPicture atualizado
     });
 
   } catch (error) {
     console.error('Erro ao atualizar imagem do contato:', error);
     return res.status(500).json({ 
       error: "Erro interno do servidor ao atualizar imagem" 
+    });
+  }
+};
+
+export const updateProfilePic = async (req: Request, res: Response): Promise<Response> => {
+  const { contactId } = req.params;
+  const { companyId } = req.user;
+
+  try {
+    const profilePicUrl = await UpdateProfilePicService({
+      contactId: Number(contactId),
+      companyId
+    });
+
+    return res.status(200).json({ profilePicUrl });
+  } catch (error) {
+    logger.error(`Erro ao atualizar foto do contato ${contactId}: ${error.message}`);
+    return res.status(500).json({ 
+      error: "Erro ao atualizar foto do contato" 
     });
   }
 };

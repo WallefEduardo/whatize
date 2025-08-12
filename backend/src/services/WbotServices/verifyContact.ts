@@ -112,18 +112,19 @@ export async function verifyContact(
   console.log("🔍 [DEBUG-XML] STEP 2: Antes GetProfilePicUrl - Stream OK");
 
   try {
-    // 🚨 TEMPORARY FIX: GetProfilePicUrl está corrompendo XML stream - desabilitado
-    if (false && wbot && !msgContact.id.includes("g.us")) {
-      console.log("🔍 [DEBUG-XML] STEP 3: Chamando GetProfilePicUrl");
-      profilePicUrl = await GetProfilePicUrl(msgContact.id, companyId) || noPicture;
+    // ✅ REABILITADO: GetProfilePicUrl agora com proteções contra XML corruption
+    if (wbot && wbot.user && !msgContact.id.includes("g.us")) {
+      console.log("🔍 [DEBUG-XML] STEP 3: Chamando GetProfilePicUrl com wbot existente");
+      // Passa o wbot existente para evitar criar nova conexão
+      profilePicUrl = await GetProfilePicUrl(msgContact.id, companyId, null, wbot) || noPicture;
       console.log("🔍 [DEBUG-XML] STEP 4: GetProfilePicUrl concluído - Stream OK");
     } else {
       profilePicUrl = noPicture;
-      console.log("🔍 [DEBUG-XML] STEP 4-ALT: Usando noPicture - Stream OK");
+      console.log("🔍 [DEBUG-XML] STEP 4-ALT: Sem wbot ou é grupo, usando noPicture");
     }
   } catch (error) {
     profilePicUrl = noPicture;
-    console.log("🔍 [DEBUG-XML] STEP 4-ERROR: GetProfilePicUrl erro, usando noPicture");
+    console.log("🔍 [DEBUG-XML] STEP 4-ERROR: GetProfilePicUrl erro, usando noPicture:", error.message);
   }
 
   console.log("🔍 [DEBUG-XML] STEP 5: Definindo flags LID/Group - Stream OK");
