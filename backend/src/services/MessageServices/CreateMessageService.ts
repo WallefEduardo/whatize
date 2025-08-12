@@ -96,32 +96,59 @@ const ns = io.of(String(companyId)); // mesmo padrão do socket (namespaces din�
 if (!messageData?.ticketImported) {
   // ✅ REABILITADO: Socket.IO não estava causando XML corruption
   
-  // 🛡️ ANTI-DUPLICAÇÃO: Cache simples para evitar emissões duplicadas em sequência
-  const messageKey = `${message.id}_${message.ticketId}`;
+  // 🛡️ ANTI-DUPLICAÇÃO: Cache robusto para evitar emissões duplicadas
+  // Usar o wid original (messageData.wid) em vez do message.wid que pode ter sido alterado para mensagens privadas
+  const originalWid = messageData.wid;
+  const messageKey = `${originalWid}_${message.ticketId}_${message.fromMe ? 'OUT' : 'IN'}`;
   const now = Date.now();
   
-  // Verificar se já emitimos essa mensagem nos últimos 2 segundos
+  // 🔍 DEBUG ANTI-DUP: Log detalhado para investigar duplicação
+  console.log(`🔍 [DEBUG-ANTI-DUP] Verificando mensagem: {
+    dbId: '${message.id}',
+    originalWid: '${originalWid}',
+    currentWid: '${message.wid}',
+    ticketId: ${message.ticketId},
+    fromMe: ${message.fromMe},
+    key: '${messageKey}',
+    body: '${message.body?.substring(0, 20)}...',
+    createdAt: '${message.createdAt}'
+  }`);
+  
+  // Verificar se já emitimos essa mensagem
   if (!global.messageEmitCache) {
     global.messageEmitCache = new Map();
   }
   
   const lastEmit = global.messageEmitCache.get(messageKey);
-  if (lastEmit && (now - lastEmit) < 2000) {
-    console.log(`🛡️ [ANTI-DUP] Bloqueando emissão duplicada: ${messageKey}`);
-    return message;
+  if (lastEmit) {
+    // Para mensagens fromMe (enviadas), usar cache mais longo (5 minutos)
+    // Para mensagens recebidas, usar cache mais curto (30 segundos)
+    const cacheTimeout = message.fromMe ? 300000 : 30000;
+    
+    if ((now - lastEmit) < cacheTimeout) {
+      console.log(`🛡️ [ANTI-DUP] Bloqueando emissão duplicada: ${messageKey} (${message.fromMe ? 'enviada' : 'recebida'}) - idade: ${now - lastEmit}ms`);
+      return message;
+    } else {
+      console.log(`⚠️ [ANTI-DUP] Cache expirado para: ${messageKey} (${message.fromMe ? 'enviada' : 'recebida'}) - idade: ${now - lastEmit}ms`);
+    }
+  } else {
+    console.log(`✅ [ANTI-DUP] Primeira emissão para: ${messageKey} (${message.fromMe ? 'enviada' : 'recebida'})`);
   }
   
   // Registrar emissão
   global.messageEmitCache.set(messageKey, now);
   
-  // Limpar cache antigo a cada 100 emissões
-  if (global.messageEmitCache.size > 100) {
-    const cutoff = now - 10000; // 10 segundos atrás
+  // Limpar cache antigo a cada 200 emissões
+  if (global.messageEmitCache.size > 200) {
+    const cutoff = now - 600000; // 10 minutos atrás
+    const keysToDelete = [];
     for (const [key, time] of global.messageEmitCache.entries()) {
       if (time < cutoff) {
-        global.messageEmitCache.delete(key);
+        keysToDelete.push(key);
       }
     }
+    keysToDelete.forEach(key => global.messageEmitCache.delete(key));
+    console.log(`🧹 [ANTI-DUP] Limpou ${keysToDelete.length} entradas antigas do cache`);
   }
 
   const rooms = [

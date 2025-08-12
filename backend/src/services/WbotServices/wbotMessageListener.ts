@@ -3319,6 +3319,20 @@ const handleMessage = async (
     let mediaSent: Message | undefined;
 
     if (!useLGPD) {
+      // 🛡️ ANTI-DUPLICAÇÃO: Verificar se a mensagem já foi processada
+      if (msg.key.fromMe) {
+        const existingMessage = await Message.findOne({
+          where: {
+            wid: getSafeMessageId(msg),
+            companyId: companyId
+          }
+        });
+        
+        if (existingMessage) {
+          logger.info(`🛡️ [ANTI-DUP-HANDLER] Mensagem já existe, pulando processamento: { wid: ${getSafeMessageId(msg)}, ticketId: ${ticket.id} }`);
+          return;
+        }
+      }
       
       if (hasMedia) {
         try {
