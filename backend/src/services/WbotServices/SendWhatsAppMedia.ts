@@ -150,6 +150,15 @@ const SendWhatsAppMedia = async ({
   isForwarded = false
 }: Request): Promise<WAMessage> => {
   try {
+    logger.info(`📤 [SEND-MEDIA] Iniciando envio de mídia:`, {
+      ticketId: ticket.id,
+      contactId: ticket.contactId,
+      mediaType: media.mimetype,
+      filename: media.originalname,
+      isGroup: ticket.isGroup,
+      isPrivate
+    });
+
     const wbot = await getWbot(ticket.whatsappId);
     const companyId = ticket.companyId.toString()
     
@@ -258,22 +267,38 @@ const SendWhatsAppMedia = async ({
 
     let number: string;
 
+    // ✅ CORREÇÃO PARA LID: Usar lógica similar ao Ticketz para resolução de JID
     if (contactNumber.remoteJid && contactNumber.remoteJid !== "" && contactNumber.remoteJid.includes("@")) {
+      // Se já tem remoteJid válido, usar ele (pode ser LID ou JID normal)
       number = contactNumber.remoteJid;
+      logger.info(`📤 [SEND-MEDIA] Usando remoteJid existente: ${number}`);
+    } else if (contactNumber.number.includes("@")) {
+      // Se o número já tem @ (pode ser LID), usar como está
+      number = contactNumber.number;
+      logger.info(`📤 [SEND-MEDIA] Usando número com @ existente: ${number}`);
     } else {
-      number = `${contactNumber.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"
-        }`;
+      // Caso padrão: construir JID normal
+      number = `${contactNumber.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`;
+      logger.info(`📤 [SEND-MEDIA] Construindo JID padrão: ${number}`);
     }
 
 
     // 🚨 PROTEÇÃO CRÍTICA: Não enviar presence para números LID (causa XML malformed)
-    const presenceJid = `${contactNumber.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`;
-    if (!presenceJid.endsWith("@lid")) {
-      await wbot.sendPresenceUpdate('recording', presenceJid);
+    if (!number.includes("@lid") && !number.includes("@newsletter")) {
+      await wbot.sendPresenceUpdate('recording', number);
+      logger.debug(`✅ [PRESENCE] Enviando presence para: ${number}`);
     } else {
-      logger.debug(`🛡️ [PRESENCE-PROTECTION] Bloqueando envio de presence para LID: ${presenceJid}`);
+      logger.debug(`🛡️ [PRESENCE-PROTECTION] Bloqueando envio de presence para LID/Newsletter: ${number}`);
     }
     await delay(500)
+
+    logger.info(`📤 [SEND-MEDIA] Enviando mensagem para:`, {
+      targetJid: number,
+      isLidFormat: number.includes("@lid"),
+      isNewsletterFormat: number.includes("@newsletter"),
+      mediaType: typeMessage,
+      optionsKeys: Object.keys(options)
+    });
 
     const sentMessage = await wbot.sendMessage(
       number,
@@ -282,10 +307,24 @@ const SendWhatsAppMedia = async ({
       }
     );
 
+    logger.info(`✅ [SEND-MEDIA] Mídia enviada com sucesso:`, {
+      messageId: sentMessage.key?.id,
+      messageKey: sentMessage.key,
+      fromMe: sentMessage.key?.fromMe,
+      remoteJid: sentMessage.key?.remoteJid
+    });
+
     await ticket.update({ lastMessage: body !== media.filename ? body : bodyMedia, imported: null });
 
     return sentMessage;
   } catch (err) {
+    logger.error(`❌ [SEND-MEDIA] Erro ao enviar mídia:`, {
+      ticketId: ticket.id,
+      contactId: ticket.contactId,
+      filename: media.originalname,
+      error: err.message,
+      errorStack: err.stack
+    });
     console.error(`Erro ao enviar mídia - Ticket: ${ticket.id}, Arquivo: ${media.originalname}:`, err);
     Sentry.captureException(err);
     throw new AppError("ERR_SENDING_WAPP_MSG");
