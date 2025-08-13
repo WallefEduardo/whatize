@@ -128,6 +128,31 @@ class Whatsapp extends Model<Whatsapp> {
   @Column(DataType.TEXT)
   channel: string;
 
+  // ============================================
+  // INSTAGRAM BUSINESS API (FASE 3 - NOVA API)
+  // ============================================
+  
+  @Column(DataType.TEXT)
+  instagramBusinessAccountId: string;
+
+  @Column(DataType.TEXT)
+  instagramAccessToken: string;
+
+  @Column(DataType.TEXT)
+  instagramUsername: string;
+
+  @Column(DataType.TEXT)
+  instagramProfilePictureUrl: string;
+
+  @Column
+  instagramFollowersCount: number;
+
+  @Column(DataType.TEXT)
+  instagramWebsite: string;
+
+  @Column(DataType.TEXT)
+  instagramBiography: string;
+
   @Default(3)
   @Column
   maxUseBotQueues: number;
