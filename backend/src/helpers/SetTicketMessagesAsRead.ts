@@ -20,6 +20,12 @@ const SetTicketMessagesAsRead = async (ticket: Ticket): Promise<void> => {
 
     if (["open", "group"].includes(ticket.status) && whatsapp && whatsapp.status === 'CONNECTED' && ticket.unreadMessages > 0) {
       try {
+        // ✅ Verificar se é um ticket do WhatsApp antes de chamar GetTicketWbot
+        if (ticket.channel !== "whatsapp") {
+          logger.debug(`SetTicketMessagesAsRead: Pulando ticket ${ticket.id} - canal: ${ticket.channel}`);
+          return;
+        }
+        
         const wbot = await GetTicketWbot(ticket);
         // no baileys temos que marcar cada mensagem como lida
         // não o chat inteiro como é feito no legacy

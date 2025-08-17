@@ -45,7 +45,11 @@ export const verifyWebhookSignature = (
       logger.warn('FacebookSecurity: Verificação de assinatura webhook falhou', {
         receivedLength: receivedSignature.length,
         expectedLength: expectedSignature.length,
-        payloadLength: payload.length
+        payloadLength: payload.length,
+        receivedSignature: receivedSignature.substring(0, 20) + '...',
+        expectedSignature: expectedSignature.substring(0, 20) + '...',
+        originalSignature: signature,
+        appSecretLength: appSecret.length
       });
     } else {
       logger.debug('FacebookSecurity: Assinatura webhook verificada com sucesso');
@@ -133,7 +137,7 @@ export const logWebhookAttempt = (
   };
 
   if (isValid) {
-    logger.info('FacebookSecurity: Webhook válido recebido', logData);
+    logger.debug('FacebookSecurity: Webhook válido recebido', logData);
   } else {
     logger.warn('FacebookSecurity: Tentativa de webhook inválida', logData);
   }

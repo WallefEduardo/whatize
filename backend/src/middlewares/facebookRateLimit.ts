@@ -175,9 +175,21 @@ export const webhookLogger = (req: Request, res: Response, next: Function): void
     timestamp: new Date().toISOString()
   });
   
-  // Interceptar a resposta para log
+  // Interceptar a resposta para log com proteção contra dupla resposta
   const originalSend = res.send;
+  let responseSent = false;
+  
   res.send = function(body: any) {
+    // ✅ Proteger contra dupla resposta
+    if (responseSent) {
+      logger.warn('Facebook Webhook: Tentativa de dupla resposta detectada', {
+        statusCode: res.statusCode,
+        timestamp: new Date().toISOString()
+      });
+      return this;
+    }
+    
+    responseSent = true;
     const duration = Date.now() - startTime;
     
     logger.debug('Facebook Webhook: Response enviado', {

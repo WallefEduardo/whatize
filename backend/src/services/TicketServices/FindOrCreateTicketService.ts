@@ -41,7 +41,7 @@ const FindOrCreateTicketService = async (
     const ticketResult = await sequelize.transaction(async (transaction: Transaction) => {
       try {
         // Log da busca de ticket
-        logger.info(`🔍 Searching for ticket: contact ${targetContact.id}, company ${companyId}, whatsapp ${whatsapp.id}`);
+        logger.debug(`🔍 Searching for ticket: contact ${targetContact.id}, company ${companyId}, whatsapp ${whatsapp.id}`);
 
         let openAsLGPD = false;
         if (settings?.enableLGPD) {
@@ -106,7 +106,7 @@ const FindOrCreateTicketService = async (
 
         // Se encontrou ticket existente, atualiza e retorna
         if (ticket) {
-          logger.info(`✅ Found existing ticket ${ticket.id} for contact ${targetContact.id}`);
+          logger.debug(`✅ Found existing ticket ${ticket.id} for contact ${targetContact.id}`);
 
           if (isCampaign) {
             await ticket.update({

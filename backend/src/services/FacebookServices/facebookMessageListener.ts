@@ -148,10 +148,14 @@ export const verifyMessageFace = async (
 ) => {
 
   let fileName = null;
-  try {
-    fileName = await downloadMedia(msg.attachments[0].payload.url, ticket.companyId);
-  } catch (e) {
-    console.error('Erro ao fazer download de mídia do Facebook:', e);
+  
+  // ✅ Verificar se há anexos antes de tentar acessá-los
+  if (msg.attachments && msg.attachments.length > 0 && msg.attachments[0].payload?.url) {
+    try {
+      fileName = await downloadMedia(msg.attachments[0].payload.url, ticket.companyId);
+    } catch (e) {
+      console.error('Erro ao fazer download de mídia do Facebook:', e);
+    }
   }
 
   if (fileName) {
@@ -162,7 +166,7 @@ export const verifyMessageFace = async (
       contactId: fromMe ? undefined : msg.is_echo ? undefined : contact.id,
       body: msg.text || fileName,
       fromMe: fromMe ? fromMe : msg.is_echo ? true : false,
-      mediaType: msg.attachments[0].type,
+      mediaType: msg.attachments?.[0]?.type || 'file',
       mediaUrl: fileName,
       read: fromMe ? fromMe : msg.is_echo,
       quotedMsgId: null,

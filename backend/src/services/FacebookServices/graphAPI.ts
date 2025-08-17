@@ -285,6 +285,9 @@ export const getAccessTokenFromPage = async (
 
     if (!token) throw new Error("ERR_FETCHING_FB_USER_TOKEN");
 
+    console.log('Tentando exchange token para:', token.substring(0, 20) + '...');
+    console.log('App ID:', process.env.FACEBOOK_APP_ID);
+
     const data = await axios.get(
       `${API_BASE_URL}/${API_VERSION}/oauth/access_token`,
       {
@@ -301,6 +304,7 @@ export const getAccessTokenFromPage = async (
       }
     );
 
+    console.log('Token exchange response:', data.data);
     return data.data.access_token;
   } catch (error) {
     const fbError = handleFacebookAPIError(error);

@@ -331,16 +331,23 @@ const UpdateTicketService = async ({
         await newTicketTransfer.reload();
 
         if (settings.sendMsgTransfTicket === "enabled") {
-          if ((oldQueueId !== queueId || oldUserId !== userId) && !isNil(oldQueueId) && !isNil(queueId) && !isNil(queueId) && ticket.whatsapp.status === 'CONNECTED') {
-            const wbot = await GetTicketWbot(ticket);
+          if ((oldQueueId !== queueId || oldUserId !== userId) && !isNil(oldQueueId) && !isNil(queueId) && !isNil(queueId)) {
             const msgtxt = formatBody(`\u200e ${settings.transferMessage.replace("${queue.name}", queue?.name)}`, ticket);
-            const queueChangedMessage = await wbot.sendMessage(
-              `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
-              {
-                text: msgtxt
-              }
-            );
-            await verifyMessage(queueChangedMessage, ticket, ticket.contact, ticketTraking);
+            
+            // ✅ Verificar o canal do ticket para usar o serviço correto
+            if (ticket.channel === "whatsapp" && ticket.whatsapp.status === 'CONNECTED') {
+              const wbot = await GetTicketWbot(ticket);
+              const queueChangedMessage = await wbot.sendMessage(
+                `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
+                {
+                  text: msgtxt
+                }
+              );
+              await verifyMessage(queueChangedMessage, ticket, ticket.contact, ticketTraking);
+            } else if (["facebook", "instagram"].includes(ticket.channel)) {
+              const sentMessage = await sendFaceMessage({ body: msgtxt, ticket });
+              await verifyMessageFace(sentMessage, msgtxt, ticket, ticket.contact, true);
+            }
           }
         }
 
@@ -413,16 +420,23 @@ const UpdateTicketService = async ({
         return { ticket: newTicketTransfer, oldStatus, oldUserId };
       } else {
         if (settings.sendMsgTransfTicket === "enabled") {
-          if (oldQueueId !== queueId || oldUserId !== userId && !isNil(oldQueueId) && !isNil(queueId) && ticket.whatsapp.status === 'CONNECTED') {
-            const wbot = await GetTicketWbot(ticket);
+          if (oldQueueId !== queueId || oldUserId !== userId && !isNil(oldQueueId) && !isNil(queueId)) {
             const msgtxt = formatBody(`\u200e ${settings.transferMessage.replace("${queue.name}", queue?.name)}`, ticket);
-            const queueChangedMessage = await wbot.sendMessage(
-              `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
-              {
-                text: msgtxt
-              }
-            );
-            await verifyMessage(queueChangedMessage, ticket, ticket.contact, ticketTraking);
+            
+            // ✅ Verificar o canal do ticket para usar o serviço correto
+            if (ticket.channel === "whatsapp" && ticket.whatsapp.status === 'CONNECTED') {
+              const wbot = await GetTicketWbot(ticket);
+              const queueChangedMessage = await wbot.sendMessage(
+                `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
+                {
+                  text: msgtxt
+                }
+              );
+              await verifyMessage(queueChangedMessage, ticket, ticket.contact, ticketTraking);
+            } else if (["facebook", "instagram"].includes(ticket.channel)) {
+              const sentMessage = await sendFaceMessage({ body: msgtxt, ticket });
+              await verifyMessageFace(sentMessage, msgtxt, ticket, ticket.contact, true);
+            }
           }
         }
 

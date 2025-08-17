@@ -219,9 +219,12 @@ export const storeFacebook = async (
 
     const { data } = await getPageProfile(facebookUserId, facebookUserToken);
 
+    console.log('Facebook pages found:', data);
+    console.log('User ID:', facebookUserId);
+
     if (data.length === 0) {
       return res.status(400).json({
-        error: "Facebook page not found"
+        error: "Nenhuma página do Facebook encontrada. Verifique se você possui páginas do Facebook ou se tem permissões de administrador."
       });
     }
     const io = getIO();
@@ -317,7 +320,7 @@ export const storeFacebook = async (
 
       }
     }
-    return res.status(200);
+    return res.status(200).json({ success: true, message: "Conexões Facebook criadas com sucesso" });
   } catch (error) {
     console.error('Erro ao processar página do Facebook:', error);
     return res.status(400).json({
