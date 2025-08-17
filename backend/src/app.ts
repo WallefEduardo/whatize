@@ -115,6 +115,9 @@ app.use(
 );
 app.options('*', cors()); 
 app.use(cookieParser());
+
+// ✅ Webhook signature verification configurado corretamente
+
 app.use(express.json());
 app.use(Sentry.Handlers.requestHandler());
 
