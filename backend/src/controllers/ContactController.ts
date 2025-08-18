@@ -18,6 +18,7 @@ import SimpleListService, {
   SearchContactParams
 } from "../services/ContactServices/SimpleListService";
 import ContactCustomField from "../models/ContactCustomField";
+import Whatsapp from "../models/Whatsapp";
 import ToggleAcceptAudioContactService from "../services/ContactServices/ToggleAcceptAudioContactService";
 import BlockUnblockContactService from "../services/ContactServices/BlockUnblockContactService";
 import { ImportContactsService } from "../services/ContactServices/ImportContactsService";
@@ -665,13 +666,16 @@ export const refreshContactImage = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Contato não encontrado" });
     }
 
-    // Tentar obter nova imagem via WhatsApp seguindo documentação Baileys
+    // Tentar obter nova imagem baseado no canal do contato
     let newProfilePicUrl = "";
     let hasRealImage = false;
     
-    try {
-      const defaultWhatsapp = await GetDefaultWhatsApp(companyId);
-      const wbot = getWbot(defaultWhatsapp.id);
+    // ✅ Verificar o canal do contato antes de decidir qual API usar
+    if (contact.channel === "whatsapp") {
+      // Lógica para WhatsApp (mantendo funcional)
+      try {
+        const defaultWhatsapp = await GetDefaultWhatsApp(companyId);
+        const wbot = getWbot(defaultWhatsapp.id);
       
       // Determinar JID correto baseado no contact
       let targetJid = contact.remoteJid;
@@ -749,8 +753,48 @@ export const refreshContactImage = async (req: Request, res: Response) => {
         }
       }
       
-    } catch (error) {
-      console.error('❌ Erro geral ao obter imagem de perfil:', error);
+      } catch (error) {
+        console.error('❌ Erro geral ao obter imagem de perfil WhatsApp:', error);
+        newProfilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+        hasRealImage = false;
+      }
+    } else if (contact.channel === "facebook" || contact.channel === "instagram") {
+      // ✅ Lógica para Facebook/Instagram
+      try {
+        const whatsapp = await Whatsapp.findOne({
+          where: {
+            companyId: companyId,
+            channel: contact.channel
+          }
+        });
+
+        if (!whatsapp) {
+          logger.warn(`📷 [REFRESH-IMAGE] Conexão ${contact.channel} não encontrada para company ${companyId}`);
+          newProfilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+          hasRealImage = false;
+        } else {
+          // Usar a API do Facebook para buscar a foto de perfil
+          const { profilePsid } = require('../services/FacebookServices/graphAPI');
+          const profileData = await profilePsid(contact.number, whatsapp.facebookUserToken);
+          
+          if (profileData && profileData.profile_pic) {
+            newProfilePicUrl = profileData.profile_pic;
+            hasRealImage = true;
+            logger.info(`📷 [REFRESH-IMAGE] Foto ${contact.channel} obtida com sucesso: ${newProfilePicUrl.substring(0, 50)}...`);
+          } else {
+            logger.warn(`📷 [REFRESH-IMAGE] Nenhuma foto disponível para contato ${contact.channel}: ${contact.number}`);
+            newProfilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+            hasRealImage = false;
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Erro geral ao obter imagem de perfil ${contact.channel}:`, error);
+        newProfilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
+        hasRealImage = false;
+      }
+    } else {
+      // Canal não suportado ou não identificado
+      logger.warn(`📷 [REFRESH-IMAGE] Canal não suportado: ${contact.channel}`);
       newProfilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
       hasRealImage = false;
     }

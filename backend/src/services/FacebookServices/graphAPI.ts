@@ -203,7 +203,7 @@ export const getPageProfile = async (
 export const profilePsid = async (id: string, token: string): Promise<any> => {
   try {
     const { data } = await axios.get(
-      `${API_BASE_URL}/${API_VERSION}/${id}?access_token=${token}`,
+      `${API_BASE_URL}/${API_VERSION}/${id}?fields=first_name,last_name,name,profile_pic&access_token=${token}`,
       {
         timeout: parseInt(process.env.FACEBOOK_API_TIMEOUT || "30000"),
         headers: {
