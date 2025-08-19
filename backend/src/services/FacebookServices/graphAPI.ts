@@ -2,30 +2,50 @@ import axios from "axios";
 import FormData from "form-data";
 import { createReadStream } from "fs";
 import logger from "../../utils/logger";
+import { createCompatibleApiBase, getFacebookClient } from "./FacebookClientWrapper";
+import { handleFacebookAPIError } from "./FacebookErrorHandler";
 
 const formData: FormData = new FormData();
 
-const apiBase = (token: string) =>
-  axios.create({
-    baseURL: "https://graph.facebook.com/v18.0/",
-    params: {
-      access_token: token
-    }
-  });
+// Versão da API configurável via variável de ambiente (padrão v22.0)
+const API_VERSION = process.env.META_API_VERSION || "v22.0";
+const API_BASE_URL = process.env.META_API_BASE_URL || "https://graph.facebook.com";
+
+// Log da versão da API sendo usada
+logger.info(`Facebook Graph API: Usando versão ${API_VERSION} com retry automático`);
+
+/**
+ * Função compatível que agora usa o novo client com retry
+ * Mantém a mesma interface para não quebrar código existente
+ */
+const apiBase = (token: string, companyId?: number) => {
+  // Usar o novo wrapper que implementa retry e error handling
+  return createCompatibleApiBase(token, companyId);
+};
 
 export const getAccessToken = async (): Promise<string> => {
-  const { data } = await axios.get(
-    "https://graph.facebook.com/v18.0/oauth/access_token",
-    {
-      params: {
-        client_id: process.env.FACEBOOK_APP_ID,
-        client_secret: process.env.FACEBOOK_APP_SECRET,
-        grant_type: "client_credentials"
+  try {
+    const { data } = await axios.get(
+      `${API_BASE_URL}/${API_VERSION}/oauth/access_token`,
+      {
+        params: {
+          client_id: process.env.FACEBOOK_APP_ID,
+          client_secret: process.env.FACEBOOK_APP_SECRET,
+          grant_type: "client_credentials"
+        },
+        timeout: parseInt(process.env.FACEBOOK_API_TIMEOUT || "30000"),
+        headers: {
+          'User-Agent': `Whatize-Backend/2.2.2 (Facebook-Graph-API/${API_VERSION})`
+        }
       }
-    }
-  );
+    );
 
-  return data.access_token;
+    return data.access_token;
+  } catch (error) {
+    const fbError = handleFacebookAPIError(error);
+    logger.error('Erro ao obter access token do app Facebook', fbError.toLogData());
+    throw fbError;
+  }
 };
 
 export const markSeen = async (id: string, token: string): Promise<void> => {
@@ -183,7 +203,13 @@ export const getPageProfile = async (
 export const profilePsid = async (id: string, token: string): Promise<any> => {
   try {
     const { data } = await axios.get(
-      `https://graph.facebook.com/v18.0/${id}?access_token=${token}`
+      `${API_BASE_URL}/${API_VERSION}/${id}?fields=first_name,last_name,name,profile_pic&access_token=${token}`,
+      {
+        timeout: parseInt(process.env.FACEBOOK_API_TIMEOUT || "30000"),
+        headers: {
+          'User-Agent': `Whatize-Backend/2.2.2 (Facebook-Graph-API/${API_VERSION})`
+        }
+      }
     );
     return data;
   } catch (error) {
@@ -195,7 +221,7 @@ export const profilePsid = async (id: string, token: string): Promise<any> => {
 export const subscribeApp = async (id: string, token: string): Promise<any> => {
   try {
     const { data } = await axios.post(
-      `https://graph.facebook.com/v18.0/${id}/subscribed_apps?access_token=${token}`,
+      `${API_BASE_URL}/${API_VERSION}/${id}/subscribed_apps?access_token=${token}`,
       {
         subscribed_fields: [
           "messages",
@@ -204,6 +230,12 @@ export const subscribeApp = async (id: string, token: string): Promise<any> => {
           "message_reads",
           "message_echoes"
         ]
+      },
+      {
+        timeout: parseInt(process.env.FACEBOOK_API_TIMEOUT || "30000"),
+        headers: {
+          'User-Agent': `Whatize-Backend/2.2.2 (Facebook-Graph-API/${API_VERSION})`
+        }
       }
     );
     return data;
@@ -219,7 +251,13 @@ export const unsubscribeApp = async (
 ): Promise<any> => {
   try {
     const { data } = await axios.delete(
-      `https://graph.facebook.com/v18.0/${id}/subscribed_apps?access_token=${token}`
+      `${API_BASE_URL}/${API_VERSION}/${id}/subscribed_apps?access_token=${token}`,
+      {
+        timeout: parseInt(process.env.FACEBOOK_API_TIMEOUT || "30000"),
+        headers: {
+          'User-Agent': `Whatize-Backend/2.2.2 (Facebook-Graph-API/${API_VERSION})`
+        }
+      }
     );
     return data;
   } catch (error) {
@@ -247,22 +285,31 @@ export const getAccessTokenFromPage = async (
 
     if (!token) throw new Error("ERR_FETCHING_FB_USER_TOKEN");
 
+    console.log('Tentando exchange token para:', token.substring(0, 20) + '...');
+    console.log('App ID:', process.env.FACEBOOK_APP_ID);
+
     const data = await axios.get(
-      "https://graph.facebook.com/v18.0/oauth/access_token",
+      `${API_BASE_URL}/${API_VERSION}/oauth/access_token`,
       {
         params: {
           client_id: process.env.FACEBOOK_APP_ID,
           client_secret: process.env.FACEBOOK_APP_SECRET,
           grant_type: "fb_exchange_token",
           fb_exchange_token: token
+        },
+        timeout: parseInt(process.env.FACEBOOK_API_TIMEOUT || "30000"),
+        headers: {
+          'User-Agent': `Whatize-Backend/2.2.2 (Facebook-Graph-API/${API_VERSION})`
         }
       }
     );
 
+    console.log('Token exchange response:', data.data);
     return data.data.access_token;
   } catch (error) {
-    console.error('Erro ao obter token Facebook:', error);
-    throw new Error("ERR_FETCHING_FB_USER_TOKEN");
+    const fbError = handleFacebookAPIError(error);
+    logger.error('Erro ao obter token de página Facebook', fbError.toLogData());
+    throw fbError;
   }
 };
 
@@ -271,9 +318,13 @@ export const removeApplcation = async (
   token: string
 ): Promise<void> => {
   try {
-    await axios.delete(`https://graph.facebook.com/v18.0/${id}/permissions`, {
+    await axios.delete(`${API_BASE_URL}/${API_VERSION}/${id}/permissions`, {
       params: {
         access_token: token
+      },
+      timeout: parseInt(process.env.FACEBOOK_API_TIMEOUT || "30000"),
+      headers: {
+        'User-Agent': `Whatize-Backend/2.2.2 (Facebook-Graph-API/${API_VERSION})`
       }
     });
   } catch (error) {

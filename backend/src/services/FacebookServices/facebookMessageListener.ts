@@ -13,6 +13,7 @@ import Whatsapp from "../../models/Whatsapp";
 import UpdateTicketService from "../TicketServices/UpdateTicketService";
 import { debounce } from "../../helpers/Debounce";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
+import logger from "../../utils/logger";
 import formatBody from "../../helpers/Mustache";
 import Queue from "../../models/Queue";
 import Chatbot from "../../models/Chatbot";
@@ -147,11 +148,31 @@ export const verifyMessageFace = async (
   fromMe: boolean = false
 ) => {
 
+  // ✅ Log detalhado da mensagem recebida para produção
+  logger.info('📨 Facebook Message Debug', {
+    hasAttachments: !!(msg.attachments && msg.attachments.length > 0),
+    attachmentCount: msg.attachments?.length || 0,
+    messageType: msg.attachments?.[0]?.type || 'text',
+    hasPayloadUrl: !!(msg.attachments?.[0]?.payload?.url),
+    ticketId: ticket.id,
+    messageId: msg.mid
+  });
+
   let fileName = null;
-  try {
-    fileName = await downloadMedia(msg.attachments[0].payload.url, ticket.companyId);
-  } catch (e) {
-    console.error('Erro ao fazer download de mídia do Facebook:', e);
+  
+  // ✅ Verificar se há anexos antes de tentar acessá-los
+  if (msg.attachments && msg.attachments.length > 0 && msg.attachments[0].payload?.url) {
+    logger.info('🎵 Processando mídia do Facebook', {
+      type: msg.attachments[0].type,
+      url: msg.attachments[0].payload.url,
+      ticketId: ticket.id
+    });
+    
+    try {
+      fileName = await downloadMedia(msg.attachments[0].payload.url, ticket.companyId);
+    } catch (e) {
+      console.error('Erro ao fazer download de mídia do Facebook:', e);
+    }
   }
 
   if (fileName) {
@@ -162,7 +183,7 @@ export const verifyMessageFace = async (
       contactId: fromMe ? undefined : msg.is_echo ? undefined : contact.id,
       body: msg.text || fileName,
       fromMe: fromMe ? fromMe : msg.is_echo ? true : false,
-      mediaType: msg.attachments[0].type,
+      mediaType: msg.attachments?.[0]?.type || 'file',
       mediaUrl: fileName,
       read: fromMe ? fromMe : msg.is_echo,
       quotedMsgId: null,
@@ -869,7 +890,12 @@ export const handleMessage = async (
       }
 
       if (ticket.channel === "facebook" || ticket.channel === "instagram") {
-        await verifyMessageFace(message, message.text, ticket, contact);
+        // ✅ Verificar se há anexos para Facebook/Instagram
+        if (message.attachments && message.attachments.length > 0) {
+          await verifyMessageMedia(message, ticket, contact);
+        } else {
+          await verifyMessageFace(message, message.text, ticket, contact);
+        }
       } else if (message.attachments) {
         await verifyMessageMedia(message, ticket, contact);
       }

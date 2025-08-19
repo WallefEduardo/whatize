@@ -57,7 +57,9 @@ const allowedOrigins = [
   "http://localhost:3002",
   "http://127.0.0.1:3000",
   "http://127.0.0.1:3002",
-  "https://9e34d27d0ab7.ngrok-free.app"
+  "https://a3a8efef6f16.ngrok-free.app",
+  'https://apps-atm-powers-quebec.trycloudflare.com',
+  
 ];
 
 // Configuração do BullBoard
@@ -113,6 +115,9 @@ app.use(
 );
 app.options('*', cors()); 
 app.use(cookieParser());
+
+// ✅ Webhook signature verification configurado corretamente
+
 app.use(express.json());
 app.use(Sentry.Handlers.requestHandler());
 

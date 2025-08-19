@@ -64,6 +64,11 @@ const nameFileDiscovery = (pathMedia: string) => {
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 export const typeSimulation = async (ticket: Ticket, presence: WAPresence) => {
+  // ✅ Verificar se é um ticket do WhatsApp antes de simular digitação
+  if (ticket.channel !== "whatsapp") {
+    logger.debug(`typeSimulation: Pulando ticket ${ticket.id} - canal: ${ticket.channel}`);
+    return;
+  }
 
   const wbot = await GetTicketWbot(ticket);
 

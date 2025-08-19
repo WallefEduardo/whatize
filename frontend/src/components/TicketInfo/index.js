@@ -27,47 +27,9 @@ const TicketInfo = ({ contact, ticket, onClick }) => {
 	const [autoDownloadAttempted, setAutoDownloadAttempted] = useState(false);
 	const [imageLoadError, setImageLoadError] = useState(false);
 
-	// Auto-download inteligente de imagens ausentes
-	const tryAutoDownload = useCallback(async () => {
-		if (!contact?.id || autoDownloadAttempted || refreshingImage) return;
-		
-		const hasNoImage = !currentImageUrl || currentImageUrl.includes('nopicture.png') || currentImageUrl === "";
-		
-		// Só faz auto-download para números que parecem válidos do WhatsApp
-		const isValidWhatsAppNumber = contact?.number && 
-			contact.number.length >= 10 && 
-			contact.number.length <= 15 &&
-			!contact.number.includes('253725780217903'); // Evita números corrompidos conhecidos
-		
-		if (hasNoImage && isValidWhatsAppNumber) {
-			setAutoDownloadAttempted(true);
-			
-			try {
-				const response = await api.put(`/contacts/${contact.id}/refresh-image`);
-				
-				if (response.data.success && response.data.hasImage && response.data.contact?.urlPicture) {
-					const newImageUrl = response.data.contact.urlPicture;
-					setCurrentImageUrl(newImageUrl);
-					setImageKey(Date.now());
-					setImageLoadError(false);
-				}
-			} catch (error) {
-				// Falha silenciosa no auto-download
-			}
-		} else if (!isValidWhatsAppNumber) {
-			setAutoDownloadAttempted(true); // Evita tentar novamente
-		}
-	}, [contact?.id, contact?.number, currentImageUrl, autoDownloadAttempted, refreshingImage]);
+	// Auto-download removido - agora usa lógica simples no useEffect
 
-	// Effect para auto-download quando componente monta
-	useEffect(() => {
-		// Delay maior para evitar muitas requisições simultâneas e dar tempo da página carregar
-		const timer = setTimeout(() => {
-			tryAutoDownload();
-		}, 1500 + Math.random() * 1000); // 1.5-2.5s com aleatoriedade
-		
-		return () => clearTimeout(timer);
-	}, [tryAutoDownload]);
+	// Removido useEffect complicado - agora usa lógica simples
 
 	// Effect para atualizar imagem quando contact.urlPicture muda
 	useEffect(() => {
@@ -75,8 +37,23 @@ const TicketInfo = ({ contact, ticket, onClick }) => {
 			setCurrentImageUrl(contact.urlPicture);
 			setImageKey(Date.now());
 			setImageLoadError(false); // Reset error state
+		} else if (!contact?.urlPicture && contact?.id && !autoDownloadAttempted && !refreshingImage) {
+			// ✅ Auto-download simples: se não tem urlPicture, tenta fazer refresh automaticamente
+			console.log('🔍 [AUTO-REFRESH] Contato sem imagem local, fazendo auto-download:', {
+				contactId: contact?.id,
+				urlPicture: contact?.urlPicture
+			});
+			
+			setAutoDownloadAttempted(true);
+			setCurrentImageUrl("");
+			setImageKey(Date.now());
+			
+			// Usar a mesma lógica do refresh manual após delay
+			setTimeout(() => {
+				handleRefreshImage({ stopPropagation: () => {} });
+			}, 2000);
 		}
-	}, [contact?.urlPicture]);
+	}, [contact?.urlPicture, contact?.id, autoDownloadAttempted, refreshingImage]);
 
 	// Effect para resetar estado quando contato muda
 	useEffect(() => {
@@ -90,11 +67,8 @@ const TicketInfo = ({ contact, ticket, onClick }) => {
 	const handleImageError = useCallback(() => {
 		setImageLoadError(true);
 		
-		// Se não tentou auto-download ainda, tenta agora
-		if (!autoDownloadAttempted && !refreshingImage) {
-			tryAutoDownload();
-		}
-	}, [contact?.id, autoDownloadAttempted, refreshingImage, tryAutoDownload]);
+		// Auto-download removido, agora usa lógica no useEffect principal
+	}, [contact?.id, autoDownloadAttempted, refreshingImage]);
 
 	// Função para quando imagem carrega com sucesso
 	const handleImageLoad = useCallback(() => {

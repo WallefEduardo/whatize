@@ -72,7 +72,7 @@ export const initIO = (httpServer: Server): SocketIO => {
     // Escutando o evento de digitação do usuário
     socket.on("user_typing", async ({ ticketId }) => {
         const ticket = await Ticket.findOne({ where: { id: ticketId } }); 
-        if (ticket) {
+        if (ticket && ticket.channel === "whatsapp") {
             await typeSimulation(ticket, 'composing');
         }
     });

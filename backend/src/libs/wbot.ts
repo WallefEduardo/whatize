@@ -97,11 +97,11 @@ export default function msg() {
 }
 
 export const getWbot = (whatsappId: number): Session => {
-  logger.info(`🔍 [WBOT-DEBUG] Tentando obter sessão WhatsApp: { whatsappId: ${whatsappId}, totalSessions: ${sessions.length} }`);
+  logger.debug(`🔍 [WBOT-DEBUG] Tentando obter sessão WhatsApp: { whatsappId: ${whatsappId}, totalSessions: ${sessions.length} }`);
   
   // Log das sessões ativas
   const activeSessions = sessions.map(s => ({ id: s.id, readyState: (s as any).readyState || 'unknown' }));
-  logger.info(`📱 [WBOT-DEBUG] Sessões ativas: ${JSON.stringify(activeSessions)}`);
+  logger.debug(`📱 [WBOT-DEBUG] Sessões ativas: ${JSON.stringify(activeSessions)}`);
   
   const sessionIndex = sessions.findIndex(s => s.id === whatsappId);
 
@@ -111,7 +111,7 @@ export const getWbot = (whatsappId: number): Session => {
   }
   
   const session = sessions[sessionIndex];
-  logger.info(`✅ [WBOT-DEBUG] Sessão encontrada: { whatsappId: ${whatsappId}, readyState: ${(session as any).readyState || 'unknown'} }`);
+  logger.debug(`✅ [WBOT-DEBUG] Sessão encontrada: { whatsappId: ${whatsappId}, readyState: ${(session as any).readyState || 'unknown'} }`);
   
   return session;
 };
