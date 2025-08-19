@@ -5,7 +5,7 @@ export function getJidOf(reference: string | Contact | Ticket) {
   console.log("🔍 [WHATIZE-TICKETZ] getJidOf - INPUT:", {
     type: reference instanceof Contact ? "Contact" : reference instanceof Ticket ? "Ticket" : "string",
     reference: reference instanceof Contact ? { id: reference.id, number: reference.number, isGroup: reference.isGroup } :
-               reference instanceof Ticket ? { id: reference.id, contactNumber: reference.contact.number, isGroup: reference.isGroup } :
+               reference instanceof Ticket ? { id: reference.id, contactNumber: reference.contact.number, isGroup: reference.isGroup, lastRemoteJid: reference.lastRemoteJid } :
                reference
   });
 
@@ -16,9 +16,18 @@ export function getJidOf(reference: string | Contact | Ticket) {
     address = reference.number;
     console.log("🔍 [WHATIZE-TICKETZ] getJidOf - Contact detected:", { contactId: reference.id, number: reference.number, isGroup });
   } else if (reference instanceof Ticket) {
+    // 🎯 NOVA LÓGICA: Se ticket tem lastRemoteJid salvo, usa ele prioritariamente
+    if (reference.lastRemoteJid) {
+      console.log("🎯 [WHATIZE-TICKETZ] getJidOf - Using lastRemoteJid from ticket:", { 
+        ticketId: reference.id, 
+        lastRemoteJid: reference.lastRemoteJid,
+        isLid: reference.lastRemoteJid.includes("@lid")
+      });
+      return reference.lastRemoteJid;
+    }
     isGroup = reference.isGroup;
     address = reference.contact.number;
-    console.log("🔍 [WHATIZE-TICKETZ] getJidOf - Ticket detected:", { ticketId: reference.id, contactNumber: reference.contact.number, isGroup });
+    console.log("🔍 [WHATIZE-TICKETZ] getJidOf - Ticket detected (no lastRemoteJid):", { ticketId: reference.id, contactNumber: reference.contact.number, isGroup });
   }
 
   if (typeof address !== "string") {

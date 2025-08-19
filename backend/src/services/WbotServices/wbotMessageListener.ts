@@ -808,9 +808,17 @@ export const verifyMediaMessage = async (
         isPrivate
       };
 
-      await ticket.update({
-        lastMessage: body
-      });
+      // Só atualiza lastRemoteJid se NÃO for mensagem enviada por nós
+      if (!msg.key.fromMe) {
+        await ticket.update({
+          lastMessage: body,
+          lastRemoteJid: msg.key.remoteJid // Salva o JID/LID usado na última mensagem recebida
+        });
+      } else {
+        await ticket.update({
+          lastMessage: body
+        });
+      }
       logger.error(Error("ERR_WAPP_DOWNLOAD_MEDIA"));
       return CreateMessageService({ messageData, companyId: companyId });
     }
@@ -925,9 +933,17 @@ export const verifyMediaMessage = async (
       isPrivate
     };
 
-    await ticket.update({
-      lastMessage: body || media.filename
-    });
+    // Só atualiza lastRemoteJid se NÃO for mensagem enviada por nós
+    if (!msg.key.fromMe) {
+      await ticket.update({
+        lastMessage: body || media.filename,
+        lastRemoteJid: msg.key.remoteJid // Salva o JID/LID usado na última mensagem recebida
+      });
+    } else {
+      await ticket.update({
+        lastMessage: body || media.filename
+      });
+    }
 
     const newMessage = await CreateMessageService({
       messageData,
@@ -1029,9 +1045,17 @@ export const verifyMessage = async (
     isForwarded
   };
 
-  await ticket.update({
-    lastMessage: body
-  });
+  // Só atualiza lastRemoteJid se NÃO for mensagem enviada por nós
+  if (!msg.key.fromMe) {
+    await ticket.update({
+      lastMessage: body,
+      lastRemoteJid: msg.key.remoteJid // Salva o JID/LID usado na última mensagem recebida
+    });
+  } else {
+    await ticket.update({
+      lastMessage: body
+    });
+  }
 
   await CreateMessageService({ messageData, companyId: companyId });
 
@@ -3068,6 +3092,15 @@ const handleMessage = async (
 
     const isGroup = msg.key.remoteJid?.endsWith("@g.us");
 
+    // 🎯 LOG: Rastrear tipo de identificador recebido
+    logger.info(`📨 [LID-JID-TRACKING] Message received: {
+      remoteJid: '${msg.key.remoteJid}',
+      isLid: ${msg.key.remoteJid?.includes("@lid")},
+      isGroup: ${isGroup},
+      fromMe: ${msg.key.fromMe},
+      messageId: '${msg.key.id}'
+    }`);
+
     const whatsapp = await ShowWhatsAppService(wbot.id!, companyId);
 
     // 🚫 FILTRO MELHORADO: Bloquear grupos quando allowGroup = false, ANTES de qualquer processamento
@@ -3236,7 +3269,17 @@ const handleMessage = async (
 
         await messageToUpdate.update({ isEdited: true, body: bodyEdited });
 
-        await ticket.update({ lastMessage: bodyEdited })
+        // Só atualiza lastRemoteJid se NÃO for mensagem enviada por nós
+        if (!msg.key.fromMe) {
+          await ticket.update({ 
+            lastMessage: bodyEdited,
+            lastRemoteJid: msg.key.remoteJid // Salva o JID/LID usado na última mensagem recebida
+          })
+        } else {
+          await ticket.update({ 
+            lastMessage: bodyEdited
+          })
+        }
 
         
 

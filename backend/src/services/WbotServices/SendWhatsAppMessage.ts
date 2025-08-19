@@ -59,7 +59,9 @@ const SendWhatsAppMessage = async ({
   logger.info(`📤 [WHATIZE-TICKETZ] SendWhatsAppMessage - Target JID resolved: {
     targetJid: '${targetJid}',
     isLidFormat: ${targetJid.includes("@lid")},
-    ticketContactNumber: '${ticket.contact.number}'
+    ticketContactNumber: '${ticket.contact.number}',
+    lastRemoteJid: '${ticket.lastRemoteJid || "not set"}',
+    usingLastRemoteJid: ${!!ticket.lastRemoteJid}
   }`);
 
   if (quotedMsg) {
@@ -165,7 +167,10 @@ const SendWhatsAppMessage = async ({
       messageId: '${sentMessage.key?.id}',
       messageKey: ${JSON.stringify(sentMessage.key)},
       fromMe: ${sentMessage.key?.fromMe},
-      remoteJid: '${sentMessage.key?.remoteJid}'
+      remoteJid: '${sentMessage.key?.remoteJid}',
+      sentToJid: '${targetJid}',
+      wasLidUsed: ${targetJid.includes("@lid")},
+      ticketLastRemoteJid: '${ticket.lastRemoteJid || "not set"}'
     }`);
 
     if (typeof wbot.cacheMessage === "function") {
