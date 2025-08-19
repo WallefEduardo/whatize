@@ -1,0 +1,43 @@
+{
+  "migration": {
+    "version": "1.0.0",
+    "phase": 1,
+    "startDate": "2025-08-19",
+    "preserveMode": true,
+    "breakingChangesAllowed": false
+  },
+  "backup": {
+    "originalBranch": "main",
+    "migrationBranch": "feature/frontend-modernization-2025",
+    "backupCreated": true
+  },
+  "dependencies": {
+    "critical": [
+      "@material-ui/core",
+      "react",
+      "react-dom",
+      "react-scripts",
+      "react-query",
+      "socket.io-client",
+      "formik"
+    ],
+    "preserve": [
+      "src/pages/Tickets",
+      "src/components/MessageInput",
+      "src/services/socket.js",
+      "src/context",
+      "src/pages/Dashboard"
+    ]
+  },
+  "testing": {
+    "regressionTests": false,
+    "unitTests": false,
+    "e2eTests": false,
+    "manualTesting": true
+  },
+  "rollback": {
+    "strategy": "git-branch-switch",
+    "automated": true,
+    "preserveData": true
+  }
+}

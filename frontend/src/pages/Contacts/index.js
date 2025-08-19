@@ -237,11 +237,6 @@ const useStyles = makeStyles(theme => ({
       backgroundColor: "#f5f5f5",
     },
   },
-  selectedChip: {
-    backgroundColor: "#2196f3",
-    color: "white",
-    fontWeight: "bold",
-  },
   iconButton: {
     padding: theme.spacing(0),
     "&.new-ticket": {
