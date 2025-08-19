@@ -200,18 +200,29 @@ const Ticket = () => {
       >
         {/* <div id="TicketHeader"> */}
         <TicketHeader loading={loading}>
-          {ticket.contact !== undefined && (
-            <div id="TicketHeader">
-              <TicketInfo
-                contact={contact}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}>
+            {ticket.contact !== undefined && (
+              <div id="TicketHeader" style={{ flex: '1', minWidth: '250px' }}>
+                <TicketInfo
+                  contact={contact}
+                  ticket={ticket}
+                  onClick={handleDrawerOpen}
+                />
+              </div>
+            )}
+            <div style={{ flexShrink: 0 }}>
+              <TicketActionButtons
                 ticket={ticket}
-                onClick={handleDrawerOpen}
               />
             </div>
-          )}
-          <TicketActionButtons
-            ticket={ticket}
-          />
+          </div>
         </TicketHeader>
         {/* </div> */}
         

@@ -14,9 +14,19 @@ const useStyles = makeStyles(theme => ({
 		flex: "none",
 		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
 		height: "65px",
+		alignItems: "center",
+		padding: theme.spacing(0, 1),
+		[theme.breakpoints.down("md")]: {
+			flexWrap: "wrap",
+			height: 'auto',
+			minHeight: "65px",
+			padding: theme.spacing(1)
+		},
 		[theme.breakpoints.down("sm")]: {
 			flexWrap: "wrap",
-			height: 'max-content'
+			height: 'auto',
+			minHeight: "65px",
+			padding: theme.spacing(0.5)
 		},
 	},
 }));

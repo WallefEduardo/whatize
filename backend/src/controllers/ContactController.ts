@@ -26,8 +26,7 @@ import NumberSimpleListService from "../services/ContactServices/NumberSimpleLis
 import CreateOrUpdateContactServiceForImport from "../services/ContactServices/CreateOrUpdateContactServiceForImport";
 import CreateOrUpdateContactService from "../services/ContactServices/CreateOrUpdateContactService";
 import Contact from "../models/Contact";
-import GetDefaultWhatsApp from "../helpers/GetDefaultWhatsApp";
-import { getWbot } from "../libs/wbot";
+import { getWbot, sessions } from "../libs/wbot";
 import UpdateContactWalletsService from "../services/ContactServices/UpdateContactWalletsService";
 import UpdateProfilePicService from "../services/ContactServices/UpdateProfilePicService";
 import DownloadProfilePicService from "../services/ContactServices/DownloadProfilePicService";
@@ -674,8 +673,77 @@ export const refreshContactImage = async (req: Request, res: Response) => {
     if (contact.channel === "whatsapp") {
       // Lógica para WhatsApp (mantendo funcional)
       try {
-        const defaultWhatsapp = await GetDefaultWhatsApp(companyId);
-        const wbot = getWbot(defaultWhatsapp.id);
+        // Buscar todas as conexões WhatsApp da empresa
+        const whatsappConnections = await Whatsapp.findAll({
+          where: { companyId, status: "CONNECTED", channel: "whatsapp" },
+          order: [["updatedAt", "DESC"]]
+        });
+        
+        if (!whatsappConnections.length) {
+          logger.warn(`📷 [REFRESH-IMAGE] Nenhuma conexão WhatsApp ativa encontrada para company ${companyId}`);
+          throw new AppError("ERR_NO_WAPP_CONNECTION", 400);
+        }
+        
+        // Acessar sessions diretamente para verificar sessões ativas
+        
+        logger.info(`📷 [REFRESH-IMAGE] Sessões encontradas no banco: ${whatsappConnections.map(w => `ID:${w.id}(${w.status})`).join(', ')}`);
+        logger.info(`📷 [REFRESH-IMAGE] Sessões ativas no wbot: ${sessions.map(s => `ID:${s.id}(${(s as any).readyState || 'unknown'})`).join(', ')}`);
+        logger.info(`📷 [REFRESH-IMAGE] Total sessões banco: ${whatsappConnections.length}, Total sessões wbot: ${sessions.length}`);
+        
+        // Tentar encontrar uma sessão que realmente funcione
+        let wbot = null;
+        let activeWhatsapp = null;
+        
+        // Primeiro: tentar com as sessões que realmente existem no array sessions
+        for (const session of sessions) {
+          // Verificar se esta sessão tem um registro no banco que está CONNECTED
+          const dbConnection = whatsappConnections.find(w => w.id === session.id);
+          
+          if (dbConnection) {
+            try {
+              logger.info(`📷 [REFRESH-IMAGE] Tentando sessão ativa ID: ${session.id} (DB: ${dbConnection.status})`);
+              
+              // Verificar se a sessão está realmente conectada
+              const readyState = (session as any).readyState || 'unknown';
+              const isConnected = (session as any).isConnected || false;
+              
+              logger.debug(`📷 [REFRESH-IMAGE] Session ${session.id} - readyState: ${readyState}, isConnected: ${isConnected}`);
+              
+              // Se a sessão tem authState (está inicializada), usar ela
+              if (session && session.authState) {
+                wbot = session;
+                activeWhatsapp = dbConnection;
+                logger.info(`📷 [REFRESH-IMAGE] Sessão ativa encontrada: ID ${session.id}`);
+                break;
+              }
+            } catch (sessionError) {
+              logger.debug(`📷 [REFRESH-IMAGE] Erro ao verificar sessão ${session.id}: ${sessionError.message}`);
+              continue;
+            }
+          }
+        }
+        
+        // Se não encontrou nenhuma sessão ativa diretamente, tentar usar getWbot como fallback
+        if (!wbot || !activeWhatsapp) {
+          for (const whatsappConn of whatsappConnections) {
+            try {
+              logger.info(`📷 [REFRESH-IMAGE] Fallback - tentando getWbot para ID: ${whatsappConn.id}`);
+              wbot = getWbot(whatsappConn.id);
+              activeWhatsapp = whatsappConn;
+              logger.info(`📷 [REFRESH-IMAGE] Fallback bem-sucedido: ID ${whatsappConn.id}`);
+              break;
+            } catch (wbotError) {
+              logger.debug(`📷 [REFRESH-IMAGE] Fallback falhou para ${whatsappConn.id}: ${wbotError.message}`);
+              continue;
+            }
+          }
+        }
+        
+        if (!wbot || !activeWhatsapp) {
+          logger.error(`📷 [REFRESH-IMAGE] Nenhuma sessão WhatsApp ativa disponível`);
+          logger.error(`📷 [REFRESH-IMAGE] Banco: ${whatsappConnections.length} conexões, Sessions: ${sessions.length} sessões`);
+          throw new AppError("ERR_WAPP_NOT_INITIALIZED", 400);
+        }
       
       // Determinar JID correto baseado no contact
       let targetJid = contact.remoteJid;
@@ -696,6 +764,12 @@ export const refreshContactImage = async (req: Request, res: Response) => {
         logger.info(`📷 [REFRESH-IMAGE] Verificando contato no WhatsApp: ${numberToCheck} (original: ${contact.number})`);
         
         try {
+          // Verificar se wbot está realmente conectado
+          if (!wbot || !wbot.authState || wbot.authState.state?.connection !== 'open') {
+            logger.warn(`📷 [REFRESH-IMAGE] Sessão WhatsApp não está conectada adequadamente`);
+            throw new Error("Sessão WhatsApp não conectada");
+          }
+          
           const [result] = await wbot.onWhatsApp(numberToCheck);
           if (!result?.exists) {
             logger.warn(`📷 [REFRESH-IMAGE] Contato ${numberToCheck} não existe no WhatsApp`);
@@ -709,10 +783,11 @@ export const refreshContactImage = async (req: Request, res: Response) => {
           logger.info(`📷 [REFRESH-IMAGE] Contato encontrado, JID: ${targetJid}`);
         } catch (onWhatsAppError) {
           logger.error(`📷 [REFRESH-IMAGE] Erro ao verificar contato: ${onWhatsAppError.message}`);
-          // Se falhar, tentar com o JID que temos
+          // Se falhar a verificação, tentar com o JID que temos
           if (!targetJid) {
             targetJid = `${contact.number}@s.whatsapp.net`;
           }
+          logger.info(`📷 [REFRESH-IMAGE] Usando JID fallback: ${targetJid}`);
         }
       } else {
         // Para grupos, usar o JID do grupo
@@ -755,6 +830,17 @@ export const refreshContactImage = async (req: Request, res: Response) => {
       
       } catch (error) {
         console.error('❌ Erro geral ao obter imagem de perfil WhatsApp:', error);
+        
+        // Verificar se é erro de sessão não inicializada
+        if (error.message === "ERR_WAPP_NOT_INITIALIZED" || error.statusCode === 400) {
+          return res.status(400).json({ 
+            error: "Sessão WhatsApp não está ativa. Verifique a conexão.",
+            success: false,
+            hasImage: false,
+            sessionError: true
+          });
+        }
+        
         newProfilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
         hasRealImage = false;
       }

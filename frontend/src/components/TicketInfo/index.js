@@ -37,23 +37,24 @@ const TicketInfo = ({ contact, ticket, onClick }) => {
 			setCurrentImageUrl(contact.urlPicture);
 			setImageKey(Date.now());
 			setImageLoadError(false); // Reset error state
-		} else if (!contact?.urlPicture && contact?.id && !autoDownloadAttempted && !refreshingImage) {
-			// ✅ Auto-download simples: se não tem urlPicture, tenta fazer refresh automaticamente
-			console.log('🔍 [AUTO-REFRESH] Contato sem imagem local, fazendo auto-download:', {
+		} else if (!contact?.urlPicture && contact?.id && !autoDownloadAttempted && !refreshingImage && contact?.channel === 'whatsapp') {
+			// ✅ Auto-download APENAS UMA VEZ e apenas para WhatsApp
+			console.log('🔍 [AUTO-REFRESH] Contato WhatsApp sem imagem local, fazendo auto-download (tentativa única):', {
 				contactId: contact?.id,
-				urlPicture: contact?.urlPicture
+				urlPicture: contact?.urlPicture,
+				channel: contact?.channel
 			});
 			
 			setAutoDownloadAttempted(true);
 			setCurrentImageUrl("");
 			setImageKey(Date.now());
 			
-			// Usar a mesma lógica do refresh manual após delay
+			// Usar a mesma lógica do refresh manual após delay menor
 			setTimeout(() => {
 				handleRefreshImage({ stopPropagation: () => {} });
-			}, 2000);
+			}, 1000);
 		}
-	}, [contact?.urlPicture, contact?.id, autoDownloadAttempted, refreshingImage]);
+	}, [contact?.urlPicture, contact?.id, autoDownloadAttempted, refreshingImage, contact?.channel]);
 
 	// Effect para resetar estado quando contato muda
 	useEffect(() => {
@@ -61,14 +62,15 @@ const TicketInfo = ({ contact, ticket, onClick }) => {
 		setImageLoadError(false);
 		setCurrentImageUrl(contact?.urlPicture || "");
 		setImageKey(Date.now());
+		console.log('🔄 [CONTACT-CHANGE] Estado resetado para novo contato:', contact?.id);
 	}, [contact?.id]);
 
 	// Função para lidar com erro de carregamento da imagem
 	const handleImageError = useCallback(() => {
+		console.log('❌ [IMAGE-ERROR] Erro ao carregar imagem para contato:', contact?.id);
 		setImageLoadError(true);
-		
-		// Auto-download removido, agora usa lógica no useEffect principal
-	}, [contact?.id, autoDownloadAttempted, refreshingImage]);
+		// Não faz auto-download em caso de erro - usuário deve usar o botão refresh
+	}, [contact?.id]);
 
 	// Função para quando imagem carrega com sucesso
 	const handleImageLoad = useCallback(() => {
@@ -183,7 +185,13 @@ const TicketInfo = ({ contact, ticket, onClick }) => {
 				toast.error("Contato não encontrado.");
 			} else if (error.response?.status === 400) {
 				const errorMsg = error.response?.data?.error || "Erro de validação.";
-				toast.error(errorMsg);
+				
+				// Verificar se é erro de sessão
+				if (error.response?.data?.sessionError) {
+					toast.warn("Conexão WhatsApp indisponível. Verifique se o WhatsApp está conectado.");
+				} else {
+					toast.error(errorMsg);
+				}
 			} else if (error.response?.status === 500) {
 				toast.error("Erro interno do servidor. Contate o suporte.");
 			} else {
@@ -197,9 +205,9 @@ const TicketInfo = ({ contact, ticket, onClick }) => {
 
 	return (
 		<React.Fragment>
-			<Grid container alignItems="center" spacing={10}>
-				{/* Conteúdo do contato à esquerda */}
-				<Grid item xs={6}>
+			<Grid container alignItems="center" spacing={1}>
+				{/* Conteúdo do contato com responsividade melhorada */}
+				<Grid item xs={12} sm={8} md={6}>
 					{renderCardReader()}
 				</Grid>
 			</Grid>

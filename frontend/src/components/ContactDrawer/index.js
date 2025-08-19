@@ -41,11 +41,21 @@ const useStyles = makeStyles(theme => ({
 	drawerPaper: {
 		width: drawerWidth,
 		display: "flex",
+		flexDirection: "column",
 		borderTop: "1px solid rgba(0, 0, 0, 0.12)",
 		borderRight: "1px solid rgba(0, 0, 0, 0.12)",
 		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
 		borderTopRightRadius: 4,
 		borderBottomRightRadius: 4,
+		height: "100%",
+		maxHeight: "100vh",
+		overflowY: "hidden",
+		[theme.breakpoints.down("md")]: {
+			width: 300,
+		},
+		[theme.breakpoints.down("sm")]: {
+			width: 280,
+		},
 	},
 	header: {
 		display: "flex",
@@ -54,24 +64,50 @@ const useStyles = makeStyles(theme => ({
 		alignItems: "center",
 		padding: theme.spacing(0, 1),
 		minHeight: "50px",
+		maxHeight: "50px",
 		justifyContent: "flex-start",
+		flexShrink: 0,
+		[theme.breakpoints.down("md")]: {
+			minHeight: "45px",
+			maxHeight: "45px",
+			padding: theme.spacing(0, 0.5),
+		},
 	},
 	content: {
 		display: "flex",
 		backgroundColor: theme.palette.inputBackground,
 		flexDirection: "column",
 		padding: "8px 0px 8px 8px",
-		// height: "100%",
-		justifyContent: "center",
-		overflowY: "scroll",
+		height: "calc(100vh - 130px)",
+		maxHeight: "calc(100vh - 130px)",
+		overflowY: "auto",
+		overflowX: "hidden",
 		...theme.scrollbarStyles,
+		[theme.breakpoints.down("md")]: {
+			height: "calc(100vh - 160px)",
+			maxHeight: "calc(100vh - 160px)",
+		},
+		[theme.breakpoints.down("sm")]: {
+			height: "calc(100vh - 200px)",
+			maxHeight: "calc(100vh - 200px)",
+		},
 	},
 
 	contactAvatar: {
 		margin: 15,
-		width: 160,
-		height: 160,
+		width: 140,
+		height: 140,
 		borderRadius: 14,
+		[theme.breakpoints.down("md")]: {
+			width: 120,
+			height: 120,
+			margin: 10,
+		},
+		[theme.breakpoints.down("sm")]: {
+			width: 100,
+			height: 100,
+			margin: 8,
+		},
 	},
 
 	contactHeader: {

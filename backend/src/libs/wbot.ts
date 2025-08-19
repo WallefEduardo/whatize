@@ -64,6 +64,9 @@ export type Session = WASocket & {
 
 const sessions: Session[] = [];
 
+// Exportar sessions para uso em outros módulos
+export { sessions };
+
 const retriesQrCodeMap = new Map<number, number>();
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout })

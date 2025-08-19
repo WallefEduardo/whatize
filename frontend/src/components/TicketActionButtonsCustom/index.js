@@ -47,10 +47,27 @@ const useStyles = makeStyles(theme => ({
         flex: "none",
         alignSelf: "center",
         marginLeft: "auto",
-        // flexBasis: "50%",
         display: "flex",
+        flexWrap: "wrap",
+        gap: theme.spacing(0.5),
         "& > *": {
-            margin: theme.spacing(1),
+            margin: theme.spacing(0.5),
+        },
+        [theme.breakpoints.down("md")]: {
+            margin: theme.spacing(0.25),
+            "& > *": {
+                margin: theme.spacing(0.25),
+            },
+        },
+        [theme.breakpoints.down("sm")]: {
+            flexDirection: "row",
+            width: "100%",
+            justifyContent: "flex-end",
+            margin: 0,
+            "& > *": {
+                margin: theme.spacing(0.25),
+                minWidth: "auto",
+            },
         },
     },
     bottomButtonVisibilityIcon: {
