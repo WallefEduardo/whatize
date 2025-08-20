@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useContext, useEffect } from "react";
-import { toast } from "react-toastify";
+import { toast } from "../../components/ui/ToastProvider";
 import { add, format, parseISO } from "date-fns";
 
-import Menu from "@material-ui/core/Menu";
-import MenuItem from "@material-ui/core/MenuItem";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import PopupState, { bindTrigger, bindMenu } from "material-ui-popup-state";
-import { makeStyles } from "@material-ui/core/styles";
-import { green } from "@material-ui/core/colors";
+import { styled } from "@mui/material/styles";
+import { green } from "@mui/material/colors";
 import {
   Button,
   TableBody,
@@ -22,7 +22,7 @@ import {
   Box,
   Card,
   CardContent,
-} from "@material-ui/core";
+} from "@mui/material";
 import {
   Edit,
   CheckCircle,
@@ -35,7 +35,7 @@ import {
   Instagram,
   WhatsApp,
   AddCircleOutline
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 import FacebookLogin from "react-facebook-login/dist/facebook-login-render-props";
 

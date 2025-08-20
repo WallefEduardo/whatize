@@ -1,4 +1,4 @@
-import { logger } from './logger';
+import logger from './logger';
 
 // Logger específico para Fase 5 - UX e Features Modernas
 export const phase5Logger = {

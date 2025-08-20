@@ -1,4 +1,4 @@
-import { toast } from "react-toastify";
+import { toast } from "../components/ui/ToastProvider";
 import { i18n } from "../translate/i18n";
 import { isString } from 'lodash';
 
@@ -7,26 +7,14 @@ const toastError = err => {
 	if (errorMsg) {
 		if (i18n.exists(`backendErrors.${errorMsg}`)) {
 			toast.error(i18n.t(`backendErrors.${errorMsg}`), {
-				toastId: errorMsg,
-				autoClose: 2000,
-				hideProgressBar: false,
-				closeOnClick: true,
-				pauseOnHover: false,
-				draggable: true,
-				progress: undefined,
-				theme: "light",
+				id: errorMsg,
+				duration: 2000
 			});
 			return
 		} else {
 			toast.error(errorMsg, {
-				toastId: errorMsg,
-				autoClose: 2000,
-				hideProgressBar: false,
-				closeOnClick: true,
-				pauseOnHover: false,
-				draggable: true,
-				progress: undefined,
-				theme: "light",
+				id: errorMsg,
+				duration: 2000
 			});
 			return
 		}
@@ -34,7 +22,6 @@ const toastError = err => {
 		toast.error(err);
 		return
 	} else {
-		//aqui ficava a mensagem An error occurred!
 		toast.error("Ops! algo deu errado. Revise sua ação ou chame nosso suporte!");
 		return
 	}

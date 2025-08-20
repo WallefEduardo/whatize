@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
 import api from "./services/api";
-import "react-toastify/dist/ReactToastify.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./config/query-config";
-import { ptBR } from "@material-ui/core/locale";
-import { createTheme, ThemeProvider } from "@material-ui/core/styles";
-import { useMediaQuery } from "@material-ui/core";
+import { ptBR } from "@mui/material/locale";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { useMediaQuery } from "@mui/material";
+import { Toaster } from "react-hot-toast";
 import ColorModeContext from "./layout/themeContext";
 import { ActiveMenuProvider } from "./context/ActiveMenuContext";
 import Favicon from "react-favicon";
@@ -218,6 +218,16 @@ const App = () => {
           <QueryClientProvider client={queryClient}>
             <ActiveMenuProvider>
               <Routes />
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: mode === 'dark' ? '#333' : '#fff',
+                    color: mode === 'dark' ? '#fff' : '#333',
+                  },
+                }}
+              />
             </ActiveMenuProvider>
           </QueryClientProvider>
         </ThemeProvider>

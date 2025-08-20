@@ -1,87 +1,79 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import Grid from "@material-ui/core/Grid";
-import Paper from "@material-ui/core/Paper";
-import { makeStyles } from "@material-ui/core/styles";
+import Grid from "@mui/material/Grid";
+import Paper from "@mui/material/Paper";
+import { styled } from "@mui/material/styles";
 
 import TicketsManager from "../../components/TicketsManager";
 import Ticket from "../../components/Ticket";
 
 import { i18n } from "../../translate/i18n";
 
-const useStyles = makeStyles(theme => ({
-	chatContainer: {
-		flex: 1,
-		backgroundColor: "#eee",
-		padding: theme.spacing(4),
-		padding: theme.padding,
-		height: `calc(100% - 100px)`,
-		overflowY: "hidden",
-	},
+// Styled components
+const ChatContainer = styled('div')(({ theme }) => ({
+	flex: 1,
+	backgroundColor: "#eee",
+	padding: theme.spacing(4),
+	height: `calc(100% - 100px)`,
+	overflowY: "hidden",
+}));
 
-	chatPapper: {
-		// backgroundColor: "red",
-		display: "flex",
-		height: "100%",
-		boxShadow: `rgba(149, 157, 165, 0.5) 0px 8px 24px`
-	},
+const ChatPaper = styled(Paper)(() => ({
+	display: "flex",
+	height: "100%",
+	boxShadow: `rgba(149, 157, 165, 0.5) 0px 8px 24px`
+}));
 
-	contactsWrapper: {
-		display: "flex",
-		height: "100%",
-		flexDirection: "column",
-		overflowY: "hidden",
-	},
-	messagessWrapper: {
-		display: "flex",
-		height: "100%",
-		flexDirection: "column",
-	},
-	welcomeMsg: {
-		// backgroundColor: "#eee",
-		background: theme.palette.tabHeaderBackground,
-		display: "flex",
-		justifyContent: "space-evenly",
-		alignItems: "center",
-		height: "100%",
-		textAlign: "center",
-	},
-	logo: {
-		logo: theme.logo,
-		content: "url(" + ((theme.appLogoLight || theme.appLogoDark) ? getBackendUrl() + "/public/" + (theme.mode === "light" ? theme.appLogoLight || theme.appLogoDark : theme.appLogoDark || theme.appLogoLight) : (theme.mode === "light" ? logo : logoDark)) + ")"
-	},
+const ContactsWrapper = styled(Grid)(() => ({
+	display: "flex",
+	height: "100%",
+	flexDirection: "column",
+	overflowY: "hidden",
+}));
+
+const MessagesWrapper = styled(Grid)(() => ({
+	display: "flex",
+	height: "100%",
+	flexDirection: "column",
+}));
+
+const WelcomeMsg = styled(Paper)(({ theme }) => ({
+	background: theme.palette.tabHeaderBackground,
+	display: "flex",
+	justifyContent: "space-evenly",
+	alignItems: "center",
+	height: "100%",
+	textAlign: "center",
 }));
 
 const Chat = () => {
-	const classes = useStyles();
 	const { ticketId } = useParams();
 
 	return (
-		<div className={classes.chatContainer}>
-			<div className={classes.chatPapper}>
+		<ChatContainer>
+			<ChatPaper>
 				<Grid container spacing={0}>
-					<Grid item xs={4} className={classes.contactsWrapper}>
+					<ContactsWrapper item xs={4}>
 						<TicketsManager />
-					</Grid>
-					<Grid item xs={8} className={classes.messagessWrapper}>
+					</ContactsWrapper>
+					<MessagesWrapper item xs={8}>
 						{ticketId ? (
 							<>
 								<Ticket />
 							</>
 						) : (
-							<Paper square className={classes.welcomeMsg}>
+							<WelcomeMsg square>
 								<span>
 									<center>
-										<img className={classes.logo} width="40%" alt="" />
+										{i18n.t("chat.noTicketMessage")}
 									</center>
-									{/*i18n.t("chat.noTicketMessage")*/}
 								</span>
-							</Paper>
+							</WelcomeMsg>
 						)}
-					</Grid>
+					</MessagesWrapper>
 				</Grid>
-			</div>
-		</div>
+			</ChatPaper>
+		</ChatContainer>
 	);
 };
 

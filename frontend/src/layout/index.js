@@ -8,7 +8,6 @@ import { useLocation } from "react-router-dom";
 // import { WebSocketInterface } from "jssip";
 
 import {
-  makeStyles,
   Drawer,
   AppBar,
   Toolbar,
@@ -21,17 +20,16 @@ import {
   useTheme,
   useMediaQuery,
   Avatar,
-  // FormControl,
   Badge,
-  withStyles,
   Chip,
-} from "@material-ui/core";
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
 
-import MenuIcon from "@material-ui/icons/Menu";
-import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
-// import AccountCircle from "@material-ui/icons/AccountCircle";
-import CachedIcon from "@material-ui/icons/Cached";
-// import whatsappIcon from "../assets/nopicture.png";
+import MenuIcon from "@mui/icons-material/Menu";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import CachedIcon from "@mui/icons-material/Cached";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
+import Brightness7Icon from "@mui/icons-material/Brightness7";
 
 import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
@@ -39,7 +37,6 @@ import NotificationsVolume from "../components/NotificationsVolume";
 import UserModal from "../components/UserModal";
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
-// import DarkMode from "../components/DarkMode";
 import { i18n } from "../translate/i18n";
 import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
@@ -49,11 +46,7 @@ import logoDark from "../assets/logo-black.png";
 import ChatPopover from "../pages/Chat/ChatPopover";
 
 import { useDate } from "../hooks/useDate";
-// import UserLanguageSelector from "../components/UserLanguageSelector";
-
 import ColorModeContext from "./themeContext";
-import Brightness4Icon from "@material-ui/icons/Brightness4";
-import Brightness7Icon from "@material-ui/icons/Brightness7";
 import BusinessIcon from '@mui/icons-material/Business';
 import InsertEmoticonIcon from '@mui/icons-material/InsertEmoticon';
 import { getBackendUrl } from "../config";
@@ -69,63 +62,49 @@ const backendUrl = getBackendUrl();
 
 const drawerWidth = 280;
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    display: "flex",
-    height: "100vh",
-    // [theme.breakpoints.down("sm")]: {
-    //   height: "calc(100vh - 56px)",
-    // },
-    maxHeight:"100% !important",
-    backgroundColor: theme.palette.fancyBackground,
-    "& .MuiButton-outlinedPrimary": {
-      color: theme.palette.primary,
-      border:
-        theme.mode === "light"
-          ? "1px solid rgba(0 124 102)"
-          : "1px solid rgba(255, 255, 255, 0.5)",
-      borderRadius: "50px",
-    },
-    "& .MuiTab-textColorPrimary.Mui-selected": {
-      color: `#111416`,
-    },
-    "& .MuiButton-root": {
-      borderRadius: "50px",
-    },
+// Styled Components
+const RootContainer = styled('div')(({ theme }) => ({
+  display: "flex",
+  height: "100vh",
+  maxHeight: "100% !important",
+  backgroundColor: theme.palette.fancyBackground,
+  "& .MuiButton-outlinedPrimary": {
+    color: theme.palette.primary,
+    border:
+      theme.mode === "light"
+        ? "1px solid rgba(0 124 102)"
+        : "1px solid rgba(255, 255, 255, 0.5)",
+    borderRadius: "50px",
   },
-  chip: {
-    background: "red",
-    color: "white",
+  "& .MuiTab-textColorPrimary.Mui-selected": {
+    color: `#111416`,
   },
-  avatar: {
-    width: "100%",
+  "& .MuiButton-root": {
+    borderRadius: "50px",
   },
-  toolbar: {
-    paddingRight: 52, // keep right padding when drawer closed
-    color: theme.palette.dark.main,
-    background: theme.palette.barraSuperior,
-    minHeight: `76px`
-  },
-  toolbarIcon: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#111416",
-    backgroundSize: "cover",
-    padding: "17px 8px",
-    minHeight: "48px",
-    [theme.breakpoints.down("sm")]: {
-      height: "48px",
-    },
-  },
-  appBar: {
-    zIndex: theme.zIndex.drawer + 1,
-    transition: theme.transitions.create(["width", "margin"], {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
-    }),
-  },
-  appBarShift: {
+}));
+
+const StyledChip = styled(Chip)(() => ({
+  background: "red",
+  color: "white",
+}));
+
+const StyledToolbar = styled(Toolbar)(({ theme }) => ({
+  paddingRight: 52,
+  color: theme.palette.dark.main,
+  background: theme.palette.barraSuperior,
+  minHeight: `76px`
+}));
+
+const StyledAppBar = styled(AppBar, {
+  shouldForwardProp: (prop) => prop !== 'drawerOpen',
+})(({ theme, drawerOpen }) => ({
+  zIndex: theme.zIndex.drawer + 1,
+  transition: theme.transitions.create(["width", "margin"], {
+    easing: theme.transitions.easing.sharp,
+    duration: theme.transitions.duration.leavingScreen,
+  }),
+  ...(drawerOpen && {
     marginLeft: drawerWidth,
     width: `calc(100% - 275px)`,
     transition: theme.transitions.create(["width", "margin"], {
@@ -135,19 +114,13 @@ const useStyles = makeStyles((theme) => ({
     [theme.breakpoints.down("sm")]: {
       display: "none",
     },
-  },
-  // menuButton: {
-  //   marginRight: 36,
-  // },
-  menuButtonHidden: {
-    display: "none",
-  },
-  title: {
-    flexGrow: 1,
-    fontSize: 14,
-    color: "white",
-  },
-  drawerPaper: {
+  }),
+}));
+
+const StyledDrawer = styled(Drawer, {
+  shouldForwardProp: (prop) => prop !== 'drawerOpen',
+})(({ theme, drawerOpen }) => ({
+  "& .MuiDrawer-paper": {
     position: "relative",
     whiteSpace: "nowrap",
     overflowX: "hidden",
@@ -158,88 +131,89 @@ const useStyles = makeStyles((theme) => ({
       duration: theme.transitions.duration.enteringScreen,
     }),
     overflowY: "hidden",
-  },
-
-  drawerPaperClose: {
-    overflowX: "hidden",
-    overflowY: "hidden",
-    transition: theme.transitions.create("width", {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
+    ...(!drawerOpen && {
+      overflowX: "hidden",
+      overflowY: "hidden",
+      transition: theme.transitions.create("width", {
+        easing: theme.transitions.easing.sharp,
+        duration: theme.transitions.duration.leavingScreen,
+      }),
+      width: theme.spacing(7),
+      [theme.breakpoints.up("sm")]: {
+        width: theme.spacing(9),
+      },
     }),
-    width: theme.spacing(7),
-    [theme.breakpoints.up("sm")]: {
-      width: theme.spacing(9),
-    },
-  },
-
-  appBarSpacer: {
-    minHeight: "78px",
-  },
-  content: {
-    flex: 1,
-    overflow: "auto",
-  },
-  container: {
-    paddingTop: theme.spacing(4),
-    paddingBottom: theme.spacing(4),
-  },
-  // paper: {
-  //     padding: theme.spacing(2),
-  //     display: "flex",
-  //     overflow: "auto",
-  //     flexDirection: "column",
-  //   },
-  containerWithScroll: {
-    flex: 1,
-    // padding: theme.spacing(1),
-    overflowY: "scroll", // Use "auto" para mostrar a barra de rolagem apenas quando necessário
-    overflowX: "hidden", // Oculta a barra de rolagem horizontal
-    ...theme.scrollbarStyles,
-    paddingTop: "28px !important",
-    border: "2px solid transparent",
-    "&::-webkit-scrollbar": {
-      display: "none",
-    },
-    "-ms-overflow-style": "none",
-    "scrollbar-width": "none",
-    backgroundColor: "#111416",
-  },
-  NotificationsPopOver: {
-    // color: theme.barraSuperior.secondary.main,
-  },
-  logo: {
-    width: "100%",
-    height: "45px",
-    maxWidth: 180,
-    [theme.breakpoints.down("sm")]: {
-      width: "auto",
-      height: "100%",
-      maxWidth: 180,
-    },
-    logo: theme.logo,
-    content: "url(" + (theme.mode === "light" ? theme.calculatedLogoLight() : theme.calculatedLogoDark()) + ")"
-  },
-  hideLogo: {
-    display: "none",
-  },
-  avatar2: {
-    width: theme.spacing(6),
-    height: theme.spacing(6),
-    cursor: "pointer",
-    borderRadius: "50%",
-    border: "1px solid #ccc",
-  },
-  updateDiv: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
   },
 }));
 
-const StyledBadge = withStyles((theme) => ({
-  badge: {
+const MenuButtonHidden = styled(IconButton)(() => ({
+  display: "none",
+}));
+
+const StyledTitle = styled(Typography)(() => ({
+  flexGrow: 1,
+  fontSize: 14,
+  color: "white",
+}));
+
+const AppBarSpacer = styled('div')(() => ({
+  minHeight: "78px",
+}));
+
+const ContentMain = styled('main')(() => ({
+  flex: 1,
+  overflow: "auto",
+}));
+
+const ContainerWithScroll = styled(List)(({ theme }) => ({
+  flex: 1,
+  overflowY: "scroll",
+  overflowX: "hidden",
+  ...theme.scrollbarStyles,
+  paddingTop: "28px !important",
+  border: "2px solid transparent",
+  "&::-webkit-scrollbar": {
+    display: "none",
+  },
+  "-ms-overflow-style": "none",
+  "scrollbar-width": "none",
+  backgroundColor: "#111416",
+}));
+
+const LogoImage = styled('img', {
+  shouldForwardProp: (prop) => prop !== 'drawerOpen',
+})(({ theme, drawerOpen }) => ({
+  width: "100%",
+  height: "45px",
+  maxWidth: 180,
+  [theme.breakpoints.down("sm")]: {
+    width: "auto",
+    height: "100%",
+    maxWidth: 180,
+  },
+  content: "url(" + (theme.mode === "light" ? theme.calculatedLogoLight() : theme.calculatedLogoDark()) + ")",
+  ...((!drawerOpen) && {
+    display: "none",
+  }),
+}));
+
+const StyledAvatar = styled(Avatar)(({ theme }) => ({
+  width: theme.spacing(6),
+  height: theme.spacing(6),
+  cursor: "pointer",
+  borderRadius: "50%",
+  border: "1px solid #ccc",
+}));
+
+const UpdateDiv = styled('div')(() => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+}));
+
+const StyledBadge = styled(Badge)(({ theme }) => ({
+  "& .MuiBadge-badge": {
     backgroundColor: "#44b700",
     color: "#44b700",
     boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
@@ -250,7 +224,7 @@ const StyledBadge = withStyles((theme) => ({
       width: "100%",
       height: "100%",
       borderRadius: "50%",
-      animation: "$ripple 1.2s infinite ease-in-out",
+      animation: "ripple 1.2s infinite ease-in-out",
       border: "14px solid currentColor",
       content: '""',
     },
@@ -265,18 +239,16 @@ const StyledBadge = withStyles((theme) => ({
       opacity: 0,
     },
   },
-}))(Badge);
+}));
 
-const SmallAvatar = withStyles((theme) => ({
-  root: {
-    width: 22,
-    height: 22,
-    border: `2px solid ${theme.palette.background.paper}`,
-  },
-}))(Avatar);
+const SmallAvatar = styled(Avatar)(({ theme }) => ({
+  width: 22,
+  height: 22,
+  border: `2px solid ${theme.palette.background.paper}`,
+}));
 
 const LoggedInLayout = ({ children, themeToggle }) => {
-  const classes = useStyles();
+  // Styled components used instead of makeStyles
   const [userToken, setUserToken] = useState("disabled");
   const [loadingUserToken, setLoadingUserToken] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
@@ -468,16 +440,10 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   }
 
   return (
-    <div className={classes.root}>
-      <Drawer
+    <RootContainer>
+      <StyledDrawer
         variant={drawerVariant}
-        className={drawerOpen ? classes.drawerPaper : classes.drawerPaperClose}
-        classes={{
-          paper: clsx(
-            classes.drawerPaper,
-            !drawerOpen && classes.drawerPaperClose
-          ),
-        }}
+        drawerOpen={drawerOpen}
         open={drawerOpen}
       >
         {/* <div className={classes.toolbarIcon}>
@@ -493,10 +459,10 @@ const LoggedInLayout = ({ children, themeToggle }) => {
             <ChevronLeftIcon style={{ color: "#25b6e8" }} />
           </IconButton>
         </div> */}
-        <List className={classes.containerWithScroll}>
+        <ContainerWithScroll>
         {!isFinanceiroAberto ? (
           <>
-            <img className={drawerOpen ? classes.logo : classes.hideLogo}
+            <LogoImage drawerOpen={drawerOpen}
                 style={{
                   display: "block",
                   margin: "0 auto",
@@ -510,7 +476,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
           </>
         ) : (
           <>
-            <img className={drawerOpen ? classes.logo : classes.hideLogo}
+            <LogoImage drawerOpen={drawerOpen}
                 style={{
                   display: "block",
                   margin: "0 auto",
@@ -522,33 +488,32 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         )}
           {/* {mainListItems} */}
           <MainListItems collapsed={!drawerOpen} />
-        </List>
+        </ContainerWithScroll>
         {/* <Divider /> */}
-      </Drawer>
+      </StyledDrawer>
 
-      <AppBar
+      <StyledAppBar
         position="absolute"
-        className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
+        drawerOpen={drawerOpen}
         color="primary"
       >
-        <Toolbar variant="dense" className={classes.toolbar}>
+        <StyledToolbar variant="dense">
           <IconButton
             edge="start"
             variant="contained"
             aria-label="open drawer"
             style={{ color: "white" }}
             onClick={() => setDrawerOpen(!drawerOpen)}
-            className={clsx(drawerOpen && classes.menuButtonHidden)}
+            {...(drawerOpen && { component: MenuButtonHidden })}
           >
             <MenuIcon />
           </IconButton>
 
-          <Typography
+          <StyledTitle
             component="h2"
             variant="h6"
             color="inherit"
             noWrap
-            className={classes.title}
           >
             {/* {greaterThenSm && user?.profile === "admin" && getDateAndDifDays(user?.company?.dueDate).difData < 7 ? ( */}
             {greaterThenSm &&
@@ -566,11 +531,11 @@ const LoggedInLayout = ({ children, themeToggle }) => {
                 {currentUser?.company?.name}
               </>
             )}
-          </Typography>
+          </StyledTitle>
 
           {userToken === "enabled" && currentUser?.companyId === 1 && (
             <Chip
-              className={classes.chip}
+              component={StyledChip}
               label={i18n.t("mainDrawer.appBar.user.token")}
             />
           )}
@@ -629,7 +594,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
               <Avatar
                 //alt="Multi100"
                 //alt=<ChevronLeftIcon/>
-                className={classes.avatar2}
+                component={StyledAvatar}
                 src={profileUrl}
               />
             </StyledBadge>
@@ -664,15 +629,15 @@ const LoggedInLayout = ({ children, themeToggle }) => {
               </MenuItem>
             </Menu>
           </div>
-        </Toolbar>
-      </AppBar>
+        </StyledToolbar>
+      </StyledAppBar>
 
-      <main className={classes.content}>
-        <div className={classes.appBarSpacer} />
+      <ContentMain>
+        <AppBarSpacer />
 
         {children ? children : null}
-      </main>
-    </div>
+      </ContentMain>
+    </RootContainer>
   );
 };
 
