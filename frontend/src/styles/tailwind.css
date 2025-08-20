@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Camada de compatibilidade para preservar estilos existentes */
+@layer base {
+  /* Preservar estilos base que já existem */
+  * {
+    /* Não sobrescrever estilos existentes críticos */
+  }
+}
+
+@layer components {
+  /* Componentes personalizados que preservam aparência atual */
+  .btn-primary {
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded transition-colors;
+  }
+  
+  .card-material {
+    @apply bg-white rounded-lg shadow-material-1 p-6;
+  }
+  
+  .input-material {
+    @apply border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  }
+}
+
+@layer utilities {
+  /* Utilitários específicos para o projeto */
+  .text-material-primary {
+    color: rgba(0, 0, 0, 0.87);
+  }
+  
+  .text-material-secondary {
+    color: rgba(0, 0, 0, 0.6);
+  }
+  
+  .dark .text-material-primary {
+    color: rgba(255, 255, 255, 0.87);
+  }
+  
+  .dark .text-material-secondary {
+    color: rgba(255, 255, 255, 0.6);
+  }
+}

@@ -13,7 +13,7 @@ import {
   SvgIcon,
   useTheme
 } from "@mui/material";
-import Grid2 from "@mui/material/Unstable_Grid2/Grid2";
+import Grid from "@mui/material/Grid";
 import {
   LineChart,
   Line,
@@ -296,8 +296,8 @@ const Dashboard = () => {
           }}
         >
           <Container maxWidth="xl">
-            <Grid2 container spacing={3}>
-              <Grid2 xs={12} sm={6} md={3}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6} md={3}>
                 <MetricCard
                   title="Em Atendimento"
                   value={counters.supportHappening || 0}
@@ -306,9 +306,9 @@ const Dashboard = () => {
                   icon={<CallIcon />}
                   chartData={generateChartData(counters.supportHappening || 0)}
                 />
-              </Grid2>
+              </Grid>
 
-              <Grid2 xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={3}>
                 <MetricCard
                   title="Aguardando"
                   value={counters.supportPending || 0}
@@ -317,9 +317,9 @@ const Dashboard = () => {
                   icon={<HourglassEmptyIcon />}
                   chartData={generateChartData(counters.supportPending || 0)}
                 />
-              </Grid2>
+              </Grid>
 
-              <Grid2 xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={3}>
                 <MetricCard
                   title="Finalizados"
                   value={counters.supportFinished || 0}
@@ -328,9 +328,9 @@ const Dashboard = () => {
                   icon={<CheckCircleIcon />}
                   chartData={generateChartData(counters.supportFinished || 0)}
                 />
-              </Grid2>
+              </Grid>
 
-              <Grid2 xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={3}>
                 <MetricCard
                   title="Total de Mensagens"
                   value={`${GetMessages(false, true).count}/${GetMessages(true, true).count}`}
@@ -339,12 +339,12 @@ const Dashboard = () => {
                   icon={<MessageIcon />}
                   chartData={generateChartData(GetMessages(true, true).count)}
                 />
-              </Grid2>
-            </Grid2>
+              </Grid>
+            </Grid>
 
             {/* Cards de Novos Contatos, Tickets Ativos e Passivos */}
-            <Grid2 container spacing={3} sx={{ mt: 3 }}>
-              <Grid2 xs={12} sm={6} lg={4}>
+            <Grid container spacing={3} sx={{ mt: 3 }}>
+              <Grid item xs={12} sm={6} lg={4}>
                 <Card sx={{
                   height: "100%",
                   backgroundColor: theme.palette.background.paper,
@@ -386,9 +386,9 @@ const Dashboard = () => {
                     </Stack>
                   </CardContent>
                 </Card>
-              </Grid2>
+              </Grid>
 
-              <Grid2 xs={12} sm={6} lg={4}>
+              <Grid item xs={12} sm={6} lg={4}>
                 <Card sx={{
                   height: "100%",
                   backgroundColor: theme.palette.background.paper,
@@ -430,9 +430,9 @@ const Dashboard = () => {
                     </Stack>
                   </CardContent>
                 </Card>
-              </Grid2>
+              </Grid>
 
-              <Grid2 xs={12} sm={6} lg={4}>
+              <Grid item xs={12} sm={6} lg={4}>
                 <Card sx={{
                   height: "100%",
                   backgroundColor: theme.palette.background.paper,
@@ -474,8 +474,8 @@ const Dashboard = () => {
                     </Stack>
                   </CardContent>
                 </Card>
-              </Grid2>
-            </Grid2>
+              </Grid>
+            </Grid>
 
             {/* Card de Performance */}
             <Card
@@ -497,30 +497,30 @@ const Dashboard = () => {
                   </Typography>
                 </Stack>
 
-                <Grid2 container spacing={3}>
-                  <Grid2 xs={12} md={6}>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
                     <PerformanceCard
                       title="Taxa de Resolução"
                       value={counters.supportFinished || 0}
                       max={counters.supportFinished + counters.supportPending || 1}
                       color={theme.palette.primary.main}
                     />
-                  </Grid2>
-                  <Grid2 xs={12} md={6}>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
                     <PerformanceCard
                       title="Tempo Médio de Resposta"
                       value={counters.avgResponseTime || 0} // Use dynamic data for average response time
                       max={counters.maxResponseTime || 60} // Use dynamic data for max response time
                       color={theme.palette.warning.main}
                     />
-                  </Grid2>
-                </Grid2>
+                  </Grid>
+                </Grid>
               </CardContent>
             </Card>
 
             {/* Gráficos */}
-            <Grid2 container spacing={3} sx={{ mt: 2 }}>
-              <Grid2 xs={12} lg={8}>
+            <Grid container spacing={3} sx={{ mt: 2 }}>
+              <Grid item xs={12} lg={8}>
                 <Card
                   sx={{
                     height: '100%',
@@ -614,9 +614,9 @@ const Dashboard = () => {
                       </ResponsiveContainer>
                     </CardContent>
                 </Card>
-              </Grid2>
+              </Grid>
 
-              <Grid2 xs={12} lg={4}>
+              <Grid item xs={12} lg={4}>
                 <Card
                   sx={{
                     height: '100%',
@@ -663,8 +663,8 @@ const Dashboard = () => {
                     </ResponsiveContainer>
                   </CardContent>
                 </Card>
-              </Grid2>
-            </Grid2>
+              </Grid>
+            </Grid>
 
             {/* Tabela de Atendentes */}
             <Card

@@ -987,7 +987,7 @@ export const runComponentTests = async (): Promise<void> => {
 ## ✅ Critérios de Conclusão da Fase 3
 
 ### Obrigatórios (Todos devem ser atendidos)
-- [ ] **MUI v6 funcionando** perfeitamente
+- [ ] **MUI v7 funcionando** perfeitamente
 - [ ] **Material-UI v4 removido** completamente
 - [ ] **Tailwind CSS implementado** sem quebrar estilos existentes
 - [ ] **Shadcn/UI integrado** e funcionando
