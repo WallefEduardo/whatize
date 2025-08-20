@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import api from "./services/api";
 import "react-toastify/dist/ReactToastify.css";
-import { QueryClient, QueryClientProvider } from "react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./config/query-config";
 import { ptBR } from "@material-ui/core/locale";
 import { createTheme, ThemeProvider } from "@material-ui/core/styles";
 import { useMediaQuery } from "@material-ui/core";
@@ -15,7 +16,6 @@ import defaultLogoDark from "./assets/logo-black.png";
 import defaultLogoFavicon from "./assets/favicon.ico";
 import useSettings from "./hooks/useSettings";
 
-const queryClient = new QueryClient();
 
 const App = () => {
   const [locale, setLocale] = useState();
