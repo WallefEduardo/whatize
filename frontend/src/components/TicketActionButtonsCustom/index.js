@@ -3,8 +3,8 @@ import { useHistory } from "react-router-dom";
 
 import { Can } from "../Can";
 import { makeStyles } from "@material-ui/core/styles";
-import { IconButton, Menu } from "@material-ui/core";
-import { DeviceHubOutlined, History, MoreVert, PictureAsPdf, Replay, SwapHorizOutlined } from "@material-ui/icons";
+import { IconButton, Menu, MenuItem, Switch } from "@material-ui/core";
+import { DeviceHubOutlined, History, MoreVert, PictureAsPdf, Replay, SwapHorizOutlined, Delete as DeleteIcon, Undo as UndoIcon, HighlightOff as HighlightOffIcon } from "@material-ui/icons";
 import { v4 as uuidv4 } from "uuid";
 
 import { i18n } from "../../translate/i18n";
@@ -26,13 +26,7 @@ import Button from '@material-ui/core/Button';
 import TransferTicketModalCustom from "../TransferTicketModalCustom";
 import AcceptTicketWithouSelectQueue from "../AcceptTicketWithoutQueueModal";
 
-//icones
-import HighlightOffIcon from "@material-ui/icons/HighlightOff";
-import UndoIcon from '@material-ui/icons/Undo';
-
 import ScheduleModal from "../ScheduleModal";
-import MenuItem from "@material-ui/core/MenuItem";
-import { Switch } from "@material-ui/core";
 import ShowTicketOpen from "../ShowTicketOpenModal";
 import { toast } from "react-toastify";
 import useCompanySettings from "../../hooks/useSettings/companySettings";
@@ -48,10 +42,17 @@ const useStyles = makeStyles(theme => ({
         alignSelf: "center",
         marginLeft: "auto",
         display: "flex",
-        flexWrap: "wrap",
-        gap: theme.spacing(0.5),
+        flexWrap: "nowrap",
+        gap: theme.spacing(0.25),
         "& > *": {
-            margin: theme.spacing(0.5),
+            margin: theme.spacing(0.25),
+        },
+        "@media (max-width: 1366px)": {
+            marginRight: 2,
+            gap: "2px",
+            "& > *": {
+                margin: "2px",
+            },
         },
         [theme.breakpoints.down("md")]: {
             margin: theme.spacing(0.25),
@@ -88,7 +89,7 @@ const SessionSchema = Yup.object().shape({
     ratingId: Yup.string().required("Avaliação obrigatória"),
 });
 
-const TicketActionButtonsCustom = ({ ticket
+const TicketActionButtonsCustom = ({ ticket, compactMode = false
     // , showSelectMessageCheckbox,
     // selectedMessages,
     // forwardMessageModalOpen,
@@ -126,6 +127,8 @@ const TicketActionButtonsCustom = ({ ticket
 
     const [anchorEl, setAnchorEl] = useState(null);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [compactMenuAnchor, setCompactMenuAnchor] = useState(null);
+    const [compactMenuOpen, setCompactMenuOpen] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -270,6 +273,14 @@ const TicketActionButtonsCustom = ({ ticket
         setTransferTicketModalOpen(false);
     };
 
+    const handleCloseScheduleModal = () => {
+        setScheduleModalOpen(false);
+    };
+
+    const handleOpenTicketMessageDialog = () => {
+        setOpenTicketMessageDialog(true);
+    };
+
     const handleDeleteTicket = async () => {
         try {
             await api.delete(`/tickets/${ticket.id}`);
@@ -393,6 +404,178 @@ const TicketActionButtonsCustom = ({ ticket
         }
     };
 
+    const handleCompactMenuClick = (event) => {
+        setCompactMenuAnchor(event.currentTarget);
+        setCompactMenuOpen(true);
+    };
+
+    const handleCompactMenuClose = () => {
+        setCompactMenuAnchor(null);
+        setCompactMenuOpen(false);
+    };
+
+    const handleCompactMenuItemClick = (action) => {
+        handleCompactMenuClose();
+        action();
+    };
+
+    if (compactMode) {
+        return (
+            <>
+                {openAlert && (
+                    <ShowTicketOpen
+                        isOpen={openAlert}
+                        handleClose={handleCloseAlert}
+                        user={userTicketOpen}
+                        queue={queueTicketOpen}
+                    />
+                )}
+                {acceptTicketWithouSelectQueueOpen && (
+                    <AcceptTicketWithouSelectQueue
+                        modalOpen={acceptTicketWithouSelectQueueOpen}
+                        onClose={(e) => setAcceptTicketWithouSelectQueueOpen(false)}
+                        ticketId={ticket.id}
+                        ticket={ticket}
+                    />
+                )}
+                {showTicketLogOpen && (
+                    <ShowTicketLogModal
+                        isOpen={showTicketLogOpen}
+                        handleClose={(e) => setShowTicketLogOpen(false)}
+                        ticketId={ticket.id}
+                    />
+                )}
+                {openTicketMessageDialog && (
+                    <TicketMessagesDialog
+                        open={openTicketMessageDialog}
+                        handleClose={() => setOpenTicketMessageDialog(false)}
+                        ticketId={ticket.id}
+                    />
+                )}
+                {transferTicketModalOpen && (
+                    <TransferTicketModalCustom
+                        modalOpen={transferTicketModalOpen}
+                        onClose={handleCloseTransferTicketModal}
+                        ticketid={ticket.id}
+                    />
+                )}
+                {scheduleModalOpen && (
+                    <ScheduleModal
+                        open={scheduleModalOpen}
+                        onClose={handleCloseScheduleModal}
+                        aria-labelledby="schedule-modal-title"
+                        contactId={contactId}
+                    />
+                )}
+                {confirmationOpen && (
+                    <ConfirmationModal
+                        title={i18n.t("tickets.buttons.resolve")}
+                        open={confirmationOpen}
+                        onClose={setConfirmationOpen}
+                        onConfirm={handleDeleteTicket}
+                    >
+                        {i18n.t("tickets.confirmationModal.deleteMessage")}
+                    </ConfirmationModal>
+                )}
+
+                <div className={classes.actionButtons}>
+                    {/* Botões sempre visíveis no modo compacto */}
+                    {(ticket.status === "open" || ticket.status === "group") && (
+                        <>
+                            <IconButton className={classes.bottomButtonVisibilityIcon}>
+                                <Tooltip title={i18n.t("messagesList.header.buttons.resolve")}>
+                                    <HighlightOffIcon
+                                        onClick={handleClickOpen}
+                                    />
+                                </Tooltip>
+                            </IconButton>
+
+                            <IconButton className={classes.bottomButtonVisibilityIcon}>
+                                <Tooltip title="Transferir Ticket">
+                                    <SwapHorizOutlined
+                                        onClick={handleOpenTransferModal}
+                                    />
+                                </Tooltip>
+                            </IconButton>
+                        </>
+                    )}
+
+                    <IconButton 
+                        className={classes.bottomButtonVisibilityIcon}
+                        onClick={handleCompactMenuClick}
+                    >
+                        <Tooltip title="Mais opções">
+                            <MoreVert />
+                        </Tooltip>
+                    </IconButton>
+
+                    <Menu
+                        anchorEl={compactMenuAnchor}
+                        open={compactMenuOpen}
+                        onClose={handleCompactMenuClose}
+                        anchorOrigin={{
+                            vertical: 'bottom',
+                            horizontal: 'right',
+                        }}
+                        transformOrigin={{
+                            vertical: 'top',
+                            horizontal: 'right',
+                        }}
+                        PaperProps={{
+                            style: {
+                                maxHeight: 48 * 6,
+                                width: '250px',
+                            },
+                        }}
+                    >
+                        {/* Switch de desabilitar chatbot */}
+                        <MenuItem onClick={(e) => e.stopPropagation()}>
+                            <Switch
+                                size="small"
+                                checked={disableBot}
+                                onChange={() => handleContactToggleDisableBot()}
+                                style={{ marginRight: 8 }}
+                            />
+                            {i18n.t("contactModal.form.chatBotContact")}
+                        </MenuItem>
+
+                        {/* Devolver à fila */}
+                        {(ticket.status === "open" || ticket.status === "group") && (
+                            <MenuItem onClick={() => handleCompactMenuItemClick(() => handleUpdateTicketStatus(null, "pending", null))}>
+                                <UndoIcon style={{ marginRight: 8 }} />
+                                {i18n.t("tickets.buttons.returnQueue")}
+                            </MenuItem>
+                        )}
+
+                        {/* Logs do Ticket */}
+                        <MenuItem onClick={() => handleCompactMenuItemClick(() => handleShowLogTicket())}>
+                            <History style={{ marginRight: 8 }} />
+                            {i18n.t("messagesList.header.buttons.logTicket")}
+                        </MenuItem>
+
+                        {/* Habilitar Integração */}
+                        <MenuItem onClick={() => handleCompactMenuItemClick(() => handleEnableIntegration())}>
+                            <DeviceHubOutlined style={{ marginRight: 8, color: enableIntegration ? "green" : "inherit" }} />
+                            {i18n.t("messagesList.header.buttons.enableIntegration")}
+                        </MenuItem>
+
+                        {/* Exportar em PDF */}
+                        <MenuItem onClick={() => handleCompactMenuItemClick(() => handleOpenTicketMessageDialog())}>
+                            <PictureAsPdf style={{ marginRight: 8 }} />
+                            Exportar em PDF
+                        </MenuItem>
+
+                        {/* Deletar ticket */}
+                        <MenuItem onClick={() => handleCompactMenuItemClick(() => handleClickOpen())}>
+                            <DeleteIcon style={{ marginRight: 8 }} />
+                            Deletar Ticket
+                        </MenuItem>
+                    </Menu>
+                </div>
+            </>
+        );
+    }
+
     return (
         <>
             {openAlert && (
@@ -478,15 +661,6 @@ const TicketActionButtonsCustom = ({ ticket
                             </IconButton>
 
                             <IconButton className={classes.bottomButtonVisibilityIcon}>
-                                <Tooltip title={i18n.t("tickets.buttons.returnQueue")}>
-                                    <UndoIcon
-                                        // color="primary"
-                                        onClick={(e) => handleUpdateTicketStatus(e, "pending", null)}
-                                    />
-                                </Tooltip>
-                            </IconButton>
-
-                            <IconButton className={classes.bottomButtonVisibilityIcon}>
                                 <Tooltip title="Transferir Ticket">
                                     <SwapHorizOutlined
                                         // color="primary"
@@ -494,33 +668,77 @@ const TicketActionButtonsCustom = ({ ticket
                                     />
                                 </Tooltip>
                             </IconButton>
+
+                            <IconButton 
+                                className={classes.bottomButtonVisibilityIcon}
+                                onClick={handleCompactMenuClick}
+                            >
+                                <Tooltip title="Mais opções">
+                                    <MoreVert />
+                                </Tooltip>
+                            </IconButton>
                         </>
 
-                        {/* {showSchedules && (
-                            <>
-                                <IconButton className={classes.bottomButtonVisibilityIcon}>
-                                    <Tooltip title={i18n.t("tickets.buttons.scredule")}>
-                                        <EventIcon
-                                            // color="primary"
-                                            onClick={handleOpenScheduleModal}
-                                        />
-                                    </Tooltip>
-                                </IconButton>
-                            </>
-                        )} */}
-
-                        <MenuItem className={classes.bottomButtonVisibilityIcon}>
-                            <Tooltip title={i18n.t("contactModal.form.chatBotContact")}>
+                        <Menu
+                            anchorEl={compactMenuAnchor}
+                            open={compactMenuOpen}
+                            onClose={handleCompactMenuClose}
+                            anchorOrigin={{
+                                vertical: 'bottom',
+                                horizontal: 'right',
+                            }}
+                            transformOrigin={{
+                                vertical: 'top',
+                                horizontal: 'right',
+                            }}
+                            PaperProps={{
+                                style: {
+                                    maxHeight: 48 * 4.5,
+                                    width: '250px',
+                                },
+                            }}
+                        >
+                            {/* Switch de desabilitar chatbot */}
+                            <MenuItem onClick={(e) => e.stopPropagation()}>
                                 <Switch
                                     size="small"
-                                    // color="primary"
                                     checked={disableBot}
                                     onChange={() => handleContactToggleDisableBot()}
+                                    style={{ marginRight: 8 }}
                                 />
-                            </Tooltip>
-                        </MenuItem>
+                                {i18n.t("contactModal.form.chatBotContact")}
+                            </MenuItem>
 
+                            {/* Devolver à fila */}
+                            <MenuItem onClick={() => handleCompactMenuItemClick(() => handleUpdateTicketStatus(null, "pending", null))}>
+                                <UndoIcon style={{ marginRight: 8 }} />
+                                {i18n.t("tickets.buttons.returnQueue")}
+                            </MenuItem>
 
+                            {/* Logs do Ticket */}
+                            <MenuItem onClick={() => handleCompactMenuItemClick(() => handleShowLogTicket())}>
+                                <History style={{ marginRight: 8 }} />
+                                {i18n.t("messagesList.header.buttons.logTicket")}
+                            </MenuItem>
+
+                            {/* Habilitar Integração */}
+                            <MenuItem onClick={() => handleCompactMenuItemClick(() => handleEnableIntegration())}>
+                                <DeviceHubOutlined style={{ marginRight: 8, color: enableIntegration ? "green" : "inherit" }} />
+                                {i18n.t("messagesList.header.buttons.enableIntegration")}
+                            </MenuItem>
+
+                            {/* Exportar em PDF */}
+                            <MenuItem onClick={() => handleCompactMenuItemClick(() => handleOpenTicketMessageDialog())}>
+                                <PictureAsPdf style={{ marginRight: 8 }} />
+                                Exportar em PDF
+                            </MenuItem>
+
+                            {/* Deletar ticket */}
+                            <MenuItem onClick={() => handleCompactMenuItemClick(() => handleClickOpen())}>
+                                <DeleteIcon style={{ marginRight: 8 }} />
+                                Deletar Ticket
+                            </MenuItem>
+                        </Menu>
 
                         {confirmationOpen && (
                             <ConfirmationModal

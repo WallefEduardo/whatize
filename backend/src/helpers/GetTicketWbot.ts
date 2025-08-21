@@ -8,27 +8,41 @@ type Session = WASocket & {
   id?: number;
 };
 
+// Cache de sessões para reduzir logs
+const wbotCache = new Map<number, { wbot: Session; timestamp: number }>();
+const CACHE_TTL = 3000; // 3 segundos
+
 const GetTicketWbot = async (ticket: Ticket): Promise<Session> => {
-  logger.debug(`🎫 [TICKET-WBOT] Obtendo wbot para ticket: { ticketId: ${ticket.id}, whatsappId: ${ticket.whatsappId}, companyId: ${ticket.companyId} }`);
+  // Log apenas em debug mode ou primeira vez
+  const isDebugMode = process.env.DEBUG_WBOT === 'true';
   
   if (!ticket.whatsappId) {
-    logger.debug(`⚠️ [TICKET-WBOT] Ticket sem whatsappId, buscando WhatsApp padrão...`);
+    if (isDebugMode) {
+      logger.info(`⚠️ [TICKET-WBOT] Ticket sem whatsappId, buscando WhatsApp padrão...`);
+    }
     const defaultWhatsapp = await GetDefaultWhatsApp(ticket.companyId, ticket.whatsappId);
-    logger.debug(`📱 [TICKET-WBOT] WhatsApp padrão encontrado: { whatsappId: ${defaultWhatsapp.id} }`);
-
     await ticket.$set("whatsapp", defaultWhatsapp);
     await ticket.reload();
-    logger.debug(`✅ [TICKET-WBOT] Ticket atualizado com WhatsApp padrão: { ticketId: ${ticket.id}, whatsappId: ${ticket.whatsappId} }`);
   }
-
-  logger.debug(`🔄 [TICKET-WBOT] Chamando getWbot com whatsappId: ${ticket.whatsappId}`);
+  
+  // Verificar cache
+  const cached = wbotCache.get(ticket.whatsappId);
+  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+    return cached.wbot;
+  }
   
   try {
     const wbot = getWbot(ticket.whatsappId);
-    logger.debug(`✅ [TICKET-WBOT] wbot obtido com sucesso`);
+    
+    // Atualizar cache
+    wbotCache.set(ticket.whatsappId, {
+      wbot,
+      timestamp: Date.now()
+    });
+    
     return wbot;
   } catch (error) {
-    logger.error(`❌ [TICKET-WBOT] Erro ao obter wbot: ${error.message}`);
+    logger.error(`❌ [TICKET-WBOT] Erro ao obter wbot para ticket ${ticket.id}: ${error.message}`);
     throw error;
   }
 };
