@@ -1,5 +1,6 @@
 import { Filterable, Op } from "sequelize";
 import Ticket from "../../models/Ticket"
+import Contact from "../../models/Contact"
 import Whatsapp from "../../models/Whatsapp"
 import { getIO } from "../../libs/socket"
 import formatBody from "../../helpers/Mustache";
@@ -63,7 +64,14 @@ const handleOpenTickets = async (companyId: number, whatsapp: Whatsapp) => {
       }
 
       const ticketsForInactiveMessage = await Ticket.findAll({
-        where:  whereCondition1 
+        where: whereCondition1,
+        include: [
+          {
+            model: Contact,
+            as: "contact",
+            attributes: ["id", "number", "name", "isGroup", "companyId"]
+          }
+        ]
       });
 
       if (ticketsForInactiveMessage && ticketsForInactiveMessage.length > 0) {
@@ -111,7 +119,14 @@ const handleOpenTickets = async (companyId: number, whatsapp: Whatsapp) => {
     }
 
     const ticketsToClose = await Ticket.findAll({
-      where: whereCondition
+      where: whereCondition,
+      include: [
+        {
+          model: Contact,
+          as: "contact",
+          attributes: ["id", "number", "name", "isGroup", "companyId"]
+        }
+      ]
     });
 
 
@@ -165,7 +180,14 @@ const handleNPSTickets = async (companyId: number, whatsapp: any) => {
       whatsappId: whatsapp.id,
       updatedAt: { [Op.lt]: dataLimite.toDate() },
       imported: null
-    }
+    },
+    include: [
+      {
+        model: Contact,
+        as: "contact",
+        attributes: ["id", "number", "name", "isGroup", "companyId"]
+      }
+    ]
   });
 
   if (ticketsToClose && ticketsToClose.length > 0) {

@@ -1,7 +1,7 @@
 import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
 
-export function getJidOf(reference: string | Contact | Ticket) {
+export async function getJidOf(reference: string | Contact | Ticket) {
   console.log("🔍 [WHATIZE-TICKETZ] getJidOf - INPUT:", {
     type: reference instanceof Contact ? "Contact" : reference instanceof Ticket ? "Ticket" : "string",
     reference: reference instanceof Contact ? { id: reference.id, number: reference.number, isGroup: reference.isGroup } :
@@ -25,9 +25,43 @@ export function getJidOf(reference: string | Contact | Ticket) {
       });
       return reference.lastRemoteJid;
     }
+    
+    // NOVA VALIDAÇÃO - Não quebra funcionalidade existente
+    if (!reference.contact) {
+      console.log("⚠️ [WHATIZE-TICKETZ] getJidOf - WARNING: Ticket without contact, attempting reload", { 
+        ticketId: reference.id 
+      });
+      
+      // Tentar recarregar o ticket com contact
+      try {
+        await reference.reload({
+          include: [{
+            model: Contact,
+            as: "contact",
+            attributes: ["id", "number", "name", "isGroup", "companyId"]
+          }]
+        });
+        console.log("✅ [WHATIZE-TICKETZ] getJidOf - Contact reloaded successfully");
+      } catch (error) {
+        console.error("❌ [WHATIZE-TICKETZ] getJidOf - Failed to reload contact:", error);
+      }
+    }
+    
+    // Validação final
+    if (!reference.contact || !reference.contact.number) {
+      console.log("❌ [WHATIZE-TICKETZ] getJidOf - ERROR: Ticket without contact after reload", { 
+        ticketId: reference.id 
+      });
+      throw new Error(`Ticket ${reference.id} does not have contact loaded`);
+    }
+    
     isGroup = reference.isGroup;
     address = reference.contact.number;
-    console.log("🔍 [WHATIZE-TICKETZ] getJidOf - Ticket detected (no lastRemoteJid):", { ticketId: reference.id, contactNumber: reference.contact.number, isGroup });
+    console.log("🔍 [WHATIZE-TICKETZ] getJidOf - Ticket detected (no lastRemoteJid):", { 
+      ticketId: reference.id, 
+      contactNumber: reference.contact.number, 
+      isGroup 
+    });
   }
 
   if (typeof address !== "string") {
