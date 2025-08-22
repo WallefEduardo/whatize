@@ -134,7 +134,7 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) => {
+const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading, isOverlay = false }) => {
 	const classes = useStyles();
 
 	const [modalOpen, setModalOpen] = useState(false);
@@ -251,17 +251,34 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 		<>
 			<Drawer
 				className={classes.drawer}
-				variant="persistent"
+				variant={isOverlay ? "temporary" : "persistent"}
 				anchor="right"
 				open={open}
-				PaperProps={{ style: { position: "absolute" } }}
-				BackdropProps={{ style: { position: "absolute" } }}
+				onClose={isOverlay ? handleDrawerClose : undefined}
+				PaperProps={{ 
+					style: { 
+						position: isOverlay ? "fixed" : "absolute",
+						zIndex: isOverlay ? 1300 : undefined,
+						boxShadow: isOverlay ? "0 8px 32px rgba(0,0,0,0.3)" : undefined,
+					} 
+				}}
+				BackdropProps={{ 
+					style: { 
+						position: isOverlay ? "fixed" : "absolute",
+						backgroundColor: isOverlay ? "rgba(0,0,0,0.3)" : undefined,
+					} 
+				}}
 				ModalProps={{
-					container: document.getElementById("drawer-container"),
-					style: { position: "absolute" },
+					container: isOverlay ? document.body : document.getElementById("drawer-container"),
+					style: { position: isOverlay ? "fixed" : "absolute" },
 				}}
 				classes={{
 					paper: classes.drawerPaper,
+				}}
+				SlideProps={{
+					style: {
+						transition: isOverlay ? "transform 0.3s ease-in-out" : undefined,
+					}
 				}}
 			>
 				<div className={classes.header}>

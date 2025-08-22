@@ -39,15 +39,23 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     overflow: "hidden",
     borderLeft: "0",
-    marginRight: -drawerWidth,
+    marginRight: 0, // Removido marginRight negativo pois agora é sempre overlay
     transition: theme.transitions.create("margin", {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
+    [theme.breakpoints.down("md")]: {
+      height: "calc(100vh - 64px)", // Ajuste para header mobile
+    },
+    [theme.breakpoints.down("sm")]: {
+      height: "calc(100vh - 56px)",
+    },
+    "@media (max-width: 1366px)": {
+      maxWidth: "100%",
+    },
   },
 
   mainWrapperShift: {
-
     transition: theme.transitions.create("margin", {
       easing: theme.transitions.easing.easeOut,
       duration: theme.transitions.duration.enteringScreen,
@@ -59,21 +67,34 @@ const useStyles = makeStyles((theme) => ({
     transition: "all 0.3s ease-in-out",
     display: "flex",
     alignItems: "center",
-    gap: "4px",
+    gap: "2px",
+    "@media (max-width: 1366px)": {
+      gap: "1px",
+    },
   },
   
   ticketActionButtonsSmall: {
     "@media (max-width: 1366px)": {
       "& .MuiIconButton-root": {
-        padding: "4px",
+        padding: "2px",
+        margin: "0 1px",
         "& svg": {
-          fontSize: "1.2rem",
+          fontSize: "1.1rem",
         },
       },
       "& .MuiButton-root": {
-        padding: "4px 8px",
-        fontSize: "0.75rem",
+        padding: "2px 6px",
+        fontSize: "0.7rem",
         minWidth: "auto",
+      },
+    },
+    "@media (max-width: 1200px)": {
+      "& .MuiIconButton-root": {
+        padding: "1px",
+        margin: "0",
+        "& svg": {
+          fontSize: "1rem",
+        },
       },
     },
   },
@@ -84,6 +105,38 @@ const useStyles = makeStyles((theme) => ({
         minWidth: "200px !important",
       },
     },
+  },
+
+  // Estilos para o sistema de overlay
+  hoverTriggerZone: {
+    position: "fixed",
+    top: 0,
+    right: 0,
+    width: "30px",
+    height: "100vh",
+    zIndex: 1200,
+    backgroundColor: "transparent",
+    cursor: "pointer",
+    "&::before": {
+      content: '""',
+      position: "absolute",
+      top: "50%",
+      left: "5px",
+      transform: "translateY(-50%)",
+      width: "3px",
+      height: "60px",
+      backgroundColor: theme.palette.primary.main,
+      borderRadius: "2px",
+      opacity: 0.3,
+      transition: "opacity 0.3s ease",
+    },
+    "&:hover::before": {
+      opacity: 0.8,
+    },
+  },
+
+  overlayWrapper: {
+    position: "relative",
   },
 }));
 
@@ -103,7 +156,10 @@ const Ticket = () => {
   const [dragDropFiles, setDragDropFiles] = useState([]);
   const [containerWidth, setContainerWidth] = useState(0);
   const [hasSpaceConflict, setHasSpaceConflict] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+  const [showHoverTrigger, setShowHoverTrigger] = useState(false);
   const headerRef = useRef(null);
+  const hoverTimeoutRef = useRef(null);
   const { companyId } = user;
 
   useEffect(() => {
@@ -112,6 +168,21 @@ const Ticket = () => {
     console.log("===========================")
 }, [ticket])
 
+  // Sistema de overlay ativo em todas as resoluções
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const width = window.innerWidth;
+      setIsSmallScreen(width <= 1366); // Apenas para detectar telas pequenas para responsividade dos botões
+      setShowHoverTrigger(!drawerOpen); // Trigger sempre ativo quando drawer fechado
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+
+    return () => {
+      window.removeEventListener('resize', checkScreenSize);
+    };
+  }, [drawerOpen]);
 
   // Detectar quando precisa usar modo compacto
   useEffect(() => {
@@ -247,6 +318,32 @@ const Ticket = () => {
     setDrawerOpen(false);
   }, []);
 
+  // Controle do hover overlay (funciona em todas as resoluções)
+  const handleTriggerZoneEnter = () => {
+    if (!drawerOpen) {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      setDrawerOpen(true);
+      setShowHoverTrigger(false);
+    }
+  };
+
+  const handleDrawerAreaLeave = () => {
+    if (drawerOpen) {
+      hoverTimeoutRef.current = setTimeout(() => {
+        setDrawerOpen(false);
+        setShowHoverTrigger(true);
+      }, 500); // Delay de 500ms antes de fechar
+    }
+  };
+
+  const handleDrawerAreaEnter = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+  };
+
   const renderMessagesList = () => {
     return (
       <>
@@ -273,11 +370,18 @@ const Ticket = () => {
 
   return (
     <div className={classes.root} id="drawer-container">
+      {/* Zona de trigger para ativar overlay em telas pequenas */}
+      {showHoverTrigger && (
+        <div 
+          className={classes.hoverTriggerZone}
+          onMouseEnter={handleTriggerZoneEnter}
+          title="Informações do contato"
+        />
+      )}
+
       <Paper
         elevation={0}
-        className={clsx(classes.mainWrapper, {
-          [classes.mainWrapperShift]: drawerOpen,
-        })}
+        className={classes.mainWrapper}
       >
         {/* <div id="TicketHeader"> */}
         <TicketHeader loading={loading}>
@@ -331,13 +435,19 @@ const Ticket = () => {
         </ReplyMessageProvider>
       </Paper>
 
-      <ContactDrawer
-        open={drawerOpen}
-        handleDrawerClose={handleDrawerClose}
-        contact={contact}
-        loading={loading}
-        ticket={ticket}
-      />
+      <div 
+        onMouseEnter={handleDrawerAreaEnter}
+        onMouseLeave={handleDrawerAreaLeave}
+      >
+        <ContactDrawer
+          open={drawerOpen}
+          handleDrawerClose={handleDrawerClose}
+          contact={contact}
+          loading={loading}
+          ticket={ticket}
+          isOverlay={true}
+        />
+      </div>
 
     </div>
   );

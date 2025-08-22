@@ -491,6 +491,14 @@ const TicketActionButtonsCustom = ({ ticket, compactMode = false
                             </IconButton>
 
                             <IconButton className={classes.bottomButtonVisibilityIcon}>
+                                <Tooltip title={i18n.t("tickets.buttons.returnQueue")}>
+                                    <UndoIcon
+                                        onClick={(e) => handleUpdateTicketStatus(e, "pending", null)}
+                                    />
+                                </Tooltip>
+                            </IconButton>
+
+                            <IconButton className={classes.bottomButtonVisibilityIcon}>
                                 <Tooltip title="Transferir Ticket">
                                     <SwapHorizOutlined
                                         onClick={handleOpenTransferModal}
@@ -539,13 +547,6 @@ const TicketActionButtonsCustom = ({ ticket, compactMode = false
                             {i18n.t("contactModal.form.chatBotContact")}
                         </MenuItem>
 
-                        {/* Devolver à fila */}
-                        {(ticket.status === "open" || ticket.status === "group") && (
-                            <MenuItem onClick={() => handleCompactMenuItemClick(() => handleUpdateTicketStatus(null, "pending", null))}>
-                                <UndoIcon style={{ marginRight: 8 }} />
-                                {i18n.t("tickets.buttons.returnQueue")}
-                            </MenuItem>
-                        )}
 
                         {/* Logs do Ticket */}
                         <MenuItem onClick={() => handleCompactMenuItemClick(() => handleShowLogTicket())}>
@@ -661,6 +662,15 @@ const TicketActionButtonsCustom = ({ ticket, compactMode = false
                             </IconButton>
 
                             <IconButton className={classes.bottomButtonVisibilityIcon}>
+                                <Tooltip title={i18n.t("tickets.buttons.returnQueue")}>
+                                    <UndoIcon
+                                        // color="primary"
+                                        onClick={(e) => handleUpdateTicketStatus(e, "pending", null)}
+                                    />
+                                </Tooltip>
+                            </IconButton>
+
+                            <IconButton className={classes.bottomButtonVisibilityIcon}>
                                 <Tooltip title="Transferir Ticket">
                                     <SwapHorizOutlined
                                         // color="primary"
@@ -709,11 +719,6 @@ const TicketActionButtonsCustom = ({ ticket, compactMode = false
                                 {i18n.t("contactModal.form.chatBotContact")}
                             </MenuItem>
 
-                            {/* Devolver à fila */}
-                            <MenuItem onClick={() => handleCompactMenuItemClick(() => handleUpdateTicketStatus(null, "pending", null))}>
-                                <UndoIcon style={{ marginRight: 8 }} />
-                                {i18n.t("tickets.buttons.returnQueue")}
-                            </MenuItem>
 
                             {/* Logs do Ticket */}
                             <MenuItem onClick={() => handleCompactMenuItemClick(() => handleShowLogTicket())}>

@@ -64,6 +64,22 @@ const useStyles = makeStyles((theme) => ({
     width: "100%",
     minWidth: 300,
     minHeight: 200,
+    [theme.breakpoints.down("md")]: {
+      minWidth: 250,
+    },
+    [theme.breakpoints.down("sm")]: {
+      minWidth: 200,
+      minHeight: 150,
+    },
+    "@media (max-width: 1366px)": {
+      minWidth: 280,
+    },
+    "@media (max-width: 1200px)": {
+      minWidth: 250,
+    },
+    "@media (max-width: 1024px)": {
+      minWidth: 220,
+    },
   },
 
   currentTick: {
@@ -95,6 +111,18 @@ const useStyles = makeStyles((theme) => ({
     padding: "20px 20px 100px 20px",
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+    [theme.breakpoints.down("md")]: {
+      padding: "15px 15px 80px 15px",
+    },
+    [theme.breakpoints.down("sm")]: {
+      padding: "10px 10px 60px 10px",
+    },
+    "@media (max-width: 1366px)": {
+      padding: "15px 15px 90px 15px",
+    },
+    "@media (max-width: 1200px)": {
+      padding: "12px 12px 80px 12px",
+    },
   },
   dragElement: {
     background: 'rgba(255, 255, 255, 0.8)',

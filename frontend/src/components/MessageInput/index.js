@@ -111,6 +111,21 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     padding: "12px",
     alignItems: "center",
+    [theme.breakpoints.down("md")]: {
+      padding: "10px",
+    },
+    [theme.breakpoints.down("sm")]: {
+      padding: "8px",
+    },
+    "@media (max-width: 1366px)": {
+      padding: "10px",
+    },
+    "@media (max-width: 1200px)": {
+      padding: "8px",
+    },
+    "@media (max-width: 1024px)": {
+      padding: "6px",
+    },
   },
   messageInputWrapper: {
     padding: 6,
@@ -120,6 +135,22 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 20,
     flex: 1,
     position: "relative",
+    [theme.breakpoints.down("md")]: {
+      padding: 5,
+      marginRight: 5,
+    },
+    [theme.breakpoints.down("sm")]: {
+      padding: 4,
+      marginRight: 4,
+    },
+    "@media (max-width: 1366px)": {
+      padding: 5,
+      marginRight: 5,
+    },
+    "@media (max-width: 1200px)": {
+      padding: 4,
+      marginRight: 4,
+    },
   },
   messageInputWrapperPrivate: {
     padding: 6,
@@ -129,19 +160,57 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 20,
     flex: 1,
     position: "relative",
+    [theme.breakpoints.down("md")]: {
+      padding: 5,
+      marginRight: 5,
+    },
+    [theme.breakpoints.down("sm")]: {
+      padding: 4,
+      marginRight: 4,
+    },
+    "@media (max-width: 1366px)": {
+      padding: 5,
+      marginRight: 5,
+    },
+    "@media (max-width: 1200px)": {
+      padding: 4,
+      marginRight: 4,
+    },
   },
   messageInput: {
     paddingLeft: 10,
     flex: 1,
     border: "none",
-
+    [theme.breakpoints.down("md")]: {
+      paddingLeft: 8,
+    },
+    [theme.breakpoints.down("sm")]: {
+      paddingLeft: 6,
+    },
+    "@media (max-width: 1366px)": {
+      paddingLeft: 8,
+    },
+    "@media (max-width: 1200px)": {
+      paddingLeft: 6,
+    },
   },
   messageInputPrivate: {
     paddingLeft: 10,
     flex: 1,
     border: "none",
     color: grey[800],
-
+    [theme.breakpoints.down("md")]: {
+      paddingLeft: 8,
+    },
+    [theme.breakpoints.down("sm")]: {
+      paddingLeft: 6,
+    },
+    "@media (max-width: 1366px)": {
+      paddingLeft: 8,
+    },
+    "@media (max-width: 1200px)": {
+      paddingLeft: 6,
+    },
   },
   sendMessageIcons: {
     color: grey[700],
