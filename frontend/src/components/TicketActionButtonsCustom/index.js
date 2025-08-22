@@ -21,6 +21,8 @@ import * as Yup from "yup";
 import { Formik, Form } from "formik";
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import DialogContent from '@material-ui/core/DialogContent';
 
 import Button from '@material-ui/core/Button';
 import TransferTicketModalCustom from "../TransferTicketModalCustom";
@@ -419,6 +421,57 @@ const TicketActionButtonsCustom = ({ ticket, compactMode = false
         action();
     };
 
+    const renderResolveDialog = () => (
+        <Formik
+            enableReinitialize={true}
+            validationSchema={SessionSchema}
+            innerRef={formRef}
+            onSubmit={(values, actions) => {
+                setTimeout(() => {
+                    actions.setSubmitting(false);
+                    actions.resetForm();
+                }, 400);
+            }}
+        >
+            {({ values, touched, errors, isSubmitting, setFieldValue, resetForm }) => (
+                <Dialog
+                    open={open}
+                    onClose={handleClose}
+                    aria-labelledby="resolve-dialog-title"
+                    aria-describedby="resolve-dialog-description"
+                    maxWidth="sm"
+                    fullWidth
+                >
+                    <Form>
+                        <DialogTitle id="resolve-dialog-title">
+                            {i18n.t("messagesList.header.buttons.resolve")}
+                        </DialogTitle>
+                        <DialogContent>
+                            <p id="resolve-dialog-description">
+                                Deseja realmente resolver este ticket?
+                            </p>
+                        </DialogContent>
+                        <DialogActions className={classes.botoes}>
+                            <Button
+                                onClick={e => handleCloseTicketWithoutFarewellMsg()}
+                                style={{ background: theme.palette.primary.main, color: "white" }}
+                            >
+                                {i18n.t("messagesList.header.dialogRatingWithoutFarewellMsg")}
+                            </Button>
+
+                            <Button
+                                onClick={e => handleUpdateTicketStatus(e, "closed", user?.id, ticket?.queue?.id)}
+                                style={{ background: theme.palette.primary.main, color: "white" }}
+                            >
+                                {i18n.t("messagesList.header.dialogRatingCancel")}
+                            </Button>
+                        </DialogActions>
+                    </Form>
+                </Dialog>
+            )}
+        </Formik>
+    );
+
     if (compactMode) {
         return (
             <>
@@ -573,6 +626,9 @@ const TicketActionButtonsCustom = ({ ticket, compactMode = false
                         </MenuItem>
                     </Menu>
                 </div>
+
+                {/* Diálogo de resolução compartilhado */}
+                {renderResolveDialog()}
             </>
         );
     }
@@ -841,48 +897,11 @@ const TicketActionButtonsCustom = ({ ticket, compactMode = false
                     </MenuItem>
                 </Menu>
             </div>
-            <>
-                <Formik
-                    enableReinitialize={true}
-                    validationSchema={SessionSchema}
-                    innerRef={formRef}
-                    onSubmit={(values, actions) => {
-                        setTimeout(() => {
-                            actions.setSubmitting(false);
-                            actions.resetForm();
-                        }, 400);
-                    }}
-                >
-                    {({ values, touched, errors, isSubmitting, setFieldValue, resetForm }) => (
-                        <Dialog
-                            open={open}
-                            onClose={handleClose}
-                            aria-labelledby="alert-dialog-title"
-                            aria-describedby="alert-dialog-description"
-                        >
-                            <Form>
-                                <DialogActions className={classes.botoes}>
-                                    <Button
-                                        onClick={e => handleCloseTicketWithoutFarewellMsg()}
-                                        style={{ background: theme.palette.primary.main, color: "white" }}
-                                    >
-                                        {i18n.t("messagesList.header.dialogRatingWithoutFarewellMsg")}
-                                    </Button>
 
-                                    <Button
-                                        onClick={e => handleUpdateTicketStatus(e, "closed", user?.id, ticket?.queue?.id)}
-                                        style={{ background: theme.palette.primary.main, color: "white" }}
-                                    >
-                                        {i18n.t("messagesList.header.dialogRatingCancel")}
-                                    </Button>
-                                </DialogActions>
-                            </Form>
-                        </Dialog>
-                    )}
-                </Formik>
-            </>
+            {/* Diálogo de resolução compartilhado */}
+            {renderResolveDialog()}
         </>
     );
-};
+}
 
 export default TicketActionButtonsCustom;

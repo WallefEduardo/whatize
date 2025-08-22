@@ -107,36 +107,36 @@ const useStyles = makeStyles((theme) => ({
     },
   },
 
-  // Estilos para o sistema de overlay
-  hoverTriggerZone: {
+  // Seta flutuante indicativa
+  floatingIndicator: {
     position: "fixed",
-    top: 0,
-    right: 0,
-    width: "30px",
-    height: "100vh",
+    top: "50%",
+    right: "15px",
+    transform: "translateY(-50%)",
     zIndex: 1200,
-    backgroundColor: "transparent",
+    color: "#46c9b3", // Verde do sistema
     cursor: "pointer",
-    "&::before": {
-      content: '""',
-      position: "absolute",
-      top: "50%",
-      left: "5px",
-      transform: "translateY(-50%)",
-      width: "3px",
-      height: "60px",
-      backgroundColor: theme.palette.primary.main,
-      borderRadius: "2px",
-      opacity: 0.3,
-      transition: "opacity 0.3s ease",
-    },
-    "&:hover::before": {
-      opacity: 0.8,
+    animation: "$pulse 2s infinite",
+    transition: "all 0.3s ease",
+    "&:hover": {
+      transform: "translateY(-50%) scale(1.2)",
+      color: "#3ba896", // Verde mais escuro no hover
     },
   },
 
-  overlayWrapper: {
-    position: "relative",
+  "@keyframes pulse": {
+    "0%": {
+      opacity: 0.7,
+      transform: "translateY(-50%) scale(1)",
+    },
+    "50%": {
+      opacity: 1,
+      transform: "translateY(-50%) scale(1.05)",
+    },
+    "100%": {
+      opacity: 0.7,
+      transform: "translateY(-50%) scale(1)",
+    },
   },
 }));
 
@@ -157,9 +157,7 @@ const Ticket = () => {
   const [containerWidth, setContainerWidth] = useState(0);
   const [hasSpaceConflict, setHasSpaceConflict] = useState(false);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
-  const [showHoverTrigger, setShowHoverTrigger] = useState(false);
   const headerRef = useRef(null);
-  const hoverTimeoutRef = useRef(null);
   const { companyId } = user;
 
   useEffect(() => {
@@ -168,12 +166,11 @@ const Ticket = () => {
     console.log("===========================")
 }, [ticket])
 
-  // Sistema de overlay ativo em todas as resoluções
+  // Detectar telas pequenas apenas para responsividade dos botões
   useEffect(() => {
     const checkScreenSize = () => {
       const width = window.innerWidth;
-      setIsSmallScreen(width <= 1366); // Apenas para detectar telas pequenas para responsividade dos botões
-      setShowHoverTrigger(!drawerOpen); // Trigger sempre ativo quando drawer fechado
+      setIsSmallScreen(width <= 1366);
     };
 
     checkScreenSize();
@@ -182,7 +179,7 @@ const Ticket = () => {
     return () => {
       window.removeEventListener('resize', checkScreenSize);
     };
-  }, [drawerOpen]);
+  }, []);
 
   // Detectar quando precisa usar modo compacto
   useEffect(() => {
@@ -318,31 +315,6 @@ const Ticket = () => {
     setDrawerOpen(false);
   }, []);
 
-  // Controle do hover overlay (funciona em todas as resoluções)
-  const handleTriggerZoneEnter = () => {
-    if (!drawerOpen) {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-      setDrawerOpen(true);
-      setShowHoverTrigger(false);
-    }
-  };
-
-  const handleDrawerAreaLeave = () => {
-    if (drawerOpen) {
-      hoverTimeoutRef.current = setTimeout(() => {
-        setDrawerOpen(false);
-        setShowHoverTrigger(true);
-      }, 500); // Delay de 500ms antes de fechar
-    }
-  };
-
-  const handleDrawerAreaEnter = () => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-  };
 
   const renderMessagesList = () => {
     return (
@@ -370,13 +342,18 @@ const Ticket = () => {
 
   return (
     <div className={classes.root} id="drawer-container">
-      {/* Zona de trigger para ativar overlay em telas pequenas */}
-      {showHoverTrigger && (
-        <div 
-          className={classes.hoverTriggerZone}
-          onMouseEnter={handleTriggerZoneEnter}
-          title="Informações do contato"
-        />
+      {/* Ícone flutuante indicativo do drawer */}
+      {!drawerOpen && (
+        <Tooltip title="Clique para ver informações do contato" placement="left">
+          <div 
+            className={classes.floatingIndicator}
+            onClick={handleDrawerOpen}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8.59 16.58L13.17 12L8.59 7.41L10 6L16 12L10 18L8.59 16.58Z"/>
+            </svg>
+          </div>
+        </Tooltip>
       )}
 
       <Paper
@@ -435,19 +412,14 @@ const Ticket = () => {
         </ReplyMessageProvider>
       </Paper>
 
-      <div 
-        onMouseEnter={handleDrawerAreaEnter}
-        onMouseLeave={handleDrawerAreaLeave}
-      >
-        <ContactDrawer
-          open={drawerOpen}
-          handleDrawerClose={handleDrawerClose}
-          contact={contact}
-          loading={loading}
-          ticket={ticket}
-          isOverlay={true}
-        />
-      </div>
+      <ContactDrawer
+        open={drawerOpen}
+        handleDrawerClose={handleDrawerClose}
+        contact={contact}
+        loading={loading}
+        ticket={ticket}
+        isOverlay={true}
+      />
 
     </div>
   );
