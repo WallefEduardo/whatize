@@ -16,6 +16,21 @@ export function WhatsappsFilter({ onFiltered, initialWhatsapps }) {
     fetchData();
   }, []);
 
+  const loadWhatsapps = async () => {
+    try {
+      const { data } = await api.get(`/whatsapp`);
+      if (Array.isArray(data)) {
+        const whatsappList = data.map((w) => ({ id: w.id, name: w.name, channel: w.channel }));
+        setWhatsapps(whatsappList);
+      } else {
+        console.warn('API /whatsapp returned non-array data:', data);
+        setWhatsapps([]);
+      }
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
   useEffect(() => {
     setSelecteds([]);
     if (
@@ -27,16 +42,6 @@ export function WhatsappsFilter({ onFiltered, initialWhatsapps }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialWhatsapps, whatsapps]);
-
-  const loadWhatsapps = async () => {
-    try {
-      const { data } = await api.get(`/whatsapp`);
-      const whatsappList = data.map((w) => ({ id: w.id, name: w.name, channel: w.channel }));
-      setWhatsapps(whatsappList);
-    } catch (err) {
-      toastError(err);
-    }
-  };
 
   const onChange = async (value) => {
     setSelecteds(value);

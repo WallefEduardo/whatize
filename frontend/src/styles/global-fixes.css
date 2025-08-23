@@ -49,11 +49,11 @@
 }
 
 .MuiAutocomplete-option[aria-selected="true"] {
-  background-color: rgba(25, 118, 210, 0.08) !important;
+  background-color: rgba(0, 195, 7, 0.08) !important;
 }
 
 .MuiAutocomplete-option[aria-selected="true"]:hover {
-  background-color: rgba(25, 118, 210, 0.12) !important;
+  background-color: rgba(0, 195, 7, 0.12) !important;
 }
 
 /* Select - Dropdown nativo do Material-UI */
@@ -76,11 +76,11 @@
 }
 
 .MuiMenuItem-root.Mui-selected {
-  background-color: rgba(25, 118, 210, 0.08) !important;
+  background-color: rgba(0, 195, 7, 0.08) !important;
 }
 
 .MuiMenuItem-root.Mui-selected:hover {
-  background-color: rgba(25, 118, 210, 0.12) !important;
+  background-color: rgba(0, 195, 7, 0.12) !important;
 }
 
 /* Menu/Popover container */
@@ -116,7 +116,7 @@
 }
 
 .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
-  border-color: #1976d2 !important;
+  border-color: var(--color-accent) !important;
   border-width: 2px !important;
 }
 
@@ -126,7 +126,7 @@
 }
 
 .MuiInputLabel-root.Mui-focused {
-  color: #1976d2 !important;
+  color: var(--color-accent) !important;
 }
 
 /* Chips dentro dos Autocomplete - REMOVIDO para usar cores originais */

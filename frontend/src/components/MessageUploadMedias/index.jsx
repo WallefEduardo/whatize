@@ -95,7 +95,7 @@ const MessageUploadMedias = ({ isOpen, files, onClose, onSend, onCancelSelection
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 height: "400px",
-                                background: "#1976d2"
+                                background: "var(--color-primary)"
                             }}
                         >
                             <img
@@ -112,7 +112,7 @@ const MessageUploadMedias = ({ isOpen, files, onClose, onSend, onCancelSelection
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                background: "#1976d2"
+                                background: "var(--color-primary)"
                             }}
                         >
                             <Typography variant="h6">{currentFile.name}</Typography>
@@ -129,7 +129,7 @@ const MessageUploadMedias = ({ isOpen, files, onClose, onSend, onCancelSelection
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 height: '400px',
-                                background: "#1976d2"
+                                background: "var(--color-primary)"
                             }}
                         >
                             <Document file={URL.createObjectURL(currentFile)} onLoadSuccess={onDocumentLoadSuccess} >
@@ -144,7 +144,7 @@ const MessageUploadMedias = ({ isOpen, files, onClose, onSend, onCancelSelection
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                background: "#1976d2"
+                                background: "var(--color-primary)"
                             }}
                         >
                             <Typography variant="h6">{currentFile.name}</Typography>
@@ -160,7 +160,7 @@ const MessageUploadMedias = ({ isOpen, files, onClose, onSend, onCancelSelection
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 height: '400px',
-                                background: "#1976d2"
+                                background: "var(--color-primary)"
                             }}
                         >
                             <video
@@ -178,7 +178,7 @@ const MessageUploadMedias = ({ isOpen, files, onClose, onSend, onCancelSelection
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                background: "#1976d2"
+                                background: "var(--color-primary)"
                             }}
                         >
                             <Typography variant="h6">{currentFile.name}</Typography>
@@ -193,7 +193,7 @@ const MessageUploadMedias = ({ isOpen, files, onClose, onSend, onCancelSelection
                             alignItems: 'center',
                             justifyContent: 'center',
                             height: '400px',
-                            background: "#1976d2"
+                            background: "var(--color-primary)"
                         }}
                     >
                         <AudioModal url={URL.createObjectURL(currentFile)} />
@@ -203,7 +203,7 @@ const MessageUploadMedias = ({ isOpen, files, onClose, onSend, onCancelSelection
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                background: "#1976d2"
+                                background: "var(--color-primary)"
                             }}
                         >
                             <Typography variant="h6">{currentFile.name}</Typography>
@@ -218,11 +218,11 @@ const MessageUploadMedias = ({ isOpen, files, onClose, onSend, onCancelSelection
                             alignItems: 'center',
                             justifyContent: 'center',
                             height: '400px',
-                            background: "#1976d2"
+                            background: "var(--color-primary)"
                         }}
                     >
                         <CardContent 
-                            sx={{ background: "#1976d2" }}
+                            sx={{ background: "var(--color-primary)" }}
                         >
                             <Typography variant="h6">Visualização não disponível</Typography>
                             <Typography variant="h6">{currentFile.name}</Typography>
@@ -259,7 +259,7 @@ const MessageUploadMedias = ({ isOpen, files, onClose, onSend, onCancelSelection
         }
     };
     return (
-        <Box sx={{ background: "#1976d2" }}>
+        <Box sx={{ background: "var(--color-primary)" }}>
             <Dialog
                 open={isOpen}
                 fullWidth
@@ -284,14 +284,14 @@ const MessageUploadMedias = ({ isOpen, files, onClose, onSend, onCancelSelection
                     <Close />
                 </IconButton>
                 
-                <DialogContent sx={{ background: "#1976d2" }}>
+                <DialogContent sx={{ background: "var(--color-primary)" }}>
                     <Card>
                         {renderFileContent}
-                        <CardContent sx={{ background: "#1976d2" }}>
+                        <CardContent sx={{ background: "var(--color-primary)" }}>
                             <Box sx={{ 
                                 padding: '6px',
                                 marginRight: '7px',
-                                background: "#1976d2",
+                                background: "var(--color-primary)",
                                 display: "flex",
                                 borderRadius: '20px',
                                 flex: 1,
@@ -313,7 +313,7 @@ const MessageUploadMedias = ({ isOpen, files, onClose, onSend, onCancelSelection
                         </CardContent>
                     </Card>
                 </DialogContent>
-                <DialogActions sx={{ background: "#1976d2" }}>
+                <DialogActions sx={{ background: "var(--color-primary)" }}>
                     <IconButton onClick={handlePrev} disabled={currentIndex === 0}>
                         <SkipPrevious sx={{ color: currentIndex === 0 ? grey[400] : "grey" }} />
                     </IconButton>

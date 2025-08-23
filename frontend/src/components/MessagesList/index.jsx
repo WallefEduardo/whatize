@@ -73,14 +73,14 @@ const messageStyles = {
     textAlign: "center",
     alignSelf: "center",
     width: "auto",
-    backgroundColor: "#1976d2",
+    backgroundColor: "var(--color-primary)",
     margin: "10px",
     borderRadius: "50px",
     boxShadow: "1px 5px 10px #b3b3b3",
   },
 
   currentTicktText: {
-    color: "#1976d2",
+    color: "var(--color-primary)",
     borderRadius: 8,
     padding: 10,
     alignSelf: "center",
@@ -361,7 +361,7 @@ const messageStyles = {
     justifyContent: "center",
     backgroundColor: "inherit",
     padding: 10,
-    color: "#1976d2",
+    color: "var(--color-primary)",
   },
 
   // Novos estilos para documentos estilo WhatsApp
@@ -959,7 +959,7 @@ const getOriginalFileName = (fileName) => {
 
 // Função para obter o ícone apropriado baseado na extensão do arquivo
 const getDocumentIcon = (fileName) => {
-  if (!fileName) return <InsertDriveFile style={{ fontSize: 28, color: '#1976d2' }} />;
+  if (!fileName) return <InsertDriveFile style={{ fontSize: 28, color: 'var(--color-accent)' }} />;
   
   const extension = path.extname(fileName).toLowerCase();
   
@@ -968,11 +968,11 @@ const getDocumentIcon = (fileName) => {
       return <PictureAsPdf style={{ fontSize: 28, color: '#d32f2f' }} />;
     case '.doc':
     case '.docx':
-      return <Description style={{ fontSize: 28, color: '#1976d2' }} />;
+      return <Description style={{ fontSize: 28, color: 'var(--color-accent)' }} />;
     case '.txt':
       return <Description style={{ fontSize: 28, color: '#757575' }} />;
     default:
-      return <InsertDriveFile style={{ fontSize: 28, color: '#1976d2' }} />;
+      return <InsertDriveFile style={{ fontSize: 28, color: 'var(--color-accent)' }} />;
   }
 };
 

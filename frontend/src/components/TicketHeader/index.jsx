@@ -34,7 +34,7 @@ const TicketHeader = ({ loading, children }) => {
 					square
 					sx={{
 						display: "flex",
-						background: "#1976d2",
+						background: "var(--color-primary)",
 						flex: "none",
 						borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
 						height: "65px",

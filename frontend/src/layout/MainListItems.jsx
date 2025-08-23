@@ -78,7 +78,7 @@ const styles = {
     }
   },
   listSubheader: {
-    color: "#00C307",
+    color: "var(--color-accent)",
     fontSize: "0.75rem",
     fontWeight: 700,
     textTransform: "uppercase",
@@ -107,10 +107,10 @@ const styles = {
     backgroundColor: "rgba(255, 255, 255, 0.04)",
     color: "rgba(255, 255, 255, 0.7)",
     "&:hover, &.active": {
-      backgroundColor: "#00C307",
-      color: "#fff",
+      backgroundColor: "var(--color-accent)",
+      color: "var(--text-on-accent)",
       transform: "translateY(-1px)",
-      boxShadow: "0 4px 12px rgba(37, 182, 232, 0.2)",
+      boxShadow: "var(--shadow-green)",
     },
     "& svg": {
       fontSize: "1.3rem",
@@ -173,7 +173,7 @@ const styles = {
     transition: "all 0.2s",
     "&.open": {
       transform: "rotate(180deg)",
-      color: "#00C307",
+      color: "var(--color-accent)",
     }
   },
   submenuItem: {
@@ -228,7 +228,7 @@ function ListItemLink(props) {
               )}
             </ListItemIcon>
           ) : null}
-          <ListItemText primary={<Typography sx={styles.listItemText}>{primary}</Typography>} />
+          {!tooltip && <ListItemText primary={<Typography sx={styles.listItemText}>{primary}</Typography>} />}
         </ListItem>
       </li>
     </ConditionalTooltip>
@@ -552,7 +552,7 @@ const MainListItems = ({ collapsed, drawerClose }) => {
                 padding: "10px",
                 textAlign: "center",
                 fontWeight: "bold",
-                color: "#898989",
+                color: "var(--text-secondary)",
               }}
             >
               Versão {`${version}`}
@@ -588,14 +588,18 @@ const MainListItems = ({ collapsed, drawerClose }) => {
                     <HomeTrendUp />
                   </Avatar>
                 </ListItemIcon>
-                <ListItemText
-                  primary={
-                    <Typography sx={styles.listItemText}>
-                      {i18n.t("mainDrawer.listItems.management")}
-                    </Typography>
-                  }
-                />
-                {openDashboardSubmenu ? <ExpandLessIcon style={{ color: "#00C307" }} /> : <ExpandMoreIcon style={{ color: "#00C307" }} />}
+                {!collapsed && (
+                  <>
+                    <ListItemText
+                      primary={
+                        <Typography sx={styles.listItemText}>
+                          {i18n.t("mainDrawer.listItems.management")}
+                        </Typography>
+                      }
+                    />
+                    {openDashboardSubmenu ? <ExpandLessIcon style={{ color: "var(--color-accent)" }} /> : <ExpandMoreIcon style={{ color: "var(--color-accent)" }} />}
+                  </>
+                )}
               </ListItem>
             </Tooltip>
             <Collapse
@@ -757,7 +761,7 @@ const MainListItems = ({ collapsed, drawerClose }) => {
                             </Typography>
                           }
                         />
-                        {openCampaignSubmenu ? <ExpandLessIcon style={{ color: "#00C307" }} /> : <ExpandMoreIcon style={{ color: "#00C307" }} />}
+                        {openCampaignSubmenu ? <ExpandLessIcon style={{ color: "var(--color-accent)" }} /> : <ExpandMoreIcon style={{ color: "var(--color-accent)" }} />}
                       </ListItem>
                     </Tooltip>
                     <Collapse
@@ -821,7 +825,7 @@ const MainListItems = ({ collapsed, drawerClose }) => {
                           </Typography>
                         }
                       />
-                      {openFlowSubmenu ? <ExpandLessIcon style={{ color: "#00C307" }} /> : <ExpandMoreIcon style={{ color: "#00C307" }} />}
+                      {openFlowSubmenu ? <ExpandLessIcon style={{ color: "var(--color-accent)" }} /> : <ExpandMoreIcon style={{ color: "var(--color-accent)" }} />}
                     </ListItem>
                   </Tooltip>
 
@@ -1023,7 +1027,7 @@ const MainListItems = ({ collapsed, drawerClose }) => {
               padding: "10px",
               textAlign: "center",
               fontWeight: "bold",
-              color: "#898989",
+              color: "var(--text-secondary)",
             }}
           >
             Versão {`${version}`}

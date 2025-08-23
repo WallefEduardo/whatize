@@ -32,7 +32,7 @@ const useStyles = () => ({
         width: '100%',
         maxWidth: '350px',
         maxHeight: '200px',
-        backgroundColor: "#1976d2",
+        backgroundColor: "var(--color-accent)",
     },
     inline: {
         width: '100%'

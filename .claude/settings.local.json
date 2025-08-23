@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__TestSprite__testsprite_bootstrap_tests"
+    ],
+    "deny": []
+  }
+}

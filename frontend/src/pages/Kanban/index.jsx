@@ -248,7 +248,7 @@ const KanbanCard = ({ card, onSendMessage }) => {
             size="small"
             style={{
               backgroundColor: `${tag.color}1A` || '#e3f2fd1A',
-              color: tag.color || '#1976d2',
+              color: tag.color || 'var(--color-primary)',
               fontSize: '0.65rem',
               height: '20px',
               // Largura natural, sem forçar truncamento
@@ -260,7 +260,7 @@ const KanbanCard = ({ card, onSendMessage }) => {
               paddingLeft: tag.name.length <= 6 ? '6px' : '8px',
               paddingRight: tag.name.length <= 6 ? '6px' : '8px',
             }}
-            icon={<LocalOffer style={{ fontSize: '12px', color: tag.color || '#1976d2' }} />}
+            icon={<LocalOffer style={{ fontSize: '12px', color: tag.color || 'var(--color-primary)' }} />}
           />
         );
         
@@ -663,7 +663,7 @@ const useStyles = () => ({
       position: 'absolute',
       top: '-10px',
       right: '-10px',
-      backgroundColor: "#1976d2",
+      backgroundColor: "var(--color-primary)",
       color: 'white',
       padding: '2px 6px',
       borderRadius: '10px',
@@ -3895,16 +3895,16 @@ const formatPhoneNumber = (phoneNumber) => {
                                 fileName = 'Documento.pdf';
                               }
                               const getDocumentIcon = (fileName) => {
-                                if (!fileName) return <Description style={{ fontSize: 28, color: '#1976d2' }} />;
+                                if (!fileName) return <Description style={{ fontSize: 28, color: 'var(--color-primary)' }} />;
                                 const extension = fileName.toLowerCase().split('.').pop();
                                 switch (extension) {
                                   case 'pdf':
                                     return <PictureAsPdf style={{ fontSize: 28, color: '#d32f2f' }} />;
                                   case 'doc':
                                   case 'docx':
-                                    return <Description style={{ fontSize: 28, color: '#1976d2' }} />;
+                                    return <Description style={{ fontSize: 28, color: 'var(--color-primary)' }} />;
                                   default:
-                                    return <Description style={{ fontSize: 28, color: '#1976d2' }} />;
+                                    return <Description style={{ fontSize: 28, color: 'var(--color-primary)' }} />;
                                 }
                               };
                               

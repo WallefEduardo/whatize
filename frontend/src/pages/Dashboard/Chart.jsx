@@ -85,12 +85,12 @@ const Chart = ({ dateStartTicket, dateEndTicket, queueTicket }) => {
 					<CartesianGrid strokeDasharray="3 3" />
 					<XAxis
 						dataKey="time"
-						stroke={"#1976d2"}
+						stroke={"var(--color-accent)"}
 					/>
 					<YAxis
 						type="number"
 						allowDecimals={false}
-						stroke={"#1976d2"}
+						stroke={"var(--color-accent)"}
 					>
 						<Tooltip />
 						<Legend />
@@ -99,7 +99,7 @@ const Chart = ({ dateStartTicket, dateEndTicket, queueTicket }) => {
 							position="left"
 							style={{
 								textAnchor: "middle",
-								fill: "#1976d2",
+								fill: "var(--color-accent)",
 							}}
 						>
 							Tickets

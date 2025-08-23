@@ -84,7 +84,7 @@ export const ChartsDate = () => {
                 data: ticketsData?.data.length > 0 && ticketsData?.data.map((item, index) => {
                     return item.total
                 }),
-                backgroundColor: "#1976d2",
+                backgroundColor: "var(--color-primary)",
             },
         ],
     };
@@ -127,7 +127,7 @@ export const ChartsDate = () => {
                     </LocalizationProvider>
                 </Grid>
                 <Grid item>
-                    <Button style={{ backgroundColor: "#1976d2", top: '10px' }} onClick={handleGetTicketsInformation} variant='contained'>Filtrar</Button>
+                    <Button style={{ backgroundColor: "var(--color-primary)", top: '10px' }} onClick={handleGetTicketsInformation} variant='contained'>Filtrar</Button>
                 </Grid>
             </Grid>
             <Bar options={options} data={dataCharts} style={{ maxWidth: '100%', maxHeight: '280px', }} />

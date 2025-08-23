@@ -38,7 +38,7 @@ const useStyles = () => ({
 	header: {
 		display: "flex",
 		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
-		backgroundColor: "#1976d2",
+		backgroundColor: "var(--color-primary)",
 		alignItems: "center",
 		padding: 8,
 		minHeight: "73px",
@@ -46,7 +46,7 @@ const useStyles = () => ({
 	},
 	content: {
 		display: "flex",
-		backgroundColor: "#1976d2",
+		backgroundColor: "var(--color-primary)",
 		flexDirection: "column",
 		padding: "8px 0px 8px 8px",
 		height: "100%",

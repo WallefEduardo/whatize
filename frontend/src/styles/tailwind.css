@@ -9,6 +9,45 @@
     /* Não sobrescrever estilos existentes críticos */
   }
   
+  /* CORREÇÃO: Evitar flash de scrollbar em todo o sistema */
+  html, body {
+    scrollbar-gutter: stable;
+    overflow-x: hidden; /* Evitar scrollbar horizontal desnecessária */
+    contain: strict; /* Isola recalculações */
+  }
+  
+  /* Root container estável */
+  #root {
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+    contain: layout style;
+  }
+  
+  /* Estabilização global de scrollbars */
+  * {
+    box-sizing: border-box;
+  }
+  
+  /* Scrollbar consistente para todos os elementos */
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  *::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+  }
+  
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+  }
+  
   /* Corrigir warnings @media do MUI */
   @media (max-width: 600px) {
     .responsive-sm {
@@ -20,16 +59,46 @@
 @layer components {
   /* Componentes do design system */
   .btn-primary {
-    @apply bg-gradient-to-r from-[#065183] to-[#1976d2] text-white font-semibold;
-    @apply hover:shadow-lg hover:shadow-blue-500/25 active:scale-95;
-    @apply transition-all duration-200 ease-out;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: var(--color-accent);
+    color: var(--text-on-accent);
+    font-weight: 600;
+    transition: var(--transition-normal);
+    border-radius: var(--radius-md);
+  }
+  
+  .btn-primary:hover {
+    background-color: var(--color-green-hover);
+    box-shadow: var(--shadow-green);
+    transform: translateY(-1px);
+  }
+  
+  .btn-primary:active {
+    transform: scale(0.95);
+  }
+  
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
   
   .btn-secondary {
-    @apply bg-white border-2 border-[#065183] text-[#065183] font-semibold;
-    @apply hover:bg-[#065183] hover:text-white hover:shadow-lg hover:shadow-blue-500/25;
-    @apply active:scale-95 transition-all duration-200 ease-out;
+    background-color: transparent;
+    border: 2px solid var(--color-accent);
+    color: var(--color-accent);
+    font-weight: 600;
+    transition: var(--transition-normal);
+    border-radius: var(--radius-md);
+  }
+  
+  .btn-secondary:hover {
+    background-color: var(--color-accent);
+    color: var(--text-on-accent);
+    box-shadow: var(--shadow-green);
+    transform: translateY(-1px);
+  }
+  
+  .btn-secondary:active {
+    transform: scale(0.95);
   }
   
   .card-glassmorphism {
@@ -39,9 +108,18 @@
   }
   
   .input-modern {
-    @apply border border-gray-200 rounded-xl px-3 py-3 bg-white;
-    @apply focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-[#065183];
-    @apply transition-all duration-200 ease-out;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: 12px 16px;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: var(--transition-normal);
+  }
+  
+  .input-modern:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--focus-ring);
   }
   
   .table-row-modern {

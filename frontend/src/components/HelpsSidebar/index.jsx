@@ -61,8 +61,8 @@ const useStyles = () => ({
   sidebar: {
     width: 280,
     height: "100%",
-    backgroundColor: "#1976d2",
-    borderRight: `1px solid ${"#1976d2"}`,
+    backgroundColor: "var(--color-primary)",
+    borderRight: `1px solid ${"var(--color-primary)"}`,
     overflow: "auto",
     "@media (max-width:600px)": {
       display: 'none'
@@ -73,9 +73,9 @@ const useStyles = () => ({
   },
   sidebarHeader: {
     padding: 16,
-    borderBottom: `1px solid ${"#1976d2"}`,
-    backgroundColor: "#1976d2",
-    color: "#1976d2",
+    borderBottom: `1px solid ${"var(--color-primary)"}`,
+    backgroundColor: "var(--color-primary)",
+    color: "var(--color-primary)",
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center'
@@ -84,21 +84,21 @@ const useStyles = () => ({
     paddingLeft: 16,
     paddingRight: 16,
     "&:hover": {
-      backgroundColor: "#1976d2"
+      backgroundColor: "var(--color-primary)"
     }
   },
   selectedCategory: {
-    backgroundColor: "#1976d2",
-    color: "#1976d2",
+    backgroundColor: "var(--color-primary)",
+    color: "var(--color-primary)",
     "& .MuiListItemText-primary": {
-      color: "#1976d2",
+      color: "var(--color-primary)",
       fontWeight: "bold"
     },
     "& .MuiListItemIcon-root": {
-      color: "#1976d2"
+      color: "var(--color-primary)"
     },
     "&:hover": {
-      backgroundColor: "#1976d2"
+      backgroundColor: "var(--color-primary)"
     }
   },
   categoryIcon: {

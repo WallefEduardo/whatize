@@ -2,9 +2,9 @@
 import { createTheme, ThemeOptions } from '@mui/material/styles';
 import { ptBR } from '@mui/material/locale';
 
-// Preservar cores do tema atual do sistema
-const currentPrimaryColor = '#065183'; // Cor principal atual
-const currentSecondaryColor = '#1976d2';
+// Cores do nova paleta sistema
+const currentPrimaryColor = '#00C307'; // Verde principal
+const currentSecondaryColor = '#111416'; // Preto principal
 
 const lightThemeOptions: ThemeOptions = {
   palette: {

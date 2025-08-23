@@ -77,7 +77,7 @@ const useStyles = () => ({
     }
   },
   description: {
-    color: "#1976d2",
+    color: "var(--color-primary)",
     display: "-webkit-box",
     "-webkit-line-clamp": 3,
     "-webkit-box-orient": "vertical",

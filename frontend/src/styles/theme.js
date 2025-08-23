@@ -2,7 +2,7 @@ import { createTheme } from '@mui/material/styles';
 
 /**
  * Theme customizado que integra MUI com Tailwind
- * Cores do sistema: #065183 (primary light), #39ACE7 (primary dark)
+ * Cores do sistema: #00C307 (verde principal), #111416 (preto principal)
  */
 export const createCustomTheme = (mode = 'light') => {
   const isLight = mode === 'light';
@@ -11,15 +11,15 @@ export const createCustomTheme = (mode = 'light') => {
     palette: {
       mode,
       primary: {
-        main: isLight ? '#065183' : '#39ACE7',
-        light: isLight ? '#1976d2' : '#64b5f6',
-        dark: isLight ? '#004d40' : '#1565c0',
+        main: '#00C307',
+        light: '#33d433',
+        dark: '#00a006',
         contrastText: '#ffffff',
       },
       secondary: {
-        main: '#1976d2',
-        light: '#42a5f5',
-        dark: '#1565c0',
+        main: '#111416',
+        light: '#1a1d21',
+        dark: '#000000',
         contrastText: '#ffffff',
       },
       background: {
@@ -157,11 +157,11 @@ export const createCustomTheme = (mode = 'light') => {
               borderRadius: 12,
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: isLight ? '#065183' : '#39ACE7',
+                borderColor: '#00C307',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderColor: isLight ? '#065183' : '#39ACE7',
-                boxShadow: `0 0 0 4px ${isLight ? 'rgba(6, 81, 131, 0.1)' : 'rgba(57, 172, 231, 0.1)'}`,
+                borderColor: '#00C307',
+                boxShadow: `0 0 0 4px rgba(0, 195, 7, 0.1)`,
               },
             },
           },

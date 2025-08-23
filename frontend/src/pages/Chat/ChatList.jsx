@@ -41,12 +41,12 @@ const useStyles = () => ({
   },
   listItemActive: {
     cursor: "pointer",
-    backgroundColor: "#1976d2",
+    backgroundColor: "var(--color-primary)",
     borderLeft: "6px solid #002d6e",
   },
   listItem: {
     cursor: "pointer",
-    backgroundColor: "#1976d2",
+    backgroundColor: "var(--color-primary)",
   },
 });
 

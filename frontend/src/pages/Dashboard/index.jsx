@@ -373,7 +373,7 @@ const Dashboard = () => {
                   title="Em Atendimento"
                   value={counters.supportHappening || 0}
                   trend={trends.supportHappening}
-                  color={"#1976d2"}
+                  color={"var(--color-accent)"}
                   icon={<CallIcon />}
                   chartData={chartDataSupportHappening}
                 />
@@ -384,7 +384,7 @@ const Dashboard = () => {
                   title="Aguardando"
                   value={counters.supportPending || 0}
                   trend={trends.supportPending}
-                  color={"#1976d2"}
+                  color={"var(--color-accent)"}
                   icon={<HourglassEmptyIcon />}
                   chartData={chartDataSupportPending}
                 />
@@ -395,7 +395,7 @@ const Dashboard = () => {
                   title="Finalizados"
                   value={counters.supportFinished || 0}
                   trend={trends.supportFinished}
-                  color={"#1976d2"}
+                  color={"var(--color-accent)"}
                   icon={<CheckCircleIcon />}
                   chartData={chartDataSupportFinished}
                 />
@@ -406,7 +406,7 @@ const Dashboard = () => {
                   title="Total de Mensagens"
                   value={`${GetMessages(false, true).count}/${GetMessages(true, true).count}`}
                   trend={trends.messages}
-                  color={"#1976d2"}
+                  color={"var(--color-accent)"}
                   icon={<MessageIcon />}
                   chartData={chartDataMessages}
                 />
@@ -418,7 +418,7 @@ const Dashboard = () => {
               <Grid item xs={12} sm={6} lg={4}>
                 <Card sx={{
                   height: "100%",
-                  backgroundColor: "#1976d2",
+                  backgroundColor: "var(--color-primary)",
                   borderRadius: '16px',
                   boxShadow: '0 8px 32px 0 rgba(31,38,135,0.15)'
                 }}>
@@ -462,7 +462,7 @@ const Dashboard = () => {
               <Grid item xs={12} sm={6} lg={4}>
                 <Card sx={{
                   height: "100%",
-                  backgroundColor: "#1976d2",
+                  backgroundColor: "var(--color-primary)",
                   borderRadius: '16px',
                   boxShadow: '0 8px 32px 0 rgba(31,38,135,0.15)'
                 }}>
@@ -506,7 +506,7 @@ const Dashboard = () => {
               <Grid item xs={12} sm={6} lg={4}>
                 <Card sx={{
                   height: "100%",
-                  backgroundColor: "#1976d2",
+                  backgroundColor: "var(--color-primary)",
                   borderRadius: '16px',
                   boxShadow: '0 8px 32px 0 rgba(31,38,135,0.15)'
                 }}>
@@ -574,7 +574,7 @@ const Dashboard = () => {
                       title="Taxa de Resolução"
                       value={counters.supportFinished || 0}
                       max={counters.supportFinished + counters.supportPending || 1}
-                      color={"#1976d2"}
+                      color={"var(--color-accent)"}
                     />
                   </Grid>
                   <Grid item xs={12} md={6}>
@@ -582,7 +582,7 @@ const Dashboard = () => {
                       title="Tempo Médio de Resposta"
                       value={counters.avgResponseTime || 0} // Use dynamic data for average response time
                       max={counters.maxResponseTime || 60} // Use dynamic data for max response time
-                      color={"#1976d2"}
+                      color={"var(--color-accent)"}
                     />
                   </Grid>
                 </Grid>
@@ -716,9 +716,9 @@ const Dashboard = () => {
                           paddingAngle={8}
                           dataKey="value"
                         >
-                          <Cell fill={"#1976d2"} />
-                          <Cell fill={"#1976d2"} />
-                          <Cell fill={"#1976d2"} />
+                          <Cell fill={"var(--color-accent)"} />
+                          <Cell fill={"var(--color-accent)"} />
+                          <Cell fill={"var(--color-accent)"} />
                         </Pie>
                         <Tooltip
                           contentStyle={{
@@ -755,13 +755,13 @@ const Dashboard = () => {
                   <IconButton
                     onClick={exportarGridParaExcel}
                     sx={{
-                      backgroundColor: `${"#1976d2"}15`,
+                      backgroundColor: `var(--color-primary)15`,
                       '&:hover': {
-                        backgroundColor: `${"#1976d2"}25`,
+                        backgroundColor: `var(--color-primary)25`,
                       }
                     }}
                   >
-                    <SaveAlt style={{ color: "#1976d2"}} />
+                    <SaveAlt style={{ color: "var(--color-accent)"}} />
                   </IconButton>
                 </Stack>
                 <Box

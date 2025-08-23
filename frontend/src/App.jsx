@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 // Importar polyfill PRIMEIRO para definir todos os componentes lamejs globalmente
 import "./utils/micRecorderPolyfill";
+// Importar sistema de cores
+import "./styles/colors.css";
 import api from "./services/api";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./config/query-config";
@@ -21,13 +23,13 @@ import useSettings from "./hooks/useSettings";
 
 const App = () => {
   const [locale, setLocale] = useState();
-  const appColorLocalStorage = localStorage.getItem("primaryColorLight") || localStorage.getItem("primaryColorDark") || "#065183";
+  const appColorLocalStorage = localStorage.getItem("primaryColorLight") || localStorage.getItem("primaryColorDark") || "#00C307";
   const appNameLocalStorage = localStorage.getItem("appName") || "";
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
   const preferredTheme = window.localStorage.getItem("preferredTheme");
   const [mode, setMode] = useState(preferredTheme ? preferredTheme : prefersDarkMode ? "dark" : "light");
-  const [primaryColorLight, setPrimaryColorLight] = useState("#065183"); // Cor padrão segura
-  const [primaryColorDark, setPrimaryColorDark] = useState("#39ACE7"); // Cor padrão segura
+  const [primaryColorLight, setPrimaryColorLight] = useState("#00C307"); // Verde padrão
+  const [primaryColorDark, setPrimaryColorDark] = useState("#00C307"); // Verde padrão (mesmo para dark)
   const [appLogoLight, setAppLogoLight] = useState(defaultLogoLight);
   const [appLogoDark, setAppLogoDark] = useState(defaultLogoDark);
   const [appLogoFavicon, setAppLogoFavicon] = useState(defaultLogoFavicon);
@@ -208,8 +210,8 @@ const App = () => {
     };
     
     // Carregar todas as configurações
-    loadSetting("primaryColorLight", setPrimaryColorLight, "#065183", isValidColor);
-    loadSetting("primaryColorDark", setPrimaryColorDark, "#39ACE7", isValidColor);
+    loadSetting("primaryColorLight", setPrimaryColorLight, "#00C307", isValidColor);
+    loadSetting("primaryColorDark", setPrimaryColorDark, "#00C307", isValidColor);
     loadSetting("appName", setAppName, "Whatize", isValidText);
     
     // Carregar logos (não precisam de validação especial)
@@ -229,7 +231,20 @@ const App = () => {
 
   useEffect(() => {
     const root = document.documentElement;
+    
+    // Compatibilidade com variável antiga
     root.style.setProperty("--primaryColor", mode === "light" ? primaryColorLight : primaryColorDark);
+    
+    // Atualizar variáveis do novo sistema de cores
+    root.style.setProperty("--color-accent", mode === "light" ? primaryColorLight : primaryColorDark);
+    root.style.setProperty("--color-green-main", mode === "light" ? primaryColorLight : primaryColorDark);
+    
+    // Aplicar tema dark/light
+    if (mode === "dark") {
+      root.setAttribute("data-theme", "dark");
+    } else {
+      root.removeAttribute("data-theme");
+    }
   }, [primaryColorLight, primaryColorDark, mode]);
 
   useEffect(() => {

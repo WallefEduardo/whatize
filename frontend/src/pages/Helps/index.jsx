@@ -44,7 +44,7 @@ const useStyles = () => ({
   emptyState: {
     textAlign: 'center',
     padding: 32,
-    color: "#1976d2"
+    color: "var(--color-primary)"
   },
   videoModal: {
     display: 'flex',

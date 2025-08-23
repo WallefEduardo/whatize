@@ -38,7 +38,7 @@ const MessagesWrapper = styled(Grid)(() => ({
 });
 
 const WelcomeMsg = styled(Paper)(({ theme }) => ({
-	background: "#1976d2",
+	background: "var(--color-primary)",
 	display: "flex",
 	justifyContent: "space-evenly",
 	alignItems: "center",

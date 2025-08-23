@@ -37,9 +37,10 @@
 			flex-direction: column;
 			justify-content: center;
 			align-items: center;
-			background-color: #111416; /* Cor e opacidade da camada semi-transparente */
-			/* 50% grey */
-			z-index: 9999;
+			background-color: #111416;
+			z-index: 1200;
+			will-change: transform, opacity;
+			transition: opacity 0.3s ease-out, transform 0.3s ease-out;
 		}
 
         #splash-content {
@@ -138,8 +139,16 @@
         clearInterval(interval);
 		    setTimeout(() => {
           const splashScreen = document.getElementById('splash-screen');
-          splashScreen.remove();
-		    }, 500);
+          if (splashScreen) {
+            splashScreen.style.opacity = '0';
+            splashScreen.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+              if (splashScreen.parentNode) {
+                splashScreen.parentNode.removeChild(splashScreen);
+              }
+            }, 300);
+          }
+		    }, 300);
 		  }
 		}, 1000);
     window.finishProgress=() => {

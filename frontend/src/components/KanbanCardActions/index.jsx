@@ -138,7 +138,7 @@ const KanbanCardActions = ({ ticket, onTagsUpdated, renderTagsOnly = false, rend
         onDoubleClick={() => confirmRemoveTag(tag)}
         style={{
           backgroundColor: `${tag.color}1A` || '#e3f2fd1A',
-          color: tag.color || '#1976d2',
+          color: tag.color || 'var(--color-primary)',
           fontSize: '0.65rem',
           height: '20px',
           flexShrink: 0,
@@ -152,7 +152,7 @@ const KanbanCardActions = ({ ticket, onTagsUpdated, renderTagsOnly = false, rend
             opacity: 0.8,
           },
         }}
-        icon={<LocalOffer style={{ fontSize: '12px', color: tag.color || '#1976d2' }} />}
+        icon={<LocalOffer style={{ fontSize: '12px', color: tag.color || 'var(--color-primary)' }} />}
       />
     );
 
@@ -370,10 +370,10 @@ const KanbanCardActions = ({ ticket, onTagsUpdated, renderTagsOnly = false, rend
                             size="small"
                             style={{
                               backgroundColor: `${tag.color}1A` || '#e3f2fd1A',
-                              color: tag.color || '#1976d2',
+                              color: tag.color || 'var(--color-primary)',
                               fontSize: '0.7rem',
                             }}
-                            icon={<LocalOffer style={{ fontSize: '12px', color: tag.color || '#1976d2' }} />}
+                            icon={<LocalOffer style={{ fontSize: '12px', color: tag.color || 'var(--color-primary)' }} />}
                           />
                         </Box>
                       }

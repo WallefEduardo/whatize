@@ -16,6 +16,21 @@ export function UsersFilter({ onFiltered, initialUsers }) {
     fetchData();
   }, []);
 
+  const loadUsers = async () => {
+    try {
+      const { data } = await api.get(`/users/list`);
+      if (Array.isArray(data)) {
+        const userList = data.map((u) => ({ id: u.id, name: u.name }));
+        setUsers(userList);
+      } else {
+        console.warn('API /users/list returned non-array data:', data);
+        setUsers([]);
+      }
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
   useEffect(() => {
     setSelecteds([]);
     if (
@@ -27,16 +42,6 @@ export function UsersFilter({ onFiltered, initialUsers }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialUsers, users]);
-
-  const loadUsers = async () => {
-    try {
-      const { data } = await api.get(`/users/list`);
-      const userList = data.map((u) => ({ id: u.id, name: u.name }));
-      setUsers(userList);
-    } catch (err) {
-      toastError(err);
-    }
-  };
 
   const onChange = async (value) => {
     setSelecteds(value);

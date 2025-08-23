@@ -30,7 +30,7 @@ const useStyles = () => ({
     display: "flex",
     flexDirection: "column",
     flex: 1,
-    backgroundColor: "#1976d2",
+    backgroundColor: "var(--color-primary)",
   },
   mainPaper: {
     

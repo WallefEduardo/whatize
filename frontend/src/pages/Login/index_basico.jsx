@@ -19,7 +19,7 @@ const useStyles = () => ({
 	root: {
 		width: "100vw",
 		height: "100vh",
-		background: "light" === "light" ? "#1976d2",
+		background: "light" === "light" ? "var(--color-primary)",
 		backgroundRepeat: "no-repeat",
 		backgroundSize: "100% 100%",
 		backgroundPosition: "center",
@@ -41,7 +41,7 @@ const useStyles = () => ({
 	},
 	avatar: {
 		margin: 8,
-		backgroundColor: "#1976d2",
+		backgroundColor: "var(--color-primary)",
 	},
 	form: {
 		width: "100%",

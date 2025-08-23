@@ -18,17 +18,17 @@ const ModernButton = ({
   // Variantes de estilo
   const variants = {
     primary: cn(
-      'bg-gradient-to-r from-[#065183] to-[#1976d2]',
+      'bg-[#00C307]',
       'text-white font-semibold',
-      'hover:shadow-lg hover:shadow-blue-500/25',
+      'hover:bg-[#00e608] hover:shadow-lg hover:shadow-green-500/25',
       'active:scale-95',
       'disabled:opacity-50 disabled:cursor-not-allowed'
     ),
     secondary: cn(
-      'bg-white border-2 border-[#065183]',
-      'text-[#065183] font-semibold',
-      'hover:bg-[#065183] hover:text-white',
-      'hover:shadow-lg hover:shadow-blue-500/25',
+      'bg-white border-2 border-[#00C307]',
+      'text-[#00C307] font-semibold',
+      'hover:bg-[#00C307] hover:text-white',
+      'hover:shadow-lg hover:shadow-green-500/25',
       'active:scale-95',
       'disabled:opacity-50 disabled:cursor-not-allowed'
     ),
@@ -60,7 +60,7 @@ const ModernButton = ({
       className={cn(
         // Base styles
         'transition-all duration-200 ease-out',
-        'focus:outline-none focus:ring-4 focus:ring-blue-500/20',
+        'focus:outline-none focus:ring-4 focus:ring-green-500/20',
         'transform-gpu', // GPU acceleration
         // Variant styles
         variants[variant],

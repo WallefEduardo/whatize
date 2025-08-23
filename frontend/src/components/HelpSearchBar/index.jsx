@@ -39,7 +39,7 @@ const HelpSearchBar = ({
     <Paper sx={{
       padding: 2,
       marginBottom: 2,
-      backgroundColor: "#1976d2",
+      backgroundColor: "var(--color-primary)",
       display: 'flex',
       alignItems: 'center',
       gap: 1
@@ -47,7 +47,7 @@ const HelpSearchBar = ({
       {isMobile && onMenuClick && (
         <IconButton
           sx={{
-            backgroundColor: "#1976d2",
+            backgroundColor: "var(--color-primary)",
             color: "white",
             '&:hover': {
               backgroundColor: "#1565c0",
@@ -81,7 +81,7 @@ const HelpSearchBar = ({
                   cursor: "pointer",
                   color: "#666",
                   "&:hover": {
-                    color: "#1976d2"
+                    color: "var(--color-primary)"
                   }
                 }}
                 onClick={handleClearSearch}

@@ -11,7 +11,7 @@ import { AuthContext } from "../../../context/Auth/AuthContext";
 // Converted makeStyles to inline styles for Material-UI v5 compatibility
 const styles = {
   cardHeader: {
-    backgroundColor: "#1976d2",
+    backgroundColor: "var(--color-primary)",
   },
   cardPricing: {
     display: 'flex',
@@ -23,7 +23,7 @@ const styles = {
     margin: 8,
   },
   footer: {
-    borderTop: "1px solid #1976d2",
+    borderTop: "1px solid var(--color-primary)",
     marginTop: 8,
     paddingTop: 24,
     paddingBottom: 24,

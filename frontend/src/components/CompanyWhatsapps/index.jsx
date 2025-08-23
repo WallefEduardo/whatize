@@ -82,7 +82,7 @@ const useStyles = () => ({
   }
   ,
   TableHead: {
-    backgroundColor: "#1976d2",//"#3d3d3d",
+    backgroundColor: "var(--color-primary)",//"#3d3d3d",
     color: "textSecondary",
     borderRadius: "5px"
   }

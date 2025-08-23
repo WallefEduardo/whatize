@@ -29,7 +29,7 @@ const useStyles = () => ({
         justifyContent: "center",
         height: "100%",
         // backgroundColor: "#eee"
-        background: "#1976d2",
+        background: "var(--color-primary)",
     },
     placeholderItem: {
     }

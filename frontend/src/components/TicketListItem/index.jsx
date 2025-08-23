@@ -127,8 +127,8 @@ const ticketStyles = {
         marginRight: 110,
         right: 20,
         bottom: 30,
-        backgroundColor: "#1976d2",
-        color: "#1976d2",
+        backgroundColor: "var(--color-primary)",
+        color: "var(--color-primary)",
         border: "1px solid #CCC",
         padding: 1,
         paddingLeft: 5,
@@ -207,7 +207,7 @@ const ticketStyles = {
     badge: {
         backgroundColor: "#44b700",
         color: "#44b700",
-        boxShadow: `0 0 0 2px ${"#1976d2"}`,
+        boxShadow: `0 0 0 2px var(--color-primary)`,
         "&::after": {
             position: "absolute",
             top: 0,
@@ -241,7 +241,7 @@ const ticketStyles = {
 const SmallAvatar = styled(Avatar)(({ theme }) => ({
     width: 22,
     height: 22,
-    border: `2px solid ${"#1976d2"}`,
+    border: `2px solid var(--color-primary)`,
 }));
 
 const getAvatarChannel = (channel) => {

@@ -38,8 +38,8 @@ const useStyles = () => ({
 		width: "100%",
 	},
 	buttonColorError: {
-		color: "#1976d2",
-		borderColor: "#1976d2",
+		color: "var(--color-primary)",
+		borderColor: "var(--color-primary)",
 	},
 });
 

@@ -47,7 +47,7 @@ const useStyles = () => ({
 		flexGrow: 1,
 	},
 	welcomeMsg: {
-		background: "#1976d2",
+		background: "var(--color-primary)",
 		display: "flex",
 		justifyContent: "space-evenly",
 		alignItems: "center",

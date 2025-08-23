@@ -4,9 +4,9 @@ Este diretório contém o design system personalizado para o projeto, combinando
 
 ## 🎨 Paleta de Cores
 
-- **Primary Light**: `#065183` 
-- **Primary Dark**: `#39ACE7`
-- **Secondary**: `#1976d2`
+- **Primary**: `#00C307` (Verde principal)
+- **Secondary**: `#111416` (Preto principal)  
+- **Background**: `#FFFFFF` (Branco)
 - **Success**: `#10b981`
 - **Warning**: `#f59e0b`
 - **Error**: `#ef4444`

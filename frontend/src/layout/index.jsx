@@ -62,20 +62,23 @@ import api from "../services/api";
 const backendUrl = getBackendUrl();
 
 const drawerWidth = 280;
+const drawerWidthCollapsed = 64;
 
 // Styled Components
 const RootContainer = styled('div')(() => ({
   display: "flex",
   height: "100vh",
   maxHeight: "100% !important",
-  backgroundColor: "#f5f5f5",
+  backgroundColor: "var(--bg-content)",
+  contain: 'layout style',
+  willChange: 'auto',
   "& .MuiButton-outlinedPrimary": {
-    color: "#1976d2",
-    border: "1px solid rgba(0, 124, 102)",
+    color: "var(--color-accent)",
+    border: "1px solid var(--color-accent)",
     borderRadius: "50px",
   },
   "& .MuiTab-textColorPrimary.Mui-selected": {
-    color: `#111416`,
+    color: "var(--text-primary)",
   },
   "& .MuiButton-root": {
     borderRadius: "50px",
@@ -83,30 +86,32 @@ const RootContainer = styled('div')(() => ({
 }));
 
 const StyledChip = styled(Chip)(() => ({
-  background: "red",
-  color: "white",
+  background: "var(--color-accent)",
+  color: "var(--text-on-accent)",
 }));
 
 const StyledToolbar = styled(Toolbar)(() => ({
   paddingRight: 52,
-  color: "#1976d2",
-  background: "#1976d2",
+  color: "var(--text-on-dark)",
+  background: "var(--bg-navbar)",
   minHeight: `76px`
 }));
 
 const StyledAppBar = styled(AppBar, {
   shouldForwardProp: (prop) => prop !== 'drawerOpen',
 })(({ drawerOpen }) => ({
-  zIndex: 9999,
-  transition: "width 0.3s ease, margin 0.3s ease",
-  ...(drawerOpen && {
-    marginLeft: drawerWidth,
-    width: `calc(100% - 275px)`,
-    transition: "width 0.3s ease, margin 0.3s ease",
-    "@media (max-width:600px)": {
+  zIndex: 1100,
+  willChange: 'transform',
+  transition: "width 0.3s ease-out, margin-left 0.3s ease-out",
+  marginLeft: drawerOpen ? drawerWidth : drawerWidthCollapsed,
+  width: drawerOpen ? `calc(100% - ${drawerWidth}px)` : `calc(100% - ${drawerWidthCollapsed}px)`,
+  "@media (max-width:600px)": {
+    marginLeft: 0,
+    width: '100%',
+    ...(drawerOpen && {
       display: "none",
-    },
-  }),
+    }),
+  },
 }));
 
 const StyledDrawer = styled(Drawer, {
@@ -117,18 +122,15 @@ const StyledDrawer = styled(Drawer, {
     whiteSpace: "nowrap",
     overflowX: "hidden",
     padding: "0 !important",
-    width: drawerWidth,
-    transition: "width 0.3s ease",
+    width: drawerOpen ? drawerWidth : drawerWidthCollapsed,
+    willChange: 'width',
+    transition: "width 0.3s ease-out",
+    transform: 'translateX(0)',
     overflowY: "hidden",
-    ...(!drawerOpen && {
-      overflowX: "hidden",
-      overflowY: "hidden",
-      transition: "width 0.3s ease",
-      width: 8,
-      "@media (max-width:600px)": {
-        width: 8,
-      },
-    }),
+    contain: 'layout style',
+    "@media (max-width:600px)": {
+      width: drawerOpen ? drawerWidth : drawerWidthCollapsed,
+    },
   },
 }));
 
@@ -148,7 +150,10 @@ const AppBarSpacer = styled('div')(() => ({
 
 const ContentMain = styled('main')(() => ({
   flex: 1,
-  overflow: "hidden auto", // Mudança para evitar flash de scrollbars
+  overflow: "auto", // Corrigido: removido "hidden" que causava flash
+  scrollbarGutter: 'stable', // Reserva espaço para scrollbar evitando layout shift
+  contain: 'layout style', // Isola recalculações de layout
+  willChange: 'scroll-position',
   '&::-webkit-scrollbar': {
     width: '8px',
   },
@@ -168,45 +173,43 @@ const ContentMain = styled('main')(() => ({
 
 const ContainerWithScroll = styled(List)(() => ({
   flex: 1,
-  overflowY: "auto", // Mudança de "scroll" para "auto" para evitar scrollbar sempre visível
+  overflowY: "auto", 
   overflowX: "hidden",
   paddingTop: "28px !important",
   border: "2px solid transparent",
-  backgroundColor: "#111416",
-  // Scrollbar suave e consistente
+  backgroundColor: "var(--bg-sidebar)",
+  // Scrollbar completamente invisível
   "&::-webkit-scrollbar": {
-    width: "6px",
+    width: "0px",
+    background: "transparent",
+  },
+  "&::-webkit-scrollbar-thumb": {
+    background: "transparent",
   },
   "&::-webkit-scrollbar-track": {
     background: "transparent",
   },
-  "&::-webkit-scrollbar-thumb": {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    borderRadius: "3px",
-    "&:hover": {
-      backgroundColor: "rgba(255, 255, 255, 0.3)",
-    }
-  },
-  // Firefox
-  scrollbarWidth: "thin",
-  scrollbarColor: "rgba(255, 255, 255, 0.2) transparent",
+  // Firefox - scrollbar invisível
+  scrollbarWidth: "none",
+  // IE/Edge - scrollbar invisível
+  msOverflowStyle: "none",
 }));
 
 const LogoImage = styled('img', {
   shouldForwardProp: (prop) => prop !== 'drawerOpen',
 })(({ drawerOpen }) => ({
-  width: "100%",
-  height: "45px",
-  maxWidth: 180,
+  width: drawerOpen ? "100%" : "40px",
+  height: drawerOpen ? "45px" : "40px",
+  maxWidth: drawerOpen ? 180 : 40,
+  margin: drawerOpen ? "0 auto" : "0 auto",
+  transition: "all 0.3s ease-out",
   "@media (max-width:600px)": {
     width: "auto",
     height: "100%",
     maxWidth: 180,
   },
   content: "url(" + logoDark + ")",
-  ...((!drawerOpen) && {
-    display: "none",
-  }),
+  objectFit: "contain",
 }));
 
 const StyledAvatar = styled(Avatar)(() => ({
@@ -226,9 +229,9 @@ const UpdateDiv = styled('div')(() => ({
 
 const StyledBadge = styled(Badge)(() => ({
   "& .MuiBadge-badge": {
-    backgroundColor: "#44b700",
-    color: "#44b700",
-    boxShadow: `0 0 0 2px ${"#1976d2"}`,
+    backgroundColor: "var(--color-accent)",
+    color: "var(--color-accent)",
+    boxShadow: `0 0 0 2px var(--color-accent)`,
     "&::after": {
       position: "absolute",
       top: -10,
@@ -256,7 +259,7 @@ const StyledBadge = styled(Badge)(() => ({
 const SmallAvatar = styled(Avatar)(() => ({
   width: 22,
   height: 22,
-  border: `2px solid ${"#1976d2"}`,
+  border: `2px solid var(--color-accent)`,
 }));
 
 const LoggedInLayout = ({ children, themeToggle }) => {
@@ -477,8 +480,23 @@ const LoggedInLayout = ({ children, themeToggle }) => {
                   width: "100%",
                 }}
                 alt="logo" />
-            <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
-                <ChevronLeftIcon style={{ color: "#00c307" }} />
+            <IconButton 
+              onClick={() => setDrawerOpen(!drawerOpen)}
+              style={{
+                display: "flex",
+                margin: drawerOpen ? "0 auto" : "0 auto",
+                padding: "8px",
+                minWidth: "40px",
+                justifyContent: "center"
+              }}
+            >
+                <ChevronLeftIcon 
+                  style={{ 
+                    color: "var(--color-accent)", 
+                    transform: drawerOpen ? "rotate(0deg)" : "rotate(180deg)",
+                    transition: "transform 0.3s ease-out"
+                  }} 
+                />
             </IconButton>
           </>
         ) : (
@@ -562,13 +580,13 @@ const LoggedInLayout = ({ children, themeToggle }) => {
             setRingVolume={setRingVolume} // Callback function
             timelocale={'UTC-3'} //Set time local for call history
           /> */}
-          {/* <IconButton edge="start" onClick={colorMode.toggleColorMode}>
-            {"light" === "dark" ? (
+          <IconButton edge="start" onClick={colorMode.toggleColorMode}>
+            {theme.palette.mode === "dark" ? (
               <Brightness7Icon style={{ color: "white" }} />
             ) : (
               <Brightness4Icon style={{ color: "white" }} />
             )}
-          </IconButton> */}
+          </IconButton>
 
           <NotificationsVolume setVolume={setVolume} volume={volume} />
 

@@ -81,14 +81,14 @@ const useStyles = () => ({
     alignItems: 'center',
     gap: 16,
     padding: 24,
-    border: `2px dashed ${"#1976d2"}`,
+    border: `2px dashed ${"var(--color-primary)"}`,
     borderRadius: 8,
     marginBottom: 24
   },
   avatarPreview: {
     width: 64,
     height: 64,
-    backgroundColor: "#1976d2"
+    backgroundColor: "var(--color-primary)"
   },
   uploadButton: {
     position: 'relative',
@@ -105,14 +105,14 @@ const useStyles = () => ({
   },
   uploadText: {
     textAlign: 'center',
-    color: "#1976d2"
+    color: "var(--color-primary)"
   },
   tableContainer: {
     marginTop: 24,
     maxHeight: 300
   },
   tableHeader: {
-    backgroundColor: "#1976d2",
+    backgroundColor: "var(--color-primary)",
     fontWeight: 'bold'
   },
   actionButton: {

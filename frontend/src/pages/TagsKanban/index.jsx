@@ -764,7 +764,7 @@ const Tags = () => {
                                 size="small"
                                 style={{
                                   backgroundColor: "#e3f2fd",
-                                  color: "#1976d2",
+                                  color: "var(--color-primary)",
                                   fontSize: "0.65rem",
                                   height: "18px",
                                   fontWeight: 500

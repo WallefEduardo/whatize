@@ -69,7 +69,7 @@ const useStyles = {
     marginLeft: 4,
     marginRight: 4,
     // backgroundColor: "#eee",
-    // backgroundColor: "#1976d2",
+    // backgroundColor: "var(--color-primary)",
   },
 
   settingsIcon: {
@@ -103,7 +103,7 @@ const useStyles = {
 
     // "&$selected": {
     //   color: "#FFF",
-    //   backgroundColor: "#1976d2",
+    //   backgroundColor: "var(--color-primary)",
     // },
   },
 
@@ -117,7 +117,7 @@ const useStyles = {
     height: 6,
     bottom: 0,
     borderRadius: "0 0 8px 8px",
-    backgroundColor: "#1976d2",
+    backgroundColor: "var(--color-primary)",
   },
   tabsBadge: {
     top: "105%",
@@ -126,7 +126,7 @@ const useStyles = {
     whiteSpace: "nowrap",
     borderRadius: "12px",
     padding: "0 8px",
-    backgroundColor: "#1976d2",
+    backgroundColor: "var(--color-primary)",
     color: "#FFF",
   },
   ticketOptionsBox: {
@@ -134,7 +134,7 @@ const useStyles = {
     justifyContent: "space-between",
     alignItems: "center",
     // background: "#fafafa",
-    background: "#1976d2",
+    background: "var(--color-primary)",
     borderRadius: 8,
     borderColor: "#aaa",
     borderWidth: "1px",
@@ -152,7 +152,7 @@ const useStyles = {
     height: 40,
     minHeight: 40,
     maxHeight: 40,
-    background: "#1976d2",
+    background: "var(--color-primary)",
     display: "flex",
     alignItems: "center",
     borderRadius: 40,
@@ -230,7 +230,7 @@ const useStyles = {
   snackbar: {
     display: "flex",
     justifyContent: "space-between",
-    backgroundColor: "#1976d2",
+    backgroundColor: "var(--color-primary)",
     color: "white",
     borderRadius: 30,
     "@media (max-width:600px)": {
@@ -279,18 +279,18 @@ const useStyles = {
     borderRadius: 8,
     marginRight: 8,
     "&:hover": {
-      borderColor: "#1976d2",
+      borderColor: "var(--color-primary)",
     },
   },
   icon: {
     color: "#aaa",
     "&:hover": {
-      color: "#1976d2",
+      color: "var(--color-primary)",
     },
   },
   buttonOpen: {
     "& $icon": {
-      color: "#1976d2",
+      color: "var(--color-primary)",
     },
   },
 };
@@ -824,9 +824,9 @@ const TicketsManagerTabs = () => {
                   height: 30,
                   width: 30,
                   border: isHoveredOpen
-                    ? "1px solid #1976d2"
+                    ? "1px solid var(--color-primary)"
                     : tab === "open"
-                      ? "1px solid #1976d2"
+                      ? "1px solid var(--color-primary)"
                       : "1px solid #aaa",
                   borderRadius: 8,
                   marginRight: 8,
@@ -836,9 +836,9 @@ const TicketsManagerTabs = () => {
                 <MoveToInboxIcon
                   style={{
                     color: isHoveredOpen
-                      ? "#1976d2"
+                      ? "var(--color-primary)"
                       : tab === "open"
-                        ? "#1976d2"
+                        ? "var(--color-primary)"
                         : "#aaa",
                   }}
                 />
@@ -873,9 +873,9 @@ const TicketsManagerTabs = () => {
                   height: 30,
                   width: 30,
                   border: isHoveredClosed
-                    ? "1px solid #1976d2"
+                    ? "1px solid var(--color-primary)"
                     : tab === "closed"
-                      ? "1px solid #1976d2"
+                      ? "1px solid var(--color-primary)"
                       : "1px solid #aaa",
                   borderRadius: 8,
                   marginRight: 8,
@@ -885,9 +885,9 @@ const TicketsManagerTabs = () => {
                 <CheckBoxIcon
                   style={{
                     color: isHoveredClosed
-                      ? "#1976d2"
+                      ? "var(--color-primary)"
                       : tab === "closed"
-                        ? "#1976d2"
+                        ? "var(--color-primary)"
                         : "#aaa",
                   }}
                 />
@@ -920,13 +920,13 @@ const TicketsManagerTabs = () => {
                   {!sortTickets ? (
                     <TextRotateUp style={{
                       color: sortTickets
-                        ? "#1976d2"
+                        ? "var(--color-primary)"
                         : "#aaa",
                     }} />
                   ) : (
                     <TextRotationDown style={{
                       color: sortTickets
-                        ? "#1976d2"
+                        ? "var(--color-primary)"
                         : "#aaa",
                     }} />
                   )}

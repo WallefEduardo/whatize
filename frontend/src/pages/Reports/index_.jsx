@@ -44,7 +44,7 @@ import { Field } from "formik";
 
 const useStyles = () => ({
   mainContainer: {
-    background: "#1976d2",
+    background: "var(--color-primary)",
     maxWidth: "100%",
   },
   formControl: {

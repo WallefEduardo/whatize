@@ -9,7 +9,7 @@ const ForbiddenPage = () => {
       flex: 1,
     }}>
       <Box sx={{
-        background: (theme) => "#1976d2", 
+        background: (theme) => "var(--color-primary)", 
         borderRadius: 2.5,
         display: 'flex',
         padding: 2.5,

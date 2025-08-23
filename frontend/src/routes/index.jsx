@@ -137,7 +137,6 @@ const Routes = () => {
               </LoggedInLayout>
             </WhatsAppsProvider>
           </Switch>
-          <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
         </TicketsContextProvider>
       </AuthProvider>
     </BrowserRouter>

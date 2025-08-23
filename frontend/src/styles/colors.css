@@ -1,0 +1,154 @@
+/* =================================================================
+   SISTEMA DE CORES WHATIZE
+   Paleta: Preto, Verde e Branco
+   ================================================================= */
+
+:root {
+  /* ===== CORES BASE ===== */
+  --color-primary: #111416;     /* Preto principal */
+  --color-accent: #00C307;      /* Verde principal */
+  --color-white: #FFFFFF;       /* Branco */
+  --color-black: #000000;       /* Preto puro */
+
+  /* ===== VARIAÇÕES DE PRETO ===== */
+  --color-black-50: #f8f9fa;    /* Quase branco */
+  --color-black-100: #e9ecef;   /* Cinza muito claro */
+  --color-black-200: #dee2e6;   /* Cinza claro */
+  --color-black-300: #ced4da;   /* Cinza */
+  --color-black-400: #6c757d;   /* Cinza médio */
+  --color-black-500: #495057;   /* Cinza escuro */
+  --color-black-600: #343a40;   /* Cinza muito escuro */
+  --color-black-700: #212529;   /* Quase preto */
+  --color-black-800: #1a1d21;   /* Preto claro */
+  --color-black-900: #111416;   /* Preto principal */
+
+  /* ===== VARIAÇÕES DE VERDE ===== */
+  --color-green-50: #f0fdf4;    /* Verde muito claro */
+  --color-green-100: #dcfce7;   /* Verde claro */
+  --color-green-200: #bbf7d0;   /* Verde suave */
+  --color-green-300: #86efac;   /* Verde médio claro */
+  --color-green-400: #4ade80;   /* Verde médio */
+  --color-green-500: #22c55e;   /* Verde padrão */
+  --color-green-600: #16a34a;   /* Verde escuro */
+  --color-green-700: #15803d;   /* Verde mais escuro */
+  --color-green-800: #166534;   /* Verde muito escuro */
+  --color-green-900: #14532d;   /* Verde quase preto */
+  
+  /* ===== CORES PERSONALIZADAS ===== */
+  --color-green-main: #00C307;     /* Verde principal do sistema */
+  --color-green-dark: #00a006;     /* Verde escuro (hover) */
+  --color-green-light: #33d433;    /* Verde claro */
+  --color-green-hover: #00e608;    /* Verde hover brilhante */
+
+  /* ===== MODO LIGHT (PADRÃO) ===== */
+  --bg-primary: var(--color-white);
+  --bg-secondary: var(--color-black-50);
+  --bg-tertiary: var(--color-black-100);
+  --bg-navbar: var(--color-primary);
+  --bg-sidebar: var(--color-primary);
+  --bg-content: var(--color-black-50);
+  
+  --text-primary: var(--color-primary);
+  --text-secondary: var(--color-black-600);
+  --text-tertiary: var(--color-black-400);
+  --text-on-dark: var(--color-white);
+  --text-on-accent: var(--color-white);
+
+  --border-primary: var(--color-black-200);
+  --border-secondary: var(--color-black-100);
+  --border-focus: var(--color-accent);
+
+  /* ===== ESTADOS INTERATIVOS ===== */
+  --hover-bg-light: rgba(0, 195, 7, 0.05);
+  --hover-bg-medium: rgba(0, 195, 7, 0.1);
+  --hover-bg-strong: rgba(0, 195, 7, 0.15);
+  
+  --focus-ring: rgba(0, 195, 7, 0.3);
+  --focus-ring-offset: 2px;
+  
+  --active-bg: rgba(0, 195, 7, 0.2);
+  --disabled-bg: var(--color-black-100);
+  --disabled-text: var(--color-black-300);
+
+  /* ===== SOMBRAS ===== */
+  --shadow-sm: 0 1px 2px 0 rgba(17, 20, 22, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(17, 20, 22, 0.1), 0 2px 4px -1px rgba(17, 20, 22, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(17, 20, 22, 0.1), 0 4px 6px -2px rgba(17, 20, 22, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(17, 20, 22, 0.1), 0 10px 10px -5px rgba(17, 20, 22, 0.04);
+  
+  --shadow-green: 0 4px 12px rgba(0, 195, 7, 0.15);
+  --shadow-green-lg: 0 8px 25px rgba(0, 195, 7, 0.2);
+
+  /* ===== BORDAS E RADIUS ===== */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* ===== TRANSIÇÕES ===== */
+  --transition-fast: 0.15s ease-out;
+  --transition-normal: 0.2s ease-out;
+  --transition-slow: 0.3s ease-out;
+}
+
+/* ===== MODO DARK ===== */
+[data-theme="dark"] {
+  --bg-primary: var(--color-primary);
+  --bg-secondary: var(--color-black-800);
+  --bg-tertiary: var(--color-black-700);
+  --bg-navbar: var(--color-primary);
+  --bg-sidebar: var(--color-primary);
+  --bg-content: var(--color-primary);
+  
+  --text-primary: var(--color-white);
+  --text-secondary: var(--color-black-200);
+  --text-tertiary: var(--color-black-300);
+  --text-on-dark: var(--color-white);
+  --text-on-accent: var(--color-white);
+
+  --border-primary: var(--color-black-600);
+  --border-secondary: var(--color-black-700);
+  --border-focus: var(--color-accent);
+
+  /* Ajustes de hover para modo dark */
+  --hover-bg-light: rgba(0, 195, 7, 0.08);
+  --hover-bg-medium: rgba(0, 195, 7, 0.15);
+  --hover-bg-strong: rgba(0, 195, 7, 0.2);
+
+  /* Sombras adaptadas para dark */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== CLASSES UTILITÁRIAS ===== */
+.bg-primary { background-color: var(--bg-primary) !important; }
+.bg-secondary { background-color: var(--bg-secondary) !important; }
+.bg-accent { background-color: var(--color-accent) !important; }
+.bg-navbar { background-color: var(--bg-navbar) !important; }
+.bg-sidebar { background-color: var(--bg-sidebar) !important; }
+
+.text-primary { color: var(--text-primary) !important; }
+.text-secondary { color: var(--text-secondary) !important; }
+.text-accent { color: var(--color-accent) !important; }
+.text-on-dark { color: var(--text-on-dark) !important; }
+
+.border-primary { border-color: var(--border-primary) !important; }
+.border-accent { border-color: var(--color-accent) !important; }
+
+.hover-accent:hover { 
+  background-color: var(--hover-bg-medium) !important;
+  transition: var(--transition-normal);
+}
+
+.focus-accent:focus {
+  outline: 2px solid var(--focus-ring) !important;
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* ===== COMPATIBILIDADE COM VARIÁVEL ATUAL ===== */
+:root {
+  --primaryColor: var(--color-accent); /* Compatibilidade com App.jsx */
+}

@@ -37,10 +37,10 @@ const SearchInput = ({
         // Custom styles
         '[&_.MuiOutlinedInput-root]:rounded-xl',
         '[&_.MuiOutlinedInput-root]:border-gray-200',
-        '[&_.MuiOutlinedInput-root:hover]:border-[#065183]',
-        '[&_.MuiOutlinedInput-root.Mui-focused]:border-[#065183]',
+        '[&_.MuiOutlinedInput-root:hover]:border-[#00C307]',
+        '[&_.MuiOutlinedInput-root.Mui-focused]:border-[#00C307]',
         '[&_.MuiOutlinedInput-root.Mui-focused]:ring-4',
-        '[&_.MuiOutlinedInput-root.Mui-focused]:ring-blue-500/10',
+        '[&_.MuiOutlinedInput-root.Mui-focused]:ring-green-500/10',
         // Background
         '[&_.MuiOutlinedInput-root]:bg-white',
         '[&_.MuiOutlinedInput-input]:py-3',

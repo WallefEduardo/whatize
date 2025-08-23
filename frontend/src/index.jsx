@@ -19,8 +19,8 @@ if (!container) {
 try {
   const root = createRoot(container);
   
-  // StrictMode condicional durante migração - pode ser reativado depois
-  const enableStrictMode = import.meta.env.VITE_STRICT_MODE !== 'false';
+  // StrictMode apenas em desenvolvimento para evitar double-renders em produção
+  const enableStrictMode = import.meta.env.MODE === 'development' && import.meta.env.VITE_STRICT_MODE !== 'false';
   
   const AppWithBaseline = (
     <CssBaseline>

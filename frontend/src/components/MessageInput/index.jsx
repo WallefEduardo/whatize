@@ -99,7 +99,7 @@ const styles = {
     overflow: "scroll",
   },
   newMessageBox: {
-    background: "#1976d2",
+    background: "var(--color-primary)",
     width: "100%",
     display: "flex",
     padding: "12px",
@@ -108,7 +108,7 @@ const styles = {
   messageInputWrapper: {
     padding: 6,
     marginRight: 7,
-    background: "#1976d2",
+    background: "var(--color-primary)",
     display: "flex",
     borderRadius: 20,
     flex: 1,
@@ -191,7 +191,7 @@ const styles = {
     paddingTop: 8,
     paddingLeft: 73,
     paddingRight: 7,
-    backgroundColor: "#1976d2",
+    backgroundColor: "var(--color-primary)",
   },
   replyginMsgContainer: {
     flex: 1,
@@ -228,7 +228,7 @@ const styles = {
     margin: 0,
     position: "absolute",
     bottom: "50px",
-    background: "#1976d2",
+    background: "var(--color-primary)",
     padding: 0,
     border: "none",
     left: 0,
@@ -1158,7 +1158,7 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
                     onClick={handleChangeSign}
                   >
                     {signMessage === true ? (
-                      <Create style={{ color: "#1976d2" }} />
+                      <Create style={{ color: "var(--color-accent)" }} />
                     ) : (
                       <Create style={{ color: "grey" }} />
                     )}
@@ -1172,7 +1172,7 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
                   onClick={handlePrivateMessage}
                 >
                   {privateMessage === true ? (
-                    <Comment style={{ color: "#1976d2" }} />
+                    <Comment style={{ color: "var(--color-accent)" }} />
                   ) : (
                     <Comment style={{ color: "grey" }} />
                   )}
@@ -1273,7 +1273,7 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
                       onClick={handleChangeSign}
                     >
                       {signMessage === true ? (
-                        <Create style={{ color: "#1976d2" }} />
+                        <Create style={{ color: "var(--color-accent)" }} />
                       ) : (
                         <Create style={{ color: "grey" }} />
                       )}
@@ -1287,7 +1287,7 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
                     onClick={handlePrivateMessage}
                   >
                     {privateMessage === true ? (
-                      <Comment style={{ color: "#1976d2" }} />
+                      <Comment style={{ color: "var(--color-accent)" }} />
                     ) : (
                       <Comment style={{ color: "grey" }} />
                     )}

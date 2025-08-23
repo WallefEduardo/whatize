@@ -72,7 +72,7 @@ const ContactTagListModal = ({ open, onClose, tag }) => {
     >
       <Fade in={open}>
         <Box sx={{
-          backgroundColor: (theme) => "#1976d2",
+          backgroundColor: (theme) => "var(--color-primary)",
           boxShadow: (theme) => theme.shadows[5],
           padding: (theme) => 8,
           borderRadius: "8px",

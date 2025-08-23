@@ -32,7 +32,7 @@ const contactNotesStyles = {
         width: '100%',
         maxWidth: '350px',
         maxHeight: '200px',
-        backgroundColor: (theme) => "#1976d2",
+        backgroundColor: (theme) => "var(--color-primary)",
         overflow: 'auto'
     },
     inline: {

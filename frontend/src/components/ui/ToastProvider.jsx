@@ -56,9 +56,7 @@ export const ToastProvider = ({ children }) => {
 // Wrapper de compatibilidade com react-toastify
 export const toast = {
   success: (message, options = {}) => {
-    logger.development.build('Toast success');
-    phase5Logger.uxEnhancements.toastMigration('success', true, true);
-    
+    // Removido logs desnecessários para reduzir re-renders
     return hotToast.success(message, {
       ...toastConfig,
       ...options,
@@ -67,11 +65,12 @@ export const toast = {
   },
 
   error: (message, options = {}) => {
-    logger.development.error('Toast error');
-    logger.production.error('User notification error');
-    phase5Logger.uxEnhancements.toastMigration('error', true, true);
+    // Apenas log crítico se necessário
+    if (message && message !== 'undefined') {
+      logger.development.error(`Toast error: ${message}`);
+    }
     
-    return hotToast.error(message, {
+    return hotToast.error(message || 'Erro desconhecido', {
       ...toastConfig,
       ...options,
       icon: '❌',
@@ -80,9 +79,7 @@ export const toast = {
   },
 
   info: (message, options = {}) => {
-    logger.development.build('Toast info');
-    phase5Logger.uxEnhancements.toastMigration('info', true, true);
-    
+    // Removido logs desnecessários para reduzir re-renders
     return hotToast(message, {
       ...toastConfig,
       ...options,
@@ -91,9 +88,7 @@ export const toast = {
   },
 
   warning: (message, options = {}) => {
-    logger.development.build('Toast warning');
-    phase5Logger.uxEnhancements.toastMigration('warning', true, true);
-    
+    // Removido logs desnecessários para reduzir re-renders
     return hotToast(message, {
       ...toastConfig,
       ...options,
@@ -107,9 +102,7 @@ export const toast = {
   },
 
   loading: (message, options = {}) => {
-    logger.development.build('Toast loading');
-    phase5Logger.uxEnhancements.toastMigration('loading', true, true);
-    
+    // Removido logs desnecessários para reduzir re-renders
     return hotToast.loading(message, {
       ...toastConfig,
       ...options,
