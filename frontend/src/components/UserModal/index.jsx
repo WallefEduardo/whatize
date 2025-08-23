@@ -204,6 +204,7 @@ const userSchema = z.object({
 });
 
 const UserModal = ({ open, onClose, userId }) => {
+	const classes = useStyles();
 
 	const initialState = {
 		name: "",

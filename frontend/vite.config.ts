@@ -45,6 +45,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
+      '/public-settings': {
+        target: 'http://localhost:4002', // Backend para configurações públicas
+        changeOrigin: true,
+        secure: false
+      },
     },
   },
   assetsInclude: ['**/*.xlsx', '**/*.xls', '**/*.doc', '**/*.docx', '**/*.pdf'],

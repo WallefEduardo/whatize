@@ -8,6 +8,7 @@ const toastError = (error) => {
 
 import Popover from "@mui/material/Popover";
 import AnnouncementIcon from "@mui/icons-material/Announcement";
+import { Info } from "@mui/icons-material";
 
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -269,7 +270,7 @@ export default function AnnouncementsPopover() {
           variant="dot"
           invisible={invisible || announcements.length < 1}
         >
-          <Information />
+          <Info />
         </Badge>
       </IconButton>
       <Popover

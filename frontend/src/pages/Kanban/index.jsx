@@ -14,7 +14,7 @@ import { Can } from "../../components/Can";
 import { Picker } from "emoji-mart";
 import "emoji-mart/css/emoji-mart.css";
 import { Menu, ClickAwayListener, CircularProgress } from "@mui/material";
-import * as MicRecorder from "mic-recorder-to-mp3";
+// MicRecorder removido - usando mock do polyfill
 import ContactSendModal from "../../components/ContactSendModal";
 import CameraModal from "../../components/CameraModal";
 import ScheduleModal from "../../components/ScheduleModal";
@@ -50,7 +50,8 @@ import { CSS } from '@dnd-kit/utilities';
 initializeMicRecorderPolyfill();
 
 // Instância do gravador de áudio (FORA do componente como no MessageInput)
-const Mp3Recorder = new MicRecorder.default({ bitRate: 128 });
+// MicRecorder será inicializado usando window.global.MicRecorder do polyfill
+let Mp3Recorder = null;
 
 // URL do backend para as imagens
 const backendUrl = getBackendUrl();
@@ -1526,6 +1527,31 @@ const Kanban = () => {
     return () => {
       isMounted.current = false;
     };
+  }, []);
+
+  // Inicializar MicRecorder usando o polyfill
+  useEffect(() => {
+    const initMicRecorder = () => {
+      try {
+        if (typeof window !== 'undefined' && window.global && typeof window.global.MicRecorder === 'function') {
+          Mp3Recorder = new window.global.MicRecorder({ bitRate: 128 });
+          console.log("✅ MicRecorder global inicializado no Kanban");
+        } else {
+          throw new Error("window.global.MicRecorder não disponível");
+        }
+      } catch (error) {
+        console.warn("⚠️ Kanban usando MicRecorder mock:", error.message);
+        Mp3Recorder = {
+          start: () => Promise.resolve(),
+          stop: () => ({ 
+            getMp3: () => Promise.resolve([new Blob(), new Uint8Array()]) 
+          }),
+          getMp3: () => Promise.resolve([new Blob(), new Uint8Array()])
+        };
+      }
+    };
+    
+    setTimeout(initMicRecorder, 100);
   }, []);
   
   // Estados para funcionalidades do chat

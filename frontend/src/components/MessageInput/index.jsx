@@ -376,29 +376,32 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
     };
   }, []);
 
-  // Inicializar MicRecorder de forma assíncrona
+  // Inicializar MicRecorder de forma completamente defensiva
   useEffect(() => {
-    const initMicRecorder = async () => {
+    const initMicRecorder = () => {
       try {
-        const MicRecorderModule = await import("mic-recorder-to-mp3");
-        const MicRecorderClass = MicRecorderModule.default || MicRecorderModule;
-        if (MicRecorderClass) {
-          Mp3Recorder = new MicRecorderClass({ bitRate: 128 });
-          console.log("✅ MicRecorder inicializado com sucesso");
+        // Verificar se global e global.MicRecorder existem (criados pelo polyfill)
+        if (typeof window !== 'undefined' && window.global && typeof window.global.MicRecorder === 'function') {
+          Mp3Recorder = new window.global.MicRecorder({ bitRate: 128 });
+          console.log("✅ MicRecorder global inicializado com sucesso");
         } else {
-          throw new Error("MicRecorder class não encontrada");
+          throw new Error("window.global.MicRecorder não disponível");
         }
       } catch (error) {
-        console.warn("⚠️ MicRecorder não disponível, usando mock:", error.message);
+        console.warn("⚠️ Usando MicRecorder mock:", error.message);
+        // Mock mais completo
         Mp3Recorder = {
           start: () => Promise.resolve(),
-          stop: () => ({ getMp3: () => Promise.resolve([new Blob(), new Uint8Array()]) }),
+          stop: () => ({ 
+            getMp3: () => Promise.resolve([new Blob(), new Uint8Array()]) 
+          }),
           getMp3: () => Promise.resolve([new Blob(), new Uint8Array()])
         };
       }
     };
     
-    initMicRecorder();
+    // Aguardar um pouco para garantir que o polyfill foi executado
+    setTimeout(initMicRecorder, 100);
   }, []);
 
   useEffect(() => {

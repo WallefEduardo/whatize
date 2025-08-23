@@ -29,6 +29,7 @@ const Card = styled(MuiCard)(({ theme }) => ({
 	flexDirection: 'column',
 	alignSelf: 'center',
 	width: '100%',
+	maxWidth: '480px', // Limitar largura máxima
 	padding: 32,
 	gap: 16,
 	margin: 'auto',
@@ -36,7 +37,8 @@ const Card = styled(MuiCard)(({ theme }) => ({
 	backdropFilter: 'blur(10px)',
 	border: '1px solid rgba(255, 255, 255, 0.1)',
 	"@media (max-width:600px)": {
-		maxWidth: '450px',
+		maxWidth: '400px',
+		padding: 24,
 	},
 	boxShadow: '0 8px 32px 0 #474c4f',
 }));

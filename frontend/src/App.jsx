@@ -26,13 +26,33 @@ const App = () => {
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
   const preferredTheme = window.localStorage.getItem("preferredTheme");
   const [mode, setMode] = useState(preferredTheme ? preferredTheme : prefersDarkMode ? "dark" : "light");
-  const [primaryColorLight, setPrimaryColorLight] = useState(appColorLocalStorage);
-  const [primaryColorDark, setPrimaryColorDark] = useState(appColorLocalStorage);
+  const [primaryColorLight, setPrimaryColorLight] = useState("#065183"); // Cor padrão segura
+  const [primaryColorDark, setPrimaryColorDark] = useState("#39ACE7"); // Cor padrão segura
   const [appLogoLight, setAppLogoLight] = useState(defaultLogoLight);
   const [appLogoDark, setAppLogoDark] = useState(defaultLogoDark);
   const [appLogoFavicon, setAppLogoFavicon] = useState(defaultLogoFavicon);
   const [appName, setAppName] = useState(appNameLocalStorage);
   const { getPublicSetting } = useSettings();
+
+  // Função para validar se é uma cor válida
+  const isValidColor = (color) => {
+    if (!color || typeof color !== 'string') return false;
+    // Verificar se é HTML (contém < ou >)
+    if (color.includes('<') || color.includes('>')) return false;
+    // Verificar se parece com uma cor hexadecimal válida
+    return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color) || 
+           color.startsWith('rgb(') || 
+           color.startsWith('rgba(') ||
+           color.startsWith('hsl(') ||
+           color.startsWith('hsla(');
+  };
+
+  // Função para validar se um texto não contém HTML
+  const isValidText = (text) => {
+    if (!text || typeof text !== 'string') return false;
+    // Verificar se contém HTML
+    return !text.includes('<') && !text.includes('>');
+  };
 
   const colorMode = useMemo(
     () => ({
@@ -150,17 +170,29 @@ const App = () => {
     
     getPublicSetting("primaryColorLight")
       .then((color) => {
-        setPrimaryColorLight(color || "#111416");
+        if (isValidColor(color)) {
+          setPrimaryColorLight(color);
+        } else {
+          console.warn("Cor primaryColorLight inválida, usando padrão:", color);
+          setPrimaryColorLight("#065183");
+        }
       })
       .catch((error) => {
         console.log("Error reading setting", error);
+        setPrimaryColorLight("#065183");
       });
     getPublicSetting("primaryColorDark")
       .then((color) => {
-        setPrimaryColorDark(color || "#39ACE7");
+        if (isValidColor(color)) {
+          setPrimaryColorDark(color);
+        } else {
+          console.warn("Cor primaryColorDark inválida, usando padrão:", color);
+          setPrimaryColorDark("#39ACE7");
+        }
       })
       .catch((error) => {
         console.log("Error reading setting", error);
+        setPrimaryColorDark("#39ACE7");
       });
     getPublicSetting("appLogoLight")
       .then((file) => {
@@ -185,7 +217,12 @@ const App = () => {
       });
     getPublicSetting("appName")
       .then((name) => {
-        setAppName(name || "Whatize");
+        if (isValidText(name)) {
+          setAppName(name);
+        } else {
+          console.warn("Nome do app inválido, usando padrão:", name);
+          setAppName("Whatize");
+        }
       })
       .catch((error) => {
         console.log("!==== Erro ao carregar temas: ====!", error);

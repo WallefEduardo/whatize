@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
+import * as Yup from "yup";
 
-// Removido: Yup/Formik já migrados para useState
 import { toast } from "../ui/ToastProvider";
 
 // Removido: makeStyles migrado para objeto de estilos
