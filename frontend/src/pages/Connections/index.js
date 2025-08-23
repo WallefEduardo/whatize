@@ -441,25 +441,14 @@ const Connections = () => {
             role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
             perform="connections-page:addConnection"
             yes={() => (
-              <>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  className={classes.actionButtons}
-                  style={{ marginRight: 8 }}
-                  onClick={() => handleStartWhatsAppSession(whatsApp.id)}
-                >
-                  {i18n.t("connections.buttons.tryAgain")}
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  className={classes.actionButtons}
-                  onClick={() => handleRequestNewQrCode(whatsApp.id)}
-                >
-                  {i18n.t("connections.buttons.newQr")}
-                </Button>
-              </>
+              <Button
+                size="small"
+                variant="outlined"
+                className={classes.actionButtons}
+                onClick={() => handleRequestNewQrCode(whatsApp.id)}
+              >
+                {i18n.t("connections.buttons.newQr")}
+              </Button>
             )}
           />
         )}
