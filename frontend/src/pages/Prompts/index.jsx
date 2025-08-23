@@ -185,9 +185,19 @@ const Prompts = () => {
       }
     };
 
-    socket.on(`company-${companyId}-prompt`, onPromptEvent);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+
+      socket.on(`company-${companyId}-prompt`, onPromptEvent);
+
+
+    }
     return () => {
-      socket.off(`company-${companyId}-prompt`, onPromptEvent);
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company-${companyId}-prompt`, onPromptEvent);
+
+      }
     };
   }, [socket, companyId]);
 

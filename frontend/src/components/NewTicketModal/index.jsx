@@ -21,7 +21,7 @@ import { toast } from "../ui/ToastProvider";
 import { Facebook, Instagram, WhatsApp } from "@mui/icons-material";
 import ShowTicketOpen from "../ShowTicketOpenModal";
 
-const useStyles = () => ({
+const useStyles = {
   online: {
     fontSize: 11,
     color: "#25d366"
@@ -30,14 +30,14 @@ const useStyles = () => ({
     fontSize: 11,
     color: "#e1306c"
   }
-});
+};
 
 const filter = createFilterOptions({
   trim: true,
 });
 
 const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
-  const classes = useStyles();
+  const classes = useStyles;
   const [options, setOptions] = useState([]);
   const [channelFilter, setChannelFilter] = useState(null);
 
@@ -71,7 +71,7 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
         api
           // .get(`/whatsapp/filter`, { params: { companyId, session: 0, channel: channelFilter } })
           .get(`/whatsapp`, { params: { companyId, session: 0 } })
-          .then(({ data }) => setWhatsapps(data));
+          .then(({ data }) => setWhatsapps(Array.isArray(data) ? data : []));
 
           // .then(({ data }) => {
           //   const mappedWhatsapps = data.map((whatsapp) => ({
@@ -399,11 +399,11 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
                   if (selectedWhatsapp === "") {
                     return "Selecione uma Conexão"
                   }
-                  const whatsapp = whatsapps.find(w => w.id === selectedWhatsapp)
+                  const whatsapp = whatsapps && Array.isArray(whatsapps) ? whatsapps.find(w => w.id === selectedWhatsapp) : null
                   return whatsapp?.name
                 }}
               >
-                {whatsapps?.length > 0 &&
+                {whatsapps && Array.isArray(whatsapps) && whatsapps.length > 0 &&
                   whatsapps.map((whatsapp, key) => (
                     <MenuItem dense key={key} value={whatsapp.id}>
                       <ListItemText

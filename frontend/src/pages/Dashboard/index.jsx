@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useState, useEffect, useMemo, useCallback } from "react";
 import {
   Container,
   Paper,
@@ -49,7 +49,16 @@ const Dashboard = () => {
   const theme = useTheme();
   const { user } = useContext(AuthContext);
   const { find } = useDashboard();
-  const [counters, setCounters] = useState({});
+  const [counters, setCounters] = useState({
+    supportHappening: 0,
+    supportPending: 0,
+    supportFinished: 0,
+    leads: 0,
+    activeTickets: 0,
+    passiveTickets: 0,
+    avgResponseTime: 0,
+    maxResponseTime: 60
+  });
   const [attendants, setAttendants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [dateStartTicket, setDateStartTicket] = useState(
@@ -63,24 +72,32 @@ const Dashboard = () => {
     async function firstLoad() {
       await fetchData();
     }
-    setTimeout(() => {
-      firstLoad();
-    }, 1000);
+    // Remover setTimeout desnecessário que causa re-renders
+    firstLoad();
   }, []);
 
-  // Função auxiliar para gerar dados do gráfico
-  const generateChartData = (baseValue, variation = 0.1, points = 12) => {
+  // Função auxiliar para gerar dados do gráfico (memoizada para evitar recálculos)
+  const generateChartData = useCallback((baseValue, variation = 0.1, points = 12) => {
     const result = [];
     let lastValue = baseValue;
+    // Usar seed consistente baseado apenas no valor base para dados estáveis
+    const seed = baseValue * 1000 + 12345; // Seed fixo baseado no valor
+    
+    // Gerador de números pseudo-aleatórios consistente
+    let currentSeed = seed;
+    const random = () => {
+      currentSeed = (currentSeed * 9301 + 49297) % 233280;
+      return currentSeed / 233280;
+    };
 
     for (let i = 0; i < points; i++) {
-      const change = (Math.random() * 2 - 1) * variation * baseValue;
+      const change = (random() * 2 - 1) * variation * baseValue;
       lastValue = Math.max(0, lastValue + change);
-      result.push({ value: lastValue });
+      result.push({ value: Math.round(lastValue * 100) / 100 }); // Arredondar para evitar flutuação
     }
 
     return result;
-  };
+  }, []);
 
   // Função para obter número de usuários ativos
   const GetUsers = () => {
@@ -144,7 +161,10 @@ const Dashboard = () => {
     }
 
     const data = await find(params);
-    setCounters(data.counters);
+    setCounters(prevCounters => ({
+      ...prevCounters,
+      ...data.counters
+    }));
     if (isArray(data.attendants)) {
       setAttendants(data.attendants);
     } else {
@@ -153,6 +173,43 @@ const Dashboard = () => {
 
     setLoading(false);
   }
+
+  // Memoizar dados dos gráficos para evitar recálculos constantes
+  const chartDataSupportHappening = useMemo(() => 
+    generateChartData(counters.supportHappening || 0), 
+    [counters.supportHappening, generateChartData]
+  );
+
+  const chartDataSupportPending = useMemo(() => 
+    generateChartData(counters.supportPending || 0), 
+    [counters.supportPending, generateChartData]
+  );
+
+  const chartDataSupportFinished = useMemo(() => 
+    generateChartData(counters.supportFinished || 0), 
+    [counters.supportFinished, generateChartData]
+  );
+
+  const chartDataMessages = useMemo(() => 
+    generateChartData(GetMessages(true, true).count), 
+    [generateChartData]
+  );
+
+  // Memoizar cálculos de tendência
+  const trends = useMemo(() => ({
+    supportHappening: counters.supportHappening > 0 
+      ? ((counters.supportHappening - counters.supportHappening) / counters.supportHappening * 100).toFixed(1) 
+      : '0.0',
+    supportPending: counters.supportPending > 0 
+      ? ((counters.supportPending - (counters.supportPending || 0)) / (counters.supportPending || 1) * 100).toFixed(1) 
+      : '0.0',
+    supportFinished: counters.supportFinished > 0 
+      ? ((counters.supportFinished - counters.supportFinished) / counters.supportFinished * 100).toFixed(1) 
+      : '0.0',
+    messages: GetMessages(false, true).count > 0 
+      ? ((GetMessages(true, true).count - GetMessages(false, true).count) / GetMessages(false, true).count * 100).toFixed(1) 
+      : '0.0'
+  }), [counters.supportHappening, counters.supportPending, counters.supportFinished]);
 
   const MetricCard = ({ title, value, trend, icon, chartData, color }) => {
     const trendIsPositive = parseFloat(trend) >= 0;
@@ -290,9 +347,23 @@ const Dashboard = () => {
         <Box
           sx={{
             minHeight: '100vh',
-            // background: 'linear-gradient(135deg, #f5f7fa 0%, #f6f9fc 100%)',
             background: '#f5f5f5',
-            py: 4
+            py: 4,
+            // Corrigir overflow para evitar flash de scrollbars
+            overflow: 'hidden auto',
+            '&::-webkit-scrollbar': {
+              width: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: 'transparent',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0, 0, 0, 0.1)',
+              borderRadius: '4px',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+              }
+            },
           }}
         >
           <Container maxWidth="xl">
@@ -301,10 +372,10 @@ const Dashboard = () => {
                 <MetricCard
                   title="Em Atendimento"
                   value={counters.supportHappening || 0}
-                  trend={counters.supportHappening > 0 ? ((counters.supportHappening - counters.supportHappening) / counters.supportHappening * 100).toFixed(1) : '0.0'}
+                  trend={trends.supportHappening}
                   color={"#1976d2"}
                   icon={<CallIcon />}
-                  chartData={generateChartData(counters.supportHappening || 0)}
+                  chartData={chartDataSupportHappening}
                 />
               </Grid>
 
@@ -312,10 +383,10 @@ const Dashboard = () => {
                 <MetricCard
                   title="Aguardando"
                   value={counters.supportPending || 0}
-                  trend={counters.supportPending > 0 ? ((counters.supportPending - (counters.supportPending || 0)) / (counters.supportPending || 1) * 100).toFixed(1) : '0.0'}
+                  trend={trends.supportPending}
                   color={"#1976d2"}
                   icon={<HourglassEmptyIcon />}
-                  chartData={generateChartData(counters.supportPending || 0)}
+                  chartData={chartDataSupportPending}
                 />
               </Grid>
 
@@ -323,10 +394,10 @@ const Dashboard = () => {
                 <MetricCard
                   title="Finalizados"
                   value={counters.supportFinished || 0}
-                  trend={counters.supportFinished > 0 ? ((counters.supportFinished - counters.supportFinished) / counters.supportFinished * 100).toFixed(1) : '0.0'}
+                  trend={trends.supportFinished}
                   color={"#1976d2"}
                   icon={<CheckCircleIcon />}
-                  chartData={generateChartData(counters.supportFinished || 0)}
+                  chartData={chartDataSupportFinished}
                 />
               </Grid>
 
@@ -334,10 +405,10 @@ const Dashboard = () => {
                 <MetricCard
                   title="Total de Mensagens"
                   value={`${GetMessages(false, true).count}/${GetMessages(true, true).count}`}
-                  trend={GetMessages(false, true).count > 0 ? ((GetMessages(true, true).count - GetMessages(false, true).count) / GetMessages(false, true).count * 100).toFixed(1) : '0.0'}
+                  trend={trends.messages}
                   color={"#1976d2"}
                   icon={<MessageIcon />}
-                  chartData={generateChartData(GetMessages(true, true).count)}
+                  chartData={chartDataMessages}
                 />
               </Grid>
             </Grid>

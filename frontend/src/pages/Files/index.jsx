@@ -199,9 +199,19 @@ const FileLists = () => {
             }
         };
 
-        socket.on(`company-${user.companyId}-file`, onFileEvent);
+        if (socket && socket.on && typeof socket.on === 'function') {
+
+
+          socket.on(`company-${user.companyId}-file`, onFileEvent);
+
+
+        }
         return () => {
-            socket.off(`company-${user.companyId}-file`, onFileEvent);
+            if (socket && socket.off && typeof socket.off === 'function') {
+
+              socket.off(`company-${user.companyId}-file`, onFileEvent);
+
+            }
         };
     }, [socket, user.companyId]);
 

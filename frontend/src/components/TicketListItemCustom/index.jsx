@@ -464,7 +464,11 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
                             setContactPresence(data.presence);
                         }
                     };
-                    socket.on('presence-update', handlePresenceUpdate);
+                    if (socket && socket.on && typeof socket.on === 'function') {
+
+                      socket.on('presence-update', handlePresenceUpdate);
+
+                    }
                     return () => socket.off('presence-update', handlePresenceUpdate);
                 }
             } catch (error) {

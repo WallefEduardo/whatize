@@ -227,7 +227,11 @@ const FlowBuilder = () => {
         dispatch({ type: "DELETE_CONTACT", payload: +data.contactId });
       }
     };
-    socket.on(`company-${companyId}-contact`, onContact);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+      socket.on(`company-${companyId}-contact`, onContact);
+
+    }
     return () => {
       socket.disconnect();
     };

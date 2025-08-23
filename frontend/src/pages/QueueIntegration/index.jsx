@@ -219,9 +219,19 @@ const QueueIntegration = () => {
       }
     };
 
-    socket.on(`company-${companyId}-queueIntegration`, onQueueEvent);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+
+      socket.on(`company-${companyId}-queueIntegration`, onQueueEvent);
+
+
+    }
     return () => {
-      socket.off(`company-${companyId}-queueIntegration`, onQueueEvent);
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company-${companyId}-queueIntegration`, onQueueEvent);
+
+      }
     };
   }, [socket, companyId]);
 

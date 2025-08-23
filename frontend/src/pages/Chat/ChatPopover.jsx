@@ -24,20 +24,17 @@ import { useDate } from "../../hooks/useDate";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
 import notifySound from "../../assets/chat_notify.mp3";
-import useSound from "use-sound";
+import useSafeSound from "../../hooks/useSound";
 import { i18n } from "../../translate/i18n";
 import { Messages } from "iconsax-react";
 
-const useStyles = () => ({
-  mainPaper: {
-    flex: 1,
-    maxHeight: 300,
-    maxWidth: 500,
-    padding: 8,
-    overflowY: "scroll",
-    
-  },
-});
+const paperStyles = {
+  flex: 1,
+  maxHeight: 300,
+  maxWidth: 500,
+  padding: 8,
+  overflowY: "scroll",
+};
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CHATS") {
@@ -96,7 +93,6 @@ const reducer = (state, action) => {
 };
 
 export default function ChatPopover() {
-  const classes = useStyles();
 
 //   const socketManager = useContext(SocketContext);
   const { user, socket } = useContext(AuthContext);
@@ -110,7 +106,7 @@ export default function ChatPopover() {
   const [chats, dispatch] = useReducer(reducer, []);
   const [invisible, setInvisible] = useState(true);
   const { datetimeToClient } = useDate();
-  const [play] = useSound(notifySound);
+  const [play] = useSafeSound(notifySound, { volume: 1 });
   const soundAlertRef = useRef();
 
   useEffect(() => {
@@ -138,7 +134,7 @@ export default function ChatPopover() {
   }, [searchParam, pageNumber]);
 
   useEffect(() => {
-    if (user.companyId) {
+    if (user.companyId && socket && socket.on && typeof socket.on === 'function') {
 
       const companyId = user.companyId;
 //    const socket = socketManager.GetSocket();
@@ -159,11 +155,13 @@ export default function ChatPopover() {
       socket.on(`company-${companyId}-chat`, onCompanyChatPopover);
 
       return () => {
-        socket.off(`company-${companyId}-chat`, onCompanyChatPopover);
+        if (socket.off && typeof socket.off === 'function') {
+          socket.off(`company-${companyId}-chat`, onCompanyChatPopover);
+        }
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, socket]);
 
 
   useEffect(() => {
@@ -255,7 +253,7 @@ export default function ChatPopover() {
         <Paper
           variant="outlined"
           onScroll={handleScroll}
-          className={classes.mainPaper}
+          sx={paperStyles}
         >
           <List
             component="nav"

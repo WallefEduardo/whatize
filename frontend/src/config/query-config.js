@@ -29,7 +29,7 @@ export const queryConfig = {
 export const queryClient = new QueryClient(queryConfig);
 
 // Logging para migração
-if (process.env.NODE_ENV === 'development') {
+if (import.meta.env.DEV) {
   console.log('TanStack Query v5 configurado com compatibilidade React Query v3');
 }
 

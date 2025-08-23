@@ -2,20 +2,46 @@ export function register() {
   console.log("Registrando service worker", navigator);
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      const swUrl = `${process.env.PUBLIC_URL}/service-worker.js`;
-      const urlVersion = `${process.env.PUBLIC_URL}/version.json`;
-      console.log("swUrl", swUrl);
-       // Verificação periódica a cada 5 segundos
-       setInterval(() => checkForUpdate(urlVersion), 5000);
-      navigator.serviceWorker.register(swUrl)
-        .then((registration) => {
-          console.log('Service worker registrado com sucesso!', registration);
-        })
-        .catch((error) => {
-          console.error('Erro durante o registro do service worker:', error);
+      // Detectar mudança de porta e limpar service workers antigos
+      const currentPort = window.location.port;
+      const lastPort = localStorage.getItem('vite-port');
+      
+      if (lastPort && lastPort !== currentPort) {
+        console.log(`Porta mudou de ${lastPort} para ${currentPort}, limpando service worker...`);
+        unregister().then(() => {
+          // Limpar cache após mudança de porta
+          if ('caches' in window) {
+            caches.keys().then(cacheNames => {
+              cacheNames.forEach(cacheName => caches.delete(cacheName));
+            });
+          }
+          registerServiceWorker();
         });
+      } else {
+        registerServiceWorker();
+      }
+      
+      // Salvar porta atual
+      localStorage.setItem('vite-port', currentPort);
     });
   }
+}
+
+function registerServiceWorker() {
+  const swUrl = `/service-worker.js`;
+  const urlVersion = `/version.json`;
+  console.log("swUrl", swUrl);
+  
+  // Verificação periódica a cada 5 segundos
+  setInterval(() => checkForUpdate(urlVersion), 5000);
+  
+  navigator.serviceWorker.register(swUrl)
+    .then((registration) => {
+      console.log('Service worker registrado com sucesso!', registration);
+    })
+    .catch((error) => {
+      console.error('Erro durante o registro do service worker:', error);
+    });
 }
 
 // Função para verificar atualizações de versão

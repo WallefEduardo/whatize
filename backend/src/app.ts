@@ -51,16 +51,18 @@ app.set("queues", {
   sendScheduledMessages
 });
 
+// Configuração dinâmica de CORS para suportar portas dinâmicas do Vite
 const allowedOrigins = [
-  process.env.FRONTEND_URL || "https://whatize.pro",
-  "http://localhost:3000",
-  "http://localhost:3002",
-  "http://127.0.0.1:3000",
-  "http://127.0.0.1:3002",
-  "https://a3a8efef6f16.ngrok-free.app",
-  'https://apps-atm-powers-quebec.trycloudflare.com',
-  
-];
+  process.env.FRONTEND_URL, // URL principal do frontend
+  process.env.BACKEND_URL,  // URL do próprio backend
+  // Portas comuns do Vite para desenvolvimento
+  'http://localhost:3000',
+  'http://localhost:3001', 
+  'http://localhost:3002',
+  'http://localhost:3003',
+  'http://localhost:5173', // Porta padrão do Vite 5+
+  'http://localhost:5174'
+].filter(Boolean); // Remove valores undefined
 
 // Configuração do BullBoard
 if (String(process.env.BULL_BOARD).toLocaleLowerCase() === 'true' && process.env.REDIS_URI_ACK !== '') {
@@ -101,11 +103,28 @@ app.use((req, res, next) => {
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Permitir requisições sem origin (ex: Postman, mobile apps)
+      if (!origin) {
         callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+        return;
       }
+
+      // Verificar se origin está na lista de permitidos
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      // Em desenvolvimento, permitir qualquer localhost
+      if (process.env.NODE_ENV === 'development') {
+        const url = new URL(origin);
+        if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+          callback(null, true);
+          return;
+        }
+      }
+
+      callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

@@ -199,9 +199,19 @@ const ContactLists = () => {
       }
     };
 
-    socket.on(`company-${companyId}-ContactList`, onContactListEvent);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+
+      socket.on(`company-${companyId}-ContactList`, onContactListEvent);
+
+
+    }
     return () => {
-      socket.off(`company-${companyId}-ContactList`, onContactListEvent);
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company-${companyId}-ContactList`, onContactListEvent);
+
+      }
     };
   }, [user, socket]);
 

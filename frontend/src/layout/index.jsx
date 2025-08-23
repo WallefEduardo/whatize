@@ -35,6 +35,7 @@ import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
 import NotificationsVolume from "../components/NotificationsVolume";
 import UserModal from "../components/UserModal";
+import ErrorBoundary from "../components/ErrorBoundary";
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
 import { i18n } from "../translate/i18n";
@@ -45,7 +46,7 @@ import logo from "../assets/logo.png";
 import logoDark from "../assets/logo-black.png";
 import ChatPopover from "../pages/Chat/ChatPopover";
 
-// import { useDate } from "../hooks/useDate"; // Hook removido durante migração
+import { useDate } from "../hooks/useDate";
 import ColorModeContext from "./themeContext";
 import BusinessIcon from '@mui/icons-material/Business';
 import InsertEmoticonIcon from '@mui/icons-material/InsertEmoticon';
@@ -147,22 +148,48 @@ const AppBarSpacer = styled('div')(() => ({
 
 const ContentMain = styled('main')(() => ({
   flex: 1,
-  overflow: "auto",
+  overflow: "hidden auto", // Mudança para evitar flash de scrollbars
+  '&::-webkit-scrollbar': {
+    width: '8px',
+  },
+  '&::-webkit-scrollbar-track': {
+    background: 'transparent',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: '4px',
+    '&:hover': {
+      backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    }
+  },
+  scrollbarWidth: 'thin',
+  scrollbarColor: 'rgba(0, 0, 0, 0.1) transparent',
 }));
 
 const ContainerWithScroll = styled(List)(() => ({
   flex: 1,
-  overflowY: "scroll",
+  overflowY: "auto", // Mudança de "scroll" para "auto" para evitar scrollbar sempre visível
   overflowX: "hidden",
-  
   paddingTop: "28px !important",
   border: "2px solid transparent",
-  "&::-webkit-scrollbar": {
-    display: "none",
-  },
-  "-ms-overflow-style": "none",
-  "scrollbar-width": "none",
   backgroundColor: "#111416",
+  // Scrollbar suave e consistente
+  "&::-webkit-scrollbar": {
+    width: "6px",
+  },
+  "&::-webkit-scrollbar-track": {
+    background: "transparent",
+  },
+  "&::-webkit-scrollbar-thumb": {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: "3px",
+    "&:hover": {
+      backgroundColor: "rgba(255, 255, 255, 0.3)",
+    }
+  },
+  // Firefox
+  scrollbarWidth: "thin",
+  scrollbarColor: "rgba(255, 255, 255, 0.2) transparent",
 }));
 
 const LogoImage = styled('img', {
@@ -256,7 +283,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
 
   const [volume, setVolume] = useState(localStorage.getItem("volume") || 1);
 
-  // const { dateToClient } = useDate(); // Hook removido durante migração
+  const { dateToClient } = useDate();
   const [profileUrl, setProfileUrl] = useState(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -324,7 +351,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         setProfileUrl(
           `${backendUrl}/public/company${companyId}/user/${ImageUrl}`
         );
-      else setProfileUrl(`${process.env.FRONTEND_URL}/nopicture.png`);
+      else setProfileUrl(`/nopicture.png`);
 
       const onCompanyAuthLayout = (data) => {
         if (data.user.id === +userId) {
@@ -352,21 +379,28 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         }
       };
 
-      socket.on(`company-${companyId}-auth`, onCompanyAuthLayout);
-      socket.on(`company-${companyId}-payment`, onCompanyPayment);
-      socket.on(`company-${companyId}-invoices`, onCompanyInvoices);
+      if (socket && socket.on && typeof socket.on === 'function') {
+        socket.on(`company-${companyId}-auth`, onCompanyAuthLayout);
+        socket.on(`company-${companyId}-payment`, onCompanyPayment);
+        socket.on(`company-${companyId}-invoices`, onCompanyInvoices);
 
-      socket.emit("userStatus");
-      const interval = setInterval(() => {
-        socket.emit("userStatus");
-      }, 1000 * 60 * 5);
+        if (socket.emit && typeof socket.emit === 'function') {
+          socket.emit("userStatus");
+          // Reduzir frequência de 5min para 10min para evitar re-renders desnecessários
+          const interval = setInterval(() => {
+            socket.emit("userStatus");
+          }, 1000 * 60 * 10);
 
-      return () => {
-        socket.off(`company-${companyId}-auth`, onCompanyAuthLayout);
-        socket.off(`company-${companyId}-payment`, onCompanyPayment);
-        socket.off(`company-${companyId}-invoices`, onCompanyInvoices);
-        clearInterval(interval);
-      };
+          return () => {
+            if (socket.off && typeof socket.off === 'function') {
+              socket.off(`company-${companyId}-auth`, onCompanyAuthLayout);
+              socket.off(`company-${companyId}-payment`, onCompanyPayment);
+              socket.off(`company-${companyId}-invoices`, onCompanyInvoices);
+            }
+            clearInterval(interval);
+          };
+        }
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket]);
@@ -572,12 +606,14 @@ const LoggedInLayout = ({ children, themeToggle }) => {
               />
             </StyledBadge>
 
-            <UserModal
-              open={userModalOpen}
-              onClose={() => setUserModalOpen(false)}
-              onImageUpdate={(newProfileUrl) => setProfileUrl(newProfileUrl)}
-              userId={currentUser?.id}
-            />
+            <ErrorBoundary fallbackMessage="Erro no perfil do usuário. Tente recarregar a página.">
+              <UserModal
+                open={userModalOpen}
+                onClose={() => setUserModalOpen(false)}
+                onImageUpdate={(newProfileUrl) => setProfileUrl(newProfileUrl)}
+                userId={currentUser?.id}
+              />
+            </ErrorBoundary>
 
             <Menu
               id="menu-appbar"

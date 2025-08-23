@@ -10,7 +10,7 @@ import { useMediaQuery } from "@mui/material";
 import { Toaster } from "react-hot-toast";
 import ColorModeContext from "./layout/themeContext";
 import { ActiveMenuProvider } from "./context/ActiveMenuContext";
-import Favicon from "react-favicon";
+// Favicon functionality implemented directly with useEffect
 import { getBackendUrl } from "./config";
 import Routes from "./routes/index.jsx";
 import defaultLogoLight from "./assets/logo.png";
@@ -36,22 +36,40 @@ const App = () => {
 
   // Função para validar se é uma cor válida
   const isValidColor = (color) => {
+    // Se for undefined, null ou string vazia, usar padrão
     if (!color || typeof color !== 'string') return false;
+    
+    const trimmed = color.trim();
+    
+    // Se for string vazia ou textos inválidos, usar padrão
+    if (!trimmed || trimmed === 'undefined' || trimmed === 'null' || trimmed === '') {
+      return false;
+    }
+    
     // Verificar se é HTML (contém < ou >)
-    if (color.includes('<') || color.includes('>')) return false;
-    // Verificar se parece com uma cor hexadecimal válida
-    return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color) || 
-           color.startsWith('rgb(') || 
-           color.startsWith('rgba(') ||
-           color.startsWith('hsl(') ||
-           color.startsWith('hsla(');
+    if (trimmed.includes('<') || trimmed.includes('>')) return false;
+    
+    // Verificar se parece com uma cor válida (hex, rgb, hsl, ou nome)
+    const colorPattern = /^(#[0-9A-Fa-f]{3,8}|rgb\(|hsl\(|[a-zA-Z]+).*$/;
+    return colorPattern.test(trimmed);
   };
 
   // Função para validar se um texto não contém HTML
   const isValidText = (text) => {
+    // Se for undefined, null ou string vazia, usar padrão
     if (!text || typeof text !== 'string') return false;
+    
+    const trimmed = text.trim();
+    
+    // Se for string vazia ou textos inválidos, usar padrão
+    if (!trimmed || trimmed === 'undefined' || trimmed === 'null' || trimmed === '') {
+      return false;
+    }
+    
     // Verificar se contém HTML
-    return !text.includes('<') && !text.includes('>');
+    if (trimmed.includes('<') || trimmed.includes('>')) return false;
+    
+    return true;
   };
 
   const colorMode = useMemo(
@@ -167,67 +185,45 @@ const App = () => {
     console.log("APP START")
     console.log("|========================================|")
    
+    // Carregar configurações com tratamento silencioso de erros
+    const loadSetting = async (key, setter, defaultValue, isValidFn = null) => {
+      try {
+        const value = await getPublicSetting(key);
+        
+        if (isValidFn && !isValidFn(value)) {
+          // Usar padrão silenciosamente se valor for inválido
+          setter(defaultValue);
+          return;
+        }
+        
+        if (value && value !== 'undefined' && value !== 'null') {
+          setter(value);
+        } else {
+          setter(defaultValue);
+        }
+      } catch (error) {
+        console.log(`Error reading setting ${key}:`, error);
+        setter(defaultValue);
+      }
+    };
     
-    getPublicSetting("primaryColorLight")
-      .then((color) => {
-        if (isValidColor(color)) {
-          setPrimaryColorLight(color);
-        } else {
-          console.warn("Cor primaryColorLight inválida, usando padrão:", color);
-          setPrimaryColorLight("#065183");
-        }
-      })
-      .catch((error) => {
-        console.log("Error reading setting", error);
-        setPrimaryColorLight("#065183");
-      });
-    getPublicSetting("primaryColorDark")
-      .then((color) => {
-        if (isValidColor(color)) {
-          setPrimaryColorDark(color);
-        } else {
-          console.warn("Cor primaryColorDark inválida, usando padrão:", color);
-          setPrimaryColorDark("#39ACE7");
-        }
-      })
-      .catch((error) => {
-        console.log("Error reading setting", error);
-        setPrimaryColorDark("#39ACE7");
-      });
-    getPublicSetting("appLogoLight")
-      .then((file) => {
-        setAppLogoLight(file ? getBackendUrl() + "/public/" + file : defaultLogoLight);
-      })
-      .catch((error) => {
-        console.log("Error reading setting", error);
-      });
-    getPublicSetting("appLogoDark")
-      .then((file) => {
-        setAppLogoDark(file ? getBackendUrl() + "/public/" + file : defaultLogoDark);
-      })
-      .catch((error) => {
-        console.log("Error reading setting", error);
-      });
-    getPublicSetting("appLogoFavicon")
-      .then((file) => {
-        setAppLogoFavicon(file ? getBackendUrl() + "/public/" + file : defaultLogoFavicon);
-      })
-      .catch((error) => {
-        console.log("Error reading setting", error);
-      });
-    getPublicSetting("appName")
-      .then((name) => {
-        if (isValidText(name)) {
-          setAppName(name);
-        } else {
-          console.warn("Nome do app inválido, usando padrão:", name);
-          setAppName("Whatize");
-        }
-      })
-      .catch((error) => {
-        console.log("!==== Erro ao carregar temas: ====!", error);
-        setAppName("Whatize");
-      });
+    // Carregar todas as configurações
+    loadSetting("primaryColorLight", setPrimaryColorLight, "#065183", isValidColor);
+    loadSetting("primaryColorDark", setPrimaryColorDark, "#39ACE7", isValidColor);
+    loadSetting("appName", setAppName, "Whatize", isValidText);
+    
+    // Carregar logos (não precisam de validação especial)
+    loadSetting("appLogoLight", (file) => {
+      setAppLogoLight(file ? getBackendUrl() + "/public/" + file : defaultLogoLight);
+    }, null);
+    
+    loadSetting("appLogoDark", (file) => {
+      setAppLogoDark(file ? getBackendUrl() + "/public/" + file : defaultLogoDark);
+    }, null);
+    
+    loadSetting("appLogoFavicon", (file) => {
+      setAppLogoFavicon(file ? getBackendUrl() + "/public/" + file : defaultLogoFavicon);
+    }, null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -249,9 +245,17 @@ const App = () => {
     fetchVersionData();
   }, []);
 
+  // Handle favicon updates
+  useEffect(() => {
+    const favicon = document.querySelector("link[rel*='icon']") || document.createElement('link');
+    favicon.type = 'image/x-icon';
+    favicon.rel = 'shortcut icon';
+    favicon.href = appLogoFavicon ? getBackendUrl() + "/public/" + appLogoFavicon : defaultLogoFavicon;
+    document.getElementsByTagName('head')[0].appendChild(favicon);
+  }, [appLogoFavicon]);
+
   return (
     <>
-      <Favicon url={appLogoFavicon ? getBackendUrl() + "/public/" + appLogoFavicon : defaultLogoFavicon} />
       <ColorModeContext.Provider value={{ colorMode }}>
         <ThemeProvider theme={theme}>
           <QueryClientProvider client={queryClient}>

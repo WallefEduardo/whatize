@@ -187,7 +187,13 @@ const FlowDefault = () => {
       }
     }
 
-    socket.on(`company-${companyId}-contact`, onContact);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+
+      socket.on(`company-${companyId}-contact`, onContact);
+
+
+    }
 
     getFlows().then(res => {
       getFlowsDefault(res)
@@ -196,7 +202,7 @@ const FlowDefault = () => {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [socket]);
 
 
 

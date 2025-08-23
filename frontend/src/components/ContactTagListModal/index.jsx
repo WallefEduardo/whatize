@@ -44,12 +44,16 @@ const ContactTagListModal = ({ open, onClose, tag }) => {
         }
       }
     };
-    socket.on(`company${user.companyId}-tag`, onCompanyTags);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+      socket.on(`company${user.companyId}-tag`, onCompanyTags);
+
+    }
 
     return () => {
       socket.off(`company${user.companyId}-tag`, onCompanyTags);
     };
-  }, []); // Dependência do estado auxiliar updateFlag
+  }, [socket]); // Dependência do estado auxiliar updateFlag
 
   return tagList.length > 0 ? (
     <Modal

@@ -209,10 +209,18 @@ const Tags = () => {
         dispatch({ type: "DELETE_TAGS", payload: +data.tagId });
       }
     };
-    socket.on(`company${user.companyId}-tag`, onCompanyTags);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+      socket.on(`company${user.companyId}-tag`, onCompanyTags);
+
+    }
 
     return () => {
-      socket.off(`company${user.companyId}-tag`, onCompanyTags);
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company${user.companyId}-tag`, onCompanyTags);
+
+      }
     };
   }, [socket, user.companyId]);
   const handleOpenTagModal = () => {

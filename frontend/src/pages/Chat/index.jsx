@@ -357,17 +357,43 @@ function Chat() {
       }
     }
 
-    socket.on(`company-${companyId}-chat-user-${user.id}`, onChatUser);
-    socket.on(`company-${companyId}-chat`, onChat);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+
+      socket.on(`company-${companyId}-chat-user-${user.id}`, onChatUser);
+
+
+    }
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+      socket.on(`company-${companyId}-chat`, onChat);
+
+    }
     if (isObject(currentChat) && has(currentChat, "id")) {
-      socket.on(`company-${companyId}-chat-${currentChat.id}`, onCurrentChat);
+      if (socket && socket.on && typeof socket.on === 'function') {
+
+        socket.on(`company-${companyId}-chat-${currentChat.id}`, onCurrentChat);
+
+      }
     }
 
     return () => {
-      socket.off(`company-${companyId}-chat-user-${user.id}`, onChatUser);
-      socket.off(`company-${companyId}-chat`, onChat);
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company-${companyId}-chat-user-${user.id}`, onChatUser);
+
+      }
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company-${companyId}-chat`, onChat);
+
+      }
       if (isObject(currentChat) && has(currentChat, "id")) {
-        socket.off(`company-${companyId}-chat-${currentChat.id}`, onCurrentChat);
+        if (socket && socket.off && typeof socket.off === 'function') {
+
+          socket.off(`company-${companyId}-chat-${currentChat.id}`, onCurrentChat);
+
+        }
       }
     };
   }, [currentChat, chats, socket, user, history]);

@@ -49,7 +49,7 @@ import api from "../../services/api";
 import { TicketsContext } from "../../context/Tickets/TicketsContext";
 // import { Filter, FilterSearch, SearchNormal1 } from "iconsax-react"; // Biblioteca removida durante migração
 
-const useStyles = () => ({
+const useStyles = {
   ticketsWrapper: {
     position: "relative",
     display: "flex",
@@ -293,10 +293,10 @@ const useStyles = () => ({
       color: "#1976d2",
     },
   },
-});
+};
 
 const TicketsManagerTabs = () => {
-  const classes = useStyles();
+  const classes = useStyles;
   const history = useHistory();
 
   const [searchParam, setSearchParam] = useState("");
@@ -536,17 +536,17 @@ const TicketsManagerTabs = () => {
   };
 
   return (
-    <Paper elevation={0} className={classes.ticketsWrapper}>
+    <Paper elevation={0} style={classes.ticketsWrapper}>
       <NewTicketModal
         modalOpen={newTicketModalOpen}
         onClose={(ticket) => {
           handleCloseOrOpenTicket(ticket);
         }}
       />
-      <div className={classes.serachInputWrapper}>
-        <SearchIcon className={classes.searchIcon} />
+      <div style={classes.serachInputWrapper}>
+        <SearchIcon sx={classes.searchIcon} />
         <InputBase
-          className={classes.searchInput}
+          sx={classes.searchInput}
           inputRef={searchInputRef}
           placeholder={i18n.t("tickets.search.placeholder")}
           type="search"
@@ -596,19 +596,19 @@ const TicketsManagerTabs = () => {
               borderRadius: "50%",
               justifyContent: "flex-end",
               alignItems: "center",
+              ...classes.filterIcon
             }}
             variant="contained"
             aria-label="filter"
-            className={classes.filterIcon}
             onClick={() => {
               setIsFilterActive((prevState) => !prevState);
               handleFilter();
             }}
           >
             {isFilterActive ? (
-              <FilterAlt className={classes.icon} />
+              <FilterAlt sx={classes.icon} />
             ) : (
-              <FilterAltOff className={classes.icon} />
+              <FilterAltOff sx={classes.icon} />
             )}
           </IconButton>
         </Badge>
@@ -631,13 +631,13 @@ const TicketsManagerTabs = () => {
                 justifyContent: "flex-end",
                 alignItems: "center",
                 marginLeft: 4,
+                ...classes.filterIcon
               }}
               variant="contained"
               aria-label="clear-filters"
-              className={classes.filterIcon}
               onClick={clearAllFilters}
             >
-              <ClearAllIcon className={classes.icon} style={{ color: "#f44336" }} />
+              <ClearAllIcon sx={{...classes.icon, color: "#f44336"}} />
             </IconButton>
           </Tooltip>
         )}
@@ -685,7 +685,7 @@ const TicketsManagerTabs = () => {
           />
         </Tabs>
       </Paper> */}
-      <Paper square elevation={0} className={classes.ticketOptionsBox}>
+      <Paper square elevation={0} style={classes.ticketOptionsBox}>
         <Grid container alignItems="center" justifyContent="space-between">
           <Grid item>
             <Can
@@ -707,7 +707,7 @@ const TicketsManagerTabs = () => {
                   <ToggleButton
                     onMouseEnter={() => setIsHoveredAll(true)}
                     onMouseLeave={() => setIsHoveredAll(false)}
-                    className={classes.button}
+                    sx={classes.button}
                     value="uncheck"
                     selected={showAllTickets}
                     onChange={() => {
@@ -716,9 +716,9 @@ const TicketsManagerTabs = () => {
                     }}
                   >
                     {showAllTickets ? (
-                      <VisibilityIcon className={classes.icon} />
+                      <VisibilityIcon sx={classes.icon} />
                     ) : (
-                      <VisibilityOffIcon className={classes.icon} />
+                      <VisibilityOffIcon sx={classes.icon} />
                     )}
                   </ToggleButton>
                 </Badge>
@@ -734,14 +734,14 @@ const TicketsManagerTabs = () => {
               action={
                 <>
                   <Button
-                    className={classes.yesButton}
+                    sx={classes.yesButton}
                     size="small"
                     onClick={CloseAllTicket}
                   >
                     {i18n.t("tickets.inbox.yes")}
                   </Button>
                   <Button
-                    className={classes.noButton}
+                    sx={classes.noButton}
                     size="small"
                     onClick={handleSnackbarClose}
                   >
@@ -765,12 +765,12 @@ const TicketsManagerTabs = () => {
               <IconButton
                 onMouseEnter={() => setIsHoveredNew(true)}
                 onMouseLeave={() => setIsHoveredNew(false)}
-                className={classes.button}
+                sx={classes.button}
                 onClick={() => {
                   setNewTicketModalOpen(true);
                 }}
               >
-                <AddIcon className={classes.icon} />
+                <AddIcon sx={classes.icon} />
               </IconButton>
             </Badge>
             {user.profile === "admin" && (
@@ -789,7 +789,7 @@ const TicketsManagerTabs = () => {
                 <IconButton
                   onMouseEnter={() => setIsHoveredResolve(true)}
                   onMouseLeave={() => setIsHoveredResolve(false)}
-                  className={classes.button}
+                  sx={classes.button}
                   onClick={handleSnackbarOpen}
                 >
                   <PlaylistAddCheckOutlined style={{ color: "green" }} />
@@ -910,7 +910,7 @@ const TicketsManagerTabs = () => {
                 <ToggleButton
                   onMouseEnter={() => setIsHoveredSort(true)}
                   onMouseLeave={() => setIsHoveredSort(false)}
-                  className={classes.button}
+                  sx={classes.button}
                   value="uncheck"
                   selected={sortTickets}
                   onChange={() =>
@@ -945,7 +945,7 @@ const TicketsManagerTabs = () => {
           </Grid>
         </Grid>
       </Paper>
-      <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
+      <TabPanel value={tab} name="open" style={classes.ticketsWrapper}>
         <Tabs
           value={tabOpen}
           onChange={handleChangeTabOpen}
@@ -1064,7 +1064,7 @@ const TicketsManagerTabs = () => {
           )}
         </Tabs>
 
-        <Paper elevation={0} className={classes.ticketsWrapper}>
+        <Paper elevation={0} style={classes.ticketsWrapper}>
           <TicketsList
             status="open"
             showAll={showAllTickets}
@@ -1117,7 +1117,7 @@ const TicketsManagerTabs = () => {
           )}
         </Paper>
       </TabPanel>
-      <TabPanel value={tab} name="closed" className={classes.ticketsWrapper}>
+      <TabPanel value={tab} name="closed" style={classes.ticketsWrapper}>
         <TicketsList
           status="closed"
           showAll={showAllTickets}
@@ -1133,7 +1133,7 @@ const TicketsManagerTabs = () => {
         />
       </TabPanel>
       {filter && (
-        <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
+        <TabPanel value={tab} name="search" style={classes.ticketsWrapper}>
           {profile === "admin" && (
             <>
               <TicketsList

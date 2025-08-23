@@ -216,7 +216,7 @@ function ListItemLink(props) {
   return (
     <ConditionalTooltip tooltipEnabled={!!tooltip}>
       <li>
-        <ListItem button component={renderLink} sx={styles.listItem}>
+        <ListItem component={renderLink} sx={styles.listItem}>
           {icon ? (
             <ListItemIcon>
               {showBadge ? (
@@ -392,16 +392,40 @@ const MainListItems = ({ collapsed, drawerClose }) => {
 
   useEffect(() => {
     async function fetchData() {
-      const companyId = user.companyId;
-      const planConfigs = await getPlanCompany(undefined, companyId);
+      try {
+        const companyId = user.companyId;
+        const planConfigs = await getPlanCompany(undefined, companyId);
 
-      setShowCampaigns(planConfigs.plan.useCampaigns);
-      setShowKanban(planConfigs.plan.useKanban);
-      setShowOpenAi(planConfigs.plan.useOpenAi);
-      setShowIntegrations(planConfigs.plan.useIntegrations);
-      setShowSchedules(planConfigs.plan.useSchedules);
-      setShowInternalChat(planConfigs.plan.useInternalChat);
-      setShowExternalApi(planConfigs.plan.useExternalApi);
+        // Add null safety checks
+        if (planConfigs && planConfigs.plan) {
+          setShowCampaigns(planConfigs.plan.useCampaigns || false);
+          setShowKanban(planConfigs.plan.useKanban || false);
+          setShowOpenAi(planConfigs.plan.useOpenAi || false);
+          setShowIntegrations(planConfigs.plan.useIntegrations || false);
+          setShowSchedules(planConfigs.plan.useSchedules || false);
+          setShowInternalChat(planConfigs.plan.useInternalChat || false);
+          setShowExternalApi(planConfigs.plan.useExternalApi || false);
+        } else {
+          // Set default values if plan data is unavailable
+          setShowCampaigns(false);
+          setShowKanban(false);
+          setShowOpenAi(false);
+          setShowIntegrations(false);
+          setShowSchedules(false);
+          setShowInternalChat(false);
+          setShowExternalApi(false);
+        }
+      } catch (error) {
+        console.error('Error fetching plan data:', error);
+        // Set default values on error
+        setShowCampaigns(false);
+        setShowKanban(false);
+        setShowOpenAi(false);
+        setShowIntegrations(false);
+        setShowSchedules(false);
+        setShowInternalChat(false);
+        setShowExternalApi(false);
+      }
     }
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -416,7 +440,7 @@ const MainListItems = ({ collapsed, drawerClose }) => {
   }, [searchParam, pageNumber]);
 
   useEffect(() => {
-    if (user.id) {
+    if (user.id && socket && socket.on && typeof socket.on === 'function') {
       const companyId = user.companyId;
       //    const socket = socketManager.GetSocket();
       // console.log('socket nListItems')
@@ -444,7 +468,9 @@ const MainListItems = ({ collapsed, drawerClose }) => {
 
       socket.on(`company-${companyId}-chat`, onCompanyChatMainListItems);
       return () => {
-        socket.off(`company-${companyId}-chat`, onCompanyChatMainListItems);
+        if (socket.off && typeof socket.off === 'function') {
+          socket.off(`company-${companyId}-chat`, onCompanyChatMainListItems);
+        }
       };
     }
   }, [socket]);
@@ -551,7 +577,6 @@ const MainListItems = ({ collapsed, drawerClose }) => {
             <Tooltip title={collapsed ? i18n.t("mainDrawer.listItems.management") : ""} placement="right">
               <ListItem
                 dense
-                button
                 onClick={() => setOpenDashboardSubmenu((prev) => !prev)}
                 onMouseEnter={() => setManagementHover(true)}
                 onMouseLeave={() => setManagementHover(false)}
@@ -714,7 +739,6 @@ const MainListItems = ({ collapsed, drawerClose }) => {
                     <Tooltip title={collapsed ? i18n.t("mainDrawer.listItems.campaigns") : ""} placement="right">
                       <ListItem
                         dense
-                        button
                         onClick={() => setOpenCampaignSubmenu((prev) => !prev)}
                         onMouseEnter={() => setCampaignHover(true)}
                         onMouseLeave={() => setCampaignHover(false)}
@@ -779,7 +803,6 @@ const MainListItems = ({ collapsed, drawerClose }) => {
                   <Tooltip title={collapsed ? i18n.t("mainDrawer.listItems.campaigns") : ""} placement="right">
                     <ListItem
                       dense
-                      button
                       onClick={() => setOpenFlowSubmenu((prev) => !prev)}
                       onMouseEnter={() => setFlowHover(true)}
                       onMouseLeave={() => setFlowHover(false)}

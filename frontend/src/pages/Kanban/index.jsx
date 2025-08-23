@@ -2934,12 +2934,20 @@ const formatPhoneNumber = (phoneNumber) => {
     };
 
     // Registra o listener
-    socket.on(`company-${user.companyId}-appMessage`, handleNewMessage);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+      socket.on(`company-${user.companyId}-appMessage`, handleNewMessage);
+
+    }
 
     // Cleanup ao desmontar ou trocar ticket
     return () => {
       socket.emit("joinChatBoxLeave", ticketId);
-      socket.off(`company-${user.companyId}-appMessage`, handleNewMessage);
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company-${user.companyId}-appMessage`, handleNewMessage);
+
+      }
     };
   }, [selectedTicket, socket, user.companyId]);
 
@@ -2980,13 +2988,29 @@ const formatPhoneNumber = (phoneNumber) => {
     };
 
     // Registrar listeners
-    socket.on(`company-${user.companyId}-ticket`, handleTicketUpdate);
-    socket.on(`company-${user.companyId}-appMessage`, handleNewMessage);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+      socket.on(`company-${user.companyId}-ticket`, handleTicketUpdate);
+
+    }
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+      socket.on(`company-${user.companyId}-appMessage`, handleNewMessage);
+
+    }
 
     // Cleanup
     return () => {
-      socket.off(`company-${user.companyId}-ticket`, handleTicketUpdate);
-      socket.off(`company-${user.companyId}-appMessage`, handleNewMessage);
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company-${user.companyId}-ticket`, handleTicketUpdate);
+
+      }
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company-${user.companyId}-appMessage`, handleNewMessage);
+
+      }
     };
   }, [socket, user, setColumns]);
 

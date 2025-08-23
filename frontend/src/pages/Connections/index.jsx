@@ -235,15 +235,17 @@ const Connections = () => {
   }, []);
 
   useEffect(() => {
-    socket.on(`importMessages-${user.companyId}`, (data) => {
-      if (data.action === "refresh") {
-        setStatusImport([]);
-        history.go(0);
-      }
-      if (data.action === "update") {
-        setStatusImport(data.status);
-      }
-    });
+    if (socket && socket.on && typeof socket.on === 'function') {
+      socket.on(`importMessages-${user.companyId}`, (data) => {
+        if (data.action === "refresh") {
+          setStatusImport([]);
+          history.go(0);
+        }
+        if (data.action === "update") {
+          setStatusImport(data.status);
+        }
+      });
+    }
   }, [whatsApps, user.companyId, socket, history]);
 
   const handleStartWhatsAppSession = async (whatsAppId) => {

@@ -1,8 +1,16 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-export default defineConfig({
+export default defineConfig(({ command, mode }) => {
+  // Load environment variables
+  const env = loadEnv(mode, process.cwd(), '')
+  
+  // Dynamic configuration based on environment
+  const backendUrl = env.VITE_BACKEND_URL || 'http://localhost:4000'
+  const frontendPort = parseInt(env.VITE_FRONTEND_PORT) || 3002
+  
+  return {
   plugins: [
     react({
       include: "**/*.{jsx,tsx,js,ts}",
@@ -37,16 +45,22 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3002, // Manter porta do projeto
+    port: frontendPort,
     host: true,
+    strictPort: false, // Permite usar porta alternativa se a configurada estiver ocupada
     proxy: {
       '/api': {
-        target: 'http://localhost:4002', // Backend na porta 4002
+        target: backendUrl,
+        changeOrigin: true,
+        secure: false
+      },
+      '/auth': {
+        target: backendUrl,
         changeOrigin: true,
         secure: false
       },
       '/public-settings': {
-        target: 'http://localhost:4002', // Backend para configurações públicas
+        target: backendUrl,
         changeOrigin: true,
         secure: false
       },
@@ -92,11 +106,11 @@ export default defineConfig({
     // Definir Lame globalmente para mic-recorder-to-mp3
     'window.Lame': 'window.lamejs',
     'process.env': {
-      REACT_APP_BACKEND_URL: JSON.stringify(process.env.REACT_APP_BACKEND_URL || 'http://localhost:4002'),
-      REACT_APP_HOURS_CLOSE_TICKETS_AUTO: JSON.stringify(process.env.REACT_APP_HOURS_CLOSE_TICKETS_AUTO || '24'),
-      REACT_APP_OPENAI_API_KEY: JSON.stringify(process.env.REACT_APP_OPENAI_API_KEY || ''),
-      REACT_APP_FACEBOOK_APP_ID: JSON.stringify(process.env.REACT_APP_FACEBOOK_APP_ID || ''),
-      NODE_ENV: JSON.stringify(process.env.NODE_ENV || 'development'),
+      REACT_APP_BACKEND_URL: JSON.stringify(backendUrl),
+      REACT_APP_HOURS_CLOSE_TICKETS_AUTO: JSON.stringify(env.VITE_HOURS_CLOSE_TICKETS_AUTO || '24'),
+      REACT_APP_OPENAI_API_KEY: JSON.stringify(env.VITE_OPENAI_API_KEY || ''),
+      REACT_APP_FACEBOOK_APP_ID: JSON.stringify(env.VITE_FACEBOOK_APP_ID || ''),
+      NODE_ENV: JSON.stringify(env.NODE_ENV || 'development'),
     },
   },
   optimizeDeps: {
@@ -112,10 +126,12 @@ export default defineConfig({
       'lamejs'
     ],
     exclude: [
-      // Excluir mic-recorder-to-mp3 do pré-bundling para evitar problemas com Lame
-      'mic-recorder-to-mp3'
+      // Excluir dependências problemáticas do pré-bundling
+      'mic-recorder-to-mp3',
+      'use-sound' // Excluir use-sound para evitar problemas com Howler.js
     ],
     // Forçar pré-bundling em modo de desenvolvimento para detectar problemas
-    force: process.env.NODE_ENV === 'development'
+    force: env.NODE_ENV === 'development'
   }
-})
+  } // Return object close
+}) // defineConfig close

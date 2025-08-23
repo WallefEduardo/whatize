@@ -624,8 +624,16 @@ const MessagesList = ({
         dispatch({ type: "DELETE_MESSAGE", payload: data.messageId });
       }
     }
-    socket.on("connect", connectEventMessagesList);
-    socket.on(`company-${companyId}-appMessage`, onAppMessageMessagesList);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+      socket.on("connect", connectEventMessagesList);
+
+    }
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+      socket.on(`company-${companyId}-appMessage`, onAppMessageMessagesList);
+
+    }
 
     return () => {
 
@@ -635,7 +643,7 @@ const MessagesList = ({
       socket.off(`company-${companyId}-appMessage`, onAppMessageMessagesList);
     };
 
-  }, [ticketId]);
+  }, [ticketId, socket]);
 
   const loadMore = () => {
     if (loadingMore) return;

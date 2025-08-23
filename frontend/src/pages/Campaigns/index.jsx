@@ -216,9 +216,19 @@ const Campaigns = () => {
       }
     }
 
-    socket.on(`company-${companyId}-campaign`, onCompanyCampaign);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+
+      socket.on(`company-${companyId}-campaign`, onCompanyCampaign);
+
+
+    }
     return () => {
-      socket.off(`company-${companyId}-campaign`, onCompanyCampaign);
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company-${companyId}-campaign`, onCompanyCampaign);
+
+      }
     };
   }, [user, socket]);
 

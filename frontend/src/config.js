@@ -4,7 +4,9 @@ function getConfig(name, defaultValue = null) {
         return window.ENV[name] || defaultValue;
     }
 
-    return process.env[name] || defaultValue;
+    // Convert REACT_APP_ to VITE_ for Vite compatibility
+    const viteName = name.replace('REACT_APP_', 'VITE_');
+    return import.meta.env[viteName] || import.meta.env[name] || defaultValue;
 }
 
 export function getBackendUrl() {
@@ -16,7 +18,21 @@ export function getHoursCloseTicketsAuto() {
 }
 
 export function getFrontendPort() {
-    return getConfig('SERVER_PORT');
+    // Em desenvolvimento, detectar porta atual do browser
+    if (typeof window !== 'undefined' && window.location) {
+        return window.location.port || '3000';
+    }
+    // Fallback para variáveis de ambiente
+    return getConfig('VITE_FRONTEND_PORT') || getConfig('SERVER_PORT') || '3000';
+}
+
+export function getFrontendUrl() {
+    // Em desenvolvimento, usar URL atual do browser
+    if (typeof window !== 'undefined' && window.location) {
+        return `${window.location.protocol}//${window.location.host}`;
+    }
+    // Fallback para variável de ambiente
+    return getConfig('VITE_FRONTEND_URL') || 'http://localhost:3000';
 }
 
 export function getPrimaryColor() {

@@ -18,12 +18,22 @@ if (!container) {
 // Usar nova API do React 18, mas com fallback
 try {
   const root = createRoot(container);
+  
+  // StrictMode condicional durante migração - pode ser reativado depois
+  const enableStrictMode = import.meta.env.VITE_STRICT_MODE !== 'false';
+  
+  const AppWithBaseline = (
+    <CssBaseline>
+      <App />
+    </CssBaseline>
+  );
+  
   root.render(
-    <React.StrictMode>
-      <CssBaseline>
-        <App />
-      </CssBaseline>
-    </React.StrictMode>
+    enableStrictMode ? (
+      <React.StrictMode>{AppWithBaseline}</React.StrictMode>
+    ) : (
+      AppWithBaseline
+    )
   );
   console.log('[MIGRATION] React 18 inicializado com sucesso');
   

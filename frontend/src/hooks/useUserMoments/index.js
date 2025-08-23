@@ -49,8 +49,18 @@ const useUserMoments = () => {
         }
       };
   
-      socket.on(`company-${companyId}-ticket`, onTicketEvent);
-      socket.on(`company-${companyId}-appMessage`, onAppMessage);
+      if (socket && socket.on && typeof socket.on === 'function') {
+
+  
+        socket.on(`company-${companyId}-ticket`, onTicketEvent);
+
+  
+      }
+      if (socket && socket.on && typeof socket.on === 'function') {
+
+        socket.on(`company-${companyId}-appMessage`, onAppMessage);
+
+      }
       return () => {
         socket.off(`company-${companyId}-ticket`, onTicketEvent);
         socket.off(`company-${companyId}-appMessage`, onAppMessage);

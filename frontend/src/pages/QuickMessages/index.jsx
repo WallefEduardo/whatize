@@ -201,10 +201,18 @@ const Quickemessages = () => {
         dispatch({ type: "DELETE_QUICKMESSAGE", payload: +data.id });
       }
     };
-    socket.on(`company - ${ companyId } -quickemessage`, onQuickMessageEvent);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+      socket.on(`company - ${ companyId } -quickemessage`, onQuickMessageEvent);
+
+    }
 
     return () => {
-      socket.off(`company - ${ companyId } -quickemessage`, onQuickMessageEvent);
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company - ${ companyId } -quickemessage`, onQuickMessageEvent);
+
+      }
     };
   }, [socket, user]);
 

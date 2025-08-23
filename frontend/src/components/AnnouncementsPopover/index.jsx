@@ -36,16 +36,13 @@ import moment from "moment";
 // import { Information } from "iconsax-react"; // Biblioteca removida durante migração
 // import { SocketContext } from "../../context/Socket/SocketContext";
 
-const useStyles = () => ({
-  mainPaper: {
-    flex: 1,
-    maxHeight: 300,
-    maxWidth: 500,
-    padding: 8,
-    overflowY: "scroll",
-    
-  },
-});
+const paperStyles = {
+  flex: 1,
+  maxHeight: 300,
+  maxWidth: 500,
+  padding: 8,
+  overflowY: "scroll",
+};
 
 function AnnouncementDialog({ announcement, open, handleClose }) {
   // const getMediaPath = (filename) => {
@@ -145,7 +142,6 @@ const reducer = (state, action) => {
 };
 
 export default function AnnouncementsPopover() {
-  const classes = useStyles();
 
   const [loading, setLoading] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -175,7 +171,7 @@ export default function AnnouncementsPopover() {
   }, [searchParam, pageNumber]);
 
   useEffect(() => {
-    if (user.companyId) {
+    if (user.companyId && socket && socket.on && typeof socket.on === 'function') {
       const companyId = user.companyId;
 //    const socket = socketManager.GetSocket();
 
@@ -191,10 +187,12 @@ export default function AnnouncementsPopover() {
       socket.on(`company-announcement`, onCompanyAnnouncement);
 
       return () => {
-        socket.off(`company-announcement`, onCompanyAnnouncement);
+        if (socket.off && typeof socket.off === 'function') {
+          socket.off(`company-announcement`, onCompanyAnnouncement);
+        }
       };
     }
-  }, [user]);
+  }, [user, socket]);
 
   const fetchAnnouncements = async () => {
     try {
@@ -290,7 +288,7 @@ export default function AnnouncementsPopover() {
         <Paper
           variant="outlined"
           onScroll={handleScroll}
-          className={classes.mainPaper}
+          sx={paperStyles}
         >
           <List
             component="nav"

@@ -144,9 +144,19 @@ const Ticket = () => {
         }
       };
 
-      socket.on("connect", onConnectTicket)
+      if (socket && socket.on && typeof socket.on === 'function') {
+
+
+        socket.on("connect", onConnectTicket)
       socket.on(`company-${companyId}-ticket`, onCompanyTicket);
-      socket.on(`company-${companyId}-contact`, onCompanyContactTicket);
+
+
+      }
+      if (socket && socket.on && typeof socket.on === 'function') {
+
+        socket.on(`company-${companyId}-contact`, onCompanyContactTicket);
+
+      }
 
       return () => {
 
@@ -156,7 +166,7 @@ const Ticket = () => {
         socket.off(`company-${companyId}-contact`, onCompanyContactTicket);
       };
     }
-  }, [ticketId, ticket, history]);
+  }, [ticketId, ticket, history, socket]);
 
   const handleDrawerOpen = useCallback(() => {
     setDrawerOpen(true);

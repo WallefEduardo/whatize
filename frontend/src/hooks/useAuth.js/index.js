@@ -16,7 +16,7 @@ const useAuth = () => {
   const [isAuth, setIsAuth] = useState(false);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState({});
-  const [socket, setSocket] = useState({})
+  const [socket, setSocket] = useState(null)
  
 
   api.interceptors.request.use(
@@ -79,7 +79,7 @@ const useAuth = () => {
     if (Object.keys(user).length && user.id > 0) {
       // console.log("Entrou useWhatsapp com user", Object.keys(user).length, Object.keys(socket).length ,user, socket)
       let io;
-      if (!Object.keys(socket).length) {
+      if (!socket) {
         io = socketConnection({ user });
         setSocket(io)
       } else {

@@ -212,9 +212,19 @@ const Announcements = () => {
         }
       }
 
-      socket.on(`company-announcement`, onCompanyAnnouncement);
+      if (socket && socket.on && typeof socket.on === 'function') {
+
+
+        socket.on(`company-announcement`, onCompanyAnnouncement);
+
+
+      }
       return () => {
-        socket.off(`company-announcement`, onCompanyAnnouncement);
+        if (socket && socket.off && typeof socket.off === 'function') {
+
+          socket.off(`company-announcement`, onCompanyAnnouncement);
+
+        }
       }
     }
   }, [user.companyId, socket]);

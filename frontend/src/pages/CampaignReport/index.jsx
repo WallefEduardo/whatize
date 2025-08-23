@@ -134,13 +134,21 @@ const CampaignReport = () => {
         }
       }
     };
-    socket.on(`company-${companyId}-campaign`, onCampaignEvent);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+      socket.on(`company-${companyId}-campaign`, onCampaignEvent);
+
+    }
 
     return () => {
-      socket.off(`company-${companyId}-campaign`, onCampaignEvent);
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company-${companyId}-campaign`, onCampaignEvent);
+
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaignId]);
+  }, [campaignId, socket]);
 
   const findCampaign = async () => {
     setLoading(true);

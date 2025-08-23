@@ -118,7 +118,7 @@ export const getAppConfig = (): AppConfiguration => {
     
     // URLs
     backendURL: process.env.BACKEND_URL || `http://localhost:${process.env.PORT || '4035'}`,
-    frontendURL: process.env.FRONTEND_URL || 'http://localhost:3000',
+    frontendURL: process.env.FRONTEND_URL || `http://localhost:${process.env.FRONTEND_PORT}`,
     
     // Banco de dados
     database: {

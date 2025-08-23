@@ -16,7 +16,12 @@ class SocketWorker {
   }
 
   configureSocket() {
-    this.socket = io(`${process.env.REACT_APP_BACKEND_URL}/${this?.companyId}` , {
+    // Em desenvolvimento, usar proxy; em produção, usar URL completa
+    const socketUrl = import.meta.env.DEV 
+      ? `/${this?.companyId}` 
+      : `${import.meta.env.VITE_BACKEND_URL}/${this?.companyId}`;
+    
+    this.socket = io(socketUrl , {
       autoConnect: true,
       reconnection: true,
       reconnectionDelay: 1000,

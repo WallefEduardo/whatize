@@ -1,39 +1,87 @@
 /**
- * Welcome to your Workbox-powered service worker!
- *
- * You'll need to register this file in your web app and you should
- * disable HTTP caching for this file too.
- * See https://goo.gl/nhQhGp
- *
- * The rest of the code is auto-generated. Please don't update this file
- * directly; instead, make changes to your Workbox build configuration
- * and re-run your build process.
- * See https://goo.gl/2aRDsh
+ * Service Worker compatível com Vite
+ * Versão simplificada sem dependências externas do Workbox
  */
 
-importScripts("https://storage.googleapis.com/workbox-cdn/releases/4.3.1/workbox-sw.js");
+const CACHE_NAME = 'whatize-v2-dynamic';
+const urlsToCache = [
+  '/',
+  '/index.html',
+  '/favicon.ico',
+  '/logo_icon.svg',
+  '/version.json'
+];
 
-importScripts(
-  "/precache-manifest.84f0e7161f2d693b40e6cd672383db6a.js"
-);
+// Install event
+self.addEventListener('install', (event) => {
+  console.log('Service Worker: Installing...');
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('Service Worker: Caching files...');
+        return cache.addAll(urlsToCache);
+      })
+      .catch((error) => {
+        console.log('Service Worker: Cache failed:', error);
+      })
+  );
+});
 
+// Activate event
+self.addEventListener('activate', (event) => {
+  console.log('Service Worker: Activating...');
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Service Worker: Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+});
+
+// Fetch event - Dinâmico para Vite
+self.addEventListener('fetch', (event) => {
+  // Apenas cachear requisições GET
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // Não cachear recursos do Vite dev server (node_modules/.vite)
+  if (event.request.url.includes('node_modules/.vite') || 
+      event.request.url.includes('@vite/') ||
+      event.request.url.includes('?v=')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request)
+      .then((response) => {
+        // Return cached version or fetch from network
+        return response || fetch(event.request);
+      })
+      .catch(() => {
+        // Fallback para página offline se necessário
+        if (event.request.destination === 'document') {
+          return caches.match('/index.html');
+        }
+      })
+  );
+});
+
+// Message event para skip waiting
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });
 
-workbox.core.clientsClaim();
-
-/**
- * The workboxSW.precacheAndRoute() method efficiently caches and responds to
- * requests for URLs in the manifest.
- * See https://goo.gl/S9QRab
- */
-self.__precacheManifest = [].concat(self.__precacheManifest || []);
-workbox.precaching.precacheAndRoute(self.__precacheManifest, {});
-
-workbox.routing.registerNavigationRoute(workbox.precaching.getCacheKeyForURL("/index.html"), {
-  
-  blacklist: [/^\/_/,/\/[^/?]+\.[^/]+$/],
+// Claim clients imediatamente
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
 });

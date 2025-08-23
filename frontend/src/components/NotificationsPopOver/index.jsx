@@ -5,7 +5,7 @@ import { useHistory } from "react-router-dom";
 import { format } from "date-fns";
 // import { SocketContext } from "../../context/Socket/SocketContext";
 
-import useSound from "use-sound";
+import useSafeSound from "../../hooks/useSound";
 
 import Popover from "@mui/material/Popover";
 import IconButton from "@mui/material/IconButton";
@@ -23,12 +23,12 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import useCompanySettings from "../../hooks/useSettings/companySettings";
-import Favicon from "react-favicon";
+import FaviconWrapper from "../FaviconWrapper";
 import { getBackendUrl } from "../../config";
 import defaultLogoFavicon from "../../assets/favicon.ico";
 import { TicketsContext } from "../../context/Tickets/TicketsContext";
 
-const useStyles = () => ({
+const useStyles = {
 	tabContainer: {
 		overflowY: "auto",
 		maxHeight: 350,
@@ -46,10 +46,10 @@ const useStyles = () => ({
 	noShadow: {
 		boxShadow: "none !important",
 	},
-});
+};
 
 const NotificationsPopOver = (volume) => {
-	const classes = useStyles();
+	const classes = useStyles;
 	const theme = useTheme();
 
 	const history = useHistory();
@@ -77,7 +77,7 @@ const NotificationsPopOver = (volume) => {
 		// showAll: showTicketWithoutQueue ? "true" : "false"
 	});
 
-	const [play] = useSound(alertSound, volume);
+	const [play] = useSafeSound(alertSound, { volume: volume?.volume || 1 });
 	const soundAlertRef = useRef();
 
 	const historyRef = useRef(history);
@@ -124,7 +124,7 @@ const NotificationsPopOver = (volume) => {
 	useEffect(() => {
 		const processNotifications = () => {
 			// if (showTicketWithoutQueue) {
-			setNotifications(tickets);
+			setNotifications(tickets || []);
 			// } else {
 			// 	const newNotifications = tickets.filter(ticket => ticket.status !== "pending");
 
@@ -219,14 +219,18 @@ const NotificationsPopOver = (volume) => {
 				}
 			}
 
-			socket.on("connect", onConnectNotificationsPopover);
-			socket.on(`company-${companyId}-ticket`, onCompanyTicketNotificationsPopover);
-			socket.on(`company-${companyId}-appMessage`, onCompanyAppMessageNotificationsPopover);
+			if (socket && socket.on && typeof socket.on === 'function') {
+				socket.on("connect", onConnectNotificationsPopover);
+				socket.on(`company-${companyId}-ticket`, onCompanyTicketNotificationsPopover);
+				socket.on(`company-${companyId}-appMessage`, onCompanyAppMessageNotificationsPopover);
+			}
 
 			return () => {
-				socket.off("connect", onConnectNotificationsPopover);
-				socket.off(`company-${companyId}-ticket`, onCompanyTicketNotificationsPopover);
-				socket.off(`company-${companyId}-appMessage`, onCompanyAppMessageNotificationsPopover);
+				if (socket && socket.off && typeof socket.off === 'function') {
+					socket.off("connect", onConnectNotificationsPopover);
+					socket.off(`company-${companyId}-ticket`, onCompanyTicketNotificationsPopover);
+					socket.off(`company-${companyId}-appMessage`, onCompanyAppMessageNotificationsPopover);
+				}
 			};
 		}
 	}, [user, profile, queues, showTicketWithoutQueue, socket, showNotificationPending, showGroupNotification]);
@@ -280,22 +284,23 @@ const NotificationsPopOver = (volume) => {
 
 	const browserNotification = () => {
 		const numbers = "⓿➊➋➌➍➎➏➐➑➒➓⓫⓬⓭⓮⓯⓰⓱⓲⓳⓴";
-		if (notifications.length > 0) {
-			if (notifications.length < 21) {
-				document.title = numbers.substring(notifications.length, notifications.length + 1) + " - " + (theme.appName || "...");
+		const notificationCount = (notifications && notifications.length) || 0;
+		if (notificationCount > 0) {
+			if (notificationCount < 21) {
+				document.title = numbers.substring(notificationCount, notificationCount + 1) + " - " + (theme.appName || "...");
 			} else {
-				document.title = "(" + notifications.length + ")" + (theme.appName || "...");
+				document.title = "(" + notificationCount + ")" + (theme.appName || "...");
 			}
 		} else {
 			document.title = theme.appName || "...";
 		}
 		return (
 			<>
-				<Favicon
+				<FaviconWrapper
 					animated={true}
 					url={(theme?.appLogoFavicon) ? theme.appLogoFavicon : defaultLogoFavicon}
-					alertCount={notifications.length}
-					iconSize={195}
+					alertCount={notificationCount}
+					iconSize={32}
 				/>
 			</>
 		);
@@ -312,8 +317,8 @@ const NotificationsPopOver = (volume) => {
 				color="inherit"
 				style={{ color: "white" }}
 			>
-				<Badge overlap="rectangular" badgeContent={notifications.length} color="secondary">
-					<MessageFavorite />
+				<Badge overlap="rectangular" badgeContent={(notifications && notifications.length) || 0} color="secondary">
+					<ChatIcon />
 				</Badge>
 			</IconButton>
 			<Popover
@@ -331,8 +336,8 @@ const NotificationsPopOver = (volume) => {
 				classes={{ paper: classes.popoverPaper }}
 				onClose={handleClickAway}
 			>
-				<List dense className={classes.tabContainer}>
-					{notifications.length === 0 ? (
+				<List dense sx={classes.tabContainer}>
+					{(!notifications || notifications.length === 0) ? (
 						<ListItem>
 							<ListItemText>{i18n.t("notifications.noTickets")}</ListItemText>
 						</ListItem>

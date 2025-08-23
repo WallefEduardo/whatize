@@ -271,14 +271,18 @@ const DashboardManage = () => {
       }
     }
   
-    // socket.on("connect", onConnect);
-    socket.on(`company-${companyId}-ticket`, onAppMessage)
-    socket.on(`company-${companyId}-appMessage`, onAppMessage);
+    if (socket && socket.on && typeof socket.on === 'function') {
+      // socket.on("connect", onConnect);
+      socket.on(`company-${companyId}-ticket`, onAppMessage);
+      socket.on(`company-${companyId}-appMessage`, onAppMessage);
+    }
   
     return () => {
-      // socket.off("connect", onConnect);
-      socket.off(`company-${companyId}-ticket`, onAppMessage)
-      socket.off(`company-${companyId}-appMessage`, onAppMessage);
+      if (socket && socket.off && typeof socket.off === 'function') {
+        // socket.off("connect", onConnect);
+        socket.off(`company-${companyId}-ticket`, onAppMessage);
+        socket.off(`company-${companyId}-appMessage`, onAppMessage);
+      }
     };
   }, [socket]);
 

@@ -23,8 +23,8 @@ const createLogEntry = (level, message, phase = null, component = null, metadata
 
 class FrontendLogger {
   constructor() {
-    this.isDevelopment = process.env.NODE_ENV === 'development';
-    this.isProduction = process.env.NODE_ENV === 'production';
+    this.isDevelopment = import.meta.env.DEV;
+    this.isProduction = import.meta.env.PROD;
   }
 
   // LOGS DE DESENVOLVIMENTO (Detalhados)

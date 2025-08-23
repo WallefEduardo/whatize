@@ -172,12 +172,20 @@ const ContactListItems = () => {
         dispatch({ type: "LOAD_CONTACTS", payload: data.records });
       }
     }
-    socket.on(`company-${companyId}-ContactListItem`, onCompanyContactLists);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+      socket.on(`company-${companyId}-ContactListItem`, onCompanyContactLists);
+
+    }
 
     return () => {
-      socket.off(`company-${companyId}-ContactListItem`, onCompanyContactLists);
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company-${companyId}-ContactListItem`, onCompanyContactLists);
+
+      }
     };
-  }, [contactListId]);
+  }, [contactListId, socket]);
 
   const handleSearch = (event) => {
     setSearchParam(event.target.value.toLowerCase());

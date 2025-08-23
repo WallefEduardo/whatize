@@ -11,7 +11,7 @@ import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Padding } from "@mui/icons-material";
 
-const useStyles = () => ({
+const useStyles = {
     ticketsListWrapper: {
         position: "relative",
         display: "flex",
@@ -76,7 +76,7 @@ const useStyles = () => ({
         alignItems: "center",
         justifyContent: "center",
     },
-});
+};
 
 const ticketSortAsc = (a, b) => {
     
@@ -107,7 +107,8 @@ const reducer = (state, action) => {
     if (action.type === "LOAD_TICKETS") {
         const newTickets = action.payload;
 
-        newTickets.forEach((ticket) => {
+        if (Array.isArray(newTickets)) {
+            newTickets.forEach((ticket) => {
             const ticketIndex = state.findIndex((t) => t.id === ticket.id);
             if (ticketIndex !== -1) {
                 state[ticketIndex] = ticket;
@@ -118,8 +119,9 @@ const reducer = (state, action) => {
                 state.push(ticket);
             }
         });
-        if (sortDir && ['ASC', 'DESC'].includes(sortDir)) {
-            sortDir === 'ASC' ? state.sort(ticketSortAsc) : state.sort(ticketSortDesc);
+            if (sortDir && ['ASC', 'DESC'].includes(sortDir)) {
+                sortDir === 'ASC' ? state.sort(ticketSortAsc) : state.sort(ticketSortDesc);
+            }
         }
 
         return [...state];
@@ -222,7 +224,7 @@ const TicketsListCustom = (props) => {
         sortTickets
     } = props;
 
-    const classes = useStyles();
+    const classes = useStyles;
     const [pageNumber, setPageNumber] = useState(1);
     let [ticketsList, dispatch] = useReducer(reducer, []);
     //   const socketManager = useContext(SocketContext);
@@ -366,10 +368,24 @@ const TicketsListCustom = (props) => {
             }
         }
 
-        socket.on("connect", onConnectTicketsList)
+        if (socket && socket.on && typeof socket.on === 'function') {
+
+
+          socket.on("connect", onConnectTicketsList)
         socket.on(`company-${companyId}-ticket`, onCompanyTicketTicketsList);
-        socket.on(`company-${companyId}-appMessage`, onCompanyAppMessageTicketsList);
-        socket.on(`company-${companyId}-contact`, onCompanyContactTicketsList);
+
+
+        }
+        if (socket && socket.on && typeof socket.on === 'function') {
+
+          socket.on(`company-${companyId}-appMessage`, onCompanyAppMessageTicketsList);
+
+        }
+        if (socket && socket.on && typeof socket.on === 'function') {
+
+          socket.on(`company-${companyId}-contact`, onCompanyContactTicketsList);
+
+        }
 
         return () => {
             if (status) {
@@ -383,7 +399,7 @@ const TicketsListCustom = (props) => {
             socket.off(`company-${companyId}-contact`, onCompanyContactTicketsList);
         };
 
-  }, [status, showAll, user, selectedQueueIds, tags, users, profile, queues, sortTickets, showTicketWithoutQueue]);
+  }, [status, showAll, user, selectedQueueIds, tags, users, profile, queues, sortTickets, showTicketWithoutQueue, socket]);
 
     useEffect(() => {
         if (typeof updateCount === "function") {
@@ -407,25 +423,25 @@ const TicketsListCustom = (props) => {
     };
 
     if (status && status !== "search") {
-        ticketsList = ticketsList.filter(ticket => ticket.status === status)
+        ticketsList = Array.isArray(ticketsList) ? ticketsList.filter(ticket => ticket.status === status) : []
     }
 
     return (
-        <Paper elevation={0} className={classes.ticketsListWrapper} style={style}>
+        <Paper elevation={0} style={{...classes.ticketsListWrapper, ...style}}>
             <Paper
                 square
                 name="closed"
                 elevation={0}
-                className={classes.ticketsList}
+                style={classes.ticketsList}
                 onScroll={handleScroll}
             >
                 <List style={{ paddingTop: 0 }} >
                     {ticketsList.length === 0 && !loading ? (
-                        <div className={classes.noTicketsDiv}>
-                            <span className={classes.noTicketsTitle}>
+                        <div style={classes.noTicketsDiv}>
+                            <span style={classes.noTicketsTitle}>
                                 {i18n.t("ticketsList.noTicketsTitle")}
                             </span>
-                            <p className={classes.noTicketsText}>
+                            <p style={classes.noTicketsText}>
                                 {i18n.t("ticketsList.noTicketsMessage")}
                             </p>
                         </div>

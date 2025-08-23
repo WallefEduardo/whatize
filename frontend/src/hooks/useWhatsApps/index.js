@@ -120,12 +120,24 @@ const useWhatsApps = () => {
         }
       }
 
-      socket.on(`company-${companyId}-whatsapp`, onCompanyWhatsapp);
-      socket.on(`company-${companyId}-whatsappSession`, onCompanyWhatsappSession);
+      if (socket && socket.on && typeof socket.on === 'function') {
+
+
+        socket.on(`company-${companyId}-whatsapp`, onCompanyWhatsapp);
+
+
+      }
+      if (socket && socket.on && typeof socket.on === 'function') {
+
+        socket.on(`company-${companyId}-whatsappSession`, onCompanyWhatsappSession);
+
+      }
 
       return () => {
-        socket.off(`company-${companyId}-whatsapp`, onCompanyWhatsapp);
-        socket.off(`company-${companyId}-whatsappSession`, onCompanyWhatsappSession);
+        if (socket && socket.off && typeof socket.off === 'function') {
+          socket.off(`company-${companyId}-whatsapp`, onCompanyWhatsapp);
+          socket.off(`company-${companyId}-whatsappSession`, onCompanyWhatsappSession);
+        }
       };
     }
   }, [socket]);

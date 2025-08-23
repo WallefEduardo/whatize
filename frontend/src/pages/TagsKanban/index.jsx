@@ -278,7 +278,11 @@ const Tags = () => {
         dispatch({ type: "DELETE_TAGS", payload: +data.tagId });
       }
     };
-    socket.on(`company${user.companyId}-tag`, onTagsEvent);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+      socket.on(`company${user.companyId}-tag`, onTagsEvent);
+
+    }
 
     const onFunnelEvent = (data) => {
       if (data.action === "create") {
@@ -301,11 +305,23 @@ const Tags = () => {
         setFunnels(prev => prev.filter(funnel => funnel.id !== +data.funilKanbanId));
       }
     };
-    socket.on(`company-${user.companyId}-funilKanban`, onFunnelEvent);
+    if (socket && socket.on && typeof socket.on === 'function') {
+
+      socket.on(`company-${user.companyId}-funilKanban`, onFunnelEvent);
+
+    }
 
     return () => {
-      socket.off(`company${user.companyId}-tag`, onTagsEvent);
-      socket.off(`company-${user.companyId}-funilKanban`, onFunnelEvent);
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company${user.companyId}-tag`, onTagsEvent);
+
+      }
+      if (socket && socket.off && typeof socket.off === 'function') {
+
+        socket.off(`company-${user.companyId}-funilKanban`, onFunnelEvent);
+
+      }
     };
   }, [socket, user.companyId]);
 
