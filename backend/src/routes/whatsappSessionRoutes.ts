@@ -23,4 +23,25 @@ whatsappSessionRoutes.delete(
   WhatsAppSessionController.remove
 );
 
+// Nova rota para monitoramento
+whatsappSessionRoutes.get(
+  "/whatsappsession/stats",
+  isAuth,
+  WhatsAppSessionController.stats
+);
+
+// Nova rota para relatório de performance
+whatsappSessionRoutes.get(
+  "/whatsappsession/performance",
+  isAuth,
+  WhatsAppSessionController.performance
+);
+
+// Nova rota para reset de métricas
+whatsappSessionRoutes.post(
+  "/whatsappsession/reset-metrics",
+  isAuth,
+  WhatsAppSessionController.resetMetrics
+);
+
 export default whatsappSessionRoutes;

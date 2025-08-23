@@ -30,12 +30,16 @@ const reducer = (state, action) => {
     const whatsAppIndex = state.findIndex((s) => s.id === whatsApp.id);
 
     if (whatsAppIndex !== -1) {
+      const oldStatus = state[whatsAppIndex].status;
+      console.log(`🔄 [REDUCER-DEBUG] Status mudando de "${oldStatus}" → "${whatsApp.status}" para ${whatsApp.name || whatsApp.id}`);
+      
       state[whatsAppIndex].status = whatsApp.status;
       state[whatsAppIndex].updatedAt = whatsApp.updatedAt;
       state[whatsAppIndex].qrcode = whatsApp.qrcode;
       state[whatsAppIndex].retries = whatsApp.retries;
       return [...state];
     } else {
+      console.log(`⚠️ [REDUCER-DEBUG] WhatsApp ${whatsApp.id} não encontrado no state para atualização`);
       return [...state];
     }
   }
@@ -76,6 +80,18 @@ const useWhatsApps = () => {
       }
     };
     fetchSession();
+    
+    // 🛡️ FALLBACK: Listener para force refresh
+    const handleForceRefresh = (event) => {
+      console.log(`🔄 [FALLBACK-LISTENER] Forçando refresh dos WhatsApps...`);
+      dispatch({ type: "LOAD_WHATSAPPS", payload: event.detail });
+    };
+    
+    window.addEventListener('forceWhatsAppRefresh', handleForceRefresh);
+    
+    return () => {
+      window.removeEventListener('forceWhatsAppRefresh', handleForceRefresh);
+    };
   }, []);
 
   useEffect(() => {
@@ -94,7 +110,17 @@ const useWhatsApps = () => {
       }
 
       const onCompanyWhatsappSession = (data) => {
+        // 🔍 DEBUG: Log todos os eventos recebidos
+        console.log(`📡 [SOCKET-DEBUG] Evento whatsappSession recebido:`, {
+          action: data.action,
+          sessionId: data.session?.id,
+          sessionName: data.session?.name,
+          newStatus: data.session?.status,
+          timestamp: new Date().toISOString()
+        });
+        
         if (data.action === "update") {
+          console.log(`🔄 [SOCKET-DEBUG] Atualizando status de ${data.session?.name || data.session?.id}: ${data.session?.status}`);
           dispatch({ type: "UPDATE_SESSION", payload: data.session });
         }
         

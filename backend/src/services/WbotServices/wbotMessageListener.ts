@@ -4044,13 +4044,32 @@ const wbotMessageListener = (wbot: Session, companyId: number): void => {
     }
   });
 
+  // Rate limiting para logs de MESSAGES-UPDATE
+  const messageUpdateStats = {
+    lastLogTime: 0,
+    totalUpdates: 0,
+    batchCount: 0
+  };
+  const LOG_THROTTLE_MS = 5000; // Log a cada 5 segundos máximo
+
   wbot.ev.on("messages.update", (messageUpdate: WAMessageUpdate[]) => {
-    logger.info(`🔄 [MESSAGES-UPDATE] INICIO: { companyId: ${companyId}, wbotId: ${wbot.id}, updatesCount: ${messageUpdate.length} }`);
+    const now = Date.now();
+    messageUpdateStats.totalUpdates += messageUpdate.length;
+    messageUpdateStats.batchCount++;
+    
+    // Log throttling - só loga a cada 5 segundos ou se for o primeiro
+    const shouldLog = (now - messageUpdateStats.lastLogTime) >= LOG_THROTTLE_MS || messageUpdateStats.lastLogTime === 0;
+    
+    if (shouldLog) {
+      logger.info(`🔄 [MESSAGES-UPDATE] BATCH: { companyId: ${companyId}, wbotId: ${wbot.id}, batchesProcessed: ${messageUpdateStats.batchCount}, totalUpdates: ${messageUpdateStats.totalUpdates}, currentBatchSize: ${messageUpdate.length} }`);
+      messageUpdateStats.lastLogTime = now;
+      messageUpdateStats.totalUpdates = 0; // Reset counter
+      messageUpdateStats.batchCount = 0;
+    }
     
     try {
       if (messageUpdate.length === 0) {
-        logger.info(`🔄 [MESSAGES-UPDATE] SEM UPDATES: Array vazio`);
-        return;
+        return; // Remove log desnecessário para arrays vazios
       }
       
       messageUpdate.forEach(async (message: WAMessageUpdate) => {
@@ -4081,7 +4100,10 @@ const wbotMessageListener = (wbot: Session, companyId: number): void => {
       }
     });
     
-    logger.info(`🔄 [MESSAGES-UPDATE] CONCLUIDO: { companyId: ${companyId}, wbotId: ${wbot.id} }`);
+    // Só loga conclusão se houve log de início (throttled)
+    if (shouldLog) {
+      logger.info(`🔄 [MESSAGES-UPDATE] CONCLUIDO: { companyId: ${companyId}, wbotId: ${wbot.id} }`);
+    }
     } catch (error) {
       logger.error(`❌ [MESSAGES-UPDATE] ERRO CRITICO: { companyId: ${companyId}, wbotId: ${wbot.id}, error: ${error.message}, stack: ${error.stack} }`);
       throw error;

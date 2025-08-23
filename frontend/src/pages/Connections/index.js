@@ -324,7 +324,22 @@ const Connections = () => {
   const handleSubmitConfirmationModal = async () => {
     if (confirmModalInfo.action === "disconnect") {
       try {
+        console.log(`🔌 [DISCONNECT-DEBUG] Iniciando disconnect para WhatsApp ID: ${confirmModalInfo.whatsAppId}`);
         await api.delete(`/whatsappsession/${confirmModalInfo.whatsAppId}`);
+        
+        // 🛡️ FALLBACK: Re-fetch dados após 2 segundos para garantir atualização
+        setTimeout(async () => {
+          try {
+            console.log(`🔄 [FALLBACK] Re-fetchando dados após disconnect...`);
+            const { data } = await api.get("/whatsapp/?session=0");
+            // Força atualização do contexto
+            const event = new CustomEvent('forceWhatsAppRefresh', { detail: data });
+            window.dispatchEvent(event);
+          } catch (error) {
+            console.log(`⚠️ [FALLBACK] Erro no re-fetch:`, error);
+          }
+        }, 2000);
+        
       } catch (err) {
         toastError(err);
       }
@@ -421,7 +436,7 @@ const Connections = () => {
             )}
           />
         )}
-        {whatsApp.status === "DISCONNECTED" && (
+        {(whatsApp.status === "DISCONNECTED" || whatsApp.status === "PENDING") && (
           <Can
             role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
             perform="connections-page:addConnection"
@@ -488,12 +503,12 @@ const Connections = () => {
   const renderStatusToolTips = (whatsApp) => {
     return (
       <div className={classes.customTableCell}>
-        {whatsApp.status === "DISCONNECTED" && (
+        {(whatsApp.status === "DISCONNECTED" || whatsApp.status === "PENDING") && (
           <CustomToolTip
-            title={i18n.t("connections.toolTips.disconnected.title")}
-            content={i18n.t("connections.toolTips.disconnected.content")}
+            title={whatsApp.status === "PENDING" ? "Aguardando Reconexão" : i18n.t("connections.toolTips.disconnected.title")}
+            content={whatsApp.status === "PENDING" ? "Sessão desconectada, pronta para nova conexão" : i18n.t("connections.toolTips.disconnected.content")}
           >
-            <SignalCellularConnectedNoInternet0Bar style={{ color: "#E57373" }} />
+            <SignalCellularConnectedNoInternet0Bar style={{ color: whatsApp.status === "PENDING" ? "#FF9800" : "#E57373" }} />
           </CustomToolTip>
         )}
         {whatsApp.status === "OPENING" && (
