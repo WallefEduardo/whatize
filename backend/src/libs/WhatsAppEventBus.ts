@@ -33,7 +33,6 @@ class WhatsAppEventBus extends EventEmitter {
 
   // Emit tipado
   emit<K extends keyof WhatsAppEvents>(event: K, data: WhatsAppEvents[K]): boolean {
-    logger.info(`📡 [EVENT-BUS] Emitindo evento: ${event}`, data);
     
     // Contar métrica
     const currentCount = this.metrics.events.get(event) || 0;
@@ -75,7 +74,7 @@ class WhatsAppEventBus extends EventEmitter {
             });
         }
       } catch (error) {
-        logger.error(`❌ [EVENT-BUS] Erro ao atualizar frontend: ${error.message}`);
+        logger.error(`Erro ao atualizar frontend: ${error.message}`);
       }
     });
 
@@ -94,7 +93,7 @@ class WhatsAppEventBus extends EventEmitter {
           // Log removido
         }
       } catch (error) {
-        logger.error(`❌ [EVENT-BUS] Erro ao atualizar DB após conexão: ${error.message}`);
+        logger.error(`Erro ao atualizar DB após conexão: ${error.message}`);
       }
     });
 
@@ -110,10 +109,10 @@ class WhatsAppEventBus extends EventEmitter {
             retries: (whatsapp.retries || 0) + 1
           });
 
-          logger.error(`❌ [EVENT-BUS] WhatsApp ${data.whatsappId} falhou em ${data.duration}ms: ${data.error}`);
+          logger.error(`WhatsApp ${data.whatsappId} falhou em ${data.duration}ms: ${data.error}`);
         }
       } catch (error) {
-        logger.error(`❌ [EVENT-BUS] Erro ao atualizar DB após falha: ${error.message}`);
+        logger.error(`Erro ao atualizar DB após falha: ${error.message}`);
       }
     });
 
@@ -132,27 +131,24 @@ class WhatsAppEventBus extends EventEmitter {
           // Log removido
         }
       } catch (error) {
-        logger.error(`❌ [EVENT-BUS] Erro ao atualizar DB após desconexão: ${error.message}`);
+        logger.error(`Erro ao atualizar DB após desconexão: ${error.message}`);
       }
     });
 
     // Listener para circuit breaker
     this.on('circuit_breaker:opened', (data) => {
-      logger.warn(`🚫 [EVENT-BUS] Circuit breaker aberto para WhatsApp ${data.whatsappId} após ${data.failureCount} falhas`);
     });
 
     this.on('circuit_breaker:closed', (data) => {
-      logger.info(`🔓 [EVENT-BUS] Circuit breaker fechado para WhatsApp ${data.whatsappId}`);
     });
 
     // Listener para limite de recursos
     this.on('resource_pool:limit_exceeded', (data) => {
-      logger.warn(`🚫 [EVENT-BUS] Limite de ${data.type} excedido para WhatsApp ${data.whatsappId} da empresa ${data.companyId}`);
     });
 
     // Error handling para todos os listeners
     super.on('error', (error: Error) => {
-      logger.error(`❌ [EVENT-BUS] Erro no EventBus: ${error.message}`);
+      logger.error(`Erro no EventBus: ${error.message}`);
       
       // Contar erro
       const currentCount = this.metrics.errors.get('connection:failed') || 0;

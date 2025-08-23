@@ -21,14 +21,12 @@ class PerformanceMonitor {
     });
     this.metrics.totalConnections++;
     
-    logger.info(`⏱️ [PERF-MONITOR] Iniciando medição de conexão: WhatsApp ${whatsappId}`);
   }
 
   // Finalizar medição de conexão
   endConnection(whatsappId: number, success: boolean) {
     const connectionData = this.connectionTimes.get(whatsappId);
     if (!connectionData) {
-      logger.warn(`⚠️ [PERF-MONITOR] Tentativa de finalizar medição sem início: WhatsApp ${whatsappId}`);
       return;
     }
 
@@ -46,12 +44,8 @@ class PerformanceMonitor {
     // Categorizar conexão por velocidade
     if (duration < 5000) {
       this.metrics.fastConnections++;
-      logger.info(`🚀 [PERF-MONITOR] Conexão RÁPIDA: WhatsApp ${whatsappId} em ${duration}ms`);
     } else if (duration > 10000) {
       this.metrics.slowConnections++;
-      logger.warn(`🐌 [PERF-MONITOR] Conexão LENTA: WhatsApp ${whatsappId} em ${duration}ms`);
-    } else {
-      logger.info(`⏱️ [PERF-MONITOR] Conexão normal: WhatsApp ${whatsappId} em ${duration}ms`);
     }
 
     // Recalcular média
@@ -67,9 +61,6 @@ class PerformanceMonitor {
     
     if (!wasNecessary) {
       this.metrics.unnecessaryCleanups++;
-      logger.warn(`⚠️ [PERF-MONITOR] Cleanup DESNECESSÁRIO: WhatsApp ${whatsappId} - ${reason}`);
-    } else {
-      logger.info(`🧹 [PERF-MONITOR] Cleanup necessário: WhatsApp ${whatsappId} - ${reason}`);
     }
   }
 
@@ -172,7 +163,6 @@ class PerformanceMonitor {
       unnecessaryCleanups: 0
     };
     
-    logger.info(`🔄 [PERF-MONITOR] Métricas resetadas`);
   }
 
   // Relatório detalhado

@@ -324,19 +324,17 @@ const Connections = () => {
   const handleSubmitConfirmationModal = async () => {
     if (confirmModalInfo.action === "disconnect") {
       try {
-        console.log(`🔌 [DISCONNECT-DEBUG] Iniciando disconnect para WhatsApp ID: ${confirmModalInfo.whatsAppId}`);
         await api.delete(`/whatsappsession/${confirmModalInfo.whatsAppId}`);
         
-        // 🛡️ FALLBACK: Re-fetch dados após 2 segundos para garantir atualização
+        // Re-fetch dados após 2 segundos para garantir atualização
         setTimeout(async () => {
           try {
-            console.log(`🔄 [FALLBACK] Re-fetchando dados após disconnect...`);
             const { data } = await api.get("/whatsapp/?session=0");
             // Força atualização do contexto
             const event = new CustomEvent('forceWhatsAppRefresh', { detail: data });
             window.dispatchEvent(event);
           } catch (error) {
-            console.log(`⚠️ [FALLBACK] Erro no re-fetch:`, error);
+            // Silent catch for fallback
           }
         }, 2000);
         

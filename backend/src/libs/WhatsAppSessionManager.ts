@@ -31,7 +31,6 @@ class ConnectionCircuitBreaker {
       const canRetry = Date.now() - lastFail > blockTime;
       
       if (canRetry) {
-        logger.info(`🔓 [CIRCUIT-BREAKER] WhatsApp ${whatsappId} desbloqueado após ${blockTime}ms`);
         this.failures.delete(whatsappId);
         this.lastFailure.delete(whatsappId);
       }
@@ -44,7 +43,6 @@ class ConnectionCircuitBreaker {
     const canRetry = Date.now() - lastFail > backoffMs;
     
     if (!canRetry) {
-      logger.warn(`⏳ [CIRCUIT-BREAKER] WhatsApp ${whatsappId} em backoff: ${failures} falhas, aguardar ${backoffMs}ms`);
     }
     
     return canRetry;
@@ -56,7 +54,6 @@ class ConnectionCircuitBreaker {
     this.lastFailure.delete(whatsappId);
     
     if (hadFailures) {
-      logger.info(`✅ [CIRCUIT-BREAKER] WhatsApp ${whatsappId} recuperado - failures resetadas`);
     }
   }
   
@@ -67,10 +64,8 @@ class ConnectionCircuitBreaker {
     this.failures.set(whatsappId, newCount);
     this.lastFailure.set(whatsappId, Date.now());
     
-    logger.warn(`❌ [CIRCUIT-BREAKER] WhatsApp ${whatsappId} falha ${newCount}/${this.maxFailures}: ${error}`);
     
     if (newCount >= this.maxFailures) {
-      logger.error(`🚫 [CIRCUIT-BREAKER] WhatsApp ${whatsappId} BLOQUEADO após ${newCount} falhas`);
     }
   }
   
@@ -93,14 +88,12 @@ class WhatsAppResourcePool {
   async acquireSlot(whatsappId: number, companyId: number): Promise<boolean> {
     // Verificar limite global
     if (this.activeConnections.size >= this.maxGlobalConcurrent) {
-      logger.warn(`🚫 [RESOURCE-POOL] Limite global atingido: ${this.activeConnections.size}/${this.maxGlobalConcurrent}`);
       return false;
     }
     
     // Verificar limite por empresa
     const companyConnections = this.connectionsByCompany.get(companyId) || new Set();
     if (companyConnections.size >= this.maxConcurrentPerCompany) {
-      logger.warn(`🚫 [RESOURCE-POOL] Limite da empresa ${companyId} atingido: ${companyConnections.size}/${this.maxConcurrentPerCompany}`);
       return false;
     }
     
@@ -109,7 +102,6 @@ class WhatsAppResourcePool {
     companyConnections.add(whatsappId);
     this.connectionsByCompany.set(companyId, companyConnections);
     
-    logger.info(`🎯 [RESOURCE-POOL] Slot adquirido: WhatsApp ${whatsappId}, Empresa ${companyId} (${companyConnections.size}/${this.maxConcurrentPerCompany})`);
     return true;
   }
   
@@ -124,7 +116,6 @@ class WhatsAppResourcePool {
       }
     }
     
-    logger.info(`🔓 [RESOURCE-POOL] Slot liberado: WhatsApp ${whatsappId}, Empresa ${companyId}`);
   }
   
   isActive(whatsappId: number): boolean {
@@ -224,7 +215,6 @@ export class WhatsAppSessionManager {
     // Se já existe uma promise de conexão, retornar ela
     const existingLock = this.locks.get(whatsappId);
     if (existingLock) {
-      logger.info(`🔄 [SESSION-MANAGER] WhatsApp ${whatsappId} reutilizando promise de conexão existente`);
       return existingLock;
     }
     
@@ -296,7 +286,7 @@ export class WhatsAppSessionManager {
       this.resourcePool.releaseSlot(whatsappId, companyId);
       
       const duration = Date.now() - startTime;
-      logger.error(`❌ [SESSION-MANAGER] WhatsApp ${whatsappId} falhou em ${duration}ms: ${error.message}`);
+      logger.error(`WhatsApp ${whatsappId} falhou em ${duration}ms: ${error.message}`);
       
       // 📊 MONITORAMENTO: Registrar falha
       performanceMonitor.endConnection(whatsappId, false);
@@ -317,7 +307,6 @@ export class WhatsAppSessionManager {
     const currentState = this.getState(whatsappId);
     
     if (currentState === WhatsAppState.IDLE || currentState === WhatsAppState.DISCONNECTING) {
-      logger.info(`ℹ️ [SESSION-MANAGER] WhatsApp ${whatsappId} já está desconectado ou desconectando`);
       return;
     }
     
@@ -344,9 +333,7 @@ export class WhatsAppSessionManager {
         
         // 🔧 CONDITIONAL: Limpar apenas se não for para preservar sessão
         if (options.preserveSession) {
-          logger.info(`✅ [SESSION-MANAGER] Logout sem limpeza para WhatsApp ${whatsappId} - sessão preservada para reconexão`);
         } else {
-          logger.info(`⚡ [SESSION-MANAGER] Logout iniciado para WhatsApp ${whatsappId} - forçando limpeza completa`);
           
           // Aguardar um pouco para garantir que o logout foi processado
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -356,7 +343,7 @@ export class WhatsAppSessionManager {
         }
         
       } catch (error) {
-        logger.warn(`⚠️ [SESSION-MANAGER] Erro ao logout WhatsApp ${whatsappId}: ${error.message}`);
+        logger.warn(`Erro ao logout WhatsApp ${whatsappId}: ${error.message}`);
         
         // Se logout falhou, fazer cleanup apenas quando necessário
         if (!options.preserveSession) {
@@ -375,7 +362,6 @@ export class WhatsAppSessionManager {
         reason: 'manual_disconnect'
       });
       
-      logger.info(`✅ [SESSION-MANAGER] WhatsApp ${whatsappId} desconectado`);
       
     } catch (error) {
       this.setState(whatsappId, WhatsAppState.FAILED, companyId);
@@ -383,7 +369,7 @@ export class WhatsAppSessionManager {
       // Cleanup específico em caso de erro
       await this.smartCleanup(whatsappId, 'disconnect_error');
       
-      logger.error(`❌ [SESSION-MANAGER] Erro ao desconectar WhatsApp ${whatsappId}: ${error.message}`);
+      logger.error(`Erro ao desconectar WhatsApp ${whatsappId}: ${error.message}`);
       throw error;
     }
   }
@@ -403,7 +389,6 @@ export class WhatsAppSessionManager {
     if (reason !== 'INTENTIONAL_LOGOUT') {
       // ⚡ OTIMIZAÇÃO ESPECIAL: Connection Failure deve permitir retry imediato
       if (reason === 'ERROR_401' || reason.includes('Connection Failure')) {
-        logger.warn(`🚀 [SESSION-MANAGER] Connection Failure detectado: WhatsApp ${whatsappId} - permitindo retry imediato`);
         
         // NÃO registrar no circuit breaker para Connection Failure
         // Isso permite retry imediato sem delay
@@ -423,9 +408,7 @@ export class WhatsAppSessionManager {
         await this.smartCleanup(whatsappId, `external_disconnect_${reason}`);
       }
       
-      logger.warn(`⚠️ [SESSION-MANAGER] Desconexão por erro detectada: WhatsApp ${whatsappId} - ${reason}`);
     } else {
-      logger.info(`✅ [SESSION-MANAGER] Logout intencional detectado: WhatsApp ${whatsappId}`);
     }
   }
   
@@ -455,7 +438,6 @@ export class WhatsAppSessionManager {
     const now = Date.now();
     const maxAge = 300000; // 5 minutos
     
-    logger.info(`🧹 [SMART-CLEANUP] Iniciando cleanup inteligente: ${reason || 'manual'} para WhatsApp ${whatsappId || 'all'}`);
     
     if (whatsappId) {
       // Cleanup específico para uma sessão
@@ -467,18 +449,12 @@ export class WhatsAppSessionManager {
     this.locks.forEach((promise, sessionId) => {
       const age = now - (promise as any).startTime || 0;
       if (age > maxAge) {
-        logger.warn(`🧹 [SMART-CLEANUP] Removendo lock órfão: WhatsApp ${sessionId} (${Math.round(age/1000)}s)`);
         this.locks.delete(sessionId);
         this.setState(sessionId, WhatsAppState.FAILED);
         cleanedLocks++;
       }
     });
     
-    if (cleanedLocks > 0) {
-      logger.info(`🧹 [SMART-CLEANUP] Cleanup concluído: ${cleanedLocks} locks órfãos removidos`);
-    } else {
-      logger.info(`⚡ [SMART-CLEANUP] Sistema limpo - nenhuma ação necessária`);
-    }
   }
   
   private async cleanupSpecificSession(whatsappId: number, reason: string) {
@@ -492,39 +468,29 @@ export class WhatsAppSessionManager {
     performanceMonitor.recordCleanup(whatsappId, reason, wasNecessary);
     
     if (!wasNecessary) {
-      logger.info(`⚡ [SMART-CLEANUP] WhatsApp ${whatsappId} já está limpo - pulando cleanup`);
       return;
     }
-    
-    logger.info(`🧹 [SMART-CLEANUP] Limpando WhatsApp ${whatsappId} - motivo: ${reason}`);
     
     // Remover lock se existir
     if (hasLock) {
       this.locks.delete(whatsappId);
-      logger.info(`🧹 [SMART-CLEANUP] Lock removido para WhatsApp ${whatsappId}`);
     }
     
     // Atualizar estado se necessário
     if (currentState !== WhatsAppState.IDLE) {
       this.setState(whatsappId, WhatsAppState.IDLE);
-      logger.info(`🧹 [SMART-CLEANUP] Estado resetado para IDLE: WhatsApp ${whatsappId}`);
     }
     
-    logger.info(`✅ [SMART-CLEANUP] Cleanup específico concluído para WhatsApp ${whatsappId}`);
   }
   
   // Método para cleanup em app restart (só órfãos)
   async cleanupOnStartup() {
-    logger.info(`🚀 [STARTUP-CLEANUP] Iniciando limpeza de sessões órfãs...`);
-    
     const totalStates = this.states.size;
     const totalLocks = this.locks.size;
     
     // Reset todos os estados para IDLE no startup
     this.states.clear();
     this.locks.clear();
-    
-    logger.info(`✅ [STARTUP-CLEANUP] Limpeza concluída: ${totalStates} estados e ${totalLocks} locks removidos`);
   }
 }
 
@@ -547,13 +513,13 @@ process.nextTick(async () => {
 
 // ✅ GRACEFUL SHUTDOWN: Cleanup ao fechar aplicação
 process.on('SIGINT', async () => {
-  logger.info('🛑 [SHUTDOWN] Iniciando cleanup de shutdown...');
+  logger.info('Iniciando cleanup de shutdown...');
   await sessionManager.smartCleanup(undefined, 'app_shutdown');
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  logger.info('🛑 [SHUTDOWN] Iniciando cleanup de shutdown...');
+  logger.info('Iniciando cleanup de shutdown...');
   await sessionManager.smartCleanup(undefined, 'app_shutdown');
   process.exit(0);
 });

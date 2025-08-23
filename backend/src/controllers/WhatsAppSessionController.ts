@@ -16,19 +16,13 @@ const store = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
 
   try {
-    console.log(`🚀 [CONTROLLER] Solicitação de conexão WhatsApp ${whatsappId}`);
-    
-    // Usar SessionManager robusto
     await sessionManager.connect(+whatsappId, companyId);
-    
-    console.log(`✅ [CONTROLLER] WhatsApp ${whatsappId} conectado com sucesso`);
     return res.status(200).json({ 
       message: "Session started successfully.",
       state: sessionManager.getState(+whatsappId)
     });
     
   } catch (error) {
-    console.error(`❌ [CONTROLLER] Erro ao conectar WhatsApp ${whatsappId}: ${error.message}`);
     
     // Retornar erro específico baseado no tipo
     let statusCode = 500;
@@ -69,7 +63,6 @@ const update = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
 
   try {
-    console.log(`🔄 [UPDATE-CONTROLLER] Solicitação de novo QR Code para WhatsApp ${whatsappId}`);
     
     const whatsapp = await Whatsapp.findOne({ where: { id: whatsappId, companyId } });
 
@@ -80,19 +73,14 @@ const update = async (req: Request, res: Response): Promise<Response> => {
     // Limpar sessão para gerar novo QR
     await whatsapp.update({ session: "" });
     
-    // 🔧 NOVO QR: Limpar autenticação para gerar novo QR Code
-    console.log(`🧹 [UPDATE-CONTROLLER] Limpando autenticação para novo QR Code...`);
+    // Limpar autenticação para gerar novo QR Code
     await cleanupWhatsAppSession(+whatsappId, 'disconnect');
     
     if (whatsapp.channel === "whatsapp") {
-      // 🎯 UNIFICADO: Usar SessionManager como único ponto de entrada
       sessionManager.connect(+whatsappId, companyId).catch(error => {
-        logger.error(`❌ [UPDATE-CONTROLLER] Erro ao conectar via SessionManager: ${error.message}`);
+        logger.error(`Erro ao conectar via SessionManager: ${error.message}`);
       });
     }
-
-    // ✅ Retornar IMEDIATAMENTE 
-    console.log(`✅ [UPDATE-CONTROLLER] Novo QR Code solicitado para ${whatsapp.name}`);
     return res.status(200).json({ 
       message: "Starting session.", 
       whatsappId: whatsapp.id,
@@ -113,19 +101,13 @@ const remove = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
 
   try {
-    console.log(`🔌 [DISCONNECT] Iniciando desconexão WhatsApp ${whatsappId}`);
-    
-    // Usar SessionManager robusto com preservação de sessão
     await sessionManager.disconnect(+whatsappId, companyId, { preserveSession: true });
-    
-    console.log(`✅ [DISCONNECT] WhatsApp ${whatsappId} desconectado - sessão preservada para reconexão`);
     return res.status(200).json({ 
       message: "Session disconnected successfully.",
       state: sessionManager.getState(+whatsappId)
     });
     
   } catch (error) {
-    console.error(`❌ [CONTROLLER] Erro ao desconectar WhatsApp ${whatsappId}: ${error.message}`);
     
     return res.status(500).json({ 
       error: "Failed to disconnect session.",

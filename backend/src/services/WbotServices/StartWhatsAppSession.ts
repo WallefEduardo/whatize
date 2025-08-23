@@ -18,9 +18,7 @@ export const StartWhatsAppSession = async (
   whatsapp: Whatsapp,
   companyId: number
 ): Promise<void> => {
-  // 🏷️ ID único para rastrear esta instância
   const sessionId = `${whatsapp.id}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-  logger.info(`🚀 [START-SESSION-${sessionId}] INICIANDO para ${whatsapp.name}`);
 
   // ⚡ OTIMIZAÇÃO: Usar SessionManager como fonte única de verdade
   const initialState = sessionManager.getState(whatsapp.id);
@@ -31,10 +29,8 @@ export const StartWhatsAppSession = async (
   //   return;
   // }
   
-  logger.info(`🔄 [START-SESSION-${sessionId}] Estado atual: ${initialState} - prosseguindo com inicialização`);
   
   if (initialState === WhatsAppState.CONNECTED) {
-    logger.info(`ℹ️ [START-SESSION] Sessão ${whatsapp.name} já está CONNECTED. Nada a fazer.`);
     return;
   }
   
@@ -43,17 +39,15 @@ export const StartWhatsAppSession = async (
   const isFailedBefore = currentState === WhatsAppState.FAILED;
   const smartTimeout = isFailedBefore ? 4000 : STARTING_TIMEOUT; // 4s se estava FAILED, 6s normal
   
-  logger.info(`⏰ [START-SESSION-${sessionId}] Timeout inteligente: ${smartTimeout}ms (failed before: ${isFailedBefore})`);
   
   const timeoutHandle = setTimeout(async () => {
-    logger.error(`❌ [START-SESSION-${sessionId}] Timeout de inicialização para ${whatsapp.name} (${smartTimeout}ms, wasFailed: ${isFailedBefore}). Limpando automaticamente.`);
+    logger.error(`Timeout de inicialização para ${whatsapp.name}: ${smartTimeout}ms`);
     
     // ⚡ OTIMIZAÇÃO: Usar smart cleanup do SessionManager
     try {
       await sessionManager.smartCleanup(whatsapp.id, 'start_session_timeout');
-      logger.info(`✅ [START-SESSION] Cleanup por timeout concluído para ${whatsapp.name}`);
     } catch (error) {
-      logger.error(`❌ [START-SESSION] Erro ao fazer cleanup após timeout: ${error.message}`);
+      logger.error(`Erro ao fazer cleanup após timeout: ${error.message}`);
     }
   }, smartTimeout);
   
@@ -68,9 +62,7 @@ export const StartWhatsAppSession = async (
       });
 
     try {
-      console.log(`🚀 [BAILEYS] Chamando initWASocket para ${whatsapp.name} - sessão atual: "${whatsapp.session}"`);
       const wbot = await initWASocket(whatsapp);
-      console.log(`✅ [BAILEYS] initWASocket retornou para ${whatsapp.name}`);
      
       if (wbot.id) {
         wbotMessageListener(wbot, companyId);
@@ -78,10 +70,9 @@ export const StartWhatsAppSession = async (
         
         // Configurar listener de presence
         PresenceService.setupPresenceListener(wbot, companyId);
-        logger.info(`✅ [START-SESSION] Sessão ${whatsapp.name} iniciada com sucesso`);
       }
     } catch (err) {
-      logger.error(`❌ [START-SESSION] Erro ao iniciar sessão ${whatsapp.name}: ${err.message}`);
+      logger.error(`Erro ao iniciar sessão ${whatsapp.name}: ${err.message}`);
       Sentry.captureException(err);
       throw err;
     }
@@ -89,6 +80,5 @@ export const StartWhatsAppSession = async (
     // ⚡ OTIMIZAÇÃO: Limpar timeout e sinalizar conclusão para SessionManager
     clearTimeout(timeoutHandle);
     
-    logger.info(`✅ [START-SESSION-${sessionId}] Processo concluído para ${whatsapp.name} - SessionManager state: ${sessionManager.getState(whatsapp.id)}`);
   }
 };
