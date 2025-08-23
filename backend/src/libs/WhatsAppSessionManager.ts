@@ -313,7 +313,7 @@ export class WhatsAppSessionManager {
     }
   }
   
-  async disconnect(whatsappId: number, companyId: number): Promise<void> {
+  async disconnect(whatsappId: number, companyId: number, options: { preserveSession?: boolean } = {}): Promise<void> {
     const currentState = this.getState(whatsappId);
     
     if (currentState === WhatsAppState.IDLE || currentState === WhatsAppState.DISCONNECTING) {
@@ -342,20 +342,26 @@ export class WhatsAppSessionManager {
         wbot.logout();
         wbot.ws.close();
         
-        // 🔧 FIX: SEMPRE limpar dados de autenticação após logout
-        logger.info(`⚡ [SESSION-MANAGER] Logout iniciado para WhatsApp ${whatsappId} - forçando limpeza completa`);
-        
-        // Aguardar um pouco para garantir que o logout foi processado
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // SEMPRE limpar cache de autenticação para permitir novo QR Code
-        await cleanupWhatsAppSession(whatsappId, 'disconnect');
+        // 🔧 CONDITIONAL: Limpar apenas se não for para preservar sessão
+        if (options.preserveSession) {
+          logger.info(`✅ [SESSION-MANAGER] Logout sem limpeza para WhatsApp ${whatsappId} - sessão preservada para reconexão`);
+        } else {
+          logger.info(`⚡ [SESSION-MANAGER] Logout iniciado para WhatsApp ${whatsappId} - forçando limpeza completa`);
+          
+          // Aguardar um pouco para garantir que o logout foi processado
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Limpar cache de autenticação apenas quando necessário
+          await cleanupWhatsAppSession(whatsappId, 'disconnect');
+        }
         
       } catch (error) {
         logger.warn(`⚠️ [SESSION-MANAGER] Erro ao logout WhatsApp ${whatsappId}: ${error.message}`);
         
-        // Se logout falhou, fazer cleanup mais agressivo
-        await cleanupWhatsAppSession(whatsappId, 'disconnect');
+        // Se logout falhou, fazer cleanup apenas quando necessário
+        if (!options.preserveSession) {
+          await cleanupWhatsAppSession(whatsappId, 'disconnect');
+        }
         await this.smartCleanup(whatsappId, 'logout_failed');
       }
       

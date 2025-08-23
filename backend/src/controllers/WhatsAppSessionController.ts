@@ -80,8 +80,8 @@ const update = async (req: Request, res: Response): Promise<Response> => {
     // Limpar sessão para gerar novo QR
     await whatsapp.update({ session: "" });
     
-    // 🔧 FIX: FORÇAR limpeza completa do cache de auth antes de conectar
-    console.log(`🧹 [UPDATE-CONTROLLER] Forçando limpeza completa do cache de autenticação...`);
+    // 🔧 NOVO QR: Limpar autenticação para gerar novo QR Code
+    console.log(`🧹 [UPDATE-CONTROLLER] Limpando autenticação para novo QR Code...`);
     await cleanupWhatsAppSession(+whatsappId, 'disconnect');
     
     if (whatsapp.channel === "whatsapp") {
@@ -115,10 +115,10 @@ const remove = async (req: Request, res: Response): Promise<Response> => {
   try {
     console.log(`🔌 [DISCONNECT] Iniciando desconexão WhatsApp ${whatsappId}`);
     
-    // Usar SessionManager robusto
-    await sessionManager.disconnect(+whatsappId, companyId);
+    // Usar SessionManager robusto com preservação de sessão
+    await sessionManager.disconnect(+whatsappId, companyId, { preserveSession: true });
     
-    console.log(`✅ [DISCONNECT] WhatsApp ${whatsappId} TOTALMENTE desconectado - sessão limpa`);
+    console.log(`✅ [DISCONNECT] WhatsApp ${whatsappId} desconectado - sessão preservada para reconexão`);
     return res.status(200).json({ 
       message: "Session disconnected successfully.",
       state: sessionManager.getState(+whatsappId)
