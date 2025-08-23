@@ -28,7 +28,7 @@ export function useDate() {
     let result = data2.getTime() - data1.getTime();
     let days = Math.ceil(result / (1000 * 60 * 60 * 24));
 
-    if (days === -0) {
+    if (Object.is(days, -0) || days <= 0) {
       days = 0
     }
     return days;

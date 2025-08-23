@@ -126,7 +126,7 @@ export const useCacheStore = create((set, get) => ({
       keys: Array.from(state.apiCache.keys()),
     };
   },
-}));
+});
 
 // Store otimizado para WhatsApp/Tickets (exemplo migração)
 export const useTicketStore = create((set, get) => ({
@@ -167,6 +167,6 @@ export const useTicketStore = create((set, get) => ({
   getTicketById: (id) => get().tickets.find(t => t.id === id),
   getTicketsByStatus: (status) => get().tickets.filter(t => t.status === status),
   getTicketsCount: () => get().tickets.length,
-}));
+});
 
 export default { useMigrationStore, useCacheStore, useTicketStore };

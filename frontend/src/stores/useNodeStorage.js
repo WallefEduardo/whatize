@@ -7,5 +7,5 @@ export const useNodeStorage = create(set => ({
   setNodesStorage: node => set(state => ({ ...state, node: node })),
   setConnectsStorage: connects =>
     set(state => ({ ...state, connect: connects })),
-  setAct: act => set(state => ({ ...state, action: act }))
+  setAct: act => set(state => ({ ...state, action: act })),
 }));

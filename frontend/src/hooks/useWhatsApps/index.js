@@ -1,5 +1,6 @@
 import { useState, useEffect, useReducer, useContext } from "react";
 import toastError from "../../errors/toastError";
+import { toast } from "../../components/ui/ToastProvider";
 
 import api from "../../services/api";
 // import { SocketContext } from "../../context/Socket/SocketContext";
@@ -107,7 +108,7 @@ const useWhatsApps = () => {
           }});
           
           // Mostrar toast de erro
-          const { toast } = require("react-toastify");
+          // Toast já importado no topo
           toast.error(`❌ ERRO DE CONEXÃO:\n\n${data.error}`, {
             position: "top-center",
             autoClose: 8000,

@@ -2,7 +2,7 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import openSocket from "socket.io-client";
 import { useState, useEffect } from "react";
-import { toast } from "react-toastify";
+import { toast } from "../../components/ui/ToastProvider";
 import { i18n } from "../../translate/i18n";
 
 const useUser = () => {

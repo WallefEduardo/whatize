@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client"; // React 18 API
-import CssBaseline from "@material-ui/core/CssBaseline";
+import CssBaseline from "@mui/material/CssBaseline";
 import * as serviceworker from './serviceWorker'
 
 import App from "./App";

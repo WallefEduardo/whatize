@@ -1299,7 +1299,7 @@ const messages = {
         },
         searchPlaceholder: "Pesquisar...",
 
-      },
+  },
       queueIntegration: {
         title: "Integrações",
         table: {

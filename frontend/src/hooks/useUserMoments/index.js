@@ -1,7 +1,7 @@
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { useState, useEffect, useContext } from "react";
-import { toast } from "react-toastify";
+import { toast } from "../../components/ui/ToastProvider";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 // import { SocketContext } from "../../context/Socket/SocketContext";

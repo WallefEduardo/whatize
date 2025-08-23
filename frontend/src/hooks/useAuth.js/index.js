@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from "react";
 import { useHistory } from "react-router-dom";
 import { has, isArray } from "lodash";
 
-import { toast } from "react-toastify";
+import { toast } from "../../components/ui/ToastProvider";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
