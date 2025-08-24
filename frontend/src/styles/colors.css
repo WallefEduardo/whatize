@@ -39,6 +39,12 @@
   --color-green-dark: #00a006;     /* Verde escuro (hover) */
   --color-green-light: #33d433;    /* Verde claro */
   --color-green-hover: #00e608;    /* Verde hover brilhante */
+  
+  /* ===== CORES DE TEXTO ===== */
+  --text-gray-medium: #656565;     /* Cinza médio para títulos e textos */
+  
+  /* ===== GRADIENTES ===== */
+  --gradient-green-button: linear-gradient(135deg, var(--color-accent) 0%, #00e608 100%); /* Gradiente verde para botões */
 
   /* ===== MODO LIGHT (PADRÃO) ===== */
   --bg-primary: var(--color-white);
@@ -129,11 +135,13 @@
 .bg-accent { background-color: var(--color-accent) !important; }
 .bg-navbar { background-color: var(--bg-navbar) !important; }
 .bg-sidebar { background-color: var(--bg-sidebar) !important; }
+.bg-gradient-green { background: var(--gradient-green-button) !important; }
 
 .text-primary { color: var(--text-primary) !important; }
 .text-secondary { color: var(--text-secondary) !important; }
 .text-accent { color: var(--color-accent) !important; }
 .text-on-dark { color: var(--text-on-dark) !important; }
+.text-gray-medium { color: var(--text-gray-medium) !important; }
 
 .border-primary { border-color: var(--border-primary) !important; }
 .border-accent { border-color: var(--color-accent) !important; }

@@ -11,7 +11,6 @@ import {
   Tooltip,
   Typography,
   Box,
-  Pagination,
   Breadcrumbs,
   Link,
   Autocomplete,
@@ -21,14 +20,9 @@ import {
   Paper,
   Chip,
   Card,
-  CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow
+  CardContent
 } from "@mui/material";
+import { DataTable } from 'mantine-datatable';
 import {
   FilterList as FilterIcon,
   Download as DownloadIcon,
@@ -585,7 +579,7 @@ const ModernReports = () => {
                 <Box sx={{ mt: 3, width: '100%' }}>
                   <Grid container spacing={3} sx={{ mb: 3, width: '100%', mx: 0 }}>
                     {/* Linha 1 - 4 campos */}
-                    <Grid item xs={12} sm={6} lg={3} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
+                    <Grid size={{ xs: 12, sm: 6, lg: 3 }} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
                       <Autocomplete
                         fullWidth
                         options={options || []}
@@ -641,22 +635,22 @@ const ModernReports = () => {
                       />
                     </Grid>
 
-                    <Grid item xs={12} sm={6} lg={3} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
+                    <Grid size={{ xs: 12, sm: 6, lg: 3 }} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
                       <WhatsappsFilter onFiltered={handleSelectedWhatsapps} />
                     </Grid>
 
-                    <Grid item xs={12} sm={6} lg={3} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
+                    <Grid size={{ xs: 12, sm: 6, lg: 3 }} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
                       <StatusFilter onFiltered={handleSelectedStatus} />
                     </Grid>
 
-                    <Grid item xs={12} sm={6} lg={3} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
+                    <Grid size={{ xs: 12, sm: 6, lg: 3 }} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
                       <UsersFilter onFiltered={handleSelectedUsers} />
                     </Grid>
                   </Grid>
 
                   <Grid container spacing={3} sx={{ width: '100%', mx: 0 }}>
                     {/* Linha 2 - 3 campos */}
-                    <Grid item xs={12} sm={6} lg={4} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
+                    <Grid size={{ xs: 12, sm: 6, lg: 4 }} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
                       <FormControl variant="outlined" fullWidth size="small">
                         <InputLabel>Filas</InputLabel>
                         <Select
@@ -686,7 +680,7 @@ const ModernReports = () => {
                       </FormControl>
                     </Grid>
 
-                    <Grid item xs={12} sm={6} lg={4} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
+                    <Grid size={{ xs: 12, sm: 6, lg: 4 }} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
                       <TextField
                         label="Data Inicial"
                         type="date"
@@ -715,7 +709,7 @@ const ModernReports = () => {
                       />
                     </Grid>
 
-                    <Grid item xs={12} sm={6} lg={4} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
+                    <Grid size={{ xs: 12, sm: 6, lg: 4 }} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
                       <TextField
                         label="Data Final"
                         type="date"
@@ -850,477 +844,560 @@ const ModernReports = () => {
             }}
           >
             <CardContent sx={{ p: 0 }}>
-              <TableContainer 
+              <Box 
                 sx={{ 
-                  maxHeight: { xs: '60vh', md: '70vh' },
+                  height: '500px',
                   width: '100%',
-                  overflowX: 'auto',
-                  '&::-webkit-scrollbar': {
-                    width: 8,
-                    height: 8
+                  overflow: 'hidden',
+                  '& .datatables': {
+                    overflowX: 'auto',
+                    '@media (max-width: 768px)': {
+                      overflowX: 'auto'
+                    }
                   },
-                  '&::-webkit-scrollbar-track': {
-                    backgroundColor: '#f8f9fa'
+                  '& .mantine-datatable-header': {
+                    backgroundColor: '#F6F8FA !important',
+                    color: 'var(--text-primary) !important',
+                    fontWeight: 600,
+                    fontSize: '0.875rem'
                   },
-                  '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: 'var(--color-accent)',
-                    borderRadius: 4
+                  '& .mantine-datatable-table': {
+                    minWidth: '900px !important',
+                    tableLayout: 'auto !important',
+                    '@media (max-width: 768px)': {
+                      minWidth: '1200px !important'
+                    }
+                  },
+                  '& .mantine-datatable': {
+                    width: '100% !important'
+                  },
+                  '& .mantine-datatable thead th': {
+                    backgroundColor: '#F6F8FA !important',
+                    color: 'var(--text-primary) !important',
+                    border: 'none !important',
+                    borderRight: 'none !important',
+                    padding: '12px 16px !important'
+                  },
+                  '& .mantine-datatable-header th': {
+                    whiteSpace: 'nowrap !important'
+                  },
+                  '& .mantine-datatable-header th > div': {
+                    display: 'flex !important',
+                    alignItems: 'center !important',
+                    gap: '6px !important',
+                    flexDirection: 'row !important'
+                  },
+                  '& .mantine-datatable-header th button': {
+                    display: 'flex !important',
+                    alignItems: 'center !important',
+                    gap: '6px !important',
+                    flexDirection: 'row !important'
+                  },
+                  '& .mantine-datatable-header th [data-testid="mantine-datatable-column-header-sort-icon"]': {
+                    position: 'static !important',
+                    marginLeft: '6px !important',
+                    marginTop: '0 !important',
+                    display: 'inline !important'
+                  },
+                  '& .mantine-datatable tbody td': {
+                    whiteSpace: 'nowrap !important'
                   }
                 }}
+                className="datatables"
               >
-                <Table stickyHeader sx={{ minWidth: '100%', width: '100%' }}>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell 
-                        align="center" 
-                        sx={{ 
-                          backgroundColor: 'var(--color-primary)',
-                          color: 'white',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          minWidth: 80
-                        }}
-                      >
-                        {i18n.t("reports.table.id")}
-                      </TableCell>
-                      <TableCell 
-                        align="left" 
-                        sx={{ 
-                          backgroundColor: 'var(--color-primary)',
-                          color: 'white',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          minWidth: 150
-                        }}
-                      >
-                        {i18n.t("reports.table.whatsapp")}
-                      </TableCell>
-                      <TableCell 
-                        align="left" 
-                        sx={{ 
-                          backgroundColor: 'var(--color-primary)',
-                          color: 'white',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          minWidth: 120
-                        }}
-                      >
-                        {i18n.t("reports.table.contact")}
-                      </TableCell>
-                      <TableCell 
-                        align="left" 
-                        sx={{ 
-                          backgroundColor: 'var(--color-primary)',
-                          color: 'white',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          minWidth: 120
-                        }}
-                      >
-                        {i18n.t("reports.table.user")}
-                      </TableCell>
-                      <TableCell 
-                        align="left" 
-                        sx={{ 
-                          backgroundColor: 'var(--color-primary)',
-                          color: 'white',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          minWidth: 100
-                        }}
-                      >
-                        {i18n.t("reports.table.queue")}
-                      </TableCell>
-                      <TableCell 
-                        align="center" 
-                        sx={{ 
-                          backgroundColor: 'var(--color-primary)',
-                          color: 'white',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          minWidth: 100
-                        }}
-                      >
-                        {i18n.t("reports.table.status")}
-                      </TableCell>
-                      <TableCell 
-                        align="left" 
-                        sx={{ 
-                          backgroundColor: 'var(--color-primary)',
-                          color: 'white',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          minWidth: 200
-                        }}
-                      >
-                        {i18n.t("reports.table.lastMessage")}
-                      </TableCell>
-                      <TableCell 
-                        align="center" 
-                        sx={{ 
-                          backgroundColor: 'var(--color-primary)',
-                          color: 'white',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          minWidth: 130
-                        }}
-                      >
-                        {i18n.t("reports.table.dateOpen")}
-                      </TableCell>
-                      <TableCell 
-                        align="center" 
-                        sx={{ 
-                          backgroundColor: 'var(--color-primary)',
-                          color: 'white',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          minWidth: 130
-                        }}
-                      >
-                        {i18n.t("reports.table.dateClose")}
-                      </TableCell>
-                      <TableCell 
-                        align="center" 
-                        sx={{ 
-                          backgroundColor: 'var(--color-primary)',
-                          color: 'white',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          minWidth: 120
-                        }}
-                      >
-                        {i18n.t("reports.table.supportTime")}
-                      </TableCell>
-                      <TableCell 
-                        align="center" 
-                        sx={{ 
-                          backgroundColor: 'var(--color-primary)',
-                          color: 'white',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          minWidth: 80
-                        }}
-                      >
-                        {i18n.t("reports.table.NPS")}
-                      </TableCell>
-                      <TableCell 
-                        align="center" 
-                        sx={{ 
-                          backgroundColor: 'var(--color-primary)',
-                          color: 'white',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          minWidth: 120
-                        }}
-                      >
-                        {i18n.t("reports.table.actions")}
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  
-                  <TableBody>
-                    <AnimatePresence>
-                      {loading ? (
-                        // Skeleton loading
-                        [...Array(pageSize)].map((_, index) => (
-                          <TableRow key={`skeleton-${index}`}>
-                            {[...Array(12)].map((_, cellIndex) => (
-                              <TableCell key={cellIndex}>
-                                <Box
-                                  sx={{
-                                    height: 20,
-                                    backgroundColor: 'rgba(0,0,0,0.1)',
-                                    borderRadius: 1
-                                  }}
-                                />
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : tickets.length > 0 ? (
-                        tickets.map((ticket, index) => {
-                          const createdAtFormatted = formatDate(ticket.createdAt);
-                          const closedAtFormatted = formatDate(ticket.closedAt);
-                          const statusStyles = getStatusStyles(ticket.status);
-                          
+                <DataTable
+                  noRecordsText={
+                    <div style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      padding: '60px 20px',
+                      color: 'var(--text-secondary)'
+                    }}>
+                      <AssessmentIcon style={{ fontSize: 48, marginBottom: 16, color: 'var(--text-secondary)' }} />
+                      <div style={{ fontSize: '16px', fontWeight: 500, marginBottom: 8 }}>
+                        Nenhum resultado encontrado
+                      </div>
+                      <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                        Ajuste os filtros para visualizar os relatórios
+                      </div>
+                    </div>
+                  }
+                  highlightOnHover
+                  className="whitespace-nowrap table-hover"
+                  records={tickets}
+                  fetching={loading}
+                  minHeight={400}
+                  columns={[
+                    { 
+                      accessor: 'id', 
+                      title: i18n.t("reports.table.id"),
+                      textAlignment: 'center',
+                      sortable: true,
+                      width: '8%',
+                      render: ({ id }) => <strong style={{ color: 'var(--color-accent)' }}>#{id}</strong>
+                    },
+                    { 
+                      accessor: 'whatsappName', 
+                      title: i18n.t("reports.table.whatsapp"),
+                      width: '15%',
+                      render: ({ whatsappName, channel }) => (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {IconChannel(channel)}
+                          <div style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{whatsappName || '-'}</div>
+                        </div>
+                      )
+                    },
+                    { 
+                      accessor: 'contactName', 
+                      title: i18n.t("reports.table.contact"),
+                      sortable: true,
+                      width: '12%'
+                    },
+                    { 
+                      accessor: 'userName', 
+                      title: i18n.t("reports.table.user"),
+                      sortable: true,
+                      width: '12%'
+                    },
+                    { 
+                      accessor: 'queueName', 
+                      title: i18n.t("reports.table.queue"),
+                      sortable: true,
+                      width: '10%'
+                    },
+                    { 
+                      accessor: 'status', 
+                      title: i18n.t("reports.table.status"),
+                      textAlignment: 'center',
+                      width: '10%',
+                      render: ({ status }) => (
+                        <span 
+                          className={`badge ${
+                            status === 'open' ? 'badge-outline-success' :
+                            status === 'pending' ? 'badge-outline-warning' :
+                            'badge-outline-secondary'
+                          }`}
+                          style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {status}
+                        </span>
+                      )
+                    },
+                    { 
+                      accessor: 'createdAt', 
+                      title: i18n.t("reports.table.dateOpen"),
+                      textAlignment: 'center',
+                      sortable: true,
+                      width: '15%',
+                      render: ({ createdAt }) => {
+                        const formatted = formatDate(createdAt);
+                        return (
+                          <div style={{ whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                              {formatted.date}
+                            </div>
+                            <div style={{ color: '#666', fontSize: '0.75rem' }}>
+                              {formatted.time}
+                            </div>
+                          </div>
+                        );
+                      }
+                    },
+                    { 
+                      accessor: 'closedAt', 
+                      title: i18n.t("reports.table.dateClose"),
+                      textAlignment: 'center',
+                      sortable: true,
+                      width: '15%',
+                      render: ({ closedAt }) => {
+                        const formatted = formatDate(closedAt);
+                        return (
+                          <div style={{ whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                              {formatted.date}
+                            </div>
+                            <div style={{ color: '#666', fontSize: '0.75rem' }}>
+                              {formatted.time}
+                            </div>
+                          </div>
+                        );
+                      }
+                    },
+                    { 
+                      accessor: 'supportTime', 
+                      title: 'Tempo Atend.',
+                      textAlignment: 'center',
+                      sortable: true,
+                      width: '13%'
+                    },
+                    { 
+                      accessor: 'NPS', 
+                      title: i18n.t("reports.table.NPS"),
+                      textAlignment: 'center',
+                      width: '8%',
+                      render: ({ NPS }) => {
+                        if (NPS) {
                           return (
-                            <TableRow
-                              key={ticket.id}
-                              onMouseEnter={() => setHoveredRow(ticket.id)}
-                              onMouseLeave={() => setHoveredRow(null)}
-                              sx={{
-                                cursor: 'pointer',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(0, 195, 7, 0.05)',
-                                  transform: 'scale(1.01)',
-                                  boxShadow: '0 4px 12px rgba(0,195,7,0.1)'
-                                },
-                                transition: 'all 0.2s ease'
+                            <span 
+                              style={{
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                color: 'white',
+                                backgroundColor: NPS >= 8 ? '#4CAF50' : NPS >= 6 ? '#FF9800' : '#F44336',
+                                whiteSpace: 'nowrap'
                               }}
                             >
-                              <TableCell align="center" sx={{ fontWeight: 600, color: 'var(--color-accent)' }}>
-                                #{ticket.id}
-                              </TableCell>
-                              
-                              <TableCell align="left">
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  {IconChannel(ticket.channel)}
-                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                    {ticket.whatsappName || '-'}
-                                  </Typography>
-                                </Box>
-                              </TableCell>
-                              
-                              <TableCell align="left">
-                                <Typography variant="body2">
-                                  {ticket.contactName || '-'}
-                                </Typography>
-                              </TableCell>
-                              
-                              <TableCell align="left">
-                                <Typography variant="body2">
-                                  {ticket.userName || '-'}
-                                </Typography>
-                              </TableCell>
-                              
-                              <TableCell align="left">
-                                <Typography variant="body2">
-                                  {ticket.queueName || '-'}
-                                </Typography>
-                              </TableCell>
-                              
-                              <TableCell align="center">
-                                <Chip
-                                  label={ticket.status}
-                                  size="small"
-                                  sx={{
-                                    fontWeight: 600,
-                                    fontSize: '0.75rem',
-                                    textTransform: 'uppercase',
-                                    ...statusStyles
-                                  }}
-                                />
-                              </TableCell>
-                              
-                              <TableCell align="left">
-                                <Tooltip title={ticket.lastMessage}>
-                                  <Typography 
-                                    variant="body2" 
-                                    sx={{ 
-                                      maxWidth: 200,
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap'
-                                    }}
-                                  >
-                                    {truncateText(ticket.lastMessage, 30)}
-                                  </Typography>
-                                </Tooltip>
-                              </TableCell>
-                              
-                              <TableCell align="center">
-                                <Box>
-                                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                    {createdAtFormatted.date}
-                                  </Typography>
-                                  <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                                    {createdAtFormatted.time}
-                                  </Typography>
-                                </Box>
-                              </TableCell>
-                              
-                              <TableCell align="center">
-                                <Box>
-                                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                    {closedAtFormatted.date}
-                                  </Typography>
-                                  <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                                    {closedAtFormatted.time}
-                                  </Typography>
-                                </Box>
-                              </TableCell>
-                              
-                              <TableCell align="center">
-                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                  {ticket.supportTime || '-'}
-                                </Typography>
-                              </TableCell>
-                              
-                              <TableCell align="center">
-                                {ticket.NPS ? (
-                                  <Chip
-                                    label={ticket.NPS}
-                                    size="small"
-                                    sx={{
-                                      backgroundColor: ticket.NPS >= 8 ? '#4CAF50' : ticket.NPS >= 6 ? '#FF9800' : '#F44336',
-                                      color: 'white',
-                                      fontWeight: 600
-                                    }}
-                                  />
-                                ) : (
-                                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>-</Typography>
-                                )}
-                              </TableCell>
-                              
-                              <TableCell align="center">
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                                  <Tooltip title="Logs do Ticket">
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => {
-                                        setOpenTicketMessageDialog(true);
-                                        setTicketOpen(ticket);
-                                      }}
-                                      sx={{
-                                        color: '#2196F3',
-                                        '&:hover': {
-                                          backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                                          transform: 'scale(1.1)'
-                                        },
-                                        transition: 'all 0.2s ease'
-                                      }}
-                                    >
-                                      <HistoryIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                  <Tooltip title="Acessar Ticket">
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => history.push(`/tickets/${ticket.uuid}`)}
-                                      sx={{
-                                        color: 'var(--color-accent)',
-                                        '&:hover': {
-                                          backgroundColor: 'rgba(0, 195, 7, 0.05)',
-                                          transform: 'scale(1.1)'
-                                        },
-                                        transition: 'all 0.2s ease'
-                                      }}
-                                    >
-                                      <OpenIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                </Box>
-                              </TableCell>
-                            </TableRow>
+                              {NPS}
+                            </span>
                           );
-                        })
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={12} align="center" sx={{ py: 8 }}>
-                            <Box sx={{ textAlign: 'center' }}>
-                              <AssessmentIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                              <Typography variant="h6" sx={{ color: 'text.secondary', mb: 1 }}>
-                                Nenhum resultado encontrado
-                              </Typography>
-                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                Ajuste os filtros para visualizar os relatórios
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </AnimatePresence>
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                        }
+                        return <span style={{ color: '#666' }}>-</span>;
+                      }
+                    },
+                    { 
+                      accessor: 'actions', 
+                      title: i18n.t("reports.table.actions"),
+                      textAlignment: 'center',
+                      width: '10%',
+                      render: (ticket) => (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+                          <button
+                            title="Logs do Ticket"
+                            onClick={() => {
+                              setOpenTicketMessageDialog(true);
+                              setTicketOpen(ticket);
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              padding: '4px',
+                              borderRadius: '4px',
+                              color: '#2196F3',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <HistoryIcon fontSize="small" />
+                          </button>
+                          <button
+                            title="Acessar Ticket"
+                            onClick={() => history.push(`/tickets/${ticket.uuid}`)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              padding: '4px',
+                              borderRadius: '4px',
+                              color: 'var(--color-accent)',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <OpenIcon fontSize="small" />
+                          </button>
+                        </div>
+                      )
+                    }
+                  ]}
+                />
+                
+                {/* Linha divisória */}
+                {totalTickets > 0 && (
+                  <div style={{ 
+                    borderTop: '1px solid #dee2e6', 
+                    margin: '16px 0 0 0' 
+                  }} />
+                )}
+                
+                {/* Paginação customizada */}
+                {totalTickets > 0 && (
+                  <Box sx={{ 
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '16px 20px',
+                    gap: '12px',
+                    flexWrap: 'wrap',
+                    '@media (max-width: 768px)': {
+                      flexDirection: 'column',
+                      gap: '16px',
+                      padding: '16px 12px'
+                    }
+                  }}>
+                    {/* Info de registros */}
+                    <Box sx={{ 
+                      fontSize: '14px', 
+                      color: 'var(--text-secondary)',
+                      '@media (max-width: 768px)': {
+                        order: 3,
+                        textAlign: 'center',
+                        fontSize: '13px'
+                      }
+                    }}>
+                      Mostrando {((pageNumber - 1) * pageSize) + 1} a {Math.min(pageNumber * pageSize, totalTickets)} de {totalTickets} registros
+                    </Box>
+                    
+                    {/* Seletor de registros por página */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      '@media (max-width: 768px)': {
+                        order: 2,
+                        fontSize: '13px'
+                      }
+                    }}>
+                      <span style={{ fontSize: 'inherit', color: 'var(--text-secondary)' }}>Por página:</span>
+                      <select 
+                        value={pageSize}
+                        onChange={(e) => setPageSize(Number(e.target.value))}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          border: '1px solid #dee2e6',
+                          fontSize: 'inherit',
+                          backgroundColor: 'white',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                      </select>
+                    </Box>
+                    
+                    {/* Paginação com ícones */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '4px',
+                      '@media (max-width: 768px)': {
+                        order: 1,
+                        gap: '2px',
+                        flexWrap: 'wrap',
+                        justifyContent: 'center'
+                      },
+                      '@media (max-width: 480px)': {
+                        gap: '1px',
+                        '& button': {
+                          padding: '6px !important',
+                          minWidth: '28px !important'
+                        }
+                      }
+                    }}>
+                      {/* Primeira página */}
+                      <button
+                        onClick={() => handleFilter(1)}
+                        disabled={pageNumber === 1}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          fontWeight: 600,
+                          padding: '8px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          cursor: pageNumber === 1 ? 'default' : 'pointer',
+                          transition: 'all 0.2s ease',
+                          backgroundColor: pageNumber === 1 ? '#f8f9fa' : '#f8f9fa',
+                          color: pageNumber === 1 ? '#ced4da' : 'var(--text-primary)',
+                          opacity: pageNumber === 1 ? 0.5 : 1
+                        }}
+                        onMouseEnter={(e) => {
+                          if (pageNumber !== 1) {
+                            e.target.style.backgroundColor = 'var(--color-accent)';
+                            e.target.style.color = 'white';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (pageNumber !== 1) {
+                            e.target.style.backgroundColor = '#f8f9fa';
+                            e.target.style.color = 'var(--text-primary)';
+                          }
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M18.41 16.59L13.82 12l4.59-4.59L17 6l-6 6 6 6 1.41-1.41z" fill="currentColor"/>
+                          <path d="M6 6h2v12H6z" fill="currentColor"/>
+                        </svg>
+                      </button>
+                      
+                      {/* Página anterior */}
+                      <button
+                        onClick={() => handleFilter(pageNumber - 1)}
+                        disabled={pageNumber === 1}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          fontWeight: 600,
+                          padding: '8px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          cursor: pageNumber === 1 ? 'default' : 'pointer',
+                          transition: 'all 0.2s ease',
+                          backgroundColor: pageNumber === 1 ? '#f8f9fa' : '#f8f9fa',
+                          color: pageNumber === 1 ? '#ced4da' : 'var(--text-primary)',
+                          opacity: pageNumber === 1 ? 0.5 : 1
+                        }}
+                        onMouseEnter={(e) => {
+                          if (pageNumber !== 1) {
+                            e.target.style.backgroundColor = 'var(--color-accent)';
+                            e.target.style.color = 'white';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (pageNumber !== 1) {
+                            e.target.style.backgroundColor = '#f8f9fa';
+                            e.target.style.color = 'var(--text-primary)';
+                          }
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" fill="currentColor"/>
+                        </svg>
+                      </button>
+                      
+                      {/* Números das páginas */}
+                      {(() => {
+                        const totalPages = Math.ceil(totalTickets / pageSize);
+                        const pages = [];
+                        
+                        // Lógica para mostrar páginas relevantes
+                        let startPage = Math.max(1, pageNumber - 2);
+                        let endPage = Math.min(totalPages, pageNumber + 2);
+                        
+                        for (let i = startPage; i <= endPage; i++) {
+                          pages.push(
+                            <button
+                              key={i}
+                              onClick={() => handleFilter(i)}
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                fontWeight: 600,
+                                padding: '8px 12px',
+                                borderRadius: '50%',
+                                border: 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                backgroundColor: pageNumber === i ? 'var(--color-accent)' : '#f8f9fa',
+                                color: pageNumber === i ? 'white' : 'var(--text-primary)',
+                                minWidth: '36px'
+                              }}
+                              onMouseEnter={(e) => {
+                                if (pageNumber !== i) {
+                                  e.target.style.backgroundColor = 'var(--color-accent)';
+                                  e.target.style.color = 'white';
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (pageNumber !== i) {
+                                  e.target.style.backgroundColor = '#f8f9fa';
+                                  e.target.style.color = 'var(--text-primary)';
+                                }
+                              }}
+                            >
+                              {i}
+                            </button>
+                          );
+                        }
+                        
+                        return pages;
+                      })()}
+                      
+                      {/* Próxima página */}
+                      <button
+                        onClick={() => handleFilter(pageNumber + 1)}
+                        disabled={pageNumber >= Math.ceil(totalTickets / pageSize)}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          fontWeight: 600,
+                          padding: '8px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          cursor: pageNumber >= Math.ceil(totalTickets / pageSize) ? 'default' : 'pointer',
+                          transition: 'all 0.2s ease',
+                          backgroundColor: pageNumber >= Math.ceil(totalTickets / pageSize) ? '#f8f9fa' : '#f8f9fa',
+                          color: pageNumber >= Math.ceil(totalTickets / pageSize) ? '#ced4da' : 'var(--text-primary)',
+                          opacity: pageNumber >= Math.ceil(totalTickets / pageSize) ? 0.5 : 1
+                        }}
+                        onMouseEnter={(e) => {
+                          if (pageNumber < Math.ceil(totalTickets / pageSize)) {
+                            e.target.style.backgroundColor = 'var(--color-accent)';
+                            e.target.style.color = 'white';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (pageNumber < Math.ceil(totalTickets / pageSize)) {
+                            e.target.style.backgroundColor = '#f8f9fa';
+                            e.target.style.color = 'var(--text-primary)';
+                          }
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" fill="currentColor"/>
+                        </svg>
+                      </button>
+                      
+                      {/* Última página */}
+                      <button
+                        onClick={() => handleFilter(Math.ceil(totalTickets / pageSize))}
+                        disabled={pageNumber >= Math.ceil(totalTickets / pageSize)}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          fontWeight: 600,
+                          padding: '8px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          cursor: pageNumber >= Math.ceil(totalTickets / pageSize) ? 'default' : 'pointer',
+                          transition: 'all 0.2s ease',
+                          backgroundColor: pageNumber >= Math.ceil(totalTickets / pageSize) ? '#f8f9fa' : '#f8f9fa',
+                          color: pageNumber >= Math.ceil(totalTickets / pageSize) ? '#ced4da' : 'var(--text-primary)',
+                          opacity: pageNumber >= Math.ceil(totalTickets / pageSize) ? 0.5 : 1
+                        }}
+                        onMouseEnter={(e) => {
+                          if (pageNumber < Math.ceil(totalTickets / pageSize)) {
+                            e.target.style.backgroundColor = 'var(--color-accent)';
+                            e.target.style.color = 'white';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (pageNumber < Math.ceil(totalTickets / pageSize)) {
+                            e.target.style.backgroundColor = '#f8f9fa';
+                            e.target.style.color = 'var(--text-primary)';
+                          }
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M5.59 7.41L10.18 12l-4.59 4.59L7 18l6-6-6-6-1.41 1.41z" fill="currentColor"/>
+                          <path d="M16 6h2v12h-2z" fill="currentColor"/>
+                        </svg>
+                      </button>
+                    </Box>
+                  </Box>
+                )}
+              </Box>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Paginação e Controles */}
-        {totalTickets > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-          >
-            <Card
-              elevation={2}
-              sx={{
-                borderRadius: 2,
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%)',
-                backdropFilter: 'blur(10px)',
-                width: '100%',
-                maxWidth: 'none'
-              }}
-            >
-              <CardContent>
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexDirection: { xs: 'column', sm: 'row' },
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  gap: 3
-                }}>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 2
-                  }}>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: 'var(--text-secondary)',
-                        fontWeight: 500
-                      }}
-                    >
-                      Total: <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{totalTickets}</span> registros
-                    </Typography>
-                    
-                    <FormControl size="small" variant="outlined" sx={{ minWidth: 120 }}>
-                      <InputLabel>Por página</InputLabel>
-                      <Select
-                        value={pageSize}
-                        onChange={(e) => setPageSize(e.target.value)}
-                        label="Por página"
-                        sx={{
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'var(--border-primary)',
-                          },
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'var(--color-accent)',
-                          },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'var(--color-accent)',
-                          }
-                        }}
-                      >
-                        <MenuItem value={5}>5</MenuItem>
-                        <MenuItem value={10}>10</MenuItem>
-                        <MenuItem value={20}>20</MenuItem>
-                        <MenuItem value={50}>50</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Box>
-
-                  <Pagination
-                    count={Math.ceil(totalTickets / pageSize)}
-                    page={pageNumber}
-                    onChange={(event, value) => handleFilter(value)}
-                    color="primary"
-                    size="large"
-                    showFirstButton
-                    showLastButton
-                    sx={{
-                      '& .MuiPaginationItem-root': {
-                        '&.Mui-selected': {
-                          backgroundColor: 'var(--color-accent)',
-                          color: 'white',
-                          '&:hover': {
-                            backgroundColor: '#00e608',
-                          }
-                        },
-                        '&:hover': {
-                          backgroundColor: 'rgba(0, 195, 7, 0.05)',
-                        }
-                      }
-                    }}
-                  />
-                </Box>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
       </Box>
     </Box>
   );
