@@ -34,6 +34,12 @@ A identidade visual do Whatize é baseada em uma paleta minimalista e moderna:
 | Verde Escuro | `#00a006` | Estados pressed/active |
 | Verde Claro | `#33d433` | Estados disabled/loading |
 
+### Cores Especiais para Textos
+
+| Cor | Código | Uso | Preview |
+|-----|--------|-----|---------|
+| **Cinza Médio** | `#656565` | Títulos, textos em modo light | ![#656565](https://via.placeholder.com/20/656565/656565.png) |
+
 ### Escala de Cinzas (Baseada no Preto Principal)
 
 | Tonalidade | Código | Uso |
@@ -63,9 +69,27 @@ A identidade visual do Whatize é baseada em uma paleta minimalista e moderna:
 - **Fundo Principal**: Preto principal (`#111416`)
 - **Navbar/Sidebar**: Preto principal (`#111416`)
 - **Textos**: Branco sobre fundo escuro
-- **Acentos**: Verde (`#00C307`)
+- **Acentos**: Verde (`#00C307`) - **SEMPRE VERDE EM AMBOS OS TEMAS**
 
 **Ativação**: Controlado pelo atributo `data-theme="dark"` no `<html>`
+
+### ⚡ Modo Dark - Variáveis Adaptáveis
+
+```css
+/* ===== MODO DARK ===== */
+[data-theme="dark"] {
+  --bg-primary: var(--color-primary);        /* Fundo preto */
+  --bg-secondary: var(--color-black-800);    /* Fundo secundário */
+  --bg-content: var(--color-primary);        /* Fundo de conteúdo */
+  
+  --text-primary: var(--color-white);        /* Texto branco */
+  --text-secondary: var(--color-black-200);  /* Texto secundário */
+  --text-gray-medium: var(--color-white);    /* Texto cinza → branco */
+  
+  --border-primary: var(--color-black-600);  /* Bordas escuras */
+  --border-secondary: var(--color-black-700);/* Bordas mais escuras */
+}
+```
 
 ---
 
@@ -78,6 +102,18 @@ A identidade visual do Whatize é baseada em uma paleta minimalista e moderna:
   --color-accent: #00C307;      /* Verde principal */
   --color-white: #FFFFFF;       /* Branco */
   --color-black: #000000;       /* Preto puro */
+  
+  /* ===== CORES PERSONALIZADAS ===== */
+  --color-green-main: #00C307;     /* Verde principal do sistema */
+  --color-green-dark: #00a006;     /* Verde escuro (hover) */
+  --color-green-light: #33d433;    /* Verde claro */
+  --color-green-hover: #00e608;    /* Verde hover brilhante */
+  
+  /* ===== CORES DE TEXTO ===== */
+  --text-gray-medium: #656565;     /* Cinza médio para títulos e textos */
+  
+  /* ===== GRADIENTES ===== */
+  --gradient-green-button: linear-gradient(135deg, var(--color-accent) 0%, #00e608 100%); /* Gradiente verde para botões */
 }
 ```
 

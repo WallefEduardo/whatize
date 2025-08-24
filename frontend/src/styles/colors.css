@@ -112,6 +112,7 @@
   --text-tertiary: var(--color-black-300);
   --text-on-dark: var(--color-white);
   --text-on-accent: var(--color-white);
+  --text-gray-medium: var(--color-white); /* Texto branco no modo dark */
 
   --border-primary: var(--color-black-600);
   --border-secondary: var(--color-black-700);
@@ -127,6 +128,204 @@
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== ESTILOS GLOBAIS PARA MUI ===== */
+/* Menu dropdowns no modo dark */
+[data-theme="dark"] .MuiPaper-root.MuiMenu-paper {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-gray-medium) !important;
+}
+
+[data-theme="dark"] .MuiMenuItem-root {
+  color: var(--text-gray-medium) !important;
+}
+
+[data-theme="dark"] .MuiMenuItem-root:hover {
+  background-color: var(--hover-bg-light) !important;
+}
+
+[data-theme="dark"] .MuiAutocomplete-paper {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-gray-medium) !important;
+}
+
+[data-theme="dark"] .MuiAutocomplete-option {
+  color: var(--text-gray-medium) !important;
+}
+
+[data-theme="dark"] .MuiAutocomplete-option:hover {
+  background-color: var(--hover-bg-light) !important;
+}
+
+/* Ícones no modo dark */
+[data-theme="dark"] .MuiSvgIcon-root:not(.MuiSvgIcon-colorAccent) {
+  color: var(--text-gray-medium) !important;
+}
+
+/* Ícones dos inputs de data (calendário) */
+[data-theme="dark"] .MuiOutlinedInput-root .MuiSvgIcon-root {
+  color: var(--text-gray-medium) !important;
+}
+
+/* Ícones de calendário com cor accent (verde) */
+[data-theme="dark"] .MuiInputAdornment-root .MuiSvgIcon-root {
+  color: var(--color-accent) !important;
+}
+
+/* ===== ESTILOS GLOBAIS PARA TODOS OS INPUTS MUI ===== */
+/* Inputs, FormControl, TextField - TODOS os componentes MUI */
+[data-theme="dark"] .MuiOutlinedInput-root {
+  color: var(--text-gray-medium) !important;
+  background-color: var(--bg-primary) !important;
+}
+
+[data-theme="dark"] .MuiOutlinedInput-root fieldset {
+  border-color: var(--border-primary) !important;
+}
+
+[data-theme="dark"] .MuiOutlinedInput-root:hover fieldset {
+  border-color: var(--color-accent) !important;
+}
+
+[data-theme="dark"] .MuiOutlinedInput-root.Mui-focused fieldset {
+  border-color: var(--color-accent) !important;
+}
+
+/* Labels de todos os inputs */
+[data-theme="dark"] .MuiInputLabel-root {
+  color: var(--text-gray-medium) !important;
+}
+
+[data-theme="dark"] .MuiInputLabel-root.Mui-focused {
+  color: var(--color-accent) !important;
+}
+
+/* FormHelperText */
+[data-theme="dark"] .MuiFormHelperText-root {
+  color: var(--text-gray-medium) !important;
+}
+
+/* Select (dropdown) */
+[data-theme="dark"] .MuiSelect-select {
+  color: var(--text-gray-medium) !important;
+}
+
+/* Select icon (seta) */
+[data-theme="dark"] .MuiSelect-icon {
+  color: var(--text-gray-medium) !important;
+}
+
+/* ===== DROPDOWNS DOS FILTROS (POPOVER/MENU) ===== */
+/* TODOS os tipos de Paper/Popover/Menu */
+[data-theme="dark"] .MuiPaper-root {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-gray-medium) !important;
+}
+
+[data-theme="dark"] .MuiPopover-paper {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-gray-medium) !important;
+}
+
+[data-theme="dark"] .MuiMenu-paper {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-gray-medium) !important;
+}
+
+[data-theme="dark"] .MuiMenu-list {
+  background-color: var(--bg-primary) !important;
+}
+
+/* TODOS os MenuItem - mais específico */
+[data-theme="dark"] .MuiMenuItem-root,
+[data-theme="dark"] .MuiMenuItem-root span,
+[data-theme="dark"] .MuiMenuItem-root div,
+[data-theme="dark"] .MuiMenuItem-root p {
+  color: var(--text-gray-medium) !important;
+}
+
+[data-theme="dark"] .MuiMenuItem-root:hover,
+[data-theme="dark"] .MuiMenuItem-root:hover span,
+[data-theme="dark"] .MuiMenuItem-root:hover div,
+[data-theme="dark"] .MuiMenuItem-root:hover p {
+  background-color: var(--hover-bg-light) !important;
+  color: var(--text-gray-medium) !important;
+}
+
+[data-theme="dark"] .MuiMenuItem-root.Mui-selected {
+  background-color: var(--hover-bg-medium) !important;
+  color: var(--color-accent) !important;
+}
+
+[data-theme="dark"] .MuiMenuItem-root.Mui-selected:hover {
+  background-color: var(--hover-bg-strong) !important;
+}
+
+/* Autocomplete dropdowns */
+[data-theme="dark"] .MuiAutocomplete-listbox {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-gray-medium) !important;
+}
+
+[data-theme="dark"] .MuiAutocomplete-option {
+  color: var(--text-gray-medium) !important;
+}
+
+[data-theme="dark"] .MuiAutocomplete-option:hover {
+  background-color: var(--hover-bg-light) !important;
+  color: var(--text-gray-medium) !important;
+}
+
+/* ===== ÍCONES NATIVOS DE CALENDÁRIO (INPUT DATE) ===== */
+/* TODOS os ícones de calendário nativos - mais específico */
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="dark"] .MuiOutlinedInput-root input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="dark"] .MuiInputBase-root input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="dark"] .MuiTextField-root input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(0) saturate(100%) invert(70%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(96%) contrast(90%) !important;
+  opacity: 0.8 !important;
+  cursor: pointer !important;
+  width: 16px !important;
+  height: 16px !important;
+}
+
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator:hover,
+[data-theme="dark"] .MuiOutlinedInput-root input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1 !important;
+  filter: invert(1) brightness(0) saturate(100%) invert(27%) sepia(96%) saturate(7471%) hue-rotate(121deg) brightness(97%) contrast(101%) !important;
+}
+
+/* Para Firefox e outros browsers */
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] .MuiOutlinedInput-root input[type="date"],
+[data-theme="dark"] .MuiInputBase-root input[type="date"] {
+  color-scheme: dark !important;
+}
+
+/* Força o ícone em todos os contextos */
+[data-theme="dark"] * input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) !important;
+  opacity: 0.8 !important;
+  cursor: pointer !important;
+}
+
+/* ===== FORÇA TEXTOS EM DROPDOWNS - SUPER ESPECÍFICO ===== */
+/* Força TODOS os textos dentro de menus/dropdowns */
+[data-theme="dark"] .MuiMenuItem-root .MuiTypography-root,
+[data-theme="dark"] .MuiMenuItem-root .MuiTypography-body2,
+[data-theme="dark"] .MuiMenuItem-root .MuiTypography-body1,
+[data-theme="dark"] .MuiListItemText-root .MuiTypography-root,
+[data-theme="dark"] .MuiPopover-paper .MuiTypography-root,
+[data-theme="dark"] .MuiMenu-paper .MuiTypography-root {
+  color: var(--text-gray-medium) !important;
+}
+
+/* Força TODOS os elementos de texto possíveis */
+[data-theme="dark"] .MuiPopover-root *,
+[data-theme="dark"] .MuiMenu-root *,
+[data-theme="dark"] .MuiPaper-root * {
+  color: inherit !important;
 }
 
 /* ===== CLASSES UTILITÁRIAS ===== */

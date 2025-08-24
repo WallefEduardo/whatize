@@ -342,7 +342,7 @@ const ModernReports = () => {
     <Box 
       sx={{
         minHeight: '100vh',
-        backgroundColor: '#f8f9fa', // Cinza bem clarinho
+        backgroundColor: 'var(--bg-content)', // Fundo adaptável ao tema
         px: { xs: 1.5, sm: 2 }, // 15px nas extremidades conforme solicitado
         py: 3,
         width: '100%',
@@ -373,32 +373,11 @@ const ModernReports = () => {
             display: 'flex', 
             alignItems: 'center',
             justifyContent: 'space-between',
-            mb: 2 
+            mb: 2,
+            flexWrap: 'wrap',
+            gap: 2
           }}>
-            {/* Título com ícone */}
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <AssessmentIcon 
-                sx={{ 
-                  mr: 2, 
-                  color: 'var(--color-accent)', 
-                  fontSize: 32,
-                  filter: 'drop-shadow(0 2px 4px rgba(0,195,7,0.2))'
-                }} 
-              />
-              <Typography
-                variant="h5"
-                sx={{ 
-                  fontWeight: 700,
-                  color: '#656565',
-                  mb: 0,
-                  fontSize: { xs: '1.25rem', sm: '1.5rem' }
-                }}
-              >
-                Relatórios de Atendimentos
-              </Typography>
-            </Box>
-            
-            {/* Breadcrumb customizado */}
+            {/* Breadcrumb no lado esquerdo */}
             <Box 
               component="ol" 
               sx={{ 
@@ -407,9 +386,10 @@ const ModernReports = () => {
                 listStyle: 'none',
                 m: 0,
                 p: 0,
-                color: '#656565',
+                color: 'var(--text-gray-medium)',
                 fontWeight: 600,
-                fontSize: '0.875rem'
+                fontSize: '0.875rem',
+                order: { xs: 2, md: 1 }
               }}
             >
               <Box component="li" sx={{ display: 'flex', alignItems: 'center' }}>
@@ -418,9 +398,9 @@ const ModernReports = () => {
                   sx={{ 
                     display: 'flex',
                     alignItems: 'center',
-                    color: '#656565',
+                    color: 'var(--text-gray-medium)',
                     textDecoration: 'none',
-                    '&:hover': { color: '#656565' }
+                    '&:hover': { color: 'var(--color-accent)' }
                   }}
                 >
                   <HomeIcon sx={{ fontSize: 16 }} />
@@ -434,16 +414,16 @@ const ModernReports = () => {
                   '&:before': {
                     content: '"/"',
                     px: 1.5,
-                    color: '#656565'
+                    color: 'var(--text-gray-medium)'
                   }
                 }}
               >
                 <Link 
                   href="/"
                   sx={{ 
-                    color: '#656565',
+                    color: 'var(--text-gray-medium)',
                     textDecoration: 'none',
-                    '&:hover': { color: '#656565' }
+                    '&:hover': { color: 'var(--color-accent)' }
                   }}
                 >
                   Dashboard
@@ -457,13 +437,13 @@ const ModernReports = () => {
                   '&:before': {
                     content: '"/"',
                     px: 1.5,
-                    color: '#656565'
+                    color: 'var(--text-gray-medium)'
                   }
                 }}
               >
                 <Typography 
                   sx={{ 
-                    color: '#333',
+                    color: 'var(--text-gray-medium)',
                     fontWeight: 600,
                     fontSize: '0.875rem'
                   }}
@@ -472,6 +452,43 @@ const ModernReports = () => {
                 </Typography>
               </Box>
             </Box>
+            
+            {/* Título centralizado com ícone */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              justifyContent: 'center',
+              flex: { xs: '1 1 100%', md: 1 },
+              order: { xs: 1, md: 2 }
+            }}>
+              <AssessmentIcon 
+                sx={{ 
+                  mr: 2, 
+                  color: 'var(--color-accent)', 
+                  fontSize: 32,
+                  filter: 'drop-shadow(0 2px 4px rgba(0,195,7,0.2))'
+                }} 
+              />
+              <Typography
+                variant="h5"
+                sx={{ 
+                  fontWeight: 700,
+                  color: 'var(--text-gray-medium)',
+                  mb: 0,
+                  fontSize: { xs: '1.25rem', sm: '1.5rem' },
+                  textAlign: 'center'
+                }}
+              >
+                Relatórios de Atendimentos
+              </Typography>
+            </Box>
+            
+            {/* Espaço reservado para manter o layout equilibrado */}
+            <Box sx={{ 
+              width: { xs: 0, md: 'auto' },
+              order: { xs: 3, md: 3 },
+              minWidth: { md: '150px' }
+            }} />
           </Box>
         </Box>
       </motion.div>
@@ -488,9 +505,9 @@ const ModernReports = () => {
             sx={{
               mb: 4,
               borderRadius: 3,
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%)',
+              background: 'var(--bg-primary)',
               backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,255,0.2)',
+              border: '1px solid var(--border-primary)',
               overflow: 'visible',
               width: '100%',
               maxWidth: 'none',
@@ -512,7 +529,7 @@ const ModernReports = () => {
                     variant="h6" 
                     sx={{ 
                       fontWeight: 600,
-                      color: 'var(--text-primary)',
+                      color: 'var(--text-gray-medium)',
                       fontSize: { xs: '1.1rem', sm: '1.25rem' }
                     }}
                   >
@@ -525,9 +542,10 @@ const ModernReports = () => {
                     <IconButton
                       onClick={() => setFiltersExpanded(!filtersExpanded)}
                       sx={{
-                        backgroundColor: '#f8f9fa',
+                        backgroundColor: 'var(--bg-secondary)',
+                        color: 'var(--text-gray-medium)',
                         '&:hover': {
-                          backgroundColor: '#e9ecef',
+                          backgroundColor: 'var(--hover-bg-light)',
                           transform: 'scale(1.05)'
                         },
                         transition: 'all 0.2s ease'
@@ -560,9 +578,10 @@ const ModernReports = () => {
                     <IconButton
                       onClick={clearFilters}
                       sx={{
-                        backgroundColor: '#e9ecef',
+                        backgroundColor: 'var(--bg-secondary)',
+                        color: 'var(--text-gray-medium)',
                         '&:hover': {
-                          backgroundColor: '#dee2e6',
+                          backgroundColor: 'var(--hover-bg-light)',
                           transform: 'scale(1.05)'
                         },
                         transition: 'all 0.2s ease'
@@ -608,6 +627,27 @@ const ModernReports = () => {
                             variant="outlined"
                             fullWidth
                             onChange={(e) => setSearchParam(e.target.value)}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                color: 'var(--text-gray-medium)',
+                                backgroundColor: 'var(--bg-primary)',
+                                '& fieldset': {
+                                  borderColor: 'var(--border-primary)',
+                                },
+                                '&:hover fieldset': {
+                                  borderColor: 'var(--color-accent)',
+                                },
+                                '&.Mui-focused fieldset': {
+                                  borderColor: 'var(--color-accent)',
+                                }
+                              },
+                              '& .MuiInputLabel-root': {
+                                color: 'var(--text-gray-medium)',
+                                '&.Mui-focused': {
+                                  color: 'var(--color-accent)',
+                                }
+                              }
+                            }}
                             InputProps={{
                               ...params.InputProps,
                               startAdornment: <SearchIcon sx={{ color: 'var(--color-accent)', mr: 1 }} />,
@@ -651,7 +691,29 @@ const ModernReports = () => {
                   <Grid container spacing={3} sx={{ width: '100%', mx: 0 }}>
                     {/* Linha 2 - 3 campos */}
                     <Grid size={{ xs: 12, sm: 6, lg: 4 }} sx={{ width: 'auto', minWidth: 0, flex: '1 1 auto' }}>
-                      <FormControl variant="outlined" fullWidth size="small">
+                      <FormControl variant="outlined" fullWidth size="small"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            color: 'var(--text-gray-medium)',
+                            backgroundColor: 'var(--bg-primary)',
+                            '& fieldset': {
+                              borderColor: 'var(--border-primary)',
+                            },
+                            '&:hover fieldset': {
+                              borderColor: 'var(--color-accent)',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: 'var(--color-accent)',
+                            }
+                          },
+                          '& .MuiInputLabel-root': {
+                            color: 'var(--text-gray-medium)',
+                            '&.Mui-focused': {
+                              color: 'var(--color-accent)',
+                            }
+                          }
+                        }}
+                      >
                         <InputLabel>Filas</InputLabel>
                         <Select
                           multiple
@@ -698,11 +760,22 @@ const ModernReports = () => {
                           minWidth: '200px',
                           '& .MuiOutlinedInput-root': {
                             width: '100%',
+                            color: 'var(--text-gray-medium)',
+                            backgroundColor: 'var(--bg-primary)',
+                            '& fieldset': {
+                              borderColor: 'var(--border-primary)',
+                            },
                             '&:hover fieldset': {
                               borderColor: 'var(--color-accent)',
                             },
                             '&.Mui-focused fieldset': {
                               borderColor: 'var(--color-accent)',
+                            }
+                          },
+                          '& .MuiInputLabel-root': {
+                            color: 'var(--text-gray-medium)',
+                            '&.Mui-focused': {
+                              color: 'var(--color-accent)',
                             }
                           }
                         }}
@@ -727,11 +800,22 @@ const ModernReports = () => {
                           minWidth: '200px',
                           '& .MuiOutlinedInput-root': {
                             width: '100%',
+                            color: 'var(--text-gray-medium)',
+                            backgroundColor: 'var(--bg-primary)',
+                            '& fieldset': {
+                              borderColor: 'var(--border-primary)',
+                            },
                             '&:hover fieldset': {
                               borderColor: 'var(--color-accent)',
                             },
                             '&.Mui-focused fieldset': {
                               borderColor: 'var(--color-accent)',
+                            }
+                          },
+                          '& .MuiInputLabel-root': {
+                            color: 'var(--text-gray-medium)',
+                            '&.Mui-focused': {
+                              color: 'var(--color-accent)',
                             }
                           }
                         }}
@@ -772,7 +856,7 @@ const ModernReports = () => {
                       <Typography 
                         variant="body2" 
                         sx={{ 
-                          color: '#656565',
+                          color: 'var(--text-gray-medium)',
                           fontWeight: 500
                         }}
                       >
@@ -784,10 +868,10 @@ const ModernReports = () => {
                 
                 {/* Botão Aplicar Filtros */}
                 <Box sx={{ 
-                  background: 'linear-gradient(135deg, var(--color-accent) 0%, #00e608 100%)',
+                  background: 'var(--gradient-green-button)',
                   borderRadius: 2,
                   p: 0.5,
-                  boxShadow: '0 8px 25px rgba(0,195,7,0.25)'
+                  boxShadow: 'var(--shadow-green-lg)'
                 }}>
                   <IconButton
                     onClick={() => handleFilter(1)}
@@ -835,9 +919,9 @@ const ModernReports = () => {
             sx={{
               mb: 4,
               borderRadius: 3,
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%)',
+              background: 'var(--bg-primary)',
               backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,255,0.2)',
+              border: '1px solid var(--border-primary)',
               overflow: 'hidden',
               width: '100%',
               maxWidth: 'none'
@@ -856,8 +940,8 @@ const ModernReports = () => {
                     }
                   },
                   '& .mantine-datatable-header': {
-                    backgroundColor: '#F6F8FA !important',
-                    color: 'var(--text-primary) !important',
+                    backgroundColor: 'var(--bg-secondary) !important',
+                    color: 'var(--text-gray-medium) !important',
                     fontWeight: 600,
                     fontSize: '0.875rem'
                   },
@@ -872,8 +956,8 @@ const ModernReports = () => {
                     width: '100% !important'
                   },
                   '& .mantine-datatable thead th': {
-                    backgroundColor: '#F6F8FA !important',
-                    color: 'var(--text-primary) !important',
+                    backgroundColor: 'var(--bg-secondary) !important',
+                    color: 'var(--text-gray-medium) !important',
                     border: 'none !important',
                     borderRight: 'none !important',
                     padding: '12px 16px !important'
@@ -900,8 +984,13 @@ const ModernReports = () => {
                     display: 'inline !important'
                   },
                   '& .mantine-datatable tbody td': {
-                    whiteSpace: 'nowrap !important'
-                  }
+                    whiteSpace: 'nowrap !important',
+                    color: 'var(--text-gray-medium) !important'
+                  },
+                  // Esconder SVG database órfão que aparece perdido na tabela
+                  '& svg[stroke="currentColor"][fill="none"]': {
+                    display: 'none !important'
+                  },
                 }}
                 className="datatables"
               >
@@ -945,7 +1034,7 @@ const ModernReports = () => {
                       render: ({ whatsappName, channel }) => (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {IconChannel(channel)}
-                          <div style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{whatsappName || '-'}</div>
+                          <div style={{ fontWeight: 500, whiteSpace: 'nowrap', color: 'var(--text-gray-medium)' }}>{whatsappName || '-'}</div>
                         </div>
                       )
                     },
@@ -1002,10 +1091,10 @@ const ModernReports = () => {
                         const formatted = formatDate(createdAt);
                         return (
                           <div style={{ whiteSpace: 'nowrap' }}>
-                            <div style={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-gray-medium)' }}>
                               {formatted.date}
                             </div>
-                            <div style={{ color: '#666', fontSize: '0.75rem' }}>
+                            <div style={{ color: 'var(--text-gray-medium)', fontSize: '0.75rem', opacity: 0.8 }}>
                               {formatted.time}
                             </div>
                           </div>
@@ -1022,10 +1111,10 @@ const ModernReports = () => {
                         const formatted = formatDate(closedAt);
                         return (
                           <div style={{ whiteSpace: 'nowrap' }}>
-                            <div style={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-gray-medium)' }}>
                               {formatted.date}
                             </div>
-                            <div style={{ color: '#666', fontSize: '0.75rem' }}>
+                            <div style={{ color: 'var(--text-gray-medium)', fontSize: '0.75rem', opacity: 0.8 }}>
                               {formatted.time}
                             </div>
                           </div>
@@ -1043,6 +1132,7 @@ const ModernReports = () => {
                       accessor: 'NPS', 
                       title: i18n.t("reports.table.NPS"),
                       textAlignment: 'center',
+                      sortable: true,
                       width: '8%',
                       render: ({ NPS }) => {
                         if (NPS) {
@@ -1062,13 +1152,14 @@ const ModernReports = () => {
                             </span>
                           );
                         }
-                        return <span style={{ color: '#666' }}>-</span>;
+                        return <span style={{ color: 'var(--text-gray-medium)' }}>-</span>;
                       }
                     },
                     { 
                       accessor: 'actions', 
                       title: i18n.t("reports.table.actions"),
                       textAlignment: 'center',
+                      sortable: false,
                       width: '10%',
                       render: (ticket) => (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
@@ -1114,7 +1205,7 @@ const ModernReports = () => {
                 {/* Linha divisória */}
                 {totalTickets > 0 && (
                   <div style={{ 
-                    borderTop: '1px solid #dee2e6', 
+                    borderTop: '1px solid var(--border-primary)', 
                     margin: '16px 0 0 0' 
                   }} />
                 )}
@@ -1164,9 +1255,10 @@ const ModernReports = () => {
                         style={{
                           padding: '4px 8px',
                           borderRadius: '6px',
-                          border: '1px solid #dee2e6',
+                          border: '1px solid var(--border-primary)',
                           fontSize: 'inherit',
-                          backgroundColor: 'white',
+                          backgroundColor: 'var(--bg-primary)',
+                          color: 'var(--text-gray-medium)',
                           cursor: 'pointer'
                         }}
                       >
@@ -1210,7 +1302,7 @@ const ModernReports = () => {
                           border: 'none',
                           cursor: pageNumber === 1 ? 'default' : 'pointer',
                           transition: 'all 0.2s ease',
-                          backgroundColor: pageNumber === 1 ? '#f8f9fa' : '#f8f9fa',
+                          backgroundColor: pageNumber === 1 ? 'var(--bg-secondary)' : 'var(--bg-secondary)',
                           color: pageNumber === 1 ? '#ced4da' : 'var(--text-primary)',
                           opacity: pageNumber === 1 ? 0.5 : 1
                         }}
@@ -1222,7 +1314,7 @@ const ModernReports = () => {
                         }}
                         onMouseLeave={(e) => {
                           if (pageNumber !== 1) {
-                            e.target.style.backgroundColor = '#f8f9fa';
+                            e.target.style.backgroundColor = 'var(--bg-secondary)';
                             e.target.style.color = 'var(--text-primary)';
                           }
                         }}
@@ -1247,7 +1339,7 @@ const ModernReports = () => {
                           border: 'none',
                           cursor: pageNumber === 1 ? 'default' : 'pointer',
                           transition: 'all 0.2s ease',
-                          backgroundColor: pageNumber === 1 ? '#f8f9fa' : '#f8f9fa',
+                          backgroundColor: pageNumber === 1 ? 'var(--bg-secondary)' : 'var(--bg-secondary)',
                           color: pageNumber === 1 ? '#ced4da' : 'var(--text-primary)',
                           opacity: pageNumber === 1 ? 0.5 : 1
                         }}
@@ -1259,7 +1351,7 @@ const ModernReports = () => {
                         }}
                         onMouseLeave={(e) => {
                           if (pageNumber !== 1) {
-                            e.target.style.backgroundColor = '#f8f9fa';
+                            e.target.style.backgroundColor = 'var(--bg-secondary)';
                             e.target.style.color = 'var(--text-primary)';
                           }
                         }}
@@ -1293,7 +1385,7 @@ const ModernReports = () => {
                                 border: 'none',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
-                                backgroundColor: pageNumber === i ? 'var(--color-accent)' : '#f8f9fa',
+                                backgroundColor: pageNumber === i ? 'var(--color-accent)' : 'var(--bg-secondary)',
                                 color: pageNumber === i ? 'white' : 'var(--text-primary)',
                                 minWidth: '36px'
                               }}
@@ -1305,7 +1397,7 @@ const ModernReports = () => {
                               }}
                               onMouseLeave={(e) => {
                                 if (pageNumber !== i) {
-                                  e.target.style.backgroundColor = '#f8f9fa';
+                                  e.target.style.backgroundColor = 'var(--bg-secondary)';
                                   e.target.style.color = 'var(--text-primary)';
                                 }
                               }}
@@ -1332,7 +1424,7 @@ const ModernReports = () => {
                           border: 'none',
                           cursor: pageNumber >= Math.ceil(totalTickets / pageSize) ? 'default' : 'pointer',
                           transition: 'all 0.2s ease',
-                          backgroundColor: pageNumber >= Math.ceil(totalTickets / pageSize) ? '#f8f9fa' : '#f8f9fa',
+                          backgroundColor: pageNumber >= Math.ceil(totalTickets / pageSize) ? 'var(--bg-secondary)' : 'var(--bg-secondary)',
                           color: pageNumber >= Math.ceil(totalTickets / pageSize) ? '#ced4da' : 'var(--text-primary)',
                           opacity: pageNumber >= Math.ceil(totalTickets / pageSize) ? 0.5 : 1
                         }}
@@ -1344,7 +1436,7 @@ const ModernReports = () => {
                         }}
                         onMouseLeave={(e) => {
                           if (pageNumber < Math.ceil(totalTickets / pageSize)) {
-                            e.target.style.backgroundColor = '#f8f9fa';
+                            e.target.style.backgroundColor = 'var(--bg-secondary)';
                             e.target.style.color = 'var(--text-primary)';
                           }
                         }}
@@ -1368,7 +1460,7 @@ const ModernReports = () => {
                           border: 'none',
                           cursor: pageNumber >= Math.ceil(totalTickets / pageSize) ? 'default' : 'pointer',
                           transition: 'all 0.2s ease',
-                          backgroundColor: pageNumber >= Math.ceil(totalTickets / pageSize) ? '#f8f9fa' : '#f8f9fa',
+                          backgroundColor: pageNumber >= Math.ceil(totalTickets / pageSize) ? 'var(--bg-secondary)' : 'var(--bg-secondary)',
                           color: pageNumber >= Math.ceil(totalTickets / pageSize) ? '#ced4da' : 'var(--text-primary)',
                           opacity: pageNumber >= Math.ceil(totalTickets / pageSize) ? 0.5 : 1
                         }}
@@ -1380,7 +1472,7 @@ const ModernReports = () => {
                         }}
                         onMouseLeave={(e) => {
                           if (pageNumber < Math.ceil(totalTickets / pageSize)) {
-                            e.target.style.backgroundColor = '#f8f9fa';
+                            e.target.style.backgroundColor = 'var(--bg-secondary)';
                             e.target.style.color = 'var(--text-primary)';
                           }
                         }}
