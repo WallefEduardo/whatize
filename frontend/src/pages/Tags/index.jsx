@@ -237,7 +237,11 @@ const Tags = () => {
       <ModernModal
         open={tagModalOpen}
         onClose={handleCloseTagModal}
-        title={selectedTag ? "Editar Tag" : "Nova Tag"}
+        title={
+          <Typography sx={{ color: 'var(--text-gray-medium)' }}>
+            {selectedTag ? "Editar Tag" : "Nova Tag"}
+          </Typography>
+        }
         size="lg"
         showCloseButton={true}
       >

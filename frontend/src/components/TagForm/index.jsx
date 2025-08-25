@@ -20,7 +20,8 @@ import {
   DialogActions
 } from "@mui/material";
 import { Colorize } from "@mui/icons-material";
-import { ColorBox } from 'material-ui-color';
+import { Tags as TagsIcon } from "lucide-react";
+import TwitterColorPicker from '../TwitterColorPicker';
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -246,57 +247,61 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
         {({ touched, errors, isSubmitting, values }) => (
           <Form>
             <Box sx={{ p: 1 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2, width: '100%' }}>
+                <Field
+                  as={TextField}
+                  label={i18n.t("tagModal.form.name")}
+                  name="name"
+                  error={touched.name && Boolean(errors.name)}
+                  helperText={touched.name && errors.name}
+                  variant="outlined"
+                  margin="dense"
+                  onChange={(e) => {
+                    if (e && e.target) {
+                      const newValue = e.target.value || "";
+                      setTag(prev => ({ ...prev, name: newValue }));
+                    }
+                  }}
+                  sx={{ flex: 1 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <TagsIcon size={20} style={{ color: 'var(--text-gray-medium)' }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                <Field
+                  as={TextField}
+                  label={i18n.t("tagModal.form.color")}
+                  name="color"
+                  id="color"
+                  error={touched.color && Boolean(errors.color)}
+                  helperText={touched.color && errors.color}
+                  variant="outlined"
+                  margin="dense"
+                  sx={{ flex: 1 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <div
+                          style={{ backgroundColor: values.color || tag.color || "#000000", width: 20, height: 20, borderRadius: '2px' }}
+                        ></div>
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <IconButton
+                        size="small"
+                        color="default"
+                        onClick={handleOpenColorPicker}
+                      >
+                        <Colorize />
+                      </IconButton>
+                    ),
+                  }}
+                />
+              </Box>
               <Grid container spacing={2}>
-                <Grid item xs={12} md={6} xl={6} style={{ display: 'flex', gap: 8 }}>
-                  <Field
-                    as={TextField}
-                    label={i18n.t("tagModal.form.name")}
-                    name="name"
-                    error={touched.name && Boolean(errors.name)}
-                    helperText={touched.name && errors.name}
-                    variant="outlined"
-                    margin="dense"
-                    onChange={(e) => {
-                      if (e && e.target) {
-                        const newValue = e.target.value || "";
-                        setTag(prev => ({ ...prev, name: newValue }));
-                      }
-                    }}
-                    fullWidth
-                  />
-                </Grid>
-                <Grid item xs={6} md={3} xl={3} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Field
-                    as={TextField}
-                    fullWidth
-                    label={i18n.t("tagModal.form.color")}
-                    name="color"
-                    autoFocus
-                    id="color"
-                    error={touched.color && Boolean(errors.color)}
-                    helperText={touched.color && errors.color}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <div
-                            style={{ backgroundColor: values.color || tag.color || "#000000", width: 20, height: 20, borderRadius: '2px' }}
-                          ></div>
-                        </InputAdornment>
-                      ),
-                      endAdornment: (
-                        <IconButton
-                          size="small"
-                          color="default"
-                          onClick={handleOpenColorPicker}
-                        >
-                          <Colorize />
-                        </IconButton>
-                      ),
-                    }}
-                    variant="outlined"
-                    margin="dense"
-                  />
-                </Grid>
                 {kanban ? (
                   <Grid item xs={6} md={3} xl={3} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <FormControl variant="outlined" margin="dense" fullWidth>
@@ -552,36 +557,52 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
           Escolha uma cor
         </DialogTitle>
         <DialogContent>
-          <ColorBox
-            disableAlpha={true}
-            hslGradient={false}
-            style={{ margin: '0 auto' }}
-            value={tag.color || getRandomHexColor()}
-            onChange={val => {
-              if (val && val.hex) {
-                setTag(prev => ({ ...prev, color: `#${val.hex}` }));
-              }
-            }}
-          />
+          <Box sx={{ py: 2 }}>
+            <TwitterColorPicker
+              color={tag.color || getRandomHexColor()}
+              onChange={(color) => {
+                setTag(prev => ({ ...prev, color: color.hex }));
+              }}
+              width="400px"
+            />
+          </Box>
         </DialogContent>
         <DialogActions style={{ justifyContent: 'flex-end', gap: 12, padding: '8px 24px' }}>
           <Button
             onClick={handleCancelColor}
-            color="secondary"
             variant="outlined"
-            style={{ minWidth: 90 }}
+            sx={{
+              minWidth: 90,
+              textTransform: 'none',
+              borderRadius: '4px !important',
+              color: '#dc2626 !important',
+              borderColor: '#dc2626 !important',
+              backgroundColor: 'transparent !important',
+              '&:hover': {
+                borderColor: '#b91c1c !important',
+                color: '#b91c1c !important',
+                backgroundColor: 'rgba(220, 38, 38, 0.04) !important',
+              }
+            }}
           >
             CANCELAR
           </Button>
           <Button 
             onClick={handleConfirmColor}
-            style={{ 
-              backgroundColor: '#000000',
-              color: '#FFFFFF',
+            variant="outlined"
+            sx={{
               minWidth: 100,
-              borderRadius: '4px'
+              textTransform: 'none',
+              borderRadius: '4px !important',
+              color: 'var(--color-accent) !important',
+              borderColor: 'var(--color-accent) !important',
+              backgroundColor: 'transparent !important',
+              '&:hover': {
+                borderColor: 'var(--color-green-dark) !important',
+                color: 'var(--color-green-dark) !important',
+                backgroundColor: 'rgba(0, 195, 7, 0.04) !important',
+              }
             }}
-            variant="contained"
           >
             OK
           </Button>
