@@ -19,19 +19,24 @@ import {
 } from "@mui/material";
 
 import {
-  Search as SearchIcon,
-  DeleteOutline as DeleteOutlineIcon,
-  Edit as EditIcon,
-  Add as AddIcon,
-  MoreHoriz,
-  LocalOffer as TagIcon,
-} from "@mui/icons-material";
+  Search,
+  Trash2,
+  Edit3,
+  PlusCircle,
+  MoreHorizontal,
+  Tags as TagsIcon,
+  BarChart3,
+} from "lucide-react";
 
 import PageLayout from "../../components/PageLayout";
-import BaseTable from "../../components/BaseTable";
-import TagModal from "../../components/TagModal";
+import BaseTable, { ActionButton, ActionGroup } from "../../components/BaseTable";
+import ModernModal from "../../components/ModernModal";
+import TagForm from "../../components/TagForm";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import ContactTagListModal from "../../components/ContactTagListModal";
+import StatusBadge from "../../components/StatusBadge";
+import SearchInput from "../../components/SearchInput";
+import GradientButton from "../../components/GradientButton";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
 import api from "../../services/api";
@@ -43,8 +48,12 @@ const reducer = (state, action) => {
     case "LOAD_TAGS":
       // Garantir que action.payload seja um array válido
       const tags = Array.isArray(action.payload) ? action.payload : [];
-      // Sempre substituir os dados para evitar acumulação incorreta
-      return tags;
+      // Se for a primeira página, substituir tudo
+      if (action.isFirstPage) {
+        return tags;
+      }
+      // Senão, adicionar ao que já existe (paginação)
+      return [...state, ...tags];
     case "UPDATE_TAGS":
       const tag = action.payload;
       if (!tag) return state;
@@ -93,7 +102,8 @@ const Tags = () => {
         
         dispatch({ 
           type: "LOAD_TAGS", 
-          payload: data.tags || []
+          payload: data.tags || [],
+          isFirstPage: pageNumber === 1
         });
         setHasMore(data.hasMore);
         setLoading(false);
@@ -142,6 +152,9 @@ const Tags = () => {
   const handleCloseTagModal = () => {
     setSelectedTag(null);
     setTagModalOpen(false);
+    // Recarregar tags após fechar o modal
+    setSearchParam("");
+    setPageNumber(1);
   };
 
   const handleSearch = (event) => {
@@ -172,12 +185,14 @@ const Tags = () => {
     try {
       await api.delete(`/tags/${tagId}`);
       toast.success(i18n.t("tags.toasts.deleted"));
+      
+      // Atualizar lista local imediatamente
+      dispatch({ type: "DELETE_TAGS", payload: tagId });
     } catch (err) {
       toastError(err);
     }
     setDeletingTag(null);
-    setSearchParam("");
-    setPageNumber(1);
+    setConfirmModalOpen(false);
   };
 
   const loadMore = () => {
@@ -195,10 +210,10 @@ const Tags = () => {
   return (
     <PageLayout
       title="Gerenciar Tags"
-      icon={<TagIcon />}
+      icon={<TagsIcon size={24} style={{ color: 'var(--color-accent)' }} />}
       breadcrumbs={[
-        { label: "Dashboard", href: "/" },
-        { label: "Tags" }
+        { label: "Dashboard", href: "/", icon: <BarChart3 size={16} /> },
+        { label: "Tags", icon: <TagsIcon size={16} /> }
       ]}
     >
       {/* Modals */}
@@ -219,13 +234,24 @@ const Tags = () => {
         {i18n.t("tags.confirmationModal.deleteMessage")}
       </ConfirmationModal>
 
-      <TagModal
+      <ModernModal
         open={tagModalOpen}
         onClose={handleCloseTagModal}
-        aria-labelledby="form-dialog-title"
-        tagId={selectedTag && selectedTag.id}
-        kanban={0}
-      />
+        title={selectedTag ? "Editar Tag" : "Nova Tag"}
+        size="lg"
+        showCloseButton={true}
+      >
+        <TagForm
+          tagId={selectedTag && selectedTag.id}
+          kanban={0}
+          onSave={(tag) => {
+            // Atualizar lista local após salvar
+            dispatch({ type: "UPDATE_TAGS", payload: tag });
+            handleCloseTagModal();
+          }}
+          onCancel={handleCloseTagModal}
+        />
+      </ModernModal>
 
       {/* Container Único com Filtros e Tabela */}
       <Card 
@@ -254,77 +280,43 @@ const Tags = () => {
             pb: 3,
             borderBottom: '1px solid var(--border-primary)'
           }}>
-            <TextField
+            <SearchInput
               placeholder={i18n.t("contacts.searchPlaceholder")}
-              type="search"
               value={searchParam}
               onChange={handleSearch}
-              variant="outlined"
-              size="small"
+              onSearch={(searchValue) => {
+                setSearchParam(searchValue.toLowerCase());
+                setPageNumber(1);
+                dispatch({ type: "RESET" });
+              }}
+              size="medium"
+              fullWidth={false}
               sx={{
                 flex: 1,
-                maxWidth: "400px",
-                minWidth: "250px",
-                '& .MuiOutlinedInput-root': {
-                  color: 'var(--text-gray-medium)',
-                  backgroundColor: 'var(--bg-primary)',
-                  '& fieldset': {
-                    borderColor: 'var(--border-primary)',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: 'var(--color-accent)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: 'var(--color-accent)',
-                  }
-                },
-                '& .MuiInputLabel-root': {
-                  color: 'var(--text-gray-medium)',
-                  '&.Mui-focused': {
-                    color: 'var(--color-accent)',
-                  }
-                }
-              }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: 'var(--color-accent)' }} />
-                  </InputAdornment>
-                ),
+                maxWidth: "550px",
+                minWidth: "350px",
               }}
             />
 
-            <Button
-              variant="contained"
+            <GradientButton
               onClick={handleOpenTagModal}
-              startIcon={<AddIcon />}
-              sx={{
-                backgroundColor: 'var(--color-accent)',
-                color: 'white',
-                px: 3,
-                py: 1,
-                '&:hover': {
-                  backgroundColor: '#00e608',
-                  transform: 'translateY(-1px)'
-                },
-                transition: 'all 0.2s ease',
-                boxShadow: '0 4px 12px rgba(0,195,7,0.3)'
-              }}
+              icon={<PlusCircle size={20} />}
+              variant="primary"
+              size="medium"
             >
               {i18n.t("tags.buttons.add")}
-            </Button>
+            </GradientButton>
           </Box>
 
           {/* Seção da Tabela */}
-          {/* Sempre mostrar BaseTable - ele tem sua própria lógica de empty state */}
-            <BaseTable
+          <BaseTable
               records={tags}
               loading={loading}
               noRecordsTitle="Nenhuma tag encontrada"
               noRecordsText="Crie sua primeira tag ou ajuste os filtros de busca"
-              noRecordsIcon={<TagIcon />}
+              noRecordsIcon={<TagsIcon size={48} />}
               showPagination={false}
-              minHeight={300}
+              minHeight={700}
             columns={[
               { 
                 accessor: 'id', 
@@ -335,8 +327,8 @@ const Tags = () => {
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: 'var(--color-accent)', 
-                      fontWeight: 600,
+                      color: 'var(--text-gray-medium)', 
+                      fontWeight: 500,
                       fontSize: '0.875rem'
                     }}
                   >
@@ -349,20 +341,10 @@ const Tags = () => {
                 title: i18n.t("tags.table.name"),
                 width: '40%',
                 render: ({ name, color }) => (
-                  <Chip
-                    variant="outlined"
-                    sx={{
-                      borderRadius: "8px",
-                      textShadow: "1px 1px 1px rgba(0, 0, 0, 0.3)",
-                      color: "white",
-                      fontWeight: "600",
-                      fontSize: "0.875rem",
-                      border: 'none',
-                    }}
-                    style={{
-                      backgroundColor: color,
-                    }}
+                  <StatusBadge
                     label={name}
+                    color={color}
+                    variant="filled"
                     size="small"
                   />
                 )
@@ -382,23 +364,14 @@ const Tags = () => {
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
                       {contacts?.length || 0}
                     </Typography>
-                    <IconButton
-                      size="small"
+                    <ActionButton
                       onClick={() => handleShowContacts(contacts, tag)}
                       disabled={!contacts?.length}
-                      sx={{
-                        padding: 1,
-                        color: "#666",
-                        backgroundColor: "var(--bg-secondary)",
-                        '&:hover': {
-                          backgroundColor: "var(--hover-bg-light)",
-                          transform: 'scale(1.05)'
-                        },
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      <MoreHoriz fontSize="small" />
-                    </IconButton>
+                      icon={MoreHorizontal}
+                      tooltip="Ver contatos"
+                      color="var(--text-secondary)"
+                      hoverColor="var(--color-accent)"
+                    />
                   </Box>
                 )
               },
@@ -409,48 +382,26 @@ const Tags = () => {
                 width: 140,
                 sortable: false,
                 render: (tag) => (
-                  <Box sx={{
-                    display: 'flex',
-                    gap: 1,
-                    justifyContent: 'center'
-                  }}>
-                    <IconButton
-                      size="small"
+                  <ActionGroup>
+                    <ActionButton
                       onClick={() => handleEditTag(tag)}
-                      sx={{
-                        padding: 1,
-                        color: "var(--color-accent)",
-                        backgroundColor: "var(--bg-secondary)",
-                        '&:hover': {
-                          backgroundColor: "var(--hover-bg-light)",
-                          transform: 'scale(1.05)'
-                        },
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
+                      icon={Edit3}
+                      tooltip="Editar tag"
+                      color="var(--color-accent)"
+                      hoverColor="var(--color-accent)"
+                    />
 
-                    <IconButton
-                      size="small"
+                    <ActionButton
                       onClick={() => {
                         setConfirmModalOpen(true);
                         setDeletingTag(tag);
                       }}
-                      sx={{
-                        padding: 1,
-                        color: "#E57373",
-                        backgroundColor: "var(--bg-secondary)",
-                        '&:hover': {
-                          backgroundColor: "var(--hover-bg-light)",
-                          transform: 'scale(1.05)'
-                        },
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      <DeleteOutlineIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
+                      icon={Trash2}
+                      tooltip="Excluir tag"
+                      color="#E57373"
+                      hoverColor="#d32f2f"
+                    />
+                  </ActionGroup>
                 )
               }
             ]}

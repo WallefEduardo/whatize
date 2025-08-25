@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Typography, Link } from "@mui/material";
-import { Home as HomeIcon } from "@mui/icons-material";
+import { Home } from "lucide-react";
 import { motion } from "framer-motion";
 
 /**
@@ -58,7 +58,7 @@ const PageLayout = ({
             flexWrap: 'wrap',
             gap: 2
           }}>
-            {/* Breadcrumb no lado esquerdo */}
+            {/* Breadcrumb moderno no lado esquerdo */}
             {showBreadcrumb && (
               <Box 
                 component="ol" 
@@ -68,97 +68,118 @@ const PageLayout = ({
                   listStyle: 'none',
                   m: 0,
                   p: 0,
-                  color: 'var(--text-gray-medium)',
-                  fontWeight: 600,
-                  fontSize: '0.875rem',
+                  gap: 1,
                   order: { xs: 2, md: 1 }
                 }}
               >
-                <Box component="li" sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box component="li">
                   <Link 
                     href="/"
                     sx={{ 
                       display: 'flex',
                       alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 40,
+                      height: 40,
+                      backgroundColor: 'var(--bg-primary)',
+                      border: '1px solid var(--border-primary)',
+                      borderRadius: 2,
                       color: 'var(--text-gray-medium)',
                       textDecoration: 'none',
-                      '&:hover': { color: 'var(--color-accent)' }
-                    }}
-                  >
-                    <HomeIcon sx={{ fontSize: 16 }} />
-                  </Link>
-                </Box>
-                
-                {breadcrumbs.map((crumb, index) => (
-                  <Box 
-                    key={index}
-                    component="li" 
-                    sx={{ 
-                      display: 'flex',
-                      alignItems: 'center',
-                      '&:before': {
-                        content: '"/"',
-                        px: 1.5,
-                        color: 'var(--text-gray-medium)'
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                      transition: 'all 0.2s ease',
+                      '&:hover': { 
+                        color: 'var(--color-accent)',
+                        borderColor: 'var(--color-accent)',
+                        transform: 'translateY(-1px)'
                       }
                     }}
                   >
-                    {crumb.href ? (
-                      <Link 
-                        href={crumb.href}
-                        sx={{ 
-                          color: 'var(--text-gray-medium)',
-                          textDecoration: 'none',
-                          '&:hover': { color: 'var(--color-accent)' }
+                    <Home size={18} />
+                  </Link>
+                </Box>
+                
+                {breadcrumbs.map((crumb, index) => {
+                  const isLastCrumb = index === breadcrumbs.length - 1;
+                  return (
+                    <React.Fragment key={index}>
+                      {/* Separador circular */}
+                      <Box
+                        sx={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: '50%',
+                          backgroundColor: 'var(--color-accent)',
+                          opacity: 0.6
                         }}
-                      >
-                        {crumb.label}
-                      </Link>
-                    ) : (
-                      <Typography 
-                        sx={{ 
-                          color: 'var(--text-gray-medium)',
-                          fontWeight: 600,
-                          fontSize: '0.875rem'
-                        }}
-                      >
-                        {crumb.label}
-                      </Typography>
-                    )}
-                  </Box>
-                ))}
+                      />
+                      
+                      <Box component="li">
+                        {crumb.href ? (
+                          <Link 
+                            href={crumb.href}
+                            sx={{ 
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              px: 2,
+                              py: 1,
+                              backgroundColor: 'var(--bg-primary)',
+                              border: '1px solid var(--border-primary)',
+                              borderRadius: 2,
+                              color: 'var(--text-gray-medium)',
+                              textDecoration: 'none',
+                              fontSize: '0.875rem',
+                              fontWeight: 500,
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                              transition: 'all 0.2s ease',
+                              '&:hover': { 
+                                color: 'var(--color-accent)',
+                                borderColor: 'var(--color-accent)',
+                                transform: 'translateY(-1px)'
+                              }
+                            }}
+                          >
+                            {crumb.icon && React.cloneElement(crumb.icon, { size: 16 })}
+                            {crumb.label}
+                          </Link>
+                        ) : (
+                          <Box
+                            sx={{ 
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              px: 2,
+                              py: 1,
+                              backgroundColor: isLastCrumb ? 'var(--bg-primary)' : 'var(--bg-primary)',
+                              border: '1px solid var(--border-primary)',
+                              borderRadius: 2,
+                              color: isLastCrumb ? 'var(--color-accent)' : 'var(--text-gray-medium)',
+                              fontSize: '0.875rem',
+                              fontWeight: isLastCrumb ? 600 : 500,
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                              borderColor: isLastCrumb ? 'var(--color-accent)' : 'var(--border-primary)',
+                            }}
+                          >
+                            {crumb.icon && React.cloneElement(crumb.icon, { 
+                              size: 16, 
+                              color: isLastCrumb ? 'var(--color-accent)' : 'var(--text-gray-medium)' 
+                            })}
+                            {crumb.label}
+                          </Box>
+                        )}
+                      </Box>
+                    </React.Fragment>
+                  );
+                })}
               </Box>
             )}
             
-            {/* Título centralizado com ícone */}
+            {/* Espaço vazio para manter layout */}
             <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              justifyContent: 'center',
               flex: { xs: '1 1 100%', md: 1 },
               order: { xs: 1, md: 2 }
             }}>
-              {icon && React.cloneElement(icon, {
-                sx: { 
-                  mr: 2, 
-                  color: 'var(--color-accent)', 
-                  fontSize: 32,
-                  filter: 'drop-shadow(0 2px 4px rgba(0,195,7,0.2))',
-                  ...icon.props?.sx
-                } 
-              })}
-              <Typography
-                variant="h5"
-                sx={{ 
-                  fontWeight: 700,
-                  color: 'var(--text-gray-medium)',
-                  mb: 0,
-                  fontSize: { xs: '1.25rem', sm: '1.5rem' },
-                  textAlign: 'center'
-                }}
-              >
-                {title}
-              </Typography>
             </Box>
             
             {/* Ações do header */}

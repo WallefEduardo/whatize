@@ -3,6 +3,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import "./utils/micRecorderPolyfill";
 // Importar sistema de cores
 import "./styles/colors.css";
+// Importar Animate.css para animações
+import "animate.css";
 import api from "./services/api";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./config/query-config";

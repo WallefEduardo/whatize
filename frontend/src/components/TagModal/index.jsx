@@ -100,7 +100,7 @@ const tagSchema = Yup.object().shape({
 	})
 });
 
-const TagModal = ({ open, onClose, tagId, kanban }) => {
+const TagModal = ({ open, onClose, tagId, kanban, onSave }) => {
 	const { user } = useContext(AuthContext);
 	const [colorPickerModalOpen, setColorPickerModalOpen] = useState(false);
 	const [lanes, setLanes] = useState([]);
@@ -264,12 +264,18 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 		};
 
 		try {
+			let response;
 			if (tagId) {
-				await api.put(`/tags/${tagId}`, tagData);
+				response = await api.put(`/tags/${tagId}`, tagData);
 			} else {
-				await api.post("/tags", tagData);
+				response = await api.post("/tags", tagData);
 			}
 			toast.success(kanban === 0 ? `${i18n.t("tagModal.success")}` : `${i18n.t("tagModal.successKanban")}`);
+			
+			// Chamar callback onSave se foi fornecida
+			if (onSave && response.data) {
+				onSave(response.data);
+			}
 
 		} catch (err) {
 			console.error("Erro ao salvar tag:", err);
