@@ -1,6 +1,8 @@
 import React from 'react';
 import { Toaster, toast as hotToast } from 'react-hot-toast';
 import logger from '../../utils/logger';
+import ModernToast from '../ModernToast';
+import './toast.css';
 
 // Configuração que preserva comportamento atual
 const toastConfig = {
@@ -17,6 +19,46 @@ const toastConfig = {
 
 // Provider que integra com tema atual
 export const ToastProvider = ({ children }) => {
+  // Forçar posição do toast container com máxima agressividade
+  React.useEffect(() => {
+    const forceToastPosition = () => {
+      const containers = document.querySelectorAll('[data-hot-toaster], .toast-fixed-position');
+      containers.forEach(container => {
+        if (container) {
+          Object.assign(container.style, {
+            position: 'fixed',
+            top: '95px',
+            right: '0px',
+            left: 'auto',
+            bottom: 'auto',
+            transform: 'none',
+            zIndex: '999999',
+            margin: '0',
+            padding: '0',
+            width: 'auto',
+            height: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end'
+          });
+        }
+      });
+    };
+
+    // Observer para detectar quando elementos são adicionados
+    const observer = new MutationObserver(forceToastPosition);
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    // Executar imediatamente e a cada 10ms
+    forceToastPosition();
+    const interval = setInterval(forceToastPosition, 10);
+
+    return () => {
+      observer.disconnect();
+      clearInterval(interval);
+    };
+  }, []);
+
   // Detectar tema usando CSS custom properties ou context
   const isDark = React.useMemo(() => {
     try {
@@ -43,24 +85,42 @@ export const ToastProvider = ({ children }) => {
     null,
     children,
     React.createElement(Toaster, {
-      toastOptions: toasterConfig,
-      containerStyle: {
-        top: 20,
-        right: 20,
+      position: 'top-right',
+      toastOptions: {
+        duration: 4000,
+        style: {
+          background: 'transparent',
+          boxShadow: 'none',
+          padding: 0,
+          margin: 0,
+          position: 'relative',
+        },
       },
+      containerClassName: 'toast-fixed-position',
+      containerStyle: {},
     })
   );
 };
 
-// Wrapper de compatibilidade com react-toastify
+// Wrapper de compatibilidade com react-toastify usando ModernToast
 export const toast = {
   success: (message, options = {}) => {
-    // Removido logs desnecessários para reduzir re-renders
-    return hotToast.success(message, {
-      ...toastConfig,
-      ...options,
-      icon: '✅',
-    });
+    const title = options.title || undefined;
+    return hotToast.custom(
+      (t) => (
+        <ModernToast
+          type="success"
+          title={title}
+          message={message}
+          visible={t.visible}
+          onClose={() => hotToast.dismiss(t.id)}
+        />
+      ),
+      {
+        duration: 4000,
+        ...options,
+      }
+    );
   },
 
   error: (message, options = {}) => {
@@ -69,43 +129,79 @@ export const toast = {
       logger.development.error(`Toast error: ${message}`);
     }
     
-    return hotToast.error(message || 'Erro desconhecido', {
-      ...toastConfig,
-      ...options,
-      icon: '❌',
-      duration: 5000, // Erros ficam mais tempo
-    });
+    const title = options.title || undefined;
+    return hotToast.custom(
+      (t) => (
+        <ModernToast
+          type="error"
+          title={title}
+          message={message || 'Erro desconhecido'}
+          visible={t.visible}
+          onClose={() => hotToast.dismiss(t.id)}
+        />
+      ),
+      {
+        duration: 5000, // Erros ficam mais tempo
+        ...options,
+      }
+    );
   },
 
   info: (message, options = {}) => {
-    // Removido logs desnecessários para reduzir re-renders
-    return hotToast(message, {
-      ...toastConfig,
-      ...options,
-      icon: 'ℹ️',
-    });
+    const title = options.title || undefined;
+    return hotToast.custom(
+      (t) => (
+        <ModernToast
+          type="info"
+          title={title}
+          message={message}
+          visible={t.visible}
+          onClose={() => hotToast.dismiss(t.id)}
+        />
+      ),
+      {
+        duration: 4000,
+        ...options,
+      }
+    );
   },
 
   warning: (message, options = {}) => {
-    // Removido logs desnecessários para reduzir re-renders
-    return hotToast(message, {
-      ...toastConfig,
-      ...options,
-      icon: '⚠️',
-      style: {
-        ...toastConfig.style,
-        background: '#ff9800',
-        color: '#fff',
-      },
-    });
+    const title = options.title || undefined;
+    return hotToast.custom(
+      (t) => (
+        <ModernToast
+          type="warning"
+          title={title}
+          message={message}
+          visible={t.visible}
+          onClose={() => hotToast.dismiss(t.id)}
+        />
+      ),
+      {
+        duration: 4500,
+        ...options,
+      }
+    );
   },
 
   loading: (message, options = {}) => {
-    // Removido logs desnecessários para reduzir re-renders
-    return hotToast.loading(message, {
-      ...toastConfig,
-      ...options,
-    });
+    const title = options.title || "Carregando...";
+    return hotToast.custom(
+      (t) => (
+        <ModernToast
+          type="info"
+          title={title}
+          message={message}
+          visible={t.visible}
+          onClose={() => hotToast.dismiss(t.id)}
+        />
+      ),
+      {
+        duration: Infinity, // Loading fica até ser removido manualmente
+        ...options,
+      }
+    );
   },
 
   // Métodos de controle

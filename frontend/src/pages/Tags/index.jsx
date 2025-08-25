@@ -108,7 +108,10 @@ const Tags = () => {
         setHasMore(data.hasMore);
         setLoading(false);
       } catch (err) {
-        toastError(err);
+        toast.error("Erro ao carregar as tags. Verifique sua conexão e tente novamente.", { 
+          title: "Erro de Carregamento!" 
+        });
+        console.error("Erro ao carregar tags:", err);
         setLoading(false);
       }
     };
@@ -184,12 +187,17 @@ const Tags = () => {
   const handleDeleteTag = async (tagId) => {
     try {
       await api.delete(`/tags/${tagId}`);
-      toast.success(i18n.t("tags.toasts.deleted"));
+      toast.success("Tag excluída com sucesso!", { 
+        title: "Operação Concluída!" 
+      });
       
       // Atualizar lista local imediatamente
       dispatch({ type: "DELETE_TAGS", payload: tagId });
     } catch (err) {
-      toastError(err);
+      toast.error("Erro ao excluir a tag. Tente novamente.", { 
+        title: "Erro na Operação!" 
+      });
+      console.error("Erro ao excluir tag:", err);
     }
     setDeletingTag(null);
     setConfirmModalOpen(false);

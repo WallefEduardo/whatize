@@ -11,10 +11,10 @@ import { queryClient } from "./config/query-config";
 import { ptBR } from "@mui/material/locale";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { useMediaQuery } from "@mui/material";
-import { Toaster } from "react-hot-toast";
 import ColorModeContext from "./layout/themeContext";
 import { ActiveMenuProvider } from "./context/ActiveMenuContext";
 import { MantineProvider } from "@mantine/core";
+import { ToastProvider } from "./components/ui/ToastProvider";
 // Favicon functionality implemented directly with useEffect
 import { getBackendUrl } from "./config";
 import Routes from "./routes/index.jsx";
@@ -275,25 +275,17 @@ const App = () => {
   return (
     <>
       <MantineProvider>
-        <ColorModeContext.Provider value={{ colorMode }}>
-          <ThemeProvider theme={theme}>
-            <QueryClientProvider client={queryClient}>
-              <ActiveMenuProvider>
-                <Routes />
-                <Toaster
-                  position="top-right"
-                  toastOptions={{
-                    duration: 4000,
-                    style: {
-                      background: mode === 'dark' ? '#333' : '#fff',
-                      color: mode === 'dark' ? '#fff' : '#333',
-                    },
-                  }}
-                />
-              </ActiveMenuProvider>
-            </QueryClientProvider>
-          </ThemeProvider>
-        </ColorModeContext.Provider>
+        <ToastProvider>
+          <ColorModeContext.Provider value={{ colorMode }}>
+            <ThemeProvider theme={theme}>
+              <QueryClientProvider client={queryClient}>
+                <ActiveMenuProvider>
+                  <Routes />
+                </ActiveMenuProvider>
+              </QueryClientProvider>
+            </ThemeProvider>
+          </ColorModeContext.Provider>
+        </ToastProvider>
       </MantineProvider>
     </>
   );

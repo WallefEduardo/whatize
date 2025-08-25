@@ -91,7 +91,9 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
           }
         } catch (err) {
           console.error("Erro ao buscar tags:", err);
-          toastError(err);
+          toast.error("Erro ao carregar dados do formulário.", {
+            title: "Erro de Carregamento!"
+          });
         } finally {
           setLoading(false);
         }
@@ -120,7 +122,9 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
         }
       } catch (err) {
         console.error("Erro ao buscar tag:", err);
-        toastError(err);
+        toast.error("Erro ao carregar dados da tag.", {
+          title: "Erro de Carregamento!"
+        });
       }
     };
     
@@ -146,7 +150,9 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
         })
         .catch(err => {
           console.error("Erro ao buscar funis:", err);
-          toastError(err);
+          toast.error("Erro ao carregar funis disponíveis.", {
+            title: "Erro de Carregamento!"
+          });
         });
     }
   }, [kanban, tagId]);
@@ -185,7 +191,9 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
 
   const handleSaveTag = async (values) => {
     if (kanban === 1 && !values.funilId) {
-      toast.error("Selecione um funil para continuar");
+      toast.error("Selecione um funil para continuar", {
+        title: "Campo Obrigatório!"
+      });
       return;
     }
 
@@ -202,10 +210,15 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
       let response;
       if (tagId) {
         response = await api.put(`/tags/${tagId}`, tagData);
+        toast.success("Tag atualizada com sucesso!", {
+          title: "Sucesso!"
+        });
       } else {
         response = await api.post("/tags", tagData);
+        toast.success(kanban === 0 ? "Tag criada com sucesso!" : "Seção do kanban criada com sucesso!", {
+          title: "Sucesso!"
+        });
       }
-      toast.success(kanban === 0 ? `${i18n.t("tagModal.success")}` : `${i18n.t("tagModal.successKanban")}`);
       
       // Chamar callback onSave se foi fornecida
       if (onSave && response.data) {
@@ -214,7 +227,9 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
 
     } catch (err) {
       console.error("Erro ao salvar tag:", err);
-      toastError(err);
+      toast.error("Erro ao salvar a tag. Verifique os dados e tente novamente.", {
+        title: "Erro ao Salvar!"
+      });
     }
   };
 
