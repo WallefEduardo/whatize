@@ -39,11 +39,11 @@ import {
 
 import FacebookLogin from "react-facebook-login/dist/facebook-login-render-props";
 
-import MainContainer from "../../components/MainContainer";
-import MainHeader from "../../components/MainHeader";
-import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
-import Title from "../../components/Title";
-import TableRowSkeleton from "../../components/TableRowSkeleton";
+import PageLayout from "../../components/PageLayout";
+import { Network, RefreshCw, Phone, Plus, LayoutDashboard, Wifi, BarChart3 } from "lucide-react";
+import BaseTable, { ActionButton, ActionGroup } from "../../components/BaseTable";
+import GradientButton from "../../components/GradientButton";
+import SearchInput from "../../components/SearchInput";
 import api from "../../services/api";
 import WhatsAppModal from "../../components/WhatsAppModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
@@ -59,42 +59,35 @@ import ForbiddenPage from "../../components/ForbiddenPage";
 import { Can } from "../../components/Can";
 
 const useStyles = () => ({
-  mainPaper: {
-    flex: 1,
-    padding: 0,
-    overflowY: "scroll",
-    borderRadius: 0,
-    boxShadow: "none",
-    backgroundColor: "#f5f5f5",
-  },
   searchContainer: {
     backgroundColor: "white",
     padding: 16,
     borderRadius: 8,
     boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
+    display: "flex !important",
+    alignItems: "center !important",
+    justifyContent: "space-between !important",
+    gap: "16px !important",
     marginBottom: 16,
-  },
-  tableContainer: {
-    backgroundColor: "white",
-    borderRadius: 8,
-    padding: 16,
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
-  },
-  customTable: {
-    "& .MuiTableCell-head": {
-      fontWeight: 600,
-      color: "#333",
-      borderBottom: "2px solid #f5f5f5",
+    flexWrap: "nowrap !important",
+    width: "100%",
+    flexDirection: "row !important",
+    // Responsividade específica
+    "@media (max-width: 1600px)": {
+      padding: 12,
+      gap: "12px !important",
     },
-    "& .MuiTableCell-body": {
-      borderBottom: "1px solid #f5f5f5",
+    "@media (max-width: 1440px)": {
+      padding: 10,
+      gap: "10px !important",
     },
-    "& .MuiTableRow-root:hover": {
-      backgroundColor: "#f9f9f9",
+    "@media (max-width: 1366px)": {
+      padding: 8,
+      gap: "8px !important",
+    },
+    "@media (max-width: 1280px)": {
+      padding: 8,
+      gap: "6px !important",
     },
   },
   actionButtons: {
@@ -102,17 +95,6 @@ const useStyles = () => ({
     color: "white",
     "&:hover": {
       backgroundColor: "#029907",
-    },
-  },
-  iconButton: {
-    padding: 8,
-    backgroundColor: "#f5f5f5",
-    marginLeft: 8,
-    "&.edit": {
-      color: "#00C307",
-    },
-    "&.delete": {
-      color: "#E57373",
     },
   },
   customTableCell: {
@@ -222,6 +204,7 @@ const Connections = () => {
   };
   const [confirmModalInfo, setConfirmModalInfo] = useState(confirmationModalInitialState);
   const [planConfig, setPlanConfig] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const { user, socket } = useContext(AuthContext);
   const companyId = user.companyId;
   const { getPlanCompany } = usePlans();
@@ -579,8 +562,266 @@ const Connections = () => {
     }
   };
 
+  // Filtrar conexões baseado no termo de busca
+  const filteredWhatsApps = whatsApps.filter(whatsApp => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      whatsApp.name?.toLowerCase().includes(searchLower) ||
+      whatsApp.number?.toLowerCase().includes(searchLower) ||
+      whatsApp.channel?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  // Definição das colunas para BaseTable
+  const columns = [
+    {
+      accessor: 'channel',
+      title: 'Channel',
+      textAlignment: 'center',
+      width: '80px',
+      render: (whatsApp) => IconChannel(whatsApp.channel)
+    },
+    {
+      accessor: 'name',
+      title: i18n.t("connections.table.name"),
+      textAlignment: 'center',
+      sortable: true
+    },
+    {
+      accessor: 'number',
+      title: i18n.t("connections.table.number"),
+      textAlignment: 'center',
+      render: (whatsApp) => whatsApp.number && whatsApp.channel === 'whatsapp' 
+        ? formatSerializedId(whatsApp.number) 
+        : whatsApp.number
+    },
+    {
+      accessor: 'status',
+      title: i18n.t("connections.table.status"),
+      textAlignment: 'center',
+      render: (whatsApp) => renderStatusToolTips(whatsApp)
+    },
+    {
+      accessor: 'session',
+      title: i18n.t("connections.table.session"),
+      textAlignment: 'center',
+      render: (whatsApp) => renderActionButtons(whatsApp)
+    },
+    {
+      accessor: 'updatedAt',
+      title: i18n.t("connections.table.lastUpdate"),
+      textAlignment: 'center',
+      sortable: true,
+      render: (whatsApp) => format(parseISO(whatsApp.updatedAt), "dd/MM/yy HH:mm")
+    },
+    {
+      accessor: 'isDefault',
+      title: i18n.t("connections.table.default"),
+      textAlignment: 'center',
+      render: (whatsApp) => whatsApp.isDefault && (
+        <div className={classes.customTableCell}>
+          <CheckCircle style={{ color: green[500] }} />
+        </div>
+      )
+    },
+    {
+      accessor: 'actions',
+      title: i18n.t("connections.table.actions"),
+      textAlignment: 'center',
+      sortable: false,
+      render: (whatsApp) => (
+        <Can
+          role={user.profile}
+          perform="connections-page:addConnection"
+          yes={() => (
+            <ActionGroup>
+              <ActionButton
+                onClick={() => handleEditWhatsApp(whatsApp)}
+                icon={Edit}
+                tooltip="Editar conexão"
+                color="var(--color-success)"
+                hoverColor="var(--color-success)"
+              />
+              <ActionButton
+                onClick={() => handleOpenConfirmationModal("delete", whatsApp.id)}
+                icon={DeleteOutline}
+                tooltip="Excluir conexão"
+                color="var(--color-danger)"
+                hoverColor="var(--color-danger)"
+              />
+            </ActionGroup>
+          )}
+        />
+      )
+    }
+  ];
+
+  // Função para renderizar cards personalizados
+  const renderConnectionCard = (whatsApp) => {
+    return (
+      <Card sx={{ 
+        backgroundColor: 'var(--bg-primary)',
+        border: '1px solid var(--border-primary)',
+        borderRadius: 3,
+        width: '100%',
+        height: 280,
+        minHeight: 280,
+        maxHeight: 280,
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        '&:hover': {
+          borderColor: 'var(--color-accent)',
+          boxShadow: `
+            0 10px 25px -5px rgba(0, 0, 0, 0.1),
+            0 10px 10px -5px rgba(0, 0, 0, 0.04),
+            0 0 0 1px var(--color-accent-alpha, rgba(59, 130, 246, 0.1))
+          `,
+        }
+      }}>
+        <CardContent sx={{ 
+          p: 3, 
+          height: '100%', 
+          display: 'flex', 
+          flexDirection: 'column',
+          position: 'relative'
+        }}>
+          {/* Header do Card */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            mb: 2
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              {IconChannel(whatsApp.channel)}
+              <Typography variant="h6" sx={{ 
+                color: 'var(--text-primary)',
+                fontWeight: 700,
+                fontSize: '1.1rem'
+              }}>
+                {whatsApp.name}
+              </Typography>
+            </Box>
+            {whatsApp.isDefault && (
+              <CheckCircle style={{ color: 'var(--color-success)', fontSize: 20 }} />
+            )}
+          </Box>
+
+          {/* Informações principais */}
+          <Box sx={{ flex: 1, mb: 2 }}>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="caption" sx={{ 
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                fontSize: '0.7rem',
+                letterSpacing: '0.5px'
+              }}>
+                Número
+              </Typography>
+              <Typography variant="body1" sx={{ 
+                color: 'var(--text-primary)',
+                fontWeight: 500,
+                fontSize: '0.9rem',
+                mt: 0.5
+              }}>
+                {whatsApp.number && whatsApp.channel === 'whatsapp' 
+                  ? formatSerializedId(whatsApp.number) 
+                  : whatsApp.number || 'N/A'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="caption" sx={{ 
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                fontSize: '0.7rem',
+                letterSpacing: '0.5px'
+              }}>
+                Status
+              </Typography>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1,
+                mt: 0.5
+              }}>
+                {renderStatusToolTips(whatsApp)}
+              </Box>
+            </Box>
+
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="caption" sx={{ 
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                fontSize: '0.7rem',
+                letterSpacing: '0.5px'
+              }}>
+                Última Atualização
+              </Typography>
+              <Typography variant="body2" sx={{ 
+                color: 'var(--text-secondary)',
+                fontSize: '0.8rem',
+                mt: 0.5
+              }}>
+                {format(parseISO(whatsApp.updatedAt), "dd/MM/yy HH:mm")}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Ações da sessão */}
+          <Box sx={{ mb: 2 }}>
+            {renderActionButtons(whatsApp)}
+          </Box>
+
+          {/* Ações do card */}
+          <Can
+            role={user.profile}
+            perform="connections-page:addConnection"
+            yes={() => (
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                gap: 1.5,
+                pt: 2,
+                borderTop: '1px solid var(--border-primary)'
+              }}>
+                <ActionButton
+                  onClick={() => handleEditWhatsApp(whatsApp)}
+                  icon={Edit}
+                  tooltip="Editar conexão"
+                  color="var(--color-success)"
+                  hoverColor="var(--color-success)"
+                />
+                <ActionButton
+                  onClick={() => handleOpenConfirmationModal("delete", whatsApp.id)}
+                  icon={DeleteOutline}
+                  tooltip="Excluir conexão"
+                  color="var(--color-danger)"
+                  hoverColor="var(--color-danger)"
+                />
+              </Box>
+            )}
+          />
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
-    <MainContainer>
+    <PageLayout
+      title="Conexões"
+      icon={<Network />}
+      breadcrumbs={[
+        { href: "/", icon: <BarChart3 size={16} /> },
+        { label: "Conexões", icon: <Wifi size={16} /> }
+      ]}
+    >
       <ConfirmationModal
         title={confirmModalInfo.title}
         open={confirmModalOpen}
@@ -608,33 +849,161 @@ const Connections = () => {
         <ForbiddenPage />
       ) : (
         <>
-          <div className={classes.searchContainer}>
-            <div style={{
+          <div 
+            className={classes.searchContainer}
+            style={{
               display: "flex",
-              gap: "16px",
-              alignItems: "center"
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexDirection: "row",
+              flexWrap: "nowrap",
+              gap: "16px"
+            }}
+          >
+            {/* SearchInput do lado esquerdo - Responsivo */}
+            <Box sx={{
+              // Responsividade baseada na largura da tela
+              flex: {
+                xs: "0 0 280px",  // Mobile
+                sm: "0 0 300px",  // Tablet
+                md: "0 0 320px",  // Desktop pequeno (1280x720)
+                lg: "0 0 350px",  // Desktop médio (1366x768, 1600x900) 
+                xl: "0 0 400px"   // Full HD+
+              },
+              maxWidth: {
+                xs: "280px",
+                sm: "300px", 
+                md: "320px",
+                lg: "350px",
+                xl: "400px"
+              },
+              minWidth: {
+                xs: "250px",
+                sm: "280px",
+                md: "300px", 
+                lg: "320px",
+                xl: "350px"
+              }
             }}>
-              <Typography variant="h6" style={{ color: '#333' }}>
-                {i18n.t("connections.title")} ({whatsApps.length})
-              </Typography>
-            </div>
+              <SearchInput
+                placeholder="Buscar conexões..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onSearch={(value) => setSearchTerm(value)}
+                size="medium"
+                fullWidth={true}
+              />
+            </Box>
 
-            <div style={{ display: "flex", gap: "16px" }}>
-              <Button
-                variant="contained"
-                className={classes.actionButtons}
+            {/* Botões do lado direito - Responsivos */}
+            <Box sx={{ 
+              display: "flex", 
+              gap: {
+                xs: "6px",   // Mobile - gap menor
+                sm: "8px",   // Tablet
+                md: "8px",   // Desktop pequeno (1280x720)
+                lg: "10px",  // Desktop médio (1366x768, 1600x900)
+                xl: "12px"   // Full HD+
+              }, 
+              alignItems: "center",
+              flexShrink: 0,
+              marginLeft: "auto"
+            }}>
+              {/* Botão Reiniciar Conexões - Azul outline */}
+              <GradientButton
+                icon={<RefreshCw size={16} />}
                 onClick={restartWhatsapps}
+                size="small"
+                sx={{
+                  background: 'transparent',
+                  color: '#3B82F6',
+                  border: '2px solid #3B82F6',
+                  boxShadow: 'none',
+                  fontSize: {
+                    xs: '0.75rem',  // Mobile
+                    sm: '0.8rem',   // Tablet  
+                    md: '0.85rem',  // Desktop pequeno (1280x720)
+                    lg: '0.9rem',   // Desktop médio (1366x768, 1600x900)
+                    xl: '0.95rem'   // Full HD+
+                  },
+                  px: {
+                    xs: 1.5,    // Mobile
+                    sm: 2,      // Tablet
+                    md: 2.5,    // Desktop pequeno (1280x720)
+                    lg: 2.5,    // Desktop médio (1366x768, 1600x900)
+                    xl: 3       // Full HD+
+                  },
+                  py: {
+                    xs: 0.5,    // Mobile
+                    sm: 0.75,   // Tablet
+                    md: 0.75,   // Desktop pequeno (1280x720)
+                    lg: 1,      // Desktop médio (1366x768, 1600x900)
+                    xl: 1       // Full HD+
+                  },
+                  minWidth: {
+                    xs: 'auto',  // Mobile
+                    sm: '100px', // Tablet
+                    md: '120px', // Desktop pequeno (1280x720)
+                    lg: '130px', // Desktop médio (1366x768, 1600x900)
+                    xl: '140px'  // Full HD+
+                  },
+                  '&:hover': {
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(59, 130, 246, 0.2)'
+                  }
+                }}
               >
                 {i18n.t("connections.restartConnections")}
-              </Button>
+              </GradientButton>
 
-              <Button
-                variant="contained"
-                className={classes.actionButtons}
+              {/* Botão Chamar Suporte - Vermelho outline */}
+              <GradientButton
+                icon={<Phone size={16} />}
                 onClick={() => openInNewTab(`https://wa.me/5588998309323?text=Ol%C3%A1,%20poderia%20me%20ajudar%20com%20o%20Whatize?`)}
+                size="small"
+                sx={{
+                  background: 'transparent',
+                  color: '#DC2626',
+                  border: '2px solid #DC2626',
+                  boxShadow: 'none',
+                  fontSize: {
+                    xs: '0.75rem',  // Mobile
+                    sm: '0.8rem',   // Tablet  
+                    md: '0.85rem',  // Desktop pequeno (1280x720)
+                    lg: '0.9rem',   // Desktop médio (1366x768, 1600x900)
+                    xl: '0.95rem'   // Full HD+
+                  },
+                  px: {
+                    xs: 1.5,    // Mobile
+                    sm: 2,      // Tablet
+                    md: 2.5,    // Desktop pequeno (1280x720)
+                    lg: 2.5,    // Desktop médio (1366x768, 1600x900)
+                    xl: 3       // Full HD+
+                  },
+                  py: {
+                    xs: 0.5,    // Mobile
+                    sm: 0.75,   // Tablet
+                    md: 0.75,   // Desktop pequeno (1280x720)
+                    lg: 1,      // Desktop médio (1366x768, 1600x900)
+                    xl: 1       // Full HD+
+                  },
+                  minWidth: {
+                    xs: 'auto',  // Mobile
+                    sm: '100px', // Tablet
+                    md: '120px', // Desktop pequeno (1280x720)
+                    lg: '130px', // Desktop médio (1366x768, 1600x900)
+                    xl: '140px'  // Full HD+
+                  },
+                  '&:hover': {
+                    background: 'rgba(220, 38, 38, 0.1)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(220, 38, 38, 0.2)'
+                  }
+                }}
               >
                 {i18n.t("connections.callSupport")}
-              </Button>
+              </GradientButton>
 
               <PopupState variant="popover" popupId="demo-popup-menu">
                 {(popupState) => (
@@ -644,15 +1013,65 @@ const Connections = () => {
                       perform="connections-page:addConnection"
                       yes={() => (
                         <>
-                          <Button
-                            variant="contained"
-                            className={classes.actionButtons}
-                            startIcon={<AddCircleOutline />}
+                          {/* Botão Nova Conexão - Padrão (verde) */}
+                          <GradientButton
+                            icon={<Plus size={16} />}
+                            size="small"
+                            variant="primary"
+                            sx={{
+                              fontSize: {
+                                xs: '0.75rem',  // Mobile
+                                sm: '0.8rem',   // Tablet  
+                                md: '0.85rem',  // Desktop pequeno (1280x720)
+                                lg: '0.9rem',   // Desktop médio (1366x768, 1600x900)
+                                xl: '0.95rem'   // Full HD+
+                              },
+                              px: {
+                                xs: 1.5,    // Mobile
+                                sm: 2,      // Tablet
+                                md: 2.5,    // Desktop pequeno (1280x720)
+                                lg: 2.5,    // Desktop médio (1366x768, 1600x900)
+                                xl: 3       // Full HD+
+                              },
+                              py: {
+                                xs: 0.5,    // Mobile
+                                sm: 0.75,   // Tablet
+                                md: 0.75,   // Desktop pequeno (1280x720)
+                                lg: 1,      // Desktop médio (1366x768, 1600x900)
+                                xl: 1       // Full HD+
+                              },
+                              minWidth: {
+                                xs: 'auto',  // Mobile
+                                sm: '100px', // Tablet
+                                md: '120px', // Desktop pequeno (1280x720)
+                                lg: '130px', // Desktop médio (1366x768, 1600x900)
+                                xl: '140px'  // Full HD+
+                              }
+                            }}
                             {...bindTrigger(popupState)}
                           >
                             {i18n.t("connections.newConnection")}
-                          </Button>
-                          <Menu {...bindMenu(popupState)}>
+                          </GradientButton>
+                          <Menu 
+                            {...bindMenu(popupState)}
+                            PaperProps={{
+                              sx: {
+                                borderRadius: 2,
+                                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+                                border: '1px solid var(--border-primary)',
+                                backgroundColor: 'var(--bg-primary)',
+                                '& .MuiMenuItem-root': {
+                                  color: 'var(--text-primary)',
+                                  '&:hover': {
+                                    backgroundColor: 'var(--hover-bg-light)',
+                                  },
+                                  '&.Mui-disabled': {
+                                    opacity: 0.5
+                                  }
+                                }
+                              }
+                            }}
+                          >
                             <MenuItem
                               disabled={planConfig?.plan?.useWhatsapp ? false : true}
                               onClick={() => {
@@ -726,7 +1145,7 @@ const Connections = () => {
                   </React.Fragment>
                 )}
               </PopupState>
-            </div>
+            </Box>
           </div>
 
           {statusImport?.all && (
@@ -758,90 +1177,25 @@ const Connections = () => {
             </Card>
           )}
 
-          <Paper className={classes.mainPaper}>
-            <div className={classes.tableContainer}>
-              <Table size="small" className={classes.customTable}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell align="center">Channel</TableCell>
-                    <TableCell align="center">{i18n.t("connections.table.name")}</TableCell>
-                    <TableCell align="center">{i18n.t("connections.table.number")}</TableCell>
-                    <TableCell align="center">{i18n.t("connections.table.status")}</TableCell>
-                    <TableCell align="center">{i18n.t("connections.table.session")}</TableCell>
-                    <TableCell align="center">{i18n.t("connections.table.lastUpdate")}</TableCell>
-                    <TableCell align="center">{i18n.t("connections.table.default")}</TableCell>
-                    <Can
-                      role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
-                      perform="connections-page:addConnection"
-                      yes={() => (
-                        <TableCell align="center">{i18n.t("connections.table.actions")}</TableCell>
-                      )}
-                    />
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loading ? (
-                    <TableRowSkeleton />
-                  ) : (
-                    <>
-                      {whatsApps?.length > 0 &&
-                        whatsApps.map((whatsApp) => (
-                          <TableRow key={whatsApp.id}>
-                            <TableCell align="center">{IconChannel(whatsApp.channel)}</TableCell>
-                            <TableCell align="center">{whatsApp.name}</TableCell>
-                            <TableCell align="center">
-                              {whatsApp.number && whatsApp.channel === 'whatsapp' ?
-                                formatSerializedId(whatsApp.number) :
-                                whatsApp.number}
-                            </TableCell>
-                            <TableCell align="center">{renderStatusToolTips(whatsApp)}</TableCell>
-                            <TableCell align="center">{renderActionButtons(whatsApp)}</TableCell>
-                            <TableCell align="center">
-                              {format(parseISO(whatsApp.updatedAt), "dd/MM/yy HH:mm")}
-                            </TableCell>
-                            <TableCell align="center">
-                              {whatsApp.isDefault && (
-                                <div className={classes.customTableCell}>
-                                  <CheckCircle style={{ color: green[500] }} />
-                                </div>
-                              )}
-                            </TableCell>
-                            <Can
-                              role={user.profile}
-                              perform="connections-page:addConnection"
-                              yes={() => (
-                                <TableCell align="center">
-                                  <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => handleEditWhatsApp(whatsApp)}
-                                      className={`${classes.iconButton} edit`}
-                                    >
-                                      <Edit fontSize="small" />
-                                    </IconButton>
-
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => handleOpenConfirmationModal("delete", whatsApp.id)}
-                                      className={`${classes.iconButton} delete`}
-                                    >
-                                      <DeleteOutline fontSize="small" />
-                                    </IconButton>
-                                  </div>
-                                </TableCell>
-                              )}
-                            />
-                          </TableRow>
-                        ))}
-                    </>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </Paper>
+          <BaseTable
+            records={filteredWhatsApps}
+            columns={columns}
+            loading={loading}
+            noRecordsTitle="Nenhuma conexão encontrada"
+            noRecordsText="Crie uma nova conexão para começar a usar o sistema"
+            noRecordsIcon={<Network size={48} />}
+            enableSorting={true}
+            enableViewToggle={true}
+            defaultView="table"
+            renderCard={renderConnectionCard}
+            initialSortBy="name"
+            initialSortOrder="asc"
+            showPagination={false}
+            minHeight={500}
+          />
         </>
       )}
-    </MainContainer>
+    </PageLayout>
   );
 };
 

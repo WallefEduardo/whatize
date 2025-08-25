@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Typography, Link } from "@mui/material";
-import { Home } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import { motion } from "framer-motion";
 
 /**
@@ -20,7 +20,7 @@ const PageLayout = ({
   title = "Página",
   icon,
   breadcrumbs = [
-    { label: "Dashboard", href: "/" },
+    { href: "/", icon: <BarChart3 size={16} /> },
     { label: title }
   ],
   headerActions,
@@ -72,47 +72,22 @@ const PageLayout = ({
                   order: { xs: 2, md: 1 }
                 }}
               >
-                <Box component="li">
-                  <Link 
-                    href="/"
-                    sx={{ 
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 40,
-                      height: 40,
-                      backgroundColor: 'var(--bg-primary)',
-                      border: '1px solid var(--border-primary)',
-                      borderRadius: 2,
-                      color: 'var(--text-gray-medium)',
-                      textDecoration: 'none',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                      transition: 'all 0.2s ease',
-                      '&:hover': { 
-                        color: 'var(--color-accent)',
-                        borderColor: 'var(--color-accent)',
-                        transform: 'translateY(-1px)'
-                      }
-                    }}
-                  >
-                    <Home size={18} />
-                  </Link>
-                </Box>
-                
                 {breadcrumbs.map((crumb, index) => {
                   const isLastCrumb = index === breadcrumbs.length - 1;
                   return (
                     <React.Fragment key={index}>
-                      {/* Separador circular */}
-                      <Box
-                        sx={{
-                          width: 4,
-                          height: 4,
-                          borderRadius: '50%',
-                          backgroundColor: 'var(--color-accent)',
-                          opacity: 0.6
-                        }}
-                      />
+                      {/* Separador circular - apenas entre itens */}
+                      {index > 0 && (
+                        <Box
+                          sx={{
+                            width: 4,
+                            height: 4,
+                            borderRadius: '50%',
+                            backgroundColor: 'var(--color-accent)',
+                            opacity: 0.6
+                          }}
+                        />
+                      )}
                       
                       <Box component="li">
                         {crumb.href ? (
