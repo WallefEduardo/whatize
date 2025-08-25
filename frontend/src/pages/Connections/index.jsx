@@ -2,9 +2,6 @@ import React, { useState, useCallback, useContext, useEffect } from "react";
 import { toast } from "../../components/ui/ToastProvider";
 import { add, format, parseISO } from "date-fns";
 
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
-import PopupState, { bindTrigger, bindMenu } from "material-ui-popup-state";
 import { styled } from "@mui/material/styles";
 import { green } from "@mui/material/colors";
 import {
@@ -44,6 +41,7 @@ import { Network, RefreshCw, Phone, Plus, LayoutDashboard, Wifi, BarChart3 } fro
 import BaseTable, { ActionButton, ActionGroup } from "../../components/BaseTable";
 import GradientButton from "../../components/GradientButton";
 import SearchInput from "../../components/SearchInput";
+import ConnectionTypeModal from "../../components/ConnectionTypeModal";
 import api from "../../services/api";
 import WhatsAppModal from "../../components/WhatsAppModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
@@ -203,19 +201,40 @@ const Connections = () => {
     open: false,
   };
   const [confirmModalInfo, setConfirmModalInfo] = useState(confirmationModalInitialState);
-  const [planConfig, setPlanConfig] = useState(false);
+  const [planConfig, setPlanConfig] = useState({
+    plan: {
+      useWhatsapp: true,
+      useFacebook: true,
+      useInstagram: true
+    }
+  });
   const [searchTerm, setSearchTerm] = useState("");
+  const [connectionTypeModalOpen, setConnectionTypeModalOpen] = useState(false);
   const { user, socket } = useContext(AuthContext);
   const companyId = user.companyId;
   const { getPlanCompany } = usePlans();
 
   useEffect(() => {
     async function fetchData() {
-      const planConfigs = await getPlanCompany(undefined, companyId);
-      setPlanConfig(planConfigs)
+      if (companyId) {
+        try {
+          const planConfigs = await getPlanCompany(undefined, companyId);
+          setPlanConfig(planConfigs);
+        } catch (error) {
+          console.error('Erro ao carregar plano da empresa:', error);
+          // Se der erro, vamos liberar como se fosse plano completo para não bloquear
+          setPlanConfig({
+            plan: {
+              useWhatsapp: true,
+              useFacebook: true,
+              useInstagram: true
+            }
+          });
+        }
+      }
     }
     fetchData();
-  }, []);
+  }, [companyId]);
 
   useEffect(() => {
     if (socket && socket.on && typeof socket.on === 'function') {
@@ -250,12 +269,31 @@ const Connections = () => {
   const handleOpenWhatsAppModal = () => {
     setSelectedWhatsApp(null);
     setWhatsAppModalOpen(true);
+    setConnectionTypeModalOpen(false);
   };
 
   const handleCloseWhatsAppModal = useCallback(() => {
     setWhatsAppModalOpen(false);
     setSelectedWhatsApp(null);
   }, [setSelectedWhatsApp, setWhatsAppModalOpen]);
+
+  const handleOpenConnectionTypeModal = () => {
+    setConnectionTypeModalOpen(true);
+  };
+
+  const handleCloseConnectionTypeModal = () => {
+    setConnectionTypeModalOpen(false);
+  };
+
+  const handleSelectFacebook = (response) => {
+    responseFacebook(response);
+    setConnectionTypeModalOpen(false);
+  };
+
+  const handleSelectInstagram = (response) => {
+    responseInstagram(response);
+    setConnectionTypeModalOpen(false);
+  };
 
   const handleOpenQrModal = (whatsApp) => {
     setSelectedWhatsApp(whatsApp);
@@ -831,6 +869,15 @@ const Connections = () => {
         {confirmModalInfo.message}
       </ConfirmationModal>
 
+      <ConnectionTypeModal
+        open={connectionTypeModalOpen}
+        onClose={handleCloseConnectionTypeModal}
+        onSelectWhatsApp={handleOpenWhatsAppModal}
+        onSelectFacebook={handleSelectFacebook}
+        onSelectInstagram={handleSelectInstagram}
+        planConfig={planConfig}
+      />
+
       {qrModalOpen && (
         <QrcodeModal
           open={qrModalOpen}
@@ -1005,15 +1052,11 @@ const Connections = () => {
                 {i18n.t("connections.callSupport")}
               </GradientButton>
 
-              <PopupState variant="popover" popupId="demo-popup-menu">
-                {(popupState) => (
-                  <React.Fragment>
-                    <Can
+              <Can
                       role={user.profile}
                       perform="connections-page:addConnection"
                       yes={() => (
                         <>
-                          {/* Botão Nova Conexão - Padrão (verde) */}
                           <GradientButton
                             icon={<Plus size={16} />}
                             size="small"
@@ -1048,103 +1091,13 @@ const Connections = () => {
                                 xl: '140px'  // Full HD+
                               }
                             }}
-                            {...bindTrigger(popupState)}
+                            onClick={handleOpenConnectionTypeModal}
                           >
                             {i18n.t("connections.newConnection")}
                           </GradientButton>
-                          <Menu 
-                            {...bindMenu(popupState)}
-                            PaperProps={{
-                              sx: {
-                                borderRadius: 2,
-                                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
-                                border: '1px solid var(--border-primary)',
-                                backgroundColor: 'var(--bg-primary)',
-                                '& .MuiMenuItem-root': {
-                                  color: 'var(--text-primary)',
-                                  '&:hover': {
-                                    backgroundColor: 'var(--hover-bg-light)',
-                                  },
-                                  '&.Mui-disabled': {
-                                    opacity: 0.5
-                                  }
-                                }
-                              }
-                            }}
-                          >
-                            <MenuItem
-                              disabled={planConfig?.plan?.useWhatsapp ? false : true}
-                              onClick={() => {
-                                handleOpenWhatsAppModal();
-                                popupState.close();
-                              }}
-                            >
-                              <WhatsApp
-                                fontSize="small"
-                                style={{
-                                  marginRight: "10px",
-                                  color: "#25D366",
-                                }}
-                              />
-                              WhatsApp
-                            </MenuItem>
-                            <FacebookLogin
-                              appId={process.env.REACT_APP_FACEBOOK_APP_ID}
-                              autoLoad={false}
-                              fields="name,email,picture"
-                              version="23.0"
-                              scope={process.env.REACT_APP_REQUIRE_BUSINESS_MANAGEMENT?.toUpperCase() === "TRUE" ?
-                                "public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management"
-                                : "public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement"}
-                              callback={responseFacebook}
-                              render={(renderProps) => (
-                                <MenuItem
-                                  disabled={planConfig?.plan?.useFacebook ? false : true}
-                                  onClick={renderProps.onClick}
-                                >
-                                  <Facebook
-                                    fontSize="small"
-                                    style={{
-                                      marginRight: "10px",
-                                      color: "#3b5998",
-                                    }}
-                                  />
-                                  Facebook
-                                </MenuItem>
-                              )}
-                            />
-                            <FacebookLogin
-                              appId={process.env.REACT_APP_FACEBOOK_APP_ID}
-                              autoLoad={false}
-                              fields="name,email,picture"
-                              version="23.0"
-                              scope={process.env.REACT_APP_REQUIRE_BUSINESS_MANAGEMENT?.toUpperCase() === "TRUE" ?
-                                "public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management"
-                                : "public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement"}
-                              callback={responseInstagram}
-                              render={(renderProps) => (
-                                <MenuItem
-                                  disabled={planConfig?.plan?.useInstagram ? false : true}
-                                  onClick={renderProps.onClick}
-                                >
-                                  <Instagram
-                                    fontSize="small"
-                                    style={{
-                                      marginRight: "10px",
-                                      color: "#e1306c",
-                                    }}
-                                  />
-                                  Instagram
-                                </MenuItem>
-                              )}
-                            />
-                          </Menu>
                         </>
                       )}
-                    />
-                  </React.Fragment>
-                )}
-              </PopupState>
+              />
             </Box>
           </div>
 
