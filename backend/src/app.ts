@@ -51,17 +51,19 @@ app.set("queues", {
   sendScheduledMessages
 });
 
-// Configuração dinâmica de CORS para suportar portas dinâmicas do Vite
+// Configuração dinâmica de CORS para suportar desenvolvimento e produção
 const allowedOrigins = [
   process.env.FRONTEND_URL, // URL principal do frontend
   process.env.BACKEND_URL,  // URL do próprio backend
-  // Portas comuns do Vite para desenvolvimento
+  // Portas comuns para desenvolvimento
   'http://localhost:3000',
   'http://localhost:3001', 
   'http://localhost:3002',
   'http://localhost:3003',
-  'http://localhost:5173', // Porta padrão do Vite 5+
-  'http://localhost:5174'
+  'http://localhost:5173', // Porta padrão do Vite
+  'http://localhost:5174',
+  'http://127.0.0.1:3001',
+  'http://127.0.0.1:3000'
 ].filter(Boolean); // Remove valores undefined
 
 // Configuração do BullBoard
@@ -128,8 +130,8 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Authorization', 'Content-Type', 'Accept'],
-    exposedHeaders: ['Authorization']
+    allowedHeaders: ['Authorization', 'Content-Type', 'Accept', 'Cookie'],
+    exposedHeaders: ['Authorization', 'Set-Cookie']
   })
 );
 app.options('*', cors()); 

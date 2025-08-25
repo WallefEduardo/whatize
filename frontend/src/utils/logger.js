@@ -1,154 +1,229 @@
-// Sistema de Logs Robusto para Migração Frontend
-// Criado seguindo roadmap de modernização - Fase 1
+/**
+ * Sistema de logs estruturado para debug e monitoramento
+ */
 
-// LogLevel constants
 const LOG_LEVELS = {
-  TRACE: 0,
-  DEBUG: 1,
+  ERROR: 0,
+  WARN: 1,
   INFO: 2,
-  WARN: 3,
-  ERROR: 4,
-  FATAL: 5
+  DEBUG: 3
 };
 
-// LogEntry factory function
-const createLogEntry = (level, message, phase = null, component = null, metadata = null) => ({
-  timestamp: new Date().toISOString(),
-  level,
-  message,
-  phase,
-  component,
-  metadata
-});
+const LOG_COLORS = {
+  ERROR: '#FF6B6B',
+  WARN: '#FFD93D',
+  INFO: '#6BCF7F',
+  DEBUG: '#4DABF7'
+};
 
-class FrontendLogger {
+class Logger {
   constructor() {
-    this.isDevelopment = import.meta.env.DEV;
-    this.isProduction = import.meta.env.PROD;
+    this.isDev = import.meta.env.DEV;
+    this.currentLevel = this.isDev ? LOG_LEVELS.DEBUG : LOG_LEVELS.ERROR;
+    this.logs = [];
+    this.maxLogs = 1000; // Manter últimos 1000 logs
+    
+    // Expor para debug global em desenvolvimento
+    if (this.isDev) {
+      window.logger = this;
+    }
   }
 
-  // LOGS DE DESENVOLVIMENTO (Detalhados)
-  development = {
-    migration: (message, metadata) => {
-      if (this.isDevelopment) {
-        const entry = createLogEntry('INFO', `[MIGRATION] ${message}`, 'migration', null, metadata);
-        console.log(entry.message, metadata || '');
-      }
-    },
-
-    build: (message, metadata) => {
-      if (this.isDevelopment) {
-        const entry = createLogEntry('DEBUG', `[BUILD] ${message}`, null, null, metadata);
-        console.log(entry.message, metadata || '');
-      }
-    },
-
-    performance: (metric, value, metadata) => {
-      if (this.isDevelopment) {
-        const entry = createLogEntry('INFO', `[PERFORMANCE] ${metric}: ${value}ms`, null, null, metadata);
-        console.log(entry.message, metadata || '');
-      }
-    },
-
-    component: (component, action, metadata) => {
-      if (this.isDevelopment) {
-        const entry = createLogEntry('DEBUG', `[COMPONENT] ${component} - ${action}`, null, component, metadata);
-        console.log(entry.message, metadata || '');
-      }
-    },
-
-    error: (message, error, metadata) => {
-      if (this.isDevelopment) {
-        const entry = createLogEntry('ERROR', `[ERROR] ${message}`, null, null, { error: error?.message, stack: error?.stack, ...metadata });
-        console.error(entry.message, error, metadata || '');
-      }
+  /**
+   * Log estruturado com contexto
+   */
+  _log(level, context, message, data = null) {
+    if (LOG_LEVELS[level] > this.currentLevel) {
+      return;
     }
+
+    const timestamp = new Date().toISOString();
+    const logEntry = {
+      timestamp,
+      level,
+      context,
+      message,
+      data,
+      stack: level === 'ERROR' ? new Error().stack : null
+    };
+
+    // Adicionar ao array de logs
+    this.logs.push(logEntry);
+    if (this.logs.length > this.maxLogs) {
+      this.logs.shift(); // Remove o mais antigo
+    }
+
+    // Console output com estilo
+    if (this.isDev) {
+      const color = LOG_COLORS[level];
+      const prefix = `%c[${level}] [${context}]`;
+      const style = `color: ${color}; font-weight: bold;`;
+      
+      if (data) {
+        console.log(prefix, style, message, data);
+      } else {
+        console.log(prefix, style, message);
+      }
+    } else if (level === 'ERROR') {
+      // Em produção, apenas erros
+      console.error(`[${context}] ${message}`, data);
+    }
+
+    // Enviar erros críticos para monitoramento (futuro)
+    if (level === 'ERROR' && !this.isDev) {
+      this._sendToMonitoring(logEntry);
+    }
+  }
+
+  /**
+   * Logs específicos por contexto
+   */
+  auth = {
+    error: (message, data) => this._log('ERROR', 'AUTH', message, data),
+    warn: (message, data) => this._log('WARN', 'AUTH', message, data),
+    info: (message, data) => this._log('INFO', 'AUTH', message, data),
+    debug: (message, data) => this._log('DEBUG', 'AUTH', message, data)
   };
 
-  // LOGS DE PRODUÇÃO (Essenciais)
-  production = {
-    system: (message, metadata) => {
-      if (this.isProduction) {
-        const entry = createLogEntry('INFO', `[SYSTEM] ${message}`, null, null, metadata);
-        console.log(entry.message);
-      }
-    },
-
-    error: (message, error, metadata) => {
-      const entry = createLogEntry('ERROR', `[CRITICAL] ${message}`, null, null, { error: error?.message, ...metadata });
-      console.error(entry.message, error);
-    },
-
-    performance: (metric, value) => {
-      if (this.isProduction) {
-        const entry = createLogEntry('INFO', `[PERF] ${metric}: ${value}ms`);
-        console.log(entry.message);
-      }
-    }
+  api = {
+    error: (message, data) => this._log('ERROR', 'API', message, data),
+    warn: (message, data) => this._log('WARN', 'API', message, data),
+    info: (message, data) => this._log('INFO', 'API', message, data),
+    debug: (message, data) => this._log('DEBUG', 'API', message, data)
   };
 
-  // LOGS ESPECÍFICOS DE MIGRAÇÃO
-  migration = {
-    phaseStart: (phase) => {
-      const entry = createLogEntry('INFO', `🚀 INICIANDO ${phase.toUpperCase()}`, phase);
-      console.log(`🚀 ${entry.message}`);
-    },
-
-    phaseComplete: (phase, duration) => {
-      const entry = createLogEntry('INFO', `✅ ${phase.toUpperCase()} CONCLUÍDA`, phase, null, { duration: `${duration}ms` });
-      console.log(`✅ ${entry.message} (${duration}ms)`);
-    },
-
-    componentMigrated: (component, fromVersion, toVersion) => {
-      const entry = createLogEntry('INFO', `📦 ${component}: ${fromVersion} → ${toVersion}`, 'migration', component);
-      console.log(`📦 ${entry.message}`);
-    },
-
-    dependencyUpdated: (dependency, fromVersion, toVersion) => {
-      const entry = createLogEntry('INFO', `🔧 ${dependency}: ${fromVersion} → ${toVersion}`, 'migration');
-      console.log(`🔧 ${entry.message}`);
-    },
-
-    warningPreservation: (message, component) => {
-      const entry = createLogEntry('WARN', `⚠️  PRESERVAÇÃO: ${message}`, 'migration', component);
-      console.warn(`⚠️  ${entry.message}`);
-    }
+  token = {
+    error: (message, data) => this._log('ERROR', 'TOKEN', message, data),
+    warn: (message, data) => this._log('WARN', 'TOKEN', message, data),
+    info: (message, data) => this._log('INFO', 'TOKEN', message, data),
+    debug: (message, data) => this._log('DEBUG', 'TOKEN', message, data)
   };
+
+  refresh = {
+    error: (message, data) => this._log('ERROR', 'REFRESH', message, data),
+    warn: (message, data) => this._log('WARN', 'REFRESH', message, data),
+    info: (message, data) => this._log('INFO', 'REFRESH', message, data),
+    debug: (message, data) => this._log('DEBUG', 'REFRESH', message, data)
+  };
+
+  ui = {
+    error: (message, data) => this._log('ERROR', 'UI', message, data),
+    warn: (message, data) => this._log('WARN', 'UI', message, data),
+    info: (message, data) => this._log('INFO', 'UI', message, data),
+    debug: (message, data) => this._log('DEBUG', 'UI', message, data)
+  };
+
+  /**
+   * Métodos utilitários
+   */
+  
+  // Obter logs filtrados
+  getLogs(level = null, context = null, limit = 100) {
+    let filtered = [...this.logs];
+    
+    if (level) {
+      filtered = filtered.filter(log => log.level === level);
+    }
+    
+    if (context) {
+      filtered = filtered.filter(log => log.context === context);
+    }
+    
+    return filtered.slice(-limit).reverse(); // Mais recentes primeiro
+  }
+
+  // Limpar logs
+  clearLogs() {
+    this.logs = [];
+    console.clear();
+  }
+
+  // Exportar logs (para debug)
+  exportLogs() {
+    const logsJson = JSON.stringify(this.logs, null, 2);
+    const blob = new Blob([logsJson], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `logs-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // Estatísticas dos logs
+  getStats() {
+    const stats = {
+      total: this.logs.length,
+      byLevel: {},
+      byContext: {},
+      recentErrors: this.logs.filter(log => 
+        log.level === 'ERROR' && 
+        Date.now() - new Date(log.timestamp).getTime() < 60000 // Último minuto
+      ).length
+    };
+
+    this.logs.forEach(log => {
+      stats.byLevel[log.level] = (stats.byLevel[log.level] || 0) + 1;
+      stats.byContext[log.context] = (stats.byContext[log.context] || 0) + 1;
+    });
+
+    return stats;
+  }
+
+  // Definir nível de log
+  setLevel(level) {
+    if (level in LOG_LEVELS) {
+      this.currentLevel = LOG_LEVELS[level];
+      this.auth.info(`Nível de log alterado para: ${level}`);
+    }
+  }
+
+  // Enviar para sistema de monitoramento (placeholder)
+  _sendToMonitoring(logEntry) {
+    // TODO: Implementar envio para sistema de monitoramento
+    // Exemplos: Sentry, LogRocket, ou endpoint próprio
+    console.warn('Log crítico detectado:', logEntry);
+  }
+
+  // Debug helper - mostrar dashboard de logs no console
+  showDashboard() {
+    if (!this.isDev) return;
+    
+    console.group('📊 Logger Dashboard');
+    
+    const stats = this.getStats();
+    console.table(stats);
+    
+    console.group('🔥 Erros Recentes');
+    this.getLogs('ERROR', null, 10).forEach(log => {
+      console.error(`${log.timestamp}: ${log.message}`, log.data);
+    });
+    console.groupEnd();
+    
+    console.group('📈 Últimos 20 logs');
+    console.table(this.getLogs(null, null, 20).map(log => ({
+      time: log.timestamp.split('T')[1].split('.')[0],
+      level: log.level,
+      context: log.context,
+      message: log.message.substring(0, 50) + (log.message.length > 50 ? '...' : '')
+    })));
+    console.groupEnd();
+    
+    console.groupEnd();
+  }
 }
 
-// Instância global
-const logger = new FrontendLogger();
+// Instância singleton
+const logger = new Logger();
 
-// Export principal
+// Helpers para uso rápido
+export const authLog = logger.auth;
+export const apiLog = logger.api;
+export const tokenLog = logger.token;
+export const refreshLog = logger.refresh;
+export const uiLog = logger.ui;
+
 export default logger;
-// Export nomeado para backward compatibility
-export { logger };
-
-// Função auxiliar para logging contextualizado
-export const logOperation = (
-  operation,
-  component,
-  startTime
-) => {
-  const endTime = performance.now();
-  const duration = Math.round(endTime - startTime);
-  
-  logger.development.component(component, `${operation} completed`, { duration: `${duration}ms` });
-  
-  if (duration > 1000) {
-    logger.production.performance(operation, duration);
-  }
-};
-
-// Hook para componentes React
-export const useComponentLogger = (componentName) => {
-  return {
-    logMount: () => logger.development.component(componentName, 'mounted'),
-    logUnmount: () => logger.development.component(componentName, 'unmounted'),
-    logAction: (action, metadata) => logger.development.component(componentName, action, metadata),
-    logError: (error, metadata) => logger.development.error(`Component ${componentName}`, error, metadata)
-  };
-};
-
-// Exports específicos para migração
-export { LOG_LEVELS, createLogEntry };

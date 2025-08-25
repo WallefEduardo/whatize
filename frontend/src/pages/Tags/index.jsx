@@ -13,6 +13,9 @@ import {
   InputAdornment,
   Chip,
   Typography,
+  Card,
+  CardContent,
+  Box
 } from "@mui/material";
 
 import {
@@ -21,13 +24,11 @@ import {
   Edit as EditIcon,
   Add as AddIcon,
   MoreHoriz,
+  LocalOffer as TagIcon,
 } from "@mui/icons-material";
 
-import MainContainer from "../../components/MainContainer";
-import MainHeader from "../../components/MainHeader";
-import Title from "../../components/Title";
-import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
-import TableRowSkeleton from "../../components/TableRowSkeleton";
+import PageLayout from "../../components/PageLayout";
+import BaseTable from "../../components/BaseTable";
 import TagModal from "../../components/TagModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import ContactTagListModal from "../../components/ContactTagListModal";
@@ -37,112 +38,17 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { i18n } from "../../translate/i18n";
 
-const useStyles = () => ({
-  mainContainer: {
-    display: "flex",
-    flexDirection: "column",
-    position: "relative",
-    flex: 1,
-    height: "100vh",
-    width: "100%",
-    backgroundColor: "#f5f5f5",
-  },
-  mainPaper: {
-    flex: 1,
-    padding: 8,
-    overflowY: "scroll",
-    borderRadius: 0,
-    boxShadow: "none",
-    backgroundColor: "#f5f5f5",
-  },
-  searchContainer: {
-    backgroundColor: "white",
-    padding: 16,
-    borderRadius: 8,
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-    marginBottom: 16,
-    flexWrap: "wrap",
-  },
-  actionButtons: {
-    display: "flex",
-    gap: 8,
-    "& > *": {
-      backgroundColor: "#00C307",
-      color: "white",
-      "&:hover": {
-        backgroundColor: "#029907",
-      },
-    },
-  },
-  searchInput: {
-    flex: 1,
-    maxWidth: "400px",
-    "& .MuiOutlinedInput-root": {
-      borderRadius: 8,
-    },
-  },
-  tableContainer: {
-    backgroundColor: "white",
-    borderRadius: 8,
-    padding: 16,
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
-  },
-  customTable: {
-    "& .MuiTableCell-head": {
-      fontWeight: 600,
-      color: "#333",
-      borderBottom: "2px solid #f5f5f5",
-    },
-    "& .MuiTableCell-body": {
-      borderBottom: "1px solid #f5f5f5",
-    },
-    "& .MuiTableRow-root:hover": {
-      backgroundColor: "#f9f9f9",
-    },
-  },
-  tagChip: {
-    borderRadius: "8px",
-    textShadow: "1px 1px 1px rgba(0, 0, 0, 0.3)",
-    color: "white",
-    fontWeight: "500",
-    fontSize: "0.875rem",
-  },
-  iconButton: {
-    padding: 8,
-    "&.edit": {
-      color: "#00C307",
-      backgroundColor: "#f5f5f5",
-    },
-    "&.delete": {
-      color: "#E57373",
-      backgroundColor: "#f5f5f5",
-    },
-    "&.more": {
-      color: "#666",
-      backgroundColor: "#f5f5f5",
-    },
-  },
-  contactCount: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    justifyContent: "center",
-    "& .MuiTypography-root": {
-      fontWeight: "500",
-      color: "#666",
-    },
-  },
-});
 const reducer = (state, action) => {
   switch (action.type) {
     case "LOAD_TAGS":
-      return [...state, ...action.payload];
+      // Garantir que action.payload seja um array válido
+      const tags = Array.isArray(action.payload) ? action.payload : [];
+      // Sempre substituir os dados para evitar acumulação incorreta
+      return tags;
     case "UPDATE_TAGS":
       const tag = action.payload;
+      if (!tag) return state;
+      
       const tagIndex = state.findIndex((s) => s.id === tag.id);
 
       if (tagIndex !== -1) {
@@ -162,7 +68,6 @@ const reducer = (state, action) => {
 };
 
 const Tags = () => {
-  const classes = useStyles();
   const { user, socket } = useContext(AuthContext);
 
   const [selectedTagContacts, setSelectedTagContacts] = useState([]);
@@ -185,11 +90,16 @@ const Tags = () => {
         const { data } = await api.get("/tags/", {
           params: { searchParam, pageNumber, kanban: 0 },
         });
-        dispatch({ type: "LOAD_TAGS", payload: data.tags });
+        
+        dispatch({ 
+          type: "LOAD_TAGS", 
+          payload: data.tags || []
+        });
         setHasMore(data.hasMore);
         setLoading(false);
       } catch (err) {
         toastError(err);
+        setLoading(false);
       }
     };
 
@@ -200,6 +110,10 @@ const Tags = () => {
   }, [searchParam, pageNumber]);
 
   useEffect(() => {
+    if (!user?.companyId || !socket) {
+      return;
+    }
+
     const onCompanyTags = (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_TAGS", payload: data.tag });
@@ -209,20 +123,17 @@ const Tags = () => {
         dispatch({ type: "DELETE_TAGS", payload: +data.tagId });
       }
     };
+    
     if (socket && socket.on && typeof socket.on === 'function') {
-
       socket.on(`company${user.companyId}-tag`, onCompanyTags);
-
     }
 
     return () => {
       if (socket && socket.off && typeof socket.off === 'function') {
-
         socket.off(`company${user.companyId}-tag`, onCompanyTags);
-
       }
     };
-  }, [socket, user.companyId]);
+  }, [socket, user?.companyId]);
   const handleOpenTagModal = () => {
     setSelectedTag(null);
     setTagModalOpen(true);
@@ -282,7 +193,15 @@ const Tags = () => {
   };
 
   return (
-    <MainContainer>
+    <PageLayout
+      title="Gerenciar Tags"
+      icon={<TagIcon />}
+      breadcrumbs={[
+        { label: "Dashboard", href: "/" },
+        { label: "Tags" }
+      ]}
+    >
+      {/* Modals */}
       {contactModalOpen && (
         <ContactTagListModal
           open={contactModalOpen}
@@ -308,15 +227,32 @@ const Tags = () => {
         kanban={0}
       />
 
-      <Paper className={classes.mainPaper} onScroll={handleScroll}>
-        {/* Barra de Pesquisa e Botões */}
-        <div className={classes.searchContainer}>
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "16px",
-            flex: 1,
-            flexWrap: "wrap"
+      {/* Container Único com Filtros e Tabela */}
+      <Card 
+        elevation={1}
+        sx={{
+          mb: 4,
+          borderRadius: 3,
+          background: 'var(--bg-primary)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid var(--border-primary)',
+          overflow: 'visible',
+          width: '100%',
+          maxWidth: 'none',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+        }}
+      >
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+          {/* Seção de Filtros */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            gap: 2,
+            flexWrap: 'wrap',
+            mb: 3,
+            pb: 3,
+            borderBottom: '1px solid var(--border-primary)'
           }}>
             <TextField
               placeholder={i18n.t("contacts.searchPlaceholder")}
@@ -325,115 +261,203 @@ const Tags = () => {
               onChange={handleSearch}
               variant="outlined"
               size="small"
-              className={classes.searchInput}
+              sx={{
+                flex: 1,
+                maxWidth: "400px",
+                minWidth: "250px",
+                '& .MuiOutlinedInput-root': {
+                  color: 'var(--text-gray-medium)',
+                  backgroundColor: 'var(--bg-primary)',
+                  '& fieldset': {
+                    borderColor: 'var(--border-primary)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'var(--color-accent)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'var(--color-accent)',
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'var(--text-gray-medium)',
+                  '&.Mui-focused': {
+                    color: 'var(--color-accent)',
+                  }
+                }
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon style={{ color: "#00C307" }} />
+                    <SearchIcon sx={{ color: 'var(--color-accent)' }} />
                   </InputAdornment>
                 ),
               }}
             />
-          </div>
 
-          <div className={classes.actionButtons}>
             <Button
               variant="contained"
               onClick={handleOpenTagModal}
               startIcon={<AddIcon />}
+              sx={{
+                backgroundColor: 'var(--color-accent)',
+                color: 'white',
+                px: 3,
+                py: 1,
+                '&:hover': {
+                  backgroundColor: '#00e608',
+                  transform: 'translateY(-1px)'
+                },
+                transition: 'all 0.2s ease',
+                boxShadow: '0 4px 12px rgba(0,195,7,0.3)'
+              }}
             >
               {i18n.t("tags.buttons.add")}
             </Button>
-          </div>
-        </div>
-        {/* Container da Tabela */}
-        <div className={classes.tableContainer}>
-          <Table size="small" className={classes.customTable}>
-            <TableHead>
-              <TableRow>
-                <TableCell align="center" style={{ width: '15%' }}>
-                  {i18n.t("tags.table.id")}
-                </TableCell>
-                <TableCell align="center" style={{ width: '35%' }}>
-                  {i18n.t("tags.table.name")}
-                </TableCell>
-                <TableCell align="center" style={{ width: '30%' }}>
-                  {i18n.t("tags.table.contacts")}
-                </TableCell>
-                <TableCell align="center" style={{ width: '20%' }}>
-                  {i18n.t("tags.table.actions")}
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {tags.map((tag) => (
-                <TableRow key={tag.id} hover>
-                  <TableCell align="center">
-                    <Typography variant="body2" style={{ color: '#666', fontWeight: '500' }}>
-                      {tag.id}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Chip
-                      variant="outlined"
-                      className={classes.tagChip}
-                      style={{
-                        backgroundColor: tag.color,
-                        border: 'none',
-                      }}
-                      label={tag.name}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <div className={classes.contactCount}>
-                      <Typography variant="body2">
-                        {tag?.contacts?.length || 0}
-                      </Typography>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleShowContacts(tag?.contacts, tag)}
-                        disabled={!tag?.contacts?.length}
-                        className={`${classes.iconButton} more`}
-                      >
-                        <MoreHoriz fontSize="small" />
-                      </IconButton>
-                    </div>
-                  </TableCell>
-                  <TableCell align="center">
-                    <div style={{
-                      display: 'flex',
-                      gap: '8px',
-                      justifyContent: 'center'
-                    }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditTag(tag)}
-                        className={`${classes.iconButton} edit`}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
+          </Box>
 
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          setConfirmModalOpen(true);
-                          setDeletingTag(tag);
-                        }}
-                        className={`${classes.iconButton} delete`}
-                      >
-                        <DeleteOutlineIcon fontSize="small" />
-                      </IconButton>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {loading && <TableRowSkeleton columns={4} />}
-            </TableBody>
-          </Table>
-        </div>
-      </Paper>
-    </MainContainer>
+          {/* Seção da Tabela */}
+          {/* Sempre mostrar BaseTable - ele tem sua própria lógica de empty state */}
+            <BaseTable
+              records={tags}
+              loading={loading}
+              noRecordsTitle="Nenhuma tag encontrada"
+              noRecordsText="Crie sua primeira tag ou ajuste os filtros de busca"
+              noRecordsIcon={<TagIcon />}
+              showPagination={false}
+              minHeight={300}
+            columns={[
+              { 
+                accessor: 'id', 
+                title: i18n.t("tags.table.id"),
+                textAlignment: 'center',
+                width: 80,
+                render: ({ id }) => (
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: 'var(--color-accent)', 
+                      fontWeight: 600,
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    #{id}
+                  </Typography>
+                )
+              },
+              { 
+                accessor: 'name', 
+                title: i18n.t("tags.table.name"),
+                width: '40%',
+                render: ({ name, color }) => (
+                  <Chip
+                    variant="outlined"
+                    sx={{
+                      borderRadius: "8px",
+                      textShadow: "1px 1px 1px rgba(0, 0, 0, 0.3)",
+                      color: "white",
+                      fontWeight: "600",
+                      fontSize: "0.875rem",
+                      border: 'none',
+                    }}
+                    style={{
+                      backgroundColor: color,
+                    }}
+                    label={name}
+                    size="small"
+                  />
+                )
+              },
+              { 
+                accessor: 'contacts', 
+                title: i18n.t("tags.table.contacts"),
+                textAlignment: 'center',
+                width: '25%',
+                render: ({ contacts, ...tag }) => (
+                  <Box sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    justifyContent: "center"
+                  }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {contacts?.length || 0}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleShowContacts(contacts, tag)}
+                      disabled={!contacts?.length}
+                      sx={{
+                        padding: 1,
+                        color: "#666",
+                        backgroundColor: "var(--bg-secondary)",
+                        '&:hover': {
+                          backgroundColor: "var(--hover-bg-light)",
+                          transform: 'scale(1.05)'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <MoreHoriz fontSize="small" />
+                    </IconButton>
+                  </Box>
+                )
+              },
+              { 
+                accessor: 'actions', 
+                title: i18n.t("tags.table.actions"),
+                textAlignment: 'center',
+                width: 140,
+                sortable: false,
+                render: (tag) => (
+                  <Box sx={{
+                    display: 'flex',
+                    gap: 1,
+                    justifyContent: 'center'
+                  }}>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleEditTag(tag)}
+                      sx={{
+                        padding: 1,
+                        color: "var(--color-accent)",
+                        backgroundColor: "var(--bg-secondary)",
+                        '&:hover': {
+                          backgroundColor: "var(--hover-bg-light)",
+                          transform: 'scale(1.05)'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setConfirmModalOpen(true);
+                        setDeletingTag(tag);
+                      }}
+                      sx={{
+                        padding: 1,
+                        color: "#E57373",
+                        backgroundColor: "var(--bg-secondary)",
+                        '&:hover': {
+                          backgroundColor: "var(--hover-bg-light)",
+                          transform: 'scale(1.05)'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                )
+              }
+            ]}
+            />
+        </CardContent>
+      </Card>
+    </PageLayout>
   );
 };
 

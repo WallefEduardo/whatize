@@ -17,6 +17,7 @@ import ContactImportPage from "../pages/Contacts/import";
 import ChatMoments from "../pages/Moments"
 import Queues from "../pages/Queues";
 import Tags from "../pages/Tags";
+import TagsV2 from "../pages/TagsV2";
 import MessagesAPI from "../pages/MessagesAPI";
 import Helps from "../pages/Helps";
 import ContactLists from "../pages/ContactLists";
@@ -84,6 +85,7 @@ const Routes = () => {
                 <Route exact path="/todolist" component={ToDoList} isPrivate />
                 <Route exact path="/schedules" component={Schedules} isPrivate />
                 <Route exact path="/tags" component={Tags} isPrivate />
+                <Route exact path="/tagsv2" component={TagsV2} isPrivate />
                 <Route exact path="/contacts" component={Contacts} isPrivate />
                 <Route exact path="/contacts/import" component={ContactImportPage} isPrivate />
                 <Route exact path="/helps" component={Helps} isPrivate />

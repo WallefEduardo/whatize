@@ -8,6 +8,8 @@ import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { socketConnection } from "../../services/socket";
+// AUTHMANAGER REMOVIDO - usando apenas interceptors globais
+// import authManager from "../../services/authManager";
 // import { useDate } from "../../hooks/useDate";
 import moment from "moment";
 
@@ -18,18 +20,32 @@ const useAuth = () => {
   const [user, setUser] = useState({});
   const [socket, setSocket] = useState(null)
  
+  console.log('🚀 [USEAUTH] Hook inicializado - configurando interceptors...');
 
+  // INTERCEPTORS CORRIGIDOS PARA FUNCIONAR COM VITE
   api.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem("token");
       if (token) {
-        config.headers["Authorization"] = `Bearer ${JSON.parse(token)}`;
-        setIsAuth(true);
+        try {
+          // Token está em JSON.stringify, fazer parse
+          const tokenValue = JSON.parse(token);
+          config.headers["Authorization"] = `Bearer ${tokenValue}`;
+          setIsAuth(true);
+          
+          if (import.meta.env.DEV) {
+            console.log('✅ [AUTH] Token adicionado para:', config.url);
+          }
+        } catch (error) {
+          console.error('❌ [AUTH] Erro ao processar token:', error);
+          localStorage.removeItem("token");
+          setIsAuth(false);
+        }
       }
       return config;
     },
     (error) => {
-      Promise.reject(error);
+      return Promise.reject(error);
     }
   );
 
@@ -39,36 +55,84 @@ const useAuth = () => {
     },
     async (error) => {
       const originalRequest = error.config;
+      
+      // 403 - Token expirado, tentar refresh
       if (error?.response?.status === 403 && !originalRequest._retry) {
         originalRequest._retry = true;
+        console.log('🔄 [AUTH] Token expirado, tentando refresh...');
 
-        const { data } = await api.post("/auth/refresh_token");
-        if (data) {
-          localStorage.setItem("token", JSON.stringify(data.token));
-          api.defaults.headers.Authorization = `Bearer ${data.token}`;
+        try {
+          // Enviar refresh token do localStorage no body
+          const refreshToken = localStorage.getItem("refresh_token");
+          
+          if (!refreshToken) {
+            console.error('❌ [AUTH] Sem refresh token disponível');
+            throw new Error('No refresh token');
+          }
+          
+          const { data } = await api.post("/auth/refresh_token", {
+            refreshToken: refreshToken
+          });
+          
+          if (data && data.token) {
+            // Salvar novos tokens
+            localStorage.setItem("token", JSON.stringify(data.token));
+            if (data.refreshToken) {
+              localStorage.setItem("refresh_token", data.refreshToken);
+            }
+            
+            // Atualizar header e retry
+            originalRequest.headers.Authorization = `Bearer ${data.token}`;
+            api.defaults.headers.Authorization = `Bearer ${data.token}`;
+            
+            console.log('✅ [AUTH] Token renovado com sucesso');
+            return api(originalRequest);
+          }
+        } catch (refreshError) {
+          console.error('❌ [AUTH] Falha ao renovar token:', refreshError);
+          // Limpar tudo e redirecionar para login
+          localStorage.clear();
+          setIsAuth(false);
+          setUser({});
+          history.push("/login");
         }
-        return api(originalRequest);
       }
+      
+      // 401 - Não autorizado, fazer logout
       if (error?.response?.status === 401) {
-        localStorage.removeItem("token");
+        console.log('🚪 [AUTH] 401 - Sessão expirada, redirecionando para login...');
+        localStorage.clear();
         api.defaults.headers.Authorization = undefined;
         setIsAuth(false);
+        setUser({});
+        history.push("/login");
       }
+      
       return Promise.reject(error);
     }
   );
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    // Verificar se já há token e definir estado inicial
+    const token = localStorage.getItem('token');
+    
     (async () => {
       if (token) {
         try {
-          const { data } = await api.post("/auth/refresh_token");
-          api.defaults.headers.Authorization = `Bearer ${data.token}`;
-          setIsAuth(true);
-          setUser(data.user);
+          console.log('[AUTH] Verificando autenticação inicial com interceptors globais');
+          // Interceptor global vai adicionar token automaticamente
+          const { data } = await api.get("/auth/me");
+          
+          if (data && data.id) {
+            setIsAuth(true);
+            setUser(data);
+            console.log('[AUTH] Usuário autenticado:', data.name);
+          }
         } catch (err) {
-          toastError(err);
+          console.log('[AUTH] Falha na verificação inicial');
+          setIsAuth(false);
+          setUser({});
+          localStorage.removeItem("token");
         }
       }
       setLoading(false);
@@ -147,16 +211,34 @@ const useAuth = () => {
       var dias = moment.duration(diff).asDays();
 
       if (before === true) {
+        console.log('[LOGIN] Salvando tokens após login bem-sucedido');
+        console.log('[LOGIN] Access Token recebido:', data.token?.substring(0, 20) + '...');
+        console.log('[LOGIN] Refresh Token recebido:', data.refreshToken ? 'SIM' : 'NÃO');
+        
+        // Salvar tokens diretamente no localStorage (formato JSON como versão antiga)
         localStorage.setItem("token", JSON.stringify(data.token));
-        // localStorage.setItem("public-token", JSON.stringify(data.user.token));
-        // localStorage.setItem("companyId", companyId);
-        // localStorage.setItem("userId", id);
+        
+        // Salvar refresh token se vier na resposta
+        if (data.refreshToken) {
+          localStorage.setItem("refresh_token", data.refreshToken);
+          console.log('[LOGIN] Refresh token salvo no localStorage');
+        } else {
+          console.warn('[LOGIN] Nenhum refresh token recebido do backend!');
+        }
+        
+        // Verificar se salvou
+        console.log('[LOGIN] Tokens no localStorage após salvar:', {
+          accessToken: localStorage.getItem('token') ? 'PRESENTE' : 'AUSENTE',
+          refreshToken: localStorage.getItem('refresh_token') ? 'PRESENTE' : 'AUSENTE'
+        });
+        
         localStorage.setItem("companyDueDate", vencimento);
         localStorage.removeItem("assinaturaVencida");
-        api.defaults.headers.Authorization = `Bearer ${data.token}`;
+        
         setUser(data.user);
         setIsAuth(true);
         toast.success(i18n.t("auth.toasts.success"));
+        
         if (Math.round(dias) < 5) {
           toast.warn(`Sua assinatura vence em ${Math.round(dias)} ${Math.round(dias) === 1 ? 'dia' : 'dias'} `);
         }
@@ -169,8 +251,8 @@ const useAuth = () => {
         history.push("/tickets");
         setLoading(false);
       } else {
-        // localStorage.setItem("companyId", companyId);
-        api.defaults.headers.Authorization = `Bearer ${data.token}`;
+        // Salvar token mesmo com assinatura vencida  
+        localStorage.setItem("token", JSON.stringify(data.token));
         setIsAuth(true);
         localStorage.setItem("assinaturaVencida", "true");
         toastError(`Opss! Sua assinatura venceu ${vencimento}.
@@ -191,18 +273,30 @@ Entre em contato com o Suporte para mais informações! `);
     try {
       // socket.disconnect();
       await api.delete("/auth/logout");
-      setIsAuth(false);
-      setUser({});
+      
+      // Remover tokens do localStorage
       localStorage.removeItem("token");
+      localStorage.removeItem("refresh_token");
       localStorage.removeItem("cshow");
       localStorage.removeItem("assinaturaVencida");
-      // localStorage.removeItem("public-token");
-      api.defaults.headers.Authorization = undefined;
+      
+      setIsAuth(false);
+      setUser({});
       setLoading(false);
       history.push("/login");
     } catch (err) {
-      toastError(err);
+      // Mesmo com erro, fazer logout local
+      localStorage.removeItem("token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("cshow");
+      localStorage.removeItem("assinaturaVencida");
+      
+      setIsAuth(false);
+      setUser({});
       setLoading(false);
+      
+      toastError(err);
+      history.push("/login");
     }
   };
 

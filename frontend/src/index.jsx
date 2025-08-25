@@ -6,7 +6,7 @@ import * as serviceworker from './serviceWorker'
 import App from "./App";
 
 // Log da migração
-console.log('[MIGRATION] Inicializando React 18');
+console.log('[MIGRATION] Inicializando React 18 com interceptors no useAuth (como versão antiga)');
 
 // Verificar se elemento root existe (preservar funcionalidade)
 const container = document.getElementById('root');
@@ -19,8 +19,8 @@ if (!container) {
 try {
   const root = createRoot(container);
   
-  // StrictMode apenas em desenvolvimento para evitar double-renders em produção
-  const enableStrictMode = import.meta.env.MODE === 'development' && import.meta.env.VITE_STRICT_MODE !== 'false';
+  // StrictMode temporariamente desabilitado devido a problemas com interceptors axios
+  const enableStrictMode = false; // import.meta.env.MODE === 'development' && import.meta.env.VITE_STRICT_MODE !== 'false';
   
   const AppWithBaseline = (
     <CssBaseline>

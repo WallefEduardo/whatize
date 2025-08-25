@@ -7,8 +7,7 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   
   // Dynamic configuration based on environment
-  const backendUrl = env.VITE_BACKEND_URL || 'http://localhost:4000'
-  const frontendPort = parseInt(env.VITE_FRONTEND_PORT) || 3002
+  const frontendPort = parseInt(env.VITE_FRONTEND_PORT) || 3001
   
   return {
   plugins: [
@@ -48,23 +47,7 @@ export default defineConfig(({ command, mode }) => {
     port: frontendPort,
     host: true,
     strictPort: false, // Permite usar porta alternativa se a configurada estiver ocupada
-    proxy: {
-      '/api': {
-        target: backendUrl,
-        changeOrigin: true,
-        secure: false
-      },
-      '/auth': {
-        target: backendUrl,
-        changeOrigin: true,
-        secure: false
-      },
-      '/public-settings': {
-        target: backendUrl,
-        changeOrigin: true,
-        secure: false
-      },
-    },
+    // PROXY REMOVIDO - Usando URL completa no api.js
   },
   assetsInclude: ['**/*.xlsx', '**/*.xls', '**/*.doc', '**/*.docx', '**/*.pdf'],
   build: {
@@ -106,7 +89,7 @@ export default defineConfig(({ command, mode }) => {
     // Definir Lame globalmente para mic-recorder-to-mp3
     'window.Lame': 'window.lamejs',
     'process.env': {
-      REACT_APP_BACKEND_URL: JSON.stringify(backendUrl),
+      REACT_APP_BACKEND_URL: JSON.stringify(env.VITE_BACKEND_URL || 'http://localhost:4000'),
       REACT_APP_HOURS_CLOSE_TICKETS_AUTO: JSON.stringify(env.VITE_HOURS_CLOSE_TICKETS_AUTO || '24'),
       REACT_APP_OPENAI_API_KEY: JSON.stringify(env.VITE_OPENAI_API_KEY || ''),
       REACT_APP_FACEBOOK_APP_ID: JSON.stringify(env.VITE_FACEBOOK_APP_ID || ''),

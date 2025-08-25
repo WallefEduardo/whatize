@@ -14,6 +14,21 @@ const toastError = err => {
 
 	const errorMsg = err.response?.data?.error;
 	if (errorMsg) {
+		// Log específico para problemas de sessão
+		if (errorMsg === 'ERR_SESSION_EXPIRED') {
+			console.log('[AUTH ERROR] Sessão expirada detectada:', err);
+			// Para ERR_SESSION_EXPIRED, usar mensagem mais amigável
+			toast.error("Sua sessão expirou. Você será redirecionado para o login.", {
+				id: errorMsg,
+				duration: 3000
+			});
+			// Forçar redirecionamento após um breve delay
+			setTimeout(() => {
+				window.location.href = '/login';
+			}, 1000);
+			return;
+		}
+		
 		if (i18n.exists(`backendErrors.${errorMsg}`)) {
 			toast.error(i18n.t(`backendErrors.${errorMsg}`), {
 				id: errorMsg,

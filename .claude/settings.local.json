@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "mcp__TestSprite__testsprite_bootstrap_tests"
+      "mcp__TestSprite__testsprite_bootstrap_tests",
+      "Bash(NODE_ENV=test npx jest __tests__/integration/auth-flow.spec.ts --no-coverage --verbose --testTimeout=30000)",
+      "Read(//home/wallef/sistemas/whatize/frontend/src/services/**)",
+      "Read(//home/wallef/sistemas/whatize/frontend/src/context/Auth/**)",
+      "Read(//home/wallef/sistemas/whatize/frontend/src/hooks/useAuth.js/**)",
+      "Read(//home/wallef/sistemas/whatize/frontend/src/pages/Tags/**)"
     ],
     "deny": []
   }

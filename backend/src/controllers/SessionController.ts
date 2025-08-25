@@ -11,11 +11,16 @@ import User from "../models/User";
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { email, password } = req.body;
+  
+  console.log('[LOGIN] Tentativa de login para:', email);
 
   const { token, serializedUser, refreshToken } = await AuthUserService({
     email,
     password
   });
+  
+  console.log('[LOGIN] Login bem-sucedido, tokens gerados');
+  console.log('[LOGIN] Refresh token será enviado no cookie e no body');
  
   SendRefreshToken(res, refreshToken);
 
@@ -35,6 +40,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
   return res.status(200).json({
     token,
+    refreshToken, // Retornar também o refresh token para o frontend salvar
     user: serializedUser
   });
 };
@@ -43,11 +49,26 @@ export const update = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  const token: string = req.cookies.jrt;
+  // Log detalhado para debug
+  console.log('[AUTH] Refresh token request:', {
+    cookies: req.cookies,
+    body: req.body,
+    headers: {
+      cookie: req.headers.cookie,
+      origin: req.headers.origin,
+      referer: req.headers.referer
+    }
+  });
+
+  // Tentar pegar token do cookie primeiro, depois do body
+  let token: string = req.cookies.jrt || req.body?.refreshToken;
 
   if (!token) {
+    console.log('[AUTH ERROR] Token JRT não encontrado nos cookies nem no body');
     throw new AppError("ERR_SESSION_EXPIRED", 401);
   }
+
+  console.log('[AUTH] Token encontrado, origem:', req.cookies.jrt ? 'cookie' : 'body');
 
   const { user, newToken, refreshToken } = await RefreshTokenService(
     res,
@@ -56,7 +77,14 @@ export const update = async (
 
   SendRefreshToken(res, refreshToken);
 
-  return res.json({ token: newToken, user });
+  console.log('[AUTH] Token renovado com sucesso para usuário:', user.id);
+
+  // Retornar também o refresh token no body para o frontend salvar
+  return res.json({ 
+    token: newToken, 
+    refreshToken,
+    user 
+  });
 };
 
 export const me = async (req: Request, res: Response): Promise<Response> => {

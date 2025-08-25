@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
 
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Formik, Form, Field } from "formik";
 import * as Yup from "yup";
 import { toast } from "../ui/ToastProvider";
@@ -86,25 +83,21 @@ const tagModalStyles = {
 	}
 };
 
-const tagSchema = z.object({
-	name: z.string()
+const tagSchema = Yup.object().shape({
+	name: Yup.string()
 		.min(3, "Mensagem muito curta")
-		.nonempty("Obrigatório"),
-	color: z.string().optional(),
-	kanban: z.number().optional(),
-	timeLane: z.number().optional(),
-	nextLaneId: z.number().nullable().optional(),
-	greetingMessageLane: z.string().optional(),
-	rollbackLaneId: z.number().nullable().optional(),
-	funilId: z.number().nullable().optional()
-}).refine((data) => {
-	if (data.kanban === 1 && (!data.funilId || data.funilId === null)) {
-		return false;
-	}
-	return true;
-}, {
-	message: "Selecione um funil",
-	path: ["funilId"]
+		.required("Obrigatório"),
+	color: Yup.string(),
+	kanban: Yup.number(),
+	timeLane: Yup.number(),
+	nextLaneId: Yup.number().nullable(),
+	greetingMessageLane: Yup.string(),
+	rollbackLaneId: Yup.number().nullable(),
+	funilId: Yup.number().nullable().when('kanban', {
+		is: 1,
+		then: Yup.number().nullable().required("Selecione um funil"),
+		otherwise: Yup.number().nullable()
+	})
 });
 
 const TagModal = ({ open, onClose, tagId, kanban }) => {
@@ -128,19 +121,6 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 		funilId: null
 	};
 
-	const {
-		control,
-		handleSubmit,
-		reset,
-		watch,
-		setValue,
-		formState: { errors, isSubmitting },
-	} = useForm({
-		resolver: zodResolver(tagSchema),
-		defaultValues: initialState,
-	});
-
-	const watchedValues = watch();
 	const [tag, setTag] = useState(initialState);
 
 	useEffect(() => {

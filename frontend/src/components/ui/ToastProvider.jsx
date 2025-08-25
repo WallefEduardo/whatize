@@ -1,7 +1,6 @@
 import React from 'react';
 import { Toaster, toast as hotToast } from 'react-hot-toast';
-import { logger } from '../../utils/logger';
-import { phase5Logger } from '../../utils/logger-phase5';
+import logger from '../../utils/logger';
 
 // Configuração que preserva comportamento atual
 const toastConfig = {

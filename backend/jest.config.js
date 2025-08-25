@@ -141,7 +141,17 @@ module.exports = {
   // testLocationInResults: false,
 
   // The glob patterns Jest uses to detect test files
-  testMatch: ["**/__tests__/**/*.spec.ts"]
+  testMatch: ["**/__tests__/**/*.spec.ts"],
+
+  // Transform ignore patterns para axios
+  transformIgnorePatterns: [
+    "node_modules/(?!(axios)/)"
+  ],
+
+  // Module name mapper para resolver imports
+  moduleNameMapper: {
+    "^axios$": "axios/dist/node/axios.cjs"
+  }
 
   // An array of regexp pattern strings that are matched against all test paths, matched tests are skipped
   // testPathIgnorePatterns: [
