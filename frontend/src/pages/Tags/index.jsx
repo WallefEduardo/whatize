@@ -329,6 +329,180 @@ const Tags = () => {
               noRecordsIcon={<TagsIcon size={48} />}
               showPagination={false}
               minHeight={700}
+              enableSorting={true}
+              enableViewToggle={true}
+              defaultView="table"
+              initialSortBy="id"
+              initialSortOrder="asc"
+              renderCard={(tag, index) => (
+                <Card sx={{ 
+                  backgroundColor: 'var(--bg-primary)',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: 3,
+                  width: '100%',
+                  height: 280,
+                  minHeight: 280,
+                  maxHeight: 280,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  background: `
+                    linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%),
+                    var(--bg-primary)
+                  `,
+                  '&:hover': {
+                    borderColor: tag.color || 'var(--color-accent)',
+                    boxShadow: `
+                      0 10px 25px -5px rgba(0, 0, 0, 0.1),
+                      0 10px 10px -5px rgba(0, 0, 0, 0.04),
+                      0 0 0 1px ${tag.color || 'var(--color-accent)'}33
+                    `,
+                    '&::before': {
+                      opacity: 1,
+                    }
+                  },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '4px',
+                    background: `linear-gradient(90deg, ${tag.color || 'var(--color-accent)'}, ${tag.color || 'var(--color-accent)'}CC)`,
+                    opacity: 0,
+                    transition: 'opacity 0.3s ease',
+                    borderRadius: '12px 12px 0 0',
+                  }
+                }}>
+                  <CardContent sx={{ 
+                    p: 3, 
+                    height: '100%', 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    position: 'relative'
+                  }}>
+                    {/* Header com ID */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'flex-start',
+                      mb: 2
+                    }}>
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: 'var(--text-secondary)',
+                          fontWeight: 700,
+                          fontSize: '0.7rem',
+                          opacity: 0.6
+                        }}
+                      >
+                        #{tag.id}
+                      </Typography>
+                      <Box sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        backgroundColor: tag.color || 'var(--color-accent)',
+                        boxShadow: `0 0 0 3px ${tag.color || 'var(--color-accent)'}22`
+                      }} />
+                    </Box>
+
+                    {/* Nome da Tag */}
+                    <Box sx={{ flex: 1, mb: 2 }}>
+                      <StatusBadge
+                        label={tag.name}
+                        color={tag.color}
+                        variant="filled"
+                        size="medium"
+                        sx={{ 
+                          fontSize: '1rem',
+                          fontWeight: 600,
+                          px: 2,
+                          py: 1
+                        }}
+                      />
+                    </Box>
+
+                    {/* Contatos */}
+                    <Box sx={{ mb: 3 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <MoreHorizontal size={16} style={{ color: 'var(--text-secondary)' }} />
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'var(--text-secondary)',
+                            fontWeight: 600
+                          }}
+                        >
+                          {tag.contacts?.length || 0} contatos
+                        </Typography>
+                      </Box>
+                    </Box>
+                    
+                    {/* Ações */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'center', 
+                      gap: 1.5, 
+                      mt: 'auto',
+                      pt: 2.5,
+                      borderTop: '1px solid var(--border-primary)',
+                      position: 'relative',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: '40px',
+                        height: '1px',
+                        background: tag.color || 'var(--color-accent)',
+                        opacity: 0.3
+                      }
+                    }}>
+                      <ActionButton
+                        onClick={() => handleShowContacts(tag.contacts, tag)}
+                        disabled={!tag.contacts?.length}
+                        icon={MoreHorizontal}
+                        tooltip="Ver contatos"
+                        color="var(--text-secondary)"
+                        hoverColor={tag.color || 'var(--color-accent)'}
+                      />
+                      <ActionButton
+                        onClick={() => handleEditTag(tag)}
+                        icon={Edit3}
+                        tooltip="Editar tag"
+                        color={tag.color || 'var(--color-accent)'}
+                        hoverColor={tag.color || 'var(--color-accent)'}
+                      />
+                      <ActionButton
+                        onClick={() => {
+                          setConfirmModalOpen(true);
+                          setDeletingTag(tag);
+                        }}
+                        icon={Trash2}
+                        tooltip="Excluir tag"
+                        color="#E57373"
+                        hoverColor="#d32f2f"
+                      />
+                    </Box>
+                    
+                    {/* Elemento decorativo */}
+                    <Box sx={{
+                      position: 'absolute',
+                      top: -20,
+                      right: -20,
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      background: tag.color || 'var(--color-accent)',
+                      opacity: 0.05,
+                      pointerEvents: 'none'
+                    }} />
+                  </CardContent>
+                </Card>
+              )}
             columns={[
               { 
                 accessor: 'id', 

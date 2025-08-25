@@ -46,7 +46,7 @@ const StatusBadge = ({
         border: variant === "outlined" ? `1px solid ${borderColor}` : "none",
         fontWeight: 600,
         fontSize: size === "small" ? "0.75rem" : "0.875rem",
-        borderRadius: "8px",
+        borderRadius: "4px",
         textShadow: variant === "filled" ? "none" : "1px 1px 1px rgba(0, 0, 0, 0.1)",
         '&:hover': {
           backgroundColor: variant === "filled" 
