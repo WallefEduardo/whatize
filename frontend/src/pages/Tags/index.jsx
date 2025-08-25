@@ -245,13 +245,25 @@ const Tags = () => {
       <ModernModal
         open={tagModalOpen}
         onClose={handleCloseTagModal}
-        title={
-          <Typography sx={{ color: 'var(--text-gray-medium)' }}>
-            {selectedTag ? "Editar Tag" : "Nova Tag"}
-          </Typography>
-        }
+        title={selectedTag ? "Editar Tag" : "Nova Tag"}
         size="lg"
         showCloseButton={true}
+        actions={[
+          {
+            type: 'cancel',
+            label: 'Cancelar',
+            onClick: handleCloseTagModal
+          },
+          {
+            type: 'save',
+            label: selectedTag ? 'Salvar' : 'Adicionar',
+            onClick: () => {
+              // Vamos trigger o submit do form
+              const submitButton = document.querySelector('#tag-form-submit');
+              if (submitButton) submitButton.click();
+            }
+          }
+        ]}
       >
         <TagForm
           tagId={selectedTag && selectedTag.id}
@@ -262,6 +274,7 @@ const Tags = () => {
             handleCloseTagModal();
           }}
           onCancel={handleCloseTagModal}
+          hideButtons={true}
         />
       </ModernModal>
 

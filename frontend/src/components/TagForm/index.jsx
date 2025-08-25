@@ -54,8 +54,9 @@ const tagSchema = Yup.object().shape({
  * @param {Function} props.onSave - Callback chamado após salvar
  * @param {Function} props.onCancel - Callback chamado ao cancelar
  * @param {boolean} props.loading - Estado de loading externo
+ * @param {boolean} props.hideButtons - Se true, oculta os botões do formulário (para uso com modal)
  */
-const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading }) => {
+const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading, hideButtons = false }) => {
   const { user } = useContext(AuthContext);
   const [colorPickerModalOpen, setColorPickerModalOpen] = useState(false);
   const [lanes, setLanes] = useState([]);
@@ -481,6 +482,7 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
             </Box>
 
             {/* Botões de ação - padronizados */}
+            {!hideButtons && (
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'flex-end', 
@@ -512,6 +514,7 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
                 {i18n.t("tagModal.buttons.cancel")}
               </Button>
               <Button
+                id="tag-form-submit"
                 type="submit"
                 disabled={isSubmitting || externalLoading || (kanban === 1 && !values.funilId)}
                 variant="outlined"
@@ -552,6 +555,7 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
                 )}
               </Button>
             </Box>
+            )}
           </Form>
         )}
       </Formik>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Box, Typography, IconButton, Button } from "@mui/material";
 import { X } from "lucide-react";
 
@@ -47,15 +48,74 @@ const ModernModal = ({
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Configurações de tamanho
-  const sizeConfig = {
-    sm: { maxWidth: '600px', minWidth: '500px', minHeight: '400px' },
-    md: { maxWidth: '750px', minWidth: '650px', minHeight: '500px' },
-    lg: { maxWidth: '900px', minWidth: '800px', minHeight: '600px' },
-    xl: { maxWidth: '1200px', minWidth: '1000px', minHeight: '700px' }
+  // Sistema de detecção de resolução inteligente
+  const getScreenSize = () => {
+    if (typeof window === 'undefined') return 'lg';
+    
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    // Detectar resoluções específicas
+    if (width >= 1920) return 'fullhd';     // Full HD+ (manter original)
+    if (width >= 1366) return 'laptop';     // 1366x768 (~60% largura)
+    if (width >= 1280) return 'hd';         // 1280x720 (~55% largura)
+    if (width >= 1024) return 'tablet';     // 1024x768 (~70% largura)
+    return 'mobile';                        // Mobile responsivo
   };
 
-  const currentSize = sizeConfig[size] || sizeConfig.md;
+  // Configurações de tamanho por resolução específica
+  const getResponsiveConfig = (baseSize) => {
+    const screenType = getScreenSize();
+    const baseSizes = {
+      sm: { width: 600, height: 400 },
+      md: { width: 750, height: 500 },
+      lg: { width: 900, height: 600 },
+      xl: { width: 1200, height: 700 }
+    };
+    
+    const currentBase = baseSizes[baseSize] || baseSizes.md;
+    
+    switch (screenType) {
+      case 'fullhd':
+        // Full HD+ - tamanhos originais (não mexer!)
+        return {
+          width: `${currentBase.width}px`,
+          minHeight: `${currentBase.height}px`
+        };
+      
+      case 'laptop':
+        // 1366x768 - ~60% da largura original
+        return {
+          width: `${Math.round(currentBase.width * 0.6)}px`,
+          minHeight: `${Math.round(currentBase.height * 0.85)}px`
+        };
+      
+      case 'hd':
+        // 1280x720 - ~55% da largura original  
+        return {
+          width: `${Math.round(currentBase.width * 0.55)}px`,
+          minHeight: `${Math.round(currentBase.height * 0.8)}px`
+        };
+      
+      case 'tablet':
+        // 1024x768 - ~70% da largura original
+        return {
+          width: `${Math.round(currentBase.width * 0.7)}px`,
+          minHeight: `${Math.round(currentBase.height * 0.85)}px`
+        };
+      
+      case 'mobile':
+      default:
+        // Mobile - responsivo inteligente
+        return {
+          width: '90vw',
+          maxWidth: '500px',
+          minHeight: '300px'
+        };
+    }
+  };
+
+  const currentSize = getResponsiveConfig(size);
 
   // Controlar visibilidade e animação
   useEffect(() => {
@@ -92,23 +152,25 @@ const ModernModal = ({
 
   if (!isVisible) return null;
 
-  return (
+  const modalContent = (
     <div
       style={{
         position: 'fixed',
         inset: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        zIndex: 9999,
+        zIndex: 99999,
         overflowY: 'auto',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        padding: '20px',
+        padding: getScreenSize() === 'mobile' ? '10px' : '20px',
         opacity: isAnimating ? 1 : 0,
-        transition: 'opacity 0.15s ease-out'
+        transition: 'all 0.15s ease-out'
       }}
       onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (e.target === e.currentTarget) {
           onClose();
         }
@@ -117,9 +179,9 @@ const ModernModal = ({
       <div
         className={`animate__animated ${isAnimating ? 'animate__zoomInUp' : 'animate__zoomOut'}`}
         style={{
+          animationDuration: '0.3s',
           width: '100%',
-          ...currentSize,
-          animationDuration: '0.3s'
+          maxWidth: '100%'
         }}
       >
         <Box
@@ -129,6 +191,13 @@ const ModernModal = ({
             overflow: 'hidden',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             border: '1px solid var(--border-primary)',
+            width: currentSize.width,
+            maxWidth: currentSize.maxWidth || 'none',
+            minHeight: currentSize.minHeight,
+            maxHeight: getScreenSize() === 'mobile' ? '90vh' : 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            mx: 'auto',
             ...sx
           }}
           {...props}
@@ -139,18 +208,21 @@ const ModernModal = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              px: 3,
-              py: 2,
+              px: { xs: 2, sm: 3 },
+              py: { xs: 1.5, sm: 2 },
               backgroundColor: 'var(--bg-secondary)',
-              borderBottom: '1px solid var(--border-primary)'
+              borderBottom: '1px solid var(--border-primary)',
+              flexShrink: 0
             }}
           >
             <Typography
               variant="h6"
               sx={{
                 fontWeight: 700,
-                fontSize: '1.125rem',
-                color: 'var(--text-primary)'
+                fontSize: { xs: '1rem', sm: '1.125rem' },
+                color: 'var(--text-primary)',
+                lineHeight: 1.2,
+                pr: 1
               }}
             >
               {title}
@@ -177,8 +249,11 @@ const ModernModal = ({
           {/* Content */}
           <Box
             sx={{
-              p: 3,
-              color: 'var(--text-primary)'
+              p: { xs: 2, sm: 3 },
+              color: 'var(--text-primary)',
+              flex: 1,
+              overflow: 'auto',
+              maxHeight: '100%'
             }}
           >
             {children}
@@ -192,10 +267,11 @@ const ModernModal = ({
                 justifyContent: 'flex-end',
                 alignItems: 'center',
                 gap: 2,
-                px: 3,
-                py: 2,
+                px: { xs: 2, sm: 3 },
+                py: { xs: 1.5, sm: 2 },
                 borderTop: '1px solid var(--border-primary)',
-                backgroundColor: 'var(--bg-secondary)'
+                backgroundColor: 'var(--bg-secondary)',
+                flexShrink: 0
               }}
             >
               {actions.map((action, index) => {
@@ -204,9 +280,10 @@ const ModernModal = ({
                   const baseStyles = {
                     textTransform: 'none',
                     fontWeight: 600,
-                    px: 3,
-                    py: 1,
-                    minWidth: 100,
+                    px: { xs: 2, sm: 3 },
+                    py: { xs: 0.8, sm: 1 },
+                    minWidth: { xs: 80, sm: 100 },
+                    fontSize: { xs: '0.875rem', sm: '0.95rem' },
                     variant: 'outlined',
                     backgroundColor: 'transparent',
                     borderRadius: '4px !important'
@@ -281,6 +358,8 @@ const ModernModal = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default ModernModal;
