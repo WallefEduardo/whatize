@@ -46,6 +46,7 @@ const WhatsAppForm = () => {
   const [schedules, setSchedules] = useState([]);
   const [flowBuilders, setFlowBuilders] = useState([]);
   const [planConfig, setPlanConfig] = useState({ plan: {} });
+  const [schedulesEnabled, setSchedulesEnabled] = useState(false);
   
   // Estados para aba Geral
   const [enableImportMessage, setEnableImportMessage] = useState(false);
@@ -153,44 +154,68 @@ const WhatsAppForm = () => {
     setFieldValue(field, randomMessage);
   };
 
-  // Definir abas com ícones
-  const tabs = [
-    { 
-      id: 'geral', 
-      label: 'Geral', 
-      icon: <Settings size={18} />
-    },
-    { 
-      id: 'integracoes', 
-      label: 'Integrações', 
-      icon: <Zap size={18} />
-    },
-    { 
-      id: 'mensagens', 
-      label: 'Mensagens', 
-      icon: <MessageCircle size={18} />
-    },
-    { 
-      id: 'chatbot', 
-      label: 'ChatBot', 
-      icon: <Bot size={18} />
-    },
-    { 
-      id: 'nps', 
-      label: 'NPS', 
-      icon: <Star size={18} />
-    },
-    { 
-      id: 'fluxo', 
-      label: 'Fluxo Padrão', 
-      icon: <Workflow size={18} />
-    },
-    { 
-      id: 'horarios', 
-      label: 'Horários', 
-      icon: <Clock size={18} />
+  // Função para gerar mensagens NPS
+  const generateNPSMessages = (fieldName, setFieldValue) => {
+    const npsMessages = [
+      "⭐ Como você avalia nosso atendimento? De 0 a 10, o quanto você nos recomendaria para um amigo?",
+      "🌟 Que tal avaliar nossa conversa? Numa escala de 0 a 10, qual nota você daria para nosso atendimento?",
+      "💫 Sua opinião é muito importante! De 0 a 10, o quanto você recomendaria nossos serviços?",
+      "✨ Gostaríamos de saber sua experiência! Numa escala de 0 a 10, como foi nosso atendimento?",
+      "🎯 Ajude-nos a melhorar! De 0 a 10, qual sua nota para o atendimento que recebeu?"
+    ];
+    
+    const randomMessage = npsMessages[Math.floor(Math.random() * npsMessages.length)];
+    setFieldValue(fieldName, randomMessage);
+  };
+
+  // Definir abas com ícones (com condicionais)
+  const getFilteredTabs = () => {
+    const baseTabs = [
+      { 
+        id: 'geral', 
+        label: 'Geral', 
+        icon: <Settings size={18} />
+      },
+      { 
+        id: 'integracoes', 
+        label: 'Integrações', 
+        icon: <Zap size={18} />
+      },
+      { 
+        id: 'mensagens', 
+        label: 'Mensagens', 
+        icon: <MessageCircle size={18} />
+      },
+      { 
+        id: 'chatbot', 
+        label: 'ChatBot', 
+        icon: <Bot size={18} />
+      },
+      { 
+        id: 'nps', 
+        label: 'NPS', 
+        icon: <Star size={18} />
+      },
+      { 
+        id: 'fluxo', 
+        label: 'Fluxo Padrão', 
+        icon: <Workflow size={18} />
+      }
+    ];
+
+    // Adicionar tab Horários somente se estiver habilitada
+    if (schedulesEnabled) {
+      baseTabs.push({
+        id: 'horarios', 
+        label: 'Horários', 
+        icon: <Clock size={18} />
+      });
     }
-  ];
+
+    return baseTabs;
+  };
+
+  const tabs = getFilteredTabs();
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -199,6 +224,12 @@ const WhatsAppForm = () => {
         // Carregar filas
         const { data: queuesData } = await api.get("/queue");
         setQueues(queuesData);
+
+        // Verificar configuração de horários
+        const settingSchedules = await getSettings({
+          column: "scheduleType"
+        });
+        setSchedulesEnabled(settingSchedules.scheduleType === "connection");
 
         // Carregar plano da empresa
         const planData = await getPlanCompany(undefined, user.companyId);
@@ -1669,18 +1700,20 @@ const WhatsAppForm = () => {
             </Box>
 
             {/* Campo Mensagem de Avaliação - Largura Total */}
-            <Box sx={{ mb: 3 }}>
+            <Box sx={{ mb: 4 }}>
               <Box sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-                mb: 1
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1,
+                mb: 2
               }}>
-                <Typography variant="body2" sx={{ 
+                <Star size={18} color="var(--color-success)" />
+                <Typography variant="h6" sx={{ 
                   color: 'var(--text-gray-medium)',
                   fontWeight: 600,
-                  mr: 1
+                  fontSize: '1rem'
                 }}>
-                  Mensagem de Avaliação
+                  Mensagem de Avaliação NPS
                 </Typography>
                 <CustomTooltip 
                   title={
@@ -1717,37 +1750,57 @@ const WhatsAppForm = () => {
                     <HelpCircle size={16} />
                   </IconButton>
                 </CustomTooltip>
+                <IconButton
+                  onClick={() => generateNPSMessages('ratingMessage', setFieldValue)}
+                  size="small"
+                  sx={{ 
+                    color: 'var(--color-success)',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                      transform: 'scale(1.05)'
+                    },
+                    transition: 'all 0.2s ease',
+                    ml: 1
+                  }}
+                >
+                  <Wand2 size={16} />
+                </IconButton>
               </Box>
+              
               <TextField
                 name="ratingMessage"
                 value={values.ratingMessage || ''}
                 onChange={(e) => setFieldValue('ratingMessage', e.target.value)}
                 placeholder="Como você avalia nosso atendimento? De 0 a 10, o quanto você nos recomendaria?"
                 multiline
-                rows={3}
+                rows={4}
                 fullWidth
                 variant="outlined"
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    backgroundColor: 'var(--bg-primary)',
-                    borderRadius: 2,
+                    backgroundColor: 'rgba(76, 175, 80, 0.05)',
+                    borderRadius: 3,
+                    border: '2px solid rgba(76, 175, 80, 0.3)',
                     fontSize: '0.875rem',
                     '& fieldset': {
-                      borderColor: 'var(--border-primary)',
+                      border: 'none',
                     },
-                    '&:hover fieldset': {
-                      borderColor: 'var(--color-accent)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(76, 175, 80, 0.08)',
+                      borderColor: 'rgba(76, 175, 80, 0.5)',
                     },
-                    '&.Mui-focused fieldset': {
-                      borderColor: 'var(--color-accent)',
-                      borderWidth: '2px'
+                    '&.Mui-focused': {
+                      backgroundColor: 'rgba(76, 175, 80, 0.08)',
+                      borderColor: 'var(--color-success)',
+                      boxShadow: '0 0 0 3px rgba(76, 175, 80, 0.1)',
                     },
                   },
                   '& .MuiOutlinedInput-input': {
                     color: 'var(--text-primary)',
                     fontSize: '0.875rem',
                     '&::placeholder': {
-                      color: 'var(--text-disabled)',
+                      color: 'rgba(76, 175, 80, 0.7)',
                       opacity: 1
                     }
                   }
@@ -1944,42 +1997,249 @@ const WhatsAppForm = () => {
 
       case 'fluxo':
         return (
-          <ModernFormGrid
-            fields={[
-              {
-                name: 'flowIdWelcome',
-                label: 'Fluxo de Boas-vindas',
-                type: 'select',
-                options: [
-                  { value: '', label: 'Selecionar fluxo...' },
-                  ...flowBuilders.map(flow => ({
-                    value: flow.id,
-                    label: flow.name
-                  }))
-                ],
-                description: 'Fluxo executado para novos contatos',
-                span: 1
-              },
-              {
-                name: 'flowIdNotPhrase',
-                label: 'Fluxo Não Compreendido',
-                type: 'select',
-                options: [
-                  { value: '', label: 'Selecionar fluxo...' },
-                  ...flowBuilders.map(flow => ({
-                    value: flow.id,
-                    label: flow.name
-                  }))
-                ],
-                description: 'Fluxo executado quando não entender mensagem',
-                span: 1
-              }
-            ]}
-            values={values}
-            errors={errors}
-            touched={touched}
-            showSubmitButton={false}
-          />
+          <Box sx={{ 
+            backgroundColor: 'var(--bg-primary)',
+            border: '1px solid var(--border-primary)',
+            borderRadius: 3,
+            p: 3
+          }}>
+            <Box sx={{ 
+              display: 'flex',
+              alignItems: 'center',
+              mb: 3
+            }}>
+              <Typography variant="h6" sx={{ 
+                color: 'var(--text-gray-medium)',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                mr: 1
+              }}>
+                <Workflow size={20} style={{ marginRight: 8 }} />
+                Configuração de Fluxo Padrão
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 3 }}>
+              <Box sx={{ flex: 1 }}>
+                <Box sx={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  mb: 1
+                }}>
+                  <Typography variant="body2" sx={{ 
+                    color: 'var(--text-gray-medium)',
+                    fontWeight: 600,
+                    mr: 1
+                  }}>
+                    Fluxo de Boas-vindas
+                  </Typography>
+                  <CustomTooltip 
+                    title={
+                      <Box sx={{ p: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                          Fluxo de Boas-vindas:
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          • <strong>Função:</strong> Define qual fluxo de chatbot será executado automaticamente quando um novo contato iniciar uma conversa.
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          • <strong>Quando é ativado:</strong> No primeiro contato do cliente com o WhatsApp da empresa.
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          • <strong>Uso típico:</strong> Mensagens de apresentação da empresa, menu de opções, coleta de dados iniciais.
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#81C784' }}>
+                          ✅ Exemplo: "Olá! Seja bem-vindo à [Empresa]. Como posso ajudá-lo hoje?"
+                        </Typography>
+                      </Box>
+                    }
+                  >
+                    <IconButton 
+                      size="small"
+                      sx={{ 
+                        color: 'var(--color-accent)',
+                        '&:hover': {
+                          backgroundColor: 'var(--hover-bg-light)',
+                          transform: 'scale(1.1)'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <HelpCircle size={16} />
+                    </IconButton>
+                  </CustomTooltip>
+                </Box>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Selecionar fluxo...</InputLabel>
+                  <Select
+                    name="flowIdWelcome"
+                    value={values.flowIdWelcome || ''}
+                    onChange={(e) => setFieldValue('flowIdWelcome', e.target.value)}
+                    label="Selecionar fluxo..."
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'var(--bg-primary)',
+                        borderRadius: 2,
+                        fontSize: '0.875rem',
+                        '& fieldset': {
+                          borderColor: 'var(--border-primary)',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: 'var(--color-accent)',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: 'var(--color-accent)',
+                          borderWidth: '2px'
+                        },
+                      },
+                      '& .MuiSelect-select': {
+                        color: 'var(--text-primary)',
+                        fontSize: '0.875rem'
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: 'var(--text-secondary)',
+                        fontSize: '0.875rem',
+                        '&.Mui-focused': {
+                          color: 'var(--color-accent)',
+                        }
+                      }
+                    }}
+                  >
+                    <MenuItem value="">
+                      <Typography sx={{ color: 'var(--text-disabled)', fontStyle: 'italic' }}>
+                        Nenhum fluxo selecionado
+                      </Typography>
+                    </MenuItem>
+                    {flowBuilders.map(flow => (
+                      <MenuItem 
+                        key={flow.id} 
+                        value={flow.id}
+                        sx={{
+                          color: 'var(--text-primary)',
+                          fontSize: '0.875rem',
+                          '&:hover': {
+                            backgroundColor: 'var(--hover-bg-light)'
+                          }
+                        }}
+                      >
+                        {flow.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+
+              <Box sx={{ flex: 1 }}>
+                <Box sx={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  mb: 1
+                }}>
+                  <Typography variant="body2" sx={{ 
+                    color: 'var(--text-gray-medium)',
+                    fontWeight: 600,
+                    mr: 1
+                  }}>
+                    Fluxo Não Compreendido
+                  </Typography>
+                  <CustomTooltip 
+                    title={
+                      <Box sx={{ p: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                          Fluxo Não Compreendido:
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          • <strong>Função:</strong> Define qual fluxo será executado quando o chatbot não conseguir entender ou processar a mensagem do cliente.
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          • <strong>Quando é ativado:</strong> Quando o cliente envia uma mensagem que não corresponde a nenhuma palavra-chave ou opção configurada.
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          • <strong>Uso típico:</strong> Mensagens de esclarecimento, redirecionamento para atendimento humano, menu de opções alternativas.
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#FFB74D' }}>
+                          ⚠️ Exemplo: "Não entendi sua mensagem. Você pode escolher uma das opções abaixo?"
+                        </Typography>
+                      </Box>
+                    }
+                  >
+                    <IconButton 
+                      size="small"
+                      sx={{ 
+                        color: 'var(--color-accent)',
+                        '&:hover': {
+                          backgroundColor: 'var(--hover-bg-light)',
+                          transform: 'scale(1.1)'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <HelpCircle size={16} />
+                    </IconButton>
+                  </CustomTooltip>
+                </Box>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Selecionar fluxo...</InputLabel>
+                  <Select
+                    name="flowIdNotPhrase"
+                    value={values.flowIdNotPhrase || ''}
+                    onChange={(e) => setFieldValue('flowIdNotPhrase', e.target.value)}
+                    label="Selecionar fluxo..."
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'var(--bg-primary)',
+                        borderRadius: 2,
+                        fontSize: '0.875rem',
+                        '& fieldset': {
+                          borderColor: 'var(--border-primary)',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: 'var(--color-accent)',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: 'var(--color-accent)',
+                          borderWidth: '2px'
+                        },
+                      },
+                      '& .MuiSelect-select': {
+                        color: 'var(--text-primary)',
+                        fontSize: '0.875rem'
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: 'var(--text-secondary)',
+                        fontSize: '0.875rem',
+                        '&.Mui-focused': {
+                          color: 'var(--color-accent)',
+                        }
+                      }
+                    }}
+                  >
+                    <MenuItem value="">
+                      <Typography sx={{ color: 'var(--text-disabled)', fontStyle: 'italic' }}>
+                        Nenhum fluxo selecionado
+                      </Typography>
+                    </MenuItem>
+                    {flowBuilders.map(flow => (
+                      <MenuItem 
+                        key={flow.id} 
+                        value={flow.id}
+                        sx={{
+                          color: 'var(--text-primary)',
+                          fontSize: '0.875rem',
+                          '&:hover': {
+                            backgroundColor: 'var(--hover-bg-light)'
+                          }
+                        }}
+                      >
+                        {flow.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
+          </Box>
         );
 
       case 'horarios':
@@ -1990,19 +2250,253 @@ const WhatsAppForm = () => {
             borderRadius: 3,
             p: 3
           }}>
-            <Typography variant="h6" sx={{ 
-              color: 'var(--text-primary)',
-              mb: 2,
-              fontWeight: 600
+            <Box sx={{ 
+              display: 'flex',
+              alignItems: 'center',
+              mb: 3
             }}>
-              Configurar Horários de Funcionamento
-            </Typography>
-            <SchedulesForm
-              loading={false}
-              onSubmit={(data) => setSchedules(data)}
-              initialValues={schedules}
-              labelSaveButton="Salvar Horários"
-            />
+              <Typography variant="h6" sx={{ 
+                color: 'var(--text-gray-medium)',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                mr: 1
+              }}>
+                <Clock size={20} style={{ marginRight: 8 }} />
+                Horários de Funcionamento
+              </Typography>
+            </Box>
+
+            {/* Sistema de Horários Moderno */}
+            <Box sx={{ 
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2
+            }}>
+              {[
+                { id: 'monday', label: 'Segunda-feira', color: '#1976D2' },
+                { id: 'tuesday', label: 'Terça-feira', color: '#2E7D32' },
+                { id: 'wednesday', label: 'Quarta-feira', color: '#ED6C02' },
+                { id: 'thursday', label: 'Quinta-feira', color: '#9C27B0' },
+                { id: 'friday', label: 'Sexta-feira', color: '#D32F2F' },
+                { id: 'saturday', label: 'Sábado', color: '#795548' },
+                { id: 'sunday', label: 'Domingo', color: '#0288D1' }
+              ].map((day) => (
+                <Box 
+                  key={day.id}
+                  sx={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-primary)',
+                    borderRadius: 3,
+                    p: 3,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      borderColor: day.color,
+                      boxShadow: `0 2px 8px ${day.color}20`,
+                    }
+                  }}
+                >
+                  {/* Header do dia */}
+                  <Box sx={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    mb: 2
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box 
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          backgroundColor: day.color
+                        }}
+                      />
+                      <Typography variant="h6" sx={{ 
+                        color: 'var(--text-gray-medium)',
+                        fontWeight: 600,
+                        fontSize: '1rem'
+                      }}>
+                        {day.label}
+                      </Typography>
+                    </Box>
+                    
+                    {/* Toggle Ativo/Inativo */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Typography variant="body2" sx={{ 
+                        color: 'var(--text-gray-medium)',
+                        fontWeight: 600,
+                        fontSize: '0.875rem'
+                      }}>
+                        {values[`${day.id}_active`] ? 'Funcionando' : 'Fechado'}
+                      </Typography>
+                      <Box
+                        onClick={() => setFieldValue(`${day.id}_active`, !values[`${day.id}_active`])}
+                        sx={{
+                          width: 52,
+                          height: 28,
+                          backgroundColor: values[`${day.id}_active`] ? day.color : 'var(--border-primary)',
+                          borderRadius: '50px',
+                          position: 'relative',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'scale(1.05)',
+                          }
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 24,
+                            height: 24,
+                            backgroundColor: '#fff',
+                            borderRadius: '50%',
+                            position: 'absolute',
+                            top: 2,
+                            left: values[`${day.id}_active`] ? 26 : 2,
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {/* Campos de horário - só aparecem se ativo */}
+                  {values[`${day.id}_active`] && (
+                    <Box sx={{ 
+                      display: 'flex',
+                      gap: 3,
+                      alignItems: 'center',
+                      flexWrap: 'wrap'
+                    }}>
+                      <Box sx={{ flex: 1, minWidth: 140 }}>
+                        <Typography variant="body2" sx={{ 
+                          color: 'var(--text-gray-medium)',
+                          fontWeight: 600,
+                          mb: 1,
+                          fontSize: '0.875rem'
+                        }}>
+                          Abertura
+                        </Typography>
+                        <TextField
+                          type="time"
+                          value={values[`${day.id}_start`] || '09:00'}
+                          onChange={(e) => setFieldValue(`${day.id}_start`, e.target.value)}
+                          fullWidth
+                          variant="outlined"
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              backgroundColor: 'var(--bg-primary)',
+                              borderRadius: 2,
+                              border: `2px solid ${day.color}30`,
+                              fontSize: '0.875rem',
+                              '& fieldset': {
+                                border: 'none',
+                              },
+                              '&:hover': {
+                                borderColor: `${day.color}50`,
+                                backgroundColor: `${day.color}08`,
+                              },
+                              '&.Mui-focused': {
+                                borderColor: day.color,
+                                backgroundColor: `${day.color}08`,
+                                boxShadow: `0 0 0 3px ${day.color}20`,
+                              },
+                            },
+                            '& .MuiOutlinedInput-input': {
+                              color: 'var(--text-gray-medium)',
+                              fontSize: '0.875rem',
+                              fontWeight: 600,
+                            }
+                          }}
+                        />
+                      </Box>
+
+                      <Box sx={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        mt: 3
+                      }}>
+                        <Box 
+                          sx={{
+                            width: 20,
+                            height: 2,
+                            backgroundColor: day.color,
+                            borderRadius: 1
+                          }}
+                        />
+                      </Box>
+
+                      <Box sx={{ flex: 1, minWidth: 140 }}>
+                        <Typography variant="body2" sx={{ 
+                          color: 'var(--text-gray-medium)',
+                          fontWeight: 600,
+                          mb: 1,
+                          fontSize: '0.875rem'
+                        }}>
+                          Fechamento
+                        </Typography>
+                        <TextField
+                          type="time"
+                          value={values[`${day.id}_end`] || '18:00'}
+                          onChange={(e) => setFieldValue(`${day.id}_end`, e.target.value)}
+                          fullWidth
+                          variant="outlined"
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              backgroundColor: 'var(--bg-primary)',
+                              borderRadius: 2,
+                              border: `2px solid ${day.color}30`,
+                              fontSize: '0.875rem',
+                              '& fieldset': {
+                                border: 'none',
+                              },
+                              '&:hover': {
+                                borderColor: `${day.color}50`,
+                                backgroundColor: `${day.color}08`,
+                              },
+                              '&.Mui-focused': {
+                                borderColor: day.color,
+                                backgroundColor: `${day.color}08`,
+                                boxShadow: `0 0 0 3px ${day.color}20`,
+                              },
+                            },
+                            '& .MuiOutlinedInput-input': {
+                              color: 'var(--text-gray-medium)',
+                              fontSize: '0.875rem',
+                              fontWeight: 600,
+                            }
+                          }}
+                        />
+                      </Box>
+
+                      {/* Badge de status */}
+                      <Box sx={{
+                        backgroundColor: `${day.color}15`,
+                        border: `1px solid ${day.color}30`,
+                        borderRadius: 2,
+                        px: 2,
+                        py: 1,
+                        minWidth: 100,
+                        textAlign: 'center'
+                      }}>
+                        <Typography variant="caption" sx={{ 
+                          color: 'var(--text-gray-medium)',
+                          fontWeight: 600,
+                          fontSize: '0.75rem'
+                        }}>
+                          {values[`${day.id}_start`] && values[`${day.id}_end`] ? 
+                            `${values[`${day.id}_start`]} - ${values[`${day.id}_end`]}` : 
+                            'Configure os horários'
+                          }
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+              ))}
+            </Box>
           </Box>
         );
 
