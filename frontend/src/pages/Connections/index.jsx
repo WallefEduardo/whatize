@@ -314,6 +314,10 @@ const Connections = () => {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  const openWhatsAppForm = () => {
+    history.push('/whatsapp-form');
+  };
+
   const handleOpenConfirmationModal = (action, whatsAppId) => {
     if (action === "disconnect") {
       setConfirmModalInfo({
@@ -1094,6 +1098,56 @@ const Connections = () => {
                             onClick={handleOpenConnectionTypeModal}
                           >
                             {i18n.t("connections.newConnection")}
+                          </GradientButton>
+                          
+                          {/* Botão temporário para WhatsApp Form */}
+                          <GradientButton
+                            icon={<Network size={16} />}
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              fontSize: {
+                                xs: '0.75rem',  // Mobile
+                                sm: '0.8rem',   // Tablet  
+                                md: '0.85rem',  // Desktop pequeno (1280x720)
+                                lg: '0.9rem',   // Desktop médio (1366x768, 1600x900)
+                                xl: '0.95rem'   // Full HD+
+                              },
+                              px: {
+                                xs: 1.5,    // Mobile
+                                sm: 2,      // Tablet
+                                md: 2.5,    // Desktop pequeno (1280x720)
+                                lg: 2.5,    // Desktop médio (1366x768, 1600x900)
+                                xl: 3       // Full HD+
+                              },
+                              py: {
+                                xs: 0.5,    // Mobile
+                                sm: 0.75,   // Tablet
+                                md: 0.75,   // Desktop pequeno (1280x720)
+                                lg: 1,      // Desktop médio (1366x768, 1600x900)
+                                xl: 1       // Full HD+
+                              },
+                              minWidth: {
+                                xs: 'auto',  // Mobile
+                                sm: '100px', // Tablet
+                                md: '120px', // Desktop pequeno (1280x720)
+                                lg: '130px', // Desktop médio (1366x768, 1600x900)
+                                xl: '140px'  // Full HD+
+                              },
+                              ml: 1,
+                              background: 'transparent',
+                              color: '#10B981',
+                              border: '2px solid #10B981',
+                              boxShadow: 'none',
+                              '&:hover': {
+                                background: 'rgba(16, 185, 129, 0.1)',
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 8px 25px rgba(16, 185, 129, 0.2)'
+                              }
+                            }}
+                            onClick={openWhatsAppForm}
+                          >
+                            Form WhatsApp
                           </GradientButton>
                         </>
                       )}

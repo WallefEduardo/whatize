@@ -6,7 +6,8 @@
       "Read(//home/wallef/sistemas/whatize/frontend/src/services/**)",
       "Read(//home/wallef/sistemas/whatize/frontend/src/context/Auth/**)",
       "Read(//home/wallef/sistemas/whatize/frontend/src/hooks/useAuth.js/**)",
-      "Read(//home/wallef/sistemas/whatize/frontend/src/pages/Tags/**)"
+      "Read(//home/wallef/sistemas/whatize/frontend/src/pages/Tags/**)",
+      "Read(//home/wallef/sistemas/DashTemplate/app/[lang]/(dashboard)/(forms)/form-wizard/**)"
     ],
     "deny": []
   }

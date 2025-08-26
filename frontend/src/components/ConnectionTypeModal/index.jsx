@@ -73,6 +73,7 @@ const ConnectionTypeModal = ({
     const selectedConnection = connectionTypes.find(type => type.id === selectedType);
     if (selectedConnection) {
       if (selectedType === 'whatsapp') {
+        // Chama o callback para mostrar o formulário WhatsApp
         selectedConnection.onSelect();
         onClose();
       }
