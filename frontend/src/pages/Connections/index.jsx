@@ -447,8 +447,8 @@ const Connections = () => {
                 onClick={() => handleOpenQrModal(whatsApp)}
                 icon={QrCode}
                 tooltip="Novo QR Code"
-                color="var(--color-primary)"
-                hoverColor="var(--color-primary)"
+                color="#3b82f6"
+                hoverColor="#3b82f6"
               />
             )}
           />
@@ -463,15 +463,15 @@ const Connections = () => {
                   onClick={() => handleStartWhatsAppSession(whatsApp.id)}
                   icon={RotateCcw}
                   tooltip="Tentar Novamente"
-                  color="var(--color-warning)"
-                  hoverColor="var(--color-warning)"
+                  color="#f59e0b"
+                  hoverColor="#f59e0b"
                 />
                 <ActionButton
                   onClick={() => handleOpenQrModal(whatsApp)}
                   icon={QrCode}
                   tooltip="Novo QR Code"
-                  color="var(--color-primary)"
-                  hoverColor="var(--color-primary)"
+                  color="#3b82f6"
+                  hoverColor="#3b82f6"
                 />
               </>
             )}
@@ -768,126 +768,234 @@ const Connections = () => {
 
   // Função para renderizar cards personalizados
   const renderConnectionCard = (whatsApp) => {
+    // Definir cor baseada no status
+    const getStatusColor = (status) => {
+      switch (status) {
+        case "CONNECTED": return '#10b981'; // green para conectado
+        case "DISCONNECTED": return '#ef4444'; // red para desconectado
+        case "qrcode": return '#f59e0b'; // yellow para QR code
+        case "OPENING": return '#3b82f6'; // blue para conectando
+        default: return '#6366f1'; // indigo padrão
+      }
+    };
+
+    const statusColor = getStatusColor(whatsApp.status);
+
+    // Traduzir status para português
+    const getStatusText = (status) => {
+      switch (status) {
+        case "CONNECTED": return 'Conectado';
+        case "DISCONNECTED": return 'Sem Conexão';
+        case "qrcode": return 'QR Code';
+        case "OPENING": return 'Conectando';
+        case "PAIRING": return 'Pareando';
+        case "TIMEOUT": return 'Timeout';
+        default: return status;
+      }
+    };
+
     return (
       <Card sx={{ 
         backgroundColor: 'var(--bg-primary)',
         border: '1px solid var(--border-primary)',
         borderRadius: 3,
         width: '100%',
-        height: 280,
-        minHeight: 280,
-        maxHeight: 280,
+        height: 300,
+        minHeight: 300,
+        maxHeight: 300,
         position: 'relative',
         overflow: 'hidden',
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        background: `
+          linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%),
+          var(--bg-primary)
+        `,
         '&:hover': {
-          borderColor: 'var(--color-accent)',
+          borderColor: statusColor,
           boxShadow: `
             0 10px 25px -5px rgba(0, 0, 0, 0.1),
             0 10px 10px -5px rgba(0, 0, 0, 0.04),
-            0 0 0 1px var(--color-accent-alpha, rgba(59, 130, 246, 0.1))
+            0 0 0 1px ${statusColor}33
           `,
+          '&::before': {
+            opacity: 1,
+          }
+        },
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '4px',
+          background: `linear-gradient(90deg, ${statusColor}, ${statusColor}CC)`,
+          opacity: 0,
+          transition: 'opacity 0.3s ease',
+          borderRadius: '12px 12px 0 0',
         }
       }}>
         <CardContent sx={{ 
-          p: 3, 
+          p: 2, 
           height: '100%', 
           display: 'flex', 
           flexDirection: 'column',
           position: 'relative'
         }}>
-          {/* Header do Card */}
+          {/* Header com ID */}
           <Box sx={{ 
             display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            mb: 2
+            justifyContent: 'space-between', 
+            alignItems: 'flex-start',
+            mb: 1.5
           }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              {IconChannel(whatsApp.channel)}
-              <Typography variant="h6" sx={{ 
-                color: 'var(--text-primary)',
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: 'var(--text-secondary)',
                 fontWeight: 700,
-                fontSize: '1.1rem'
-              }}>
-                {whatsApp.name}
-              </Typography>
+                fontSize: '0.7rem',
+                opacity: 0.6
+              }}
+            >
+              #{whatsApp.id}
+            </Typography>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}>
+              {whatsApp.isDefault && (
+                <CheckCircle style={{ color: '#10b981', fontSize: 16 }} />
+              )}
+              <Box sx={{
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                backgroundColor: statusColor,
+                boxShadow: `0 0 0 3px ${statusColor}22`
+              }} />
             </Box>
-            {whatsApp.isDefault && (
-              <CheckCircle style={{ color: 'var(--color-success)', fontSize: 20 }} />
-            )}
           </Box>
 
-          {/* Informações principais */}
-          <Box sx={{ flex: 1, mb: 2 }}>
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="caption" sx={{ 
-                color: 'var(--text-secondary)',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                fontSize: '0.7rem',
-                letterSpacing: '0.5px'
-              }}>
-                Número
-              </Typography>
-              <Typography variant="body1" sx={{ 
-                color: 'var(--text-primary)',
-                fontWeight: 500,
-                fontSize: '0.9rem',
-                mt: 0.5
-              }}>
-                {whatsApp.number && whatsApp.channel === 'whatsapp' 
-                  ? formatSerializedId(whatsApp.number) 
-                  : whatsApp.number || 'N/A'}
-              </Typography>
+          {/* Nome da Conexão com Icon */}
+          <Box sx={{ mb: 1.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+              {IconChannel(whatsApp.channel)}
+              <StatusBadge
+                label={whatsApp.name}
+                color={statusColor}
+                variant="filled"
+                size="medium"
+                sx={{ 
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  px: 2,
+                  py: 1
+                }}
+              />
             </Box>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="caption" sx={{ 
-                color: 'var(--text-secondary)',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                fontSize: '0.7rem',
-                letterSpacing: '0.5px'
-              }}>
-                Status
-              </Typography>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 1,
-                mt: 0.5
-              }}>
-                {renderStatusToolTips(whatsApp)}
+            
+            {/* Informações compactas */}
+            <Box sx={{ mb: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                <Phone size={12} style={{ color: 'var(--text-secondary)' }} />
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: 'var(--text-secondary)',
+                    fontWeight: 500,
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  {whatsApp.number && whatsApp.channel === 'whatsapp' 
+                    ? formatSerializedId(whatsApp.number) 
+                    : whatsApp.number || 'N/A'}
+                </Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Wifi size={12} style={{ color: 'var(--text-secondary)' }} />
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: 'var(--text-secondary)',
+                    fontWeight: 600,
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  {getStatusText(whatsApp.status)}
+                </Typography>
               </Box>
             </Box>
 
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="caption" sx={{ 
-                color: 'var(--text-secondary)',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                fontSize: '0.7rem',
-                letterSpacing: '0.5px'
-              }}>
-                Última Atualização
-              </Typography>
-              <Typography variant="body2" sx={{ 
-                color: 'var(--text-secondary)',
-                fontSize: '0.8rem',
-                mt: 0.5
-              }}>
-                {format(parseISO(whatsApp.updatedAt), "dd/MM/yy HH:mm")}
-              </Typography>
-            </Box>
+            {/* Ações de Status - Retry/QR Code */}
+            {(whatsApp.status === "DISCONNECTED" || whatsApp.status === "qrcode" || whatsApp.status === "OPENING") && (
+              <Box sx={{ mb: 1.5 }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center',
+                  gap: 1,
+                  p: 1,
+                  backgroundColor: 'var(--bg-secondary)',
+                  borderRadius: 2,
+                  border: `1px solid ${statusColor}22`
+                }}>
+                  {whatsApp.status === "DISCONNECTED" && (
+                    <Can
+                      role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
+                      perform="connections-page:addConnection"
+                      yes={() => (
+                        <>
+                          <ActionButton
+                            onClick={() => handleStartWhatsAppSession(whatsApp.id)}
+                            icon={RotateCcw}
+                            tooltip="Tentar Novamente"
+                            color="#f59e0b"
+                            hoverColor="#f59e0b"
+                            size={14}
+                          />
+                          <ActionButton
+                            onClick={() => handleOpenQrModal(whatsApp)}
+                            icon={QrCode}
+                            tooltip="Novo QR Code"
+                            color="#3b82f6"
+                            hoverColor="#3b82f6"
+                            size={14}
+                          />
+                        </>
+                      )}
+                    />
+                  )}
+                  {whatsApp.status === "qrcode" && (
+                    <Can
+                      role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
+                      perform="connections-page:addConnection"
+                      yes={() => (
+                        <ActionButton
+                          onClick={() => handleOpenQrModal(whatsApp)}
+                          icon={QrCode}
+                          tooltip="Mostrar QR Code"
+                          color="#3b82f6"
+                          hoverColor="#3b82f6"
+                          size={14}
+                        />
+                      )}
+                    />
+                  )}
+                  {whatsApp.status === "OPENING" && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
+                        Conectando...
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            )}
           </Box>
-
-          {/* Ações da sessão */}
-          <Box sx={{ mb: 2 }}>
-            {renderActionButtons(whatsApp)}
-          </Box>
-
-          {/* Ações do card */}
+          
+          {/* Ações principais */}
           <Can
             role={user.profile}
             perform="connections-page:addConnection"
@@ -895,23 +1003,38 @@ const Connections = () => {
               <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'center', 
-                gap: 1.5,
-                pt: 2,
-                borderTop: '1px solid var(--border-primary)'
+                gap: 1.5, 
+                mt: 1,
+                pt: 1.5,
+                borderTop: '1px solid var(--border-primary)',
+                position: 'relative',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '40px',
+                  height: '1px',
+                  background: statusColor,
+                  opacity: 0.3
+                }
               }}>
                 <ActionButton
                   onClick={() => handleEditWhatsApp(whatsApp)}
-                  icon={Edit}
+                  icon={Edit3}
                   tooltip="Editar conexão"
-                  color="var(--color-success)"
-                  hoverColor="var(--color-success)"
+                  color="var(--color-accent)"
+                  hoverColor="var(--color-accent)"
+                  size={14}
                 />
                 <ActionButton
                   onClick={() => handleOpenConfirmationModal("delete", whatsApp.id)}
-                  icon={DeleteOutline}
+                  icon={Trash2}
                   tooltip="Excluir conexão"
-                  color="var(--color-danger)"
-                  hoverColor="var(--color-danger)"
+                  color="#ef4444"
+                  hoverColor="#ef4444"
+                  size={14}
                 />
               </Box>
             )}
