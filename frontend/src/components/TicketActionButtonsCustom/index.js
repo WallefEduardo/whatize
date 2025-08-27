@@ -532,6 +532,27 @@ const TicketActionButtonsCustom = ({ ticket, compactMode = false
                 )}
 
                 <div className={classes.actionButtons}>
+                    {/* Botões de Reabrir para tickets fechados no modo compacto */}
+                    {ticket.status === "closed" && (ticket.queueId === null || ticket.queueId === undefined) && (
+                        <ButtonWithSpinner
+                            loading={loading}
+                            startIcon={<Replay />}
+                            size="small"
+                            onClick={e => handleOpenAcceptTicketWithouSelectQueue()}
+                        >
+                            {i18n.t("messagesList.header.buttons.reopen")}
+                        </ButtonWithSpinner>
+                    )}
+                    {(ticket.status === "closed" && ticket.queueId !== null) && (
+                        <ButtonWithSpinner
+                            startIcon={<Replay />}
+                            loading={loading}
+                            onClick={e => handleAcepptTicket(ticket.id)}
+                        >
+                            {i18n.t("messagesList.header.buttons.reopen")}
+                        </ButtonWithSpinner>
+                    )}
+                    
                     {/* Botões sempre visíveis no modo compacto */}
                     {(ticket.status === "open" || ticket.status === "group") && (
                         <>
