@@ -16,12 +16,16 @@ const reducer = (state, action) => {
 
   if (action.type === "UPDATE_WHATSAPPS") {
     const whatsApp = action.payload;
+    console.log('🔄 UPDATE_WHATSAPPS reducer called with:', whatsApp);
     const whatsAppIndex = state.findIndex((s) => s.id === whatsApp.id);
+    console.log('📍 Found WhatsApp at index:', whatsAppIndex);
 
     if (whatsAppIndex !== -1) {
       state[whatsAppIndex] = whatsApp;
+      console.log('✅ Updated existing WhatsApp');
       return [...state];
     } else {
+      console.log('➕ Adding new WhatsApp');
       return [whatsApp, ...state];
     }
   }
@@ -62,20 +66,25 @@ const useWhatsApps = () => {
 //   const socketManager = useContext(SocketContext);
   const { user, socket } = useContext(AuthContext);
 
+  const fetchSession = async () => {
+    try {
+      const { data } = await api.get("/whatsapp/?session=0");
+      dispatch({ type: "LOAD_WHATSAPPS", payload: data });
+      setLoading(false);
+    } catch (_) {
+      setLoading(false);
+      // toastError(err);
+    }
+  };
 
+  const reload = async () => {
+    console.log('🔄 Reloading WhatsApp data...');
+    setLoading(true);
+    await fetchSession();
+  };
 
   useEffect(() => {
     setLoading(true);
-    const fetchSession = async () => {
-      try {
-        const { data } = await api.get("/whatsapp/?session=0");
-        dispatch({ type: "LOAD_WHATSAPPS", payload: data });
-        setLoading(false);
-      } catch (_) {
-        setLoading(false);
-        // toastError(err);
-      }
-    };
     fetchSession();
   }, []);
 
@@ -86,10 +95,13 @@ const useWhatsApps = () => {
 //    const socket = socketManager.GetSocket();
 
       const onCompanyWhatsapp = (data) => {
+        console.log('🔥 Socket WhatsApp event received:', data);
         if (data.action === "update") {
+          console.log('📝 Updating WhatsApp:', data.whatsapp);
           dispatch({ type: "UPDATE_WHATSAPPS", payload: data.whatsapp });
         }
         if (data.action === "delete") {
+          console.log('🗑️ Deleting WhatsApp:', data.whatsappId);
           dispatch({ type: "DELETE_WHATSAPPS", payload: data.whatsappId });
         }
       }
@@ -142,7 +154,7 @@ const useWhatsApps = () => {
     }
   }, [socket]);
 
-  return { whatsApps, loading };
+  return { whatsApps, loading, reload };
 };
 
 export default useWhatsApps;

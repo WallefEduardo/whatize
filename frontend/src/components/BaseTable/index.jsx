@@ -394,13 +394,20 @@ const BaseTable = ({
           borderBottom: '2px solid var(--border-primary)',
           py: 2,
           cursor: canSort ? 'pointer' : 'default',
+          textAlign: column.textAlignment || 'left', // Força o alinhamento do texto do título
           '&:hover': canSort ? {
             backgroundColor: 'var(--hover-bg-light)',
           } : {},
         }}
         onClick={() => canSort && handleSort(column.accessor)}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          justifyContent: column.textAlignment === 'center' ? 'center' : 
+                        column.textAlignment === 'right' ? 'flex-end' : 'flex-start'
+        }}>
           {column.title}
           {canSort && (
             <ArrowUpDown 

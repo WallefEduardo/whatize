@@ -3,7 +3,7 @@ import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import { Box, Typography, Card, Switch, FormControlLabel, Grid, Paper, Chip, IconButton, TextField, FormControl, InputLabel, Select, MenuItem, Button } from "@mui/material";
 import { Network, Wifi, BarChart3, Settings, MessageCircle, Bot, Star, Workflow, Clock, Zap, Users, Import, Globe, Share2, Timer, HelpCircle, RefreshCw, Copy, Key, Wand2, Heart, Moon, Trash2 } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { toast } from "../../components/ui/ToastProvider";
 import { useHistory } from "react-router-dom";
 import moment from "moment";
 
@@ -32,7 +32,7 @@ const WhatsAppSchema = Yup.object().shape({
   outOfHoursMessage: Yup.string(),
 });
 
-const WhatsAppForm = ({ onClose }) => {
+const WhatsAppForm = ({ onClose, selectedWhatsApp }) => {
   const { user } = useContext(AuthContext);
   const { getPlanCompany } = usePlans();
   const { get: getSettings } = useCompanySettings();
@@ -62,7 +62,37 @@ const WhatsAppForm = ({ onClose }) => {
   const [tokenCopied, setTokenCopied] = useState(false);
   
   // Valores iniciais do formulário
-  const initialValues = {
+  const initialValues = selectedWhatsApp ? {
+    // Modo edição - preencher com dados existentes
+    name: selectedWhatsApp.name || "",
+    isDefault: selectedWhatsApp.isDefault || false,
+    allowGroup: selectedWhatsApp.allowGroup || false,
+    isMultidevice: selectedWhatsApp.isMultidevice !== false, // padrão true
+    channel: selectedWhatsApp.channel || "whatsapp",
+    queueIdImportMessages: selectedWhatsApp.queueIdImportMessages || null,
+    greetingMessage: selectedWhatsApp.greetingMessage || "",
+    farewellMessage: selectedWhatsApp.farewellMessage || "",
+    outOfHoursMessage: selectedWhatsApp.outOfHoursMessage || "",
+    collectiveVacationMessage: selectedWhatsApp.collectiveVacationMessage || "",
+    collectiveVacationStart: selectedWhatsApp.collectiveVacationStart || "",
+    collectiveVacationEnd: selectedWhatsApp.collectiveVacationEnd || "",
+    maxUseBotQueues: selectedWhatsApp.maxUseBotQueues || 3,
+    timeUseBotQueues: selectedWhatsApp.timeUseBotQueues || 0,
+    expiresTicket: selectedWhatsApp.expiresTicket || 0,
+    expiresInactiveMessage: selectedWhatsApp.expiresInactiveMessage || "",
+    timeInactiveMessage: selectedWhatsApp.timeInactiveMessage || "",
+    inactiveMessage: selectedWhatsApp.inactiveMessage || "",
+    timeCreateNewTicket: selectedWhatsApp.timeCreateNewTicket || 0,
+    whenExpiresTicket: selectedWhatsApp.whenExpiresTicket || "0",
+    timeSendQueue: selectedWhatsApp.timeSendQueue || 0,
+    sendIdQueue: selectedWhatsApp.sendIdQueue || null,
+    ratingMessage: selectedWhatsApp.ratingMessage || "",
+    maxUseBotQueuesNPS: selectedWhatsApp.maxUseBotQueuesNPS || 0,
+    expiresTicketNPS: selectedWhatsApp.expiresTicketNPS || 0,
+    flowIdWelcome: selectedWhatsApp.flowIdWelcome || null,
+    flowIdNotPhrase: selectedWhatsApp.flowIdNotPhrase || null,
+  } : {
+    // Modo criação - valores padrão
     name: "",
     isDefault: false,
     allowGroup: false,
@@ -302,6 +332,10 @@ const WhatsAppForm = ({ onClose }) => {
     try {
       setLoading(true);
       
+      console.log('=== SUBMITTING WHATSAPP FORM ===');
+      console.log('selectedWhatsApp:', selectedWhatsApp);
+      console.log('form values:', values);
+      
       const whatsappData = {
         ...values,
         companyId: user.companyId,
@@ -314,11 +348,26 @@ const WhatsAppForm = ({ onClose }) => {
         schedules,
       };
 
-      await api.post("/whatsapp", whatsappData);
-      toast.success("Conexão WhatsApp criada com sucesso!");
+      console.log('whatsappData to send:', whatsappData);
       
-      // Redirecionar para a página de conexões
-      onClose?.();
+      if (selectedWhatsApp) {
+        // Modo edição - usar PUT
+        console.log(`PUT /whatsapp/${selectedWhatsApp.id}`);
+        const response = await api.put(`/whatsapp/${selectedWhatsApp.id}`, whatsappData);
+        console.log('PUT response:', response);
+        toast.success("Conexão WhatsApp atualizada com sucesso!");
+      } else {
+        // Modo criação - usar POST
+        console.log('POST /whatsapp');
+        const response = await api.post("/whatsapp", whatsappData);
+        console.log('POST response:', response);
+        toast.success("Conexão WhatsApp criada com sucesso!");
+      }
+      
+      // Fechar o formulário - adicionar delay para garantir que o backend processou
+      setTimeout(() => {
+        onClose?.();
+      }, 100);
       
     } catch (error) {
       toastError(error);
@@ -3203,9 +3252,10 @@ const WhatsAppForm = ({ onClose }) => {
         <Formik
           initialValues={initialValues}
           validationSchema={WhatsAppSchema}
+          onSubmit={handleSubmit}
           enableReinitialize
         >
-          {({ values, errors, touched, isSubmitting, setFieldValue }) => (
+          {({ values, errors, touched, isSubmitting, setFieldValue, submitForm }) => (
             <Box>
               <Card sx={{
                 backgroundColor: 'var(--bg-primary)',
@@ -3317,14 +3367,14 @@ const WhatsAppForm = ({ onClose }) => {
                   </GradientButton>
 
                   <GradientButton
-                    onClick={() => handleSubmit(values, { setSubmitting: () => {} })}
+                    onClick={submitForm}
                     loading={loading || isSubmitting}
                     disabled={loading || isSubmitting}
                     sx={{
                       minWidth: 140
                     }}
                   >
-                    Salvar Conexão
+                    {selectedWhatsApp ? 'Atualizar Conexão' : 'Salvar Conexão'}
                   </GradientButton>
                 </Box>
               </Card>
@@ -3340,14 +3390,17 @@ const WhatsAppForm = ({ onClose }) => {
   }
 
   // Renderizar como página completa se não há onClose
+  const pageTitle = selectedWhatsApp ? "Editar Conexão WhatsApp" : "Nova Conexão WhatsApp";
+  const breadcrumbLabel = selectedWhatsApp ? "Editar Conexão" : "Nova Conexão WhatsApp";
+
   return (
     <PageLayout
-      title="Nova Conexão WhatsApp"
+      title={pageTitle}
       icon={<Network />}
       breadcrumbs={[
         { href: "/", icon: <BarChart3 size={16} /> },
         { href: "/connections", label: "Conexões", icon: <Wifi size={16} /> },
-        { label: "Nova Conexão WhatsApp", icon: <Network size={16} /> }
+        { label: breadcrumbLabel, icon: <Network size={16} /> }
       ]}
     >
       {formContent}

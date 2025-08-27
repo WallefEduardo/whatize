@@ -37,8 +37,10 @@ import {
 import FacebookLogin from "react-facebook-login/dist/facebook-login-render-props";
 
 import PageLayout from "../../components/PageLayout";
-import { Network, RefreshCw, Phone, Plus, LayoutDashboard, Wifi, BarChart3 } from "lucide-react";
+import { Network, RefreshCw, Phone, Plus, LayoutDashboard, Wifi, BarChart3, RotateCcw, QrCode, Edit3, Trash2 } from "lucide-react";
 import BaseTable, { ActionButton, ActionGroup } from "../../components/BaseTable";
+import StatusBadge from "../../components/StatusBadge";
+import CustomTooltip from "../../components/CustomTooltip";
 import GradientButton from "../../components/GradientButton";
 import SearchInput from "../../components/SearchInput";
 import ConnectionTypeModal from "../../components/ConnectionTypeModal";
@@ -186,7 +188,7 @@ const Connections = () => {
   const classes = useStyles();
   const [hasMore, setHasMore] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
-  const { whatsApps, loading } = useContext(WhatsAppsContext);
+  const { whatsApps, loading, reload } = useContext(WhatsAppsContext);
   const [statusImport, setStatusImport] = useState([]);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [selectedWhatsApp, setSelectedWhatsApp] = useState(null);
@@ -253,6 +255,7 @@ const Connections = () => {
   const handleStartWhatsAppSession = async (whatsAppId) => {
     try {
       await api.post(`/whatsappsession/${whatsAppId}`);
+      // Context escuta atualizações via socket automaticamente
     } catch (err) {
       toastError(err);
     }
@@ -261,6 +264,7 @@ const Connections = () => {
   const handleRequestNewQrCode = async (whatsAppId) => {
     try {
       await api.put(`/whatsappsession/${whatsAppId}`);
+      // Context escuta atualizações via socket automaticamente
     } catch (err) {
       toastError(err);
     }
@@ -275,8 +279,12 @@ const Connections = () => {
 
   const handleCloseWhatsAppForm = () => {
     setWhatsappFormOpen(false);
-    // Refresh the connections list after form submission
-    loadWhatsApps();
+    setSelectedWhatsApp(null); // Limpar seleção ao fechar
+    
+    // Como fallback, forçar atualização após um breve delay
+    setTimeout(() => {
+      reload();
+    }, 200);
   };
 
   const handleOpenConnectionTypeModal = () => {
@@ -309,7 +317,7 @@ const Connections = () => {
 
   const handleEditWhatsApp = (whatsApp) => {
     setSelectedWhatsApp(whatsApp);
-    setWhatsAppModalOpen(true);
+    setWhatsappFormOpen(true);
   };
 
   const openInNewTab = url => {
@@ -429,20 +437,19 @@ const Connections = () => {
 
   const renderActionButtons = (whatsApp) => {
     return (
-      <>
+      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
         {whatsApp.status === "qrcode" && (
           <Can
             role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
             perform="connections-page:addConnection"
             yes={() => (
-              <Button
-                size="small"
-                variant="contained"
-                className={classes.actionButtons}
+              <ActionButton
                 onClick={() => handleOpenQrModal(whatsApp)}
-              >
-                {i18n.t("connections.buttons.qrcode")}
-              </Button>
+                icon={QrCode}
+                tooltip="Novo QR Code"
+                color="var(--color-primary)"
+                hoverColor="var(--color-primary)"
+              />
             )}
           />
         )}
@@ -452,23 +459,20 @@ const Connections = () => {
             perform="connections-page:addConnection"
             yes={() => (
               <>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  className={classes.actionButtons}
-                  style={{ marginRight: 8 }}
+                <ActionButton
                   onClick={() => handleStartWhatsAppSession(whatsApp.id)}
-                >
-                  {i18n.t("connections.buttons.tryAgain")}
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  className={classes.actionButtons}
-                  onClick={() => handleRequestNewQrCode(whatsApp.id)}
-                >
-                  {i18n.t("connections.buttons.newQr")}
-                </Button>
+                  icon={RotateCcw}
+                  tooltip="Tentar Novamente"
+                  color="var(--color-warning)"
+                  hoverColor="var(--color-warning)"
+                />
+                <ActionButton
+                  onClick={() => handleOpenQrModal(whatsApp)}
+                  icon={QrCode}
+                  tooltip="Novo QR Code"
+                  color="var(--color-primary)"
+                  hoverColor="var(--color-primary)"
+                />
               </>
             )}
           />
@@ -480,33 +484,30 @@ const Connections = () => {
               role={user.profile}
               perform="connections-page:addConnection"
               yes={() => (
-                <>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    className={classes.actionButtons}
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <ActionButton
                     onClick={() => {
                       handleOpenConfirmationModal("disconnect", whatsApp.id);
                     }}
-                  >
-                    {i18n.t("connections.buttons.disconnect")}
-                  </Button>
+                    icon={RefreshCw}
+                    tooltip="Desconectar"
+                    color="var(--color-danger)"
+                    hoverColor="var(--color-danger)"
+                  />
                   {renderImportButton(whatsApp)}
-                </>
+                </Box>
               )}
             />
           )}
         {whatsApp.status === "OPENING" && (
-          <Button
-            size="small"
-            variant="outlined"
-            disabled
-            className={classes.actionButtons}
-          >
-            {i18n.t("connections.buttons.connecting")}
-          </Button>
+          <ActionButton
+            icon={RefreshCw}
+            tooltip="Conectando..."
+            color="var(--text-secondary)"
+            disabled={true}
+          />
         )}
-      </>
+      </Box>
     );
   };
 
@@ -615,6 +616,47 @@ const Connections = () => {
     );
   });
 
+  // Função para formatar número de telefone brasileiro
+  const formatPhoneNumber = (number) => {
+    if (!number) return '';
+    // Remove caracteres não numéricos
+    const clean = number.replace(/\D/g, '');
+    // Formatar como (xx) xxxx-xxxx ou (xx) xxxxx-xxxx
+    if (clean.length === 11) {
+      return `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
+    } else if (clean.length === 10) {
+      return `(${clean.slice(0, 2)}) ${clean.slice(2, 6)}-${clean.slice(6)}`;
+    }
+    return number;
+  };
+
+  // Função para formatar data para o badge
+  const formatDateForBadge = (dateString) => {
+    if (!dateString) return 'Nunca';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now - date) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      return 'Agora';
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}h atrás`;
+    } else {
+      const diffInDays = Math.floor(diffInHours / 24);
+      if (diffInDays === 1) {
+        return 'Ontem';
+      } else if (diffInDays < 30) {
+        return `${diffInDays}d atrás`;
+      } else {
+        return date.toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      }
+    }
+  };
+
   // Definição das colunas para BaseTable
   const columns = [
     {
@@ -628,15 +670,35 @@ const Connections = () => {
       accessor: 'name',
       title: i18n.t("connections.table.name"),
       textAlignment: 'center',
-      sortable: true
+      sortable: true,
+      render: (whatsApp) => (
+        <Typography
+          sx={{
+            color: 'var(--text-gray-medium)',
+            fontWeight: 500
+          }}
+        >
+          {whatsApp.name}
+        </Typography>
+      )
     },
     {
       accessor: 'number',
       title: i18n.t("connections.table.number"),
       textAlignment: 'center',
-      render: (whatsApp) => whatsApp.number && whatsApp.channel === 'whatsapp' 
-        ? formatSerializedId(whatsApp.number) 
-        : whatsApp.number
+      render: (whatsApp) => (
+        <Typography
+          sx={{
+            color: 'var(--text-gray-medium)',
+            fontWeight: 500,
+            fontFamily: 'monospace'
+          }}
+        >
+          {whatsApp.number && whatsApp.channel === 'whatsapp' 
+            ? formatPhoneNumber(whatsApp.number) 
+            : whatsApp.number || 'Nenhum'}
+        </Typography>
+      )
     },
     {
       accessor: 'status',
@@ -655,7 +717,12 @@ const Connections = () => {
       title: i18n.t("connections.table.lastUpdate"),
       textAlignment: 'center',
       sortable: true,
-      render: (whatsApp) => format(parseISO(whatsApp.updatedAt), "dd/MM/yy HH:mm")
+      render: (whatsApp) => (
+        <StatusBadge
+          label={formatDateForBadge(whatsApp.updatedAt)}
+          color="#00c307"
+        />
+      )
     },
     {
       accessor: 'isDefault',
@@ -680,17 +747,17 @@ const Connections = () => {
             <ActionGroup>
               <ActionButton
                 onClick={() => handleEditWhatsApp(whatsApp)}
-                icon={Edit}
+                icon={Edit3}
                 tooltip="Editar conexão"
-                color="var(--color-success)"
-                hoverColor="var(--color-success)"
+                color="var(--color-accent)"
+                hoverColor="var(--color-accent)"
               />
               <ActionButton
                 onClick={() => handleOpenConfirmationModal("delete", whatsApp.id)}
-                icon={DeleteOutline}
+                icon={Trash2}
                 tooltip="Excluir conexão"
-                color="var(--color-danger)"
-                hoverColor="var(--color-danger)"
+                color="#E57373"
+                hoverColor="#d32f2f"
               />
             </ActionGroup>
           )}
@@ -893,6 +960,7 @@ const Connections = () => {
       {whatsappFormOpen ? (
         <WhatsAppForm
           onClose={handleCloseWhatsAppForm}
+          selectedWhatsApp={selectedWhatsApp}
         />
       ) : user.profile === "user" && user.allowConnections === "disabled" ? (
         <ForbiddenPage />
@@ -966,7 +1034,7 @@ const Connections = () => {
                 sx={{
                   background: 'transparent',
                   color: '#3B82F6',
-                  border: '2px solid #3B82F6',
+                  border: '1px solid #3B82F6',
                   boxShadow: 'none',
                   fontSize: {
                     xs: '0.75rem',  // Mobile
@@ -1014,7 +1082,7 @@ const Connections = () => {
                 sx={{
                   background: 'transparent',
                   color: '#DC2626',
-                  border: '2px solid #DC2626',
+                  border: '1px solid #DC2626',
                   boxShadow: 'none',
                   fontSize: {
                     xs: '0.75rem',  // Mobile
@@ -1132,22 +1200,24 @@ const Connections = () => {
             </Card>
           )}
 
-          <BaseTable
-            records={filteredWhatsApps}
-            columns={columns}
-            loading={loading}
-            noRecordsTitle="Nenhuma conexão encontrada"
-            noRecordsText="Crie uma nova conexão para começar a usar o sistema"
-            noRecordsIcon={<Network size={48} />}
-            enableSorting={true}
-            enableViewToggle={true}
-            defaultView="table"
-            renderCard={renderConnectionCard}
-            initialSortBy="name"
-            initialSortOrder="asc"
-            showPagination={false}
-            minHeight={500}
-          />
+          <Box sx={{ mt: 3 }}>
+            <BaseTable
+              records={filteredWhatsApps}
+              columns={columns}
+              loading={loading}
+              noRecordsTitle="Nenhuma conexão encontrada"
+              noRecordsText="Crie uma nova conexão para começar a usar o sistema"
+              noRecordsIcon={<Network size={48} />}
+              enableSorting={true}
+              enableViewToggle={true}
+              defaultView="table"
+              renderCard={renderConnectionCard}
+              initialSortBy="name"
+              initialSortOrder="asc"
+              showPagination={false}
+              minHeight={500}
+            />
+          </Box>
         </>
       )}
     </PageLayout>
