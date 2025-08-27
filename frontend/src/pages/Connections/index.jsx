@@ -43,7 +43,7 @@ import GradientButton from "../../components/GradientButton";
 import SearchInput from "../../components/SearchInput";
 import ConnectionTypeModal from "../../components/ConnectionTypeModal";
 import api from "../../services/api";
-import WhatsAppModal from "../../components/WhatsAppModal";
+import WhatsAppForm from "../WhatsAppForm";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import QrcodeModal from "../../components/QrcodeModal";
 import { i18n } from "../../translate/i18n";
@@ -187,7 +187,6 @@ const Connections = () => {
   const [hasMore, setHasMore] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
   const { whatsApps, loading } = useContext(WhatsAppsContext);
-  const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
   const [statusImport, setStatusImport] = useState([]);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [selectedWhatsApp, setSelectedWhatsApp] = useState(null);
@@ -210,6 +209,7 @@ const Connections = () => {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [connectionTypeModalOpen, setConnectionTypeModalOpen] = useState(false);
+  const [whatsappFormOpen, setWhatsappFormOpen] = useState(false);
   const { user, socket } = useContext(AuthContext);
   const companyId = user.companyId;
   const { getPlanCompany } = usePlans();
@@ -268,14 +268,16 @@ const Connections = () => {
 
   const handleOpenWhatsAppModal = () => {
     setSelectedWhatsApp(null);
-    setWhatsAppModalOpen(true);
+    setWhatsappFormOpen(true);
     setConnectionTypeModalOpen(false);
   };
 
-  const handleCloseWhatsAppModal = useCallback(() => {
-    setWhatsAppModalOpen(false);
-    setSelectedWhatsApp(null);
-  }, [setSelectedWhatsApp, setWhatsAppModalOpen]);
+
+  const handleCloseWhatsAppForm = () => {
+    setWhatsappFormOpen(false);
+    // Refresh the connections list after form submission
+    loadWhatsApps();
+  };
 
   const handleOpenConnectionTypeModal = () => {
     setConnectionTypeModalOpen(true);
@@ -314,9 +316,6 @@ const Connections = () => {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const openWhatsAppForm = () => {
-    history.push('/whatsapp-form');
-  };
 
   const handleOpenConfirmationModal = (action, whatsAppId) => {
     if (action === "disconnect") {
@@ -886,17 +885,16 @@ const Connections = () => {
         <QrcodeModal
           open={qrModalOpen}
           onClose={handleCloseQrModal}
-          whatsAppId={!whatsAppModalOpen && selectedWhatsApp?.id}
+          whatsAppId={selectedWhatsApp?.id}
         />
       )}
 
-      <WhatsAppModal
-        open={whatsAppModalOpen}
-        onClose={handleCloseWhatsAppModal}
-        whatsAppId={!qrModalOpen && selectedWhatsApp?.id}
-      />
 
-      {user.profile === "user" && user.allowConnections === "disabled" ? (
+      {whatsappFormOpen ? (
+        <WhatsAppForm
+          onClose={handleCloseWhatsAppForm}
+        />
+      ) : user.profile === "user" && user.allowConnections === "disabled" ? (
         <ForbiddenPage />
       ) : (
         <>
@@ -1098,56 +1096,6 @@ const Connections = () => {
                             onClick={handleOpenConnectionTypeModal}
                           >
                             {i18n.t("connections.newConnection")}
-                          </GradientButton>
-                          
-                          {/* Botão temporário para WhatsApp Form */}
-                          <GradientButton
-                            icon={<Network size={16} />}
-                            size="small"
-                            variant="outlined"
-                            sx={{
-                              fontSize: {
-                                xs: '0.75rem',  // Mobile
-                                sm: '0.8rem',   // Tablet  
-                                md: '0.85rem',  // Desktop pequeno (1280x720)
-                                lg: '0.9rem',   // Desktop médio (1366x768, 1600x900)
-                                xl: '0.95rem'   // Full HD+
-                              },
-                              px: {
-                                xs: 1.5,    // Mobile
-                                sm: 2,      // Tablet
-                                md: 2.5,    // Desktop pequeno (1280x720)
-                                lg: 2.5,    // Desktop médio (1366x768, 1600x900)
-                                xl: 3       // Full HD+
-                              },
-                              py: {
-                                xs: 0.5,    // Mobile
-                                sm: 0.75,   // Tablet
-                                md: 0.75,   // Desktop pequeno (1280x720)
-                                lg: 1,      // Desktop médio (1366x768, 1600x900)
-                                xl: 1       // Full HD+
-                              },
-                              minWidth: {
-                                xs: 'auto',  // Mobile
-                                sm: '100px', // Tablet
-                                md: '120px', // Desktop pequeno (1280x720)
-                                lg: '130px', // Desktop médio (1366x768, 1600x900)
-                                xl: '140px'  // Full HD+
-                              },
-                              ml: 1,
-                              background: 'transparent',
-                              color: '#10B981',
-                              border: '2px solid #10B981',
-                              boxShadow: 'none',
-                              '&:hover': {
-                                background: 'rgba(16, 185, 129, 0.1)',
-                                transform: 'translateY(-2px)',
-                                boxShadow: '0 8px 25px rgba(16, 185, 129, 0.2)'
-                              }
-                            }}
-                            onClick={openWhatsAppForm}
-                          >
-                            Form WhatsApp
                           </GradientButton>
                         </>
                       )}

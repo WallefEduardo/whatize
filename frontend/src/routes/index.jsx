@@ -9,7 +9,6 @@ import Signup from "../pages/Signup";
 import Login from "../pages/Login";
 import AutoLogin from "../pages/AutoLogin";
 import Connections from "../pages/Connections";
-import WhatsAppForm from "../pages/WhatsAppForm";
 import SettingsCustom from "../pages/SettingsCustom";
 import Financeiro from "../pages/Financeiro";
 import Users from "../pages/Users";
@@ -82,7 +81,6 @@ const Routes = () => {
                 <Route exact path="/" component={Dashboard} isPrivate />
                 <Route exact path="/tickets/:ticketId?" component={TicketResponsiveContainer} isPrivate />
                 <Route exact path="/connections" component={Connections} isPrivate />
-                <Route exact path="/whatsapp-form" component={WhatsAppForm} isPrivate />
                 <Route exact path="/quick-messages" component={QuickMessages} isPrivate />
                 <Route exact path="/todolist" component={ToDoList} isPrivate />
                 <Route exact path="/schedules" component={Schedules} isPrivate />

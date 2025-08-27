@@ -32,7 +32,7 @@ const WhatsAppSchema = Yup.object().shape({
   outOfHoursMessage: Yup.string(),
 });
 
-const WhatsAppForm = () => {
+const WhatsAppForm = ({ onClose }) => {
   const { user } = useContext(AuthContext);
   const { getPlanCompany } = usePlans();
   const { get: getSettings } = useCompanySettings();
@@ -318,7 +318,7 @@ const WhatsAppForm = () => {
       toast.success("Conexão WhatsApp criada com sucesso!");
       
       // Redirecionar para a página de conexões
-      history.push('/connections');
+      onClose?.();
       
     } catch (error) {
       toastError(error);
@@ -3191,16 +3191,8 @@ const WhatsAppForm = () => {
     }
   };
 
-  return (
-    <PageLayout
-      title="Nova Conexão WhatsApp"
-      icon={<Network />}
-      breadcrumbs={[
-        { href: "/", icon: <BarChart3 size={16} /> },
-        { href: "/connections", label: "Conexões", icon: <Wifi size={16} /> },
-        { label: "Nova Conexão WhatsApp", icon: <Network size={16} /> }
-      ]}
-    >
+  // Componente de conteúdo principal
+  const formContent = (
       <Box sx={{
         width: '100%',
         height: '100%',
@@ -3298,7 +3290,7 @@ const WhatsAppForm = () => {
                 }}>
                   <GradientButton
                     variant="outlined"
-                    onClick={() => window.history.back()}
+                    onClick={() => onClose?.()}
                     disabled={loading}
                     sx={{
                       backgroundColor: 'transparent !important',
@@ -3340,6 +3332,25 @@ const WhatsAppForm = () => {
           )}
         </Formik>
       </Box>
+  );
+
+  // Se onClose é fornecido, renderizar como componente integrado (tela completa)
+  if (onClose) {
+    return formContent;
+  }
+
+  // Renderizar como página completa se não há onClose
+  return (
+    <PageLayout
+      title="Nova Conexão WhatsApp"
+      icon={<Network />}
+      breadcrumbs={[
+        { href: "/", icon: <BarChart3 size={16} /> },
+        { href: "/connections", label: "Conexões", icon: <Wifi size={16} /> },
+        { label: "Nova Conexão WhatsApp", icon: <Network size={16} /> }
+      ]}
+    >
+      {formContent}
     </PageLayout>
   );
 };
