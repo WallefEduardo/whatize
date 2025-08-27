@@ -47,7 +47,7 @@ import ConnectionTypeModal from "../../components/ConnectionTypeModal";
 import api from "../../services/api";
 import WhatsAppForm from "../WhatsAppForm";
 import ModernConfirmationModal from "../../components/ModernConfirmationModal";
-import QrcodeModal from "../../components/QrcodeModal";
+import ModernQrCodeModal from "../../components/ModernQrCodeModal";
 import { i18n } from "../../translate/i18n";
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 import toastError from "../../errors/toastError";
@@ -1105,7 +1105,7 @@ const Connections = () => {
       />
 
       {qrModalOpen && (
-        <QrcodeModal
+        <ModernQrCodeModal
           open={qrModalOpen}
           onClose={handleCloseQrModal}
           whatsAppId={selectedWhatsApp?.id}
