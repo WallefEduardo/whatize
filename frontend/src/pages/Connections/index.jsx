@@ -46,7 +46,7 @@ import SearchInput from "../../components/SearchInput";
 import ConnectionTypeModal from "../../components/ConnectionTypeModal";
 import api from "../../services/api";
 import WhatsAppForm from "../WhatsAppForm";
-import ConfirmationModal from "../../components/ConfirmationModal";
+import ModernConfirmationModal from "../../components/ModernConfirmationModal";
 import QrcodeModal from "../../components/QrcodeModal";
 import { i18n } from "../../translate/i18n";
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
@@ -193,6 +193,7 @@ const Connections = () => {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [selectedWhatsApp, setSelectedWhatsApp] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [confirmModalLoading, setConfirmModalLoading] = useState(false);
   const history = useHistory();
   const confirmationModalInitialState = {
     action: "",
@@ -281,10 +282,24 @@ const Connections = () => {
     setWhatsappFormOpen(false);
     setSelectedWhatsApp(null); // Limpar seleção ao fechar
     
-    // Como fallback, forçar atualização após um breve delay
+    // Fazer reload imediato para pegar a nova conexão
+    reload();
+    
+    // Reload escalonado para acompanhar o processo de inicialização
     setTimeout(() => {
+      console.log('🔄 Reloading após 1s - conexão deve estar criada');
       reload();
-    }, 200);
+    }, 1000);
+    
+    setTimeout(() => {
+      console.log('🔄 Reloading após 3s - sessão deve estar inicializando');
+      reload();
+    }, 3000);
+    
+    setTimeout(() => {
+      console.log('🔄 Reloading após 6s - status deve estar definido');
+      reload();
+    }, 6000);
   };
 
   const handleOpenConnectionTypeModal = () => {
@@ -355,32 +370,33 @@ const Connections = () => {
   };
 
   const handleSubmitConfirmationModal = async () => {
-    if (confirmModalInfo.action === "disconnect") {
-      try {
+    setConfirmModalLoading(true);
+    
+    try {
+      if (confirmModalInfo.action === "disconnect") {
         await api.delete(`/whatsappsession/${confirmModalInfo.whatsAppId}`);
-      } catch (err) {
-        toastError(err);
       }
-    }
 
-    if (confirmModalInfo.action === "delete") {
-      try {
+      if (confirmModalInfo.action === "delete") {
         await api.delete(`/whatsapp/${confirmModalInfo.whatsAppId}`);
         toast.success(i18n.t("connections.toasts.deleted"));
-      } catch (err) {
-        toastError(err);
       }
-    }
-    if (confirmModalInfo.action === "closedImported") {
-      try {
+      
+      if (confirmModalInfo.action === "closedImported") {
         await api.post(`/closedimported/${confirmModalInfo.whatsAppId}`);
         toast.success(i18n.t("connections.toasts.closedimported"));
-      } catch (err) {
-        toastError(err);
       }
+      
+      // Recarregar dados após ação bem-sucedida
+      await reload();
+      
+      setConfirmModalOpen(false);
+      setConfirmModalInfo(confirmationModalInitialState);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setConfirmModalLoading(false);
     }
-
-    setConfirmModalInfo(confirmationModalInitialState);
   };
 
   const renderImportButton = (whatsApp) => {
@@ -523,7 +539,12 @@ const Connections = () => {
           </CustomToolTip>
         )}
         {whatsApp.status === "OPENING" && (
-          <CircularProgress size={24} className={classes.buttonProgress} />
+          <CustomToolTip
+            title="Conectando"
+            content="Inicializando sessão do WhatsApp..."
+          >
+            <CircularProgress size={24} className={classes.buttonProgress} />
+          </CustomToolTip>
         )}
         {whatsApp.status === "qrcode" && (
           <CustomToolTip
@@ -544,6 +565,15 @@ const Connections = () => {
             content={i18n.t("connections.toolTips.timeout.content")}
           >
             <SignalCellularConnectedNoInternet2Bar style={{ color: "#E57373" }} />
+          </CustomToolTip>
+        )}
+        {/* Fallback para status indefinido ou novo */}
+        {!whatsApp.status && (
+          <CustomToolTip
+            title="Inicializando"
+            content="Configurando nova conexão..."
+          >
+            <CircularProgress size={24} style={{ color: "#3b82f6" }} />
           </CustomToolTip>
         )}
       </div>
@@ -1053,14 +1083,17 @@ const Connections = () => {
         { label: "Conexões", icon: <Wifi size={16} /> }
       ]}
     >
-      <ConfirmationModal
+      <ModernConfirmationModal
         title={confirmModalInfo.title}
+        message={confirmModalInfo.message}
         open={confirmModalOpen}
-        onClose={() => setConfirmModalOpen(false)}
+        onClose={() => !confirmModalLoading && setConfirmModalOpen(false)}
         onConfirm={handleSubmitConfirmationModal}
-      >
-        {confirmModalInfo.message}
-      </ConfirmationModal>
+        type={confirmModalInfo.action === "delete" ? "danger" : "warning"}
+        confirmText="Confirmar"
+        cancelText="Cancelar"
+        loading={confirmModalLoading}
+      />
 
       <ConnectionTypeModal
         open={connectionTypeModalOpen}
