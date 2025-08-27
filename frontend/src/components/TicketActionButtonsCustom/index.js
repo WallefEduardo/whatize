@@ -560,6 +560,28 @@ const TicketActionButtonsCustom = ({ ticket, compactMode = false
                             </IconButton>
                         </>
                     )}
+                    
+                    {/* Botão de Aceitar para tickets pendentes no modo compacto */}
+                    {ticket.status === "pending" && (ticket.queueId === null || ticket.queueId === undefined) && (
+                        <ButtonWithSpinner
+                            loading={loading}
+                            size="small"
+                            variant="contained"
+                            onClick={e => handleOpenAcceptTicketWithouSelectQueue()}
+                        >
+                            {i18n.t("messagesList.header.buttons.accept")}
+                        </ButtonWithSpinner>
+                    )}
+                    {ticket.status === "pending" && ticket.queueId !== null && (
+                        <ButtonWithSpinner
+                            loading={loading}
+                            size="small"
+                            variant="contained"
+                            onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+                        >
+                            {i18n.t("messagesList.header.buttons.accept")}
+                        </ButtonWithSpinner>
+                    )}
 
                     <IconButton 
                         className={classes.bottomButtonVisibilityIcon}

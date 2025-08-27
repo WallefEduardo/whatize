@@ -367,7 +367,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
 
         // const { version, isLatest } = await fetchLatestWaWebVersion({});
         const { version, isLatest } = await fetchLatestBaileysVersion();
-        const versionB = [2,3000,1015920675];
+        const versionB = [2,3000,1026330385]; // 2,3000,1015920675
         logger.info(`Versão: v${version.join(".")}, isLatest: ${isLatest}`);
         logger.info(`Starting session ${name}`);
         let retriesQrCode = 0;
