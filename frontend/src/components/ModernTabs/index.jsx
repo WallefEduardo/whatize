@@ -90,7 +90,7 @@ const ModernTabs = ({
                     : 'transparent',
                   color: activeTab === tab.id 
                     ? 'var(--color-accent)' 
-                    : 'var(--text-secondary)',
+                    : 'var(--text-gray-medium)',
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
                   fontSize: '0.95rem',

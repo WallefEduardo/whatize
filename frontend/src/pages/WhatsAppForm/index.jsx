@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from "react";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
-import { Box, Typography, Card, Switch, FormControlLabel, Grid, Paper, Chip, IconButton, TextField, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
-import { Network, Wifi, BarChart3, Settings, MessageCircle, Bot, Star, Workflow, Clock, Zap, Users, Import, Globe, Share2, Timer, HelpCircle, RefreshCw, Copy, Key, Wand2, Heart, Moon } from "lucide-react";
+import { Box, Typography, Card, Switch, FormControlLabel, Grid, Paper, Chip, IconButton, TextField, FormControl, InputLabel, Select, MenuItem, Button } from "@mui/material";
+import { Network, Wifi, BarChart3, Settings, MessageCircle, Bot, Star, Workflow, Clock, Zap, Users, Import, Globe, Share2, Timer, HelpCircle, RefreshCw, Copy, Key, Wand2, Heart, Moon, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useHistory } from "react-router-dom";
 import moment from "moment";
@@ -72,10 +72,17 @@ const WhatsAppForm = () => {
     greetingMessage: "",
     farewellMessage: "",
     outOfHoursMessage: "",
+    collectiveVacationMessage: "",
+    collectiveVacationStart: "",
+    collectiveVacationEnd: "",
     maxUseBotQueues: 3,
     timeUseBotQueues: 0,
     expiresTicket: 0,
     expiresInactiveMessage: "",
+    timeInactiveMessage: "",
+    inactiveMessage: "",
+    timeCreateNewTicket: 0,
+    whenExpiresTicket: "0",
     timeSendQueue: 0,
     sendIdQueue: null,
     timeCreateNewTicket: 10,
@@ -144,6 +151,20 @@ const WhatsAppForm = () => {
       "🕐 Oi! Estamos fora do horário de atendimento no momento. Funcionamos de Segunda a Sexta, das 8h às 17h. Sua mensagem é importante para nós, responderemos em breve!",
       "🌅 Olá! Você entrou em contato fora do nosso expediente. Horário de funcionamento: Segunda a Sexta, das 8h30 às 17h30. Aguarde nosso retorno!",
       "💤 Oi! Nosso atendimento está pausado agora. Funcionamos de Segunda a Sexta, das 9h às 18h. Deixe sua mensagem que logo te respondemos!"
+    ],
+    inactiveMessage: [
+      "⏰ Olá! Notamos que você está há um tempo sem responder. Se precisar de ajuda, estaremos aqui para atendê-lo!",
+      "🕐 Oi! Percebemos que você ficou um tempo sem interagir. Ainda está aí? Podemos ajudar em algo?",
+      "⌚ Devido ao tempo de inatividade, este chat pode ser encerrado em breve. Responda se ainda precisar de atendimento!",
+      "🔔 Notamos que você não respondeu por um tempo. Se ainda precisar de ajuda, é só enviar uma mensagem!",
+      "💬 Oi! Você está aí? Ficou um tempo sem responder. Se precisar de algo, estaremos prontos para ajudar!"
+    ],
+    expiresInactiveMessage: [
+      "⏰ Devido ao tempo de inatividade, este atendimento será finalizado. Obrigado pelo contato!",
+      "🕐 Por inatividade, encerramos este chat. Foi um prazer atendê-lo! Volte sempre que precisar.",
+      "⌚ Chat finalizado por falta de resposta. Agradecemos o contato e estaremos aqui quando precisar!",
+      "🔔 Atendimento encerrado devido à inatividade. Obrigado pela preferência! Até a próxima.",
+      "💤 Por questão de organização, este chat foi finalizado por inatividade. Conte conosco sempre!"
     ]
   };
 
@@ -165,6 +186,34 @@ const WhatsAppForm = () => {
     ];
     
     const randomMessage = npsMessages[Math.floor(Math.random() * npsMessages.length)];
+    setFieldValue(fieldName, randomMessage);
+  };
+
+  // Função para gerar mensagens de férias
+  const generateVacationMessage = (fieldName, setFieldValue) => {
+    const vacationMessages = [
+      "🏝️ Estamos em férias coletivas! Retornaremos em breve para atendê-lo com todo carinho e dedicação!",
+      "🌴 Nossa equipe está em recesso! Voltaremos revigorados para oferecer o melhor atendimento. Aguarde nosso retorno!",
+      "☀️ Período de férias coletivas! Estaremos de volta em breve com energia renovada para cuidar de você!",
+      "🏖️ Momentaneamente em férias! Retornaremos com ainda mais disposição para atendê-lo da melhor forma!",
+      "🌺 Férias coletivas em andamento! Em breve estaremos de volta para continuar cuidando de você com excelência!"
+    ];
+    
+    const randomMessage = vacationMessages[Math.floor(Math.random() * vacationMessages.length)];
+    setFieldValue(fieldName, randomMessage);
+  };
+
+  // Função para gerar mensagens de inatividade
+  const generateInactivityMessage = (fieldName, setFieldValue) => {
+    const inactivityMessages = [
+      "⏰ Olá! Notamos que você está há um tempo sem responder. Se precisar de ajuda, estaremos aqui para atendê-lo!",
+      "🕐 Oi! Percebemos que você ficou um tempo sem interagir. Ainda está aí? Podemos ajudar em algo?",
+      "⌚ Devido ao tempo de inatividade, este chat pode ser encerrado em breve. Responda se ainda precisar de atendimento!",
+      "🔔 Notamos que você não respondeu por um tempo. Se ainda precisar de ajuda, é só enviar uma mensagem!",
+      "⏳ Olá! Como não houve resposta por um período, este atendimento pode ser finalizado. Ainda precisa de ajuda?"
+    ];
+    
+    const randomMessage = inactivityMessages[Math.floor(Math.random() * inactivityMessages.length)];
     setFieldValue(fieldName, randomMessage);
   };
 
@@ -356,10 +405,10 @@ const WhatsAppForm = () => {
             justifyContent: 'space-between'
           }} onClick={handleChange}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-              {icon && <Box sx={{ mr: 1, color: checked ? color : 'var(--text-secondary)' }}>{icon}</Box>}
+              {icon && <Box sx={{ mr: 1, color: checked ? color : 'var(--text-gray-medium)' }}>{icon}</Box>}
               <Typography variant="subtitle2" sx={{ 
                 fontWeight: 600,
-                color: checked ? color : 'var(--text-primary)',
+                color: checked ? color : 'var(--text-gray-medium)',
                 fontSize: '0.85rem',
                 flex: 1
               }}>
@@ -379,7 +428,7 @@ const WhatsAppForm = () => {
               )}
             </Box>
             <Typography variant="body2" sx={{ 
-              color: 'var(--text-secondary)',
+              color: 'var(--text-gray-medium)',
               fontSize: '0.75rem',
               lineHeight: 1.2,
               overflow: 'hidden',
@@ -456,7 +505,7 @@ const WhatsAppForm = () => {
             {/* Seção de Switches Coloridos */}
             <Box sx={{ mt: 3 }}>
               <Typography variant="h6" sx={{ 
-                color: 'var(--text-primary)',
+                color: 'var(--text-gray-medium)',
                 fontWeight: 600,
                 mb: 3,
                 display: 'flex',
@@ -541,7 +590,7 @@ const WhatsAppForm = () => {
             {enableImportMessage && (
               <Box sx={{ mt: 4 }}>
                 <Typography variant="h6" sx={{ 
-                  color: 'var(--text-primary)',
+                  color: 'var(--text-gray-medium)',
                   fontWeight: 600,
                   mb: 3,
                   display: 'flex',
@@ -641,7 +690,7 @@ const WhatsAppForm = () => {
                 mb: 3
               }}>
                 <Typography variant="h6" sx={{ 
-                  color: 'var(--text-primary)',
+                  color: 'var(--text-gray-medium)',
                   fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
@@ -815,7 +864,7 @@ const WhatsAppForm = () => {
                 mb: 3
               }}>
                 <Typography variant="h6" sx={{ 
-                  color: 'var(--text-primary)',
+                  color: 'var(--text-gray-medium)',
                   fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
@@ -1293,6 +1342,180 @@ const WhatsAppForm = () => {
                   Mensagem enviada fora do horário comercial
                 </Typography>
               </Box>
+
+              {/* Seção de Férias Coletivas */}
+              <Box sx={{ mt: 4 }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1,
+                  mb: 2
+                }}>
+                  <Heart size={18} color="#E91E63" />
+                  <Typography variant="h6" sx={{ 
+                    color: 'var(--text-gray-medium)',
+                    fontWeight: 600,
+                    fontSize: '1rem'
+                  }}>
+                    Mensagem de Férias Coletivas
+                  </Typography>
+                  <CustomTooltip title="Gerar mensagem automática">
+                    <IconButton
+                      onClick={() => generateVacationMessage('collectiveVacationMessage', setFieldValue)}
+                      sx={{
+                        color: '#E91E63',
+                        backgroundColor: 'rgba(233, 30, 99, 0.1)',
+                        border: '1px solid rgba(233, 30, 99, 0.3)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(233, 30, 99, 0.2)',
+                          transform: 'scale(1.05)'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <Wand2 size={18} />
+                    </IconButton>
+                  </CustomTooltip>
+                </Box>
+                <TextField
+                  name="collectiveVacationMessage"
+                  value={values.collectiveVacationMessage || ''}
+                  onChange={(e) => setFieldValue('collectiveVacationMessage', e.target.value)}
+                  multiline
+                  rows={4}
+                  fullWidth
+                  placeholder="🏝️ Estamos em férias coletivas! Retornaremos em breve para atendê-lo com todo carinho!"
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: '2px solid #E91E63',
+                      borderRadius: 2,
+                      fontSize: '0.875rem',
+                      '& fieldset': {
+                        border: 'none',
+                      },
+                      '&:hover': {
+                        borderColor: '#C2185B',
+                        boxShadow: '0 0 0 3px rgba(233, 30, 99, 0.1)'
+                      },
+                      '&.Mui-focused': {
+                        borderColor: '#C2185B',
+                        boxShadow: '0 0 0 3px rgba(233, 30, 99, 0.2)'
+                      },
+                    },
+                    '& .MuiOutlinedInput-input': {
+                      color: 'var(--text-gray-medium)',
+                      fontSize: '0.875rem',
+                      '&::placeholder': {
+                        color: 'var(--text-gray-medium)',
+                        opacity: 0.7
+                      }
+                    }
+                  }}
+                />
+                <Typography variant="caption" sx={{ 
+                  color: 'var(--text-gray-medium)', 
+                  fontSize: '0.75rem',
+                  mt: 1,
+                  display: 'block'
+                }}>
+                  Mensagem enviada durante o período de férias coletivas
+                </Typography>
+
+                {/* Campos de Data das Férias */}
+                <Box sx={{ display: 'flex', gap: 3, mt: 3 }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" sx={{ 
+                      color: 'var(--text-gray-medium)',
+                      fontWeight: 600,
+                      mb: 1,
+                      fontSize: '0.875rem'
+                    }}>
+                      Data Inicial das Férias
+                    </Typography>
+                    <TextField
+                      name="collectiveVacationStart"
+                      type="date"
+                      value={values.collectiveVacationStart || ''}
+                      onChange={(e) => setFieldValue('collectiveVacationStart', e.target.value)}
+                      fullWidth
+                      variant="outlined"
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'var(--bg-primary)',
+                          borderRadius: 2,
+                          border: '2px solid rgba(233, 30, 99, 0.3)',
+                          fontSize: '0.875rem',
+                          '& fieldset': {
+                            border: 'none',
+                          },
+                          '&:hover': {
+                            borderColor: 'rgba(233, 30, 99, 0.5)',
+                            backgroundColor: 'rgba(233, 30, 99, 0.05)',
+                          },
+                          '&.Mui-focused': {
+                            borderColor: '#E91E63',
+                            backgroundColor: 'rgba(233, 30, 99, 0.05)',
+                            boxShadow: '0 0 0 3px rgba(233, 30, 99, 0.1)',
+                          },
+                        },
+                        '& .MuiOutlinedInput-input': {
+                          color: 'var(--text-gray-medium)',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                        }
+                      }}
+                    />
+                  </Box>
+
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" sx={{ 
+                      color: 'var(--text-gray-medium)',
+                      fontWeight: 600,
+                      mb: 1,
+                      fontSize: '0.875rem'
+                    }}>
+                      Data Final das Férias
+                    </Typography>
+                    <TextField
+                      name="collectiveVacationEnd"
+                      type="date"
+                      value={values.collectiveVacationEnd || ''}
+                      onChange={(e) => setFieldValue('collectiveVacationEnd', e.target.value)}
+                      fullWidth
+                      variant="outlined"
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'var(--bg-primary)',
+                          borderRadius: 2,
+                          border: '2px solid rgba(233, 30, 99, 0.3)',
+                          fontSize: '0.875rem',
+                          '& fieldset': {
+                            border: 'none',
+                          },
+                          '&:hover': {
+                            borderColor: 'rgba(233, 30, 99, 0.5)',
+                            backgroundColor: 'rgba(233, 30, 99, 0.05)',
+                          },
+                          '&.Mui-focused': {
+                            borderColor: '#E91E63',
+                            backgroundColor: 'rgba(233, 30, 99, 0.05)',
+                            boxShadow: '0 0 0 3px rgba(233, 30, 99, 0.1)',
+                          },
+                        },
+                        '& .MuiOutlinedInput-input': {
+                          color: 'var(--text-gray-medium)',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                        }
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Box>
             </Box>
           </Box>
         );
@@ -1316,9 +1539,11 @@ const WhatsAppForm = () => {
               Configurações do ChatBot
             </Typography>
             
-            <Grid container spacing={3}>
-              {/* Máximo de Uso do Bot */}
-              <Grid item xs={12} sm={6}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Primeira linha */}
+              <Box sx={{ display: 'flex', gap: 3, width: '100%' }}>
+                {/* Máximo de Uso do Bot */}
+                <Box sx={{ flex: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle2" sx={{ 
                     color: 'var(--text-gray-medium)',
@@ -1432,10 +1657,10 @@ const WhatsAppForm = () => {
                 }}>
                   Número máximo de interações do bot antes de transferir para atendente
                 </Typography>
-              </Grid>
+                </Box>
 
-              {/* Tempo de Uso do Bot */}
-              <Grid item xs={12} sm={6}>
+                {/* Tempo de Uso do Bot */}
+                <Box sx={{ flex: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle2" sx={{ 
                     color: 'var(--text-gray-medium)',
@@ -1549,10 +1774,13 @@ const WhatsAppForm = () => {
                 }}>
                   Tempo de espera em minutos antes do bot responder (0 = imediato)
                 </Typography>
-              </Grid>
+                </Box>
+              </Box>
 
-              {/* Tempo para Novo Ticket */}
-              <Grid item xs={12} sm={6}>
+              {/* Segunda linha */}
+              <Box sx={{ display: 'flex', gap: 3, width: '100%' }}>
+                {/* Tempo para Novo Ticket */}
+                <Box sx={{ flex: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle2" sx={{ 
                     color: 'var(--text-gray-medium)',
@@ -1669,8 +1897,466 @@ const WhatsAppForm = () => {
                 }}>
                   Tempo de inatividade em minutos após o qual um novo ticket será criado
                 </Typography>
-              </Grid>
-            </Grid>
+                </Box>
+
+                {/* Tempo para Fechamento do Ticket */}
+                <Box sx={{ flex: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ 
+                    color: 'var(--text-gray-medium)',
+                    fontWeight: 600,
+                    flex: 1
+                  }}>
+                    Expirar Ticket em X Horas
+                  </Typography>
+                  <CustomTooltip 
+                    title={
+                      <Box sx={{ p: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                          Fechamento Automático de Tickets:
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          • <strong>Função:</strong> Define quando um ticket deve ser fechado automaticamente por inatividade.
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          • <strong>Exemplo:</strong> Se configurado como "24", tickets sem atividade por 24 horas serão fechados automaticamente.
+                        </Typography>
+                        <Typography variant="body2">
+                          • <strong>0 = Desabilitado:</strong> Tickets nunca fecham automaticamente por tempo.
+                        </Typography>
+                      </Box>
+                    }
+                  >
+                    <IconButton 
+                      size="small"
+                      sx={{ 
+                        color: 'var(--color-accent)',
+                        '&:hover': {
+                          backgroundColor: 'var(--hover-bg-light)',
+                          transform: 'scale(1.1)'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <HelpCircle size={18} />
+                    </IconButton>
+                  </CustomTooltip>
+                </Box>
+                <TextField
+                  name="expiresTicket"
+                  value={values.expiresTicket || ''}
+                  onChange={(e) => setFieldValue('expiresTicket', e.target.value)}
+                  type="number"
+                  placeholder="0"
+                  fullWidth
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'var(--bg-primary)',
+                      borderRadius: 2,
+                      fontSize: '0.875rem',
+                      '& fieldset': {
+                        borderColor: 'var(--border-primary)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: 'var(--color-accent)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: 'var(--color-accent)',
+                        borderWidth: '2px'
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: 'var(--text-secondary)',
+                      fontSize: '0.875rem',
+                      '&.Mui-focused': {
+                        color: 'var(--color-accent)',
+                      }
+                    },
+                    '& .MuiOutlinedInput-input': {
+                      color: 'var(--text-gray-medium)',
+                      fontSize: '0.875rem',
+                      '&::placeholder': {
+                        color: 'var(--text-gray-medium)',
+                        opacity: 1
+                      }
+                    },
+                    '& .MuiFormHelperText-root': {
+                      color: 'var(--text-gray-medium)',
+                      fontSize: '0.75rem'
+                    }
+                  }}
+                />
+                <Typography variant="caption" sx={{ 
+                  color: 'var(--text-gray-medium)', 
+                  fontSize: '0.75rem',
+                  mt: 1,
+                  display: 'block'
+                }}>
+                  Horas de inatividade para fechamento automático (0 = desabilitado)
+                </Typography>
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Seção de Configurações de Fechamento */}
+            <Box sx={{ mt: 4 }}>
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                mb: 3
+              }}>
+                <Typography variant="h6" sx={{ 
+                  color: 'var(--text-gray-medium)',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  mr: 1
+                }}>
+                  <Clock size={20} style={{ marginRight: 8 }} />
+                  Configurações de Fechamento e Inatividade
+                </Typography>
+              </Box>
+
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 3, 
+                width: '100%'
+              }}>
+                {/* Tempo para Aviso de Inatividade */}
+                <Box sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ 
+                      color: 'var(--text-gray-medium)',
+                      fontWeight: 600,
+                      flex: 1
+                    }}>
+                      Tempo em Minutos para do Aviso de Inatividade
+                    </Typography>
+                    <CustomTooltip 
+                      title={
+                        <Box sx={{ p: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                            Tempo para Aviso de Inatividade:
+                          </Typography>
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            • <strong>Função:</strong> Define após quantos minutos de inatividade será enviado o aviso de que o chat será fechado.
+                          </Typography>
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            • <strong>Exemplo:</strong> Se configurado como "30", após 30 minutos sem resposta, o sistema enviará o aviso.
+                          </Typography>
+                          <Typography variant="body2">
+                            • <strong>0 = Desabilitado:</strong> Não enviará avisos de inatividade.
+                          </Typography>
+                        </Box>
+                      }
+                    >
+                      <IconButton 
+                        size="small"
+                        sx={{ 
+                          color: 'var(--color-accent)',
+                          '&:hover': {
+                            backgroundColor: 'var(--hover-bg-light)',
+                            transform: 'scale(1.1)'
+                          },
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <HelpCircle size={18} />
+                      </IconButton>
+                    </CustomTooltip>
+                  </Box>
+                  <TextField
+                    name="timeInactiveMessage"
+                    value={values.timeInactiveMessage || ''}
+                    onChange={(e) => setFieldValue('timeInactiveMessage', e.target.value)}
+                    type="number"
+                    placeholder="0"
+                    fullWidth
+                    variant="outlined"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'var(--bg-primary)',
+                        borderRadius: 2,
+                        fontSize: '0.875rem',
+                        '& fieldset': {
+                          borderColor: 'var(--border-primary)',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: 'var(--color-accent)',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: 'var(--color-accent)',
+                          borderWidth: '2px'
+                        },
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: 'var(--text-secondary)',
+                        fontSize: '0.875rem',
+                        '&.Mui-focused': {
+                          color: 'var(--color-accent)',
+                        }
+                      },
+                      '& .MuiOutlinedInput-input': {
+                        color: 'var(--text-gray-medium)',
+                        fontSize: '0.875rem',
+                        '&::placeholder': {
+                          color: 'var(--text-gray-medium)',
+                          opacity: 1
+                        }
+                      },
+                      '& .MuiFormHelperText-root': {
+                        color: 'var(--text-gray-medium)',
+                        fontSize: '0.75rem'
+                      }
+                    }}
+                  />
+                  <Typography variant="caption" sx={{ 
+                    color: 'var(--text-gray-medium)', 
+                    fontSize: '0.75rem',
+                    mt: 1,
+                    display: 'block'
+                  }}>
+                    Tempo em minutos para enviar aviso de inatividade (0 = desabilitado)
+                  </Typography>
+                </Box>
+
+                {/* Encerrar Chats Aberto Quando */}
+                <Box sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ 
+                      color: 'var(--text-gray-medium)',
+                      fontWeight: 600,
+                      flex: 1
+                    }}>
+                      Encerrar Chats Aberto Quando
+                    </Typography>
+                    <CustomTooltip 
+                      title={
+                        <Box sx={{ p: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                            Condição de Fechamento:
+                          </Typography>
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            • <strong>Última mensagem de atendente:</strong> Fecha quando a última mensagem foi enviada pelo atendente.
+                          </Typography>
+                          <Typography variant="body2">
+                            • <strong>Última mensagem de cliente:</strong> Fecha quando a última mensagem foi enviada pelo cliente.
+                          </Typography>
+                        </Box>
+                      }
+                    >
+                      <IconButton 
+                        size="small"
+                        sx={{ 
+                          color: 'var(--color-accent)',
+                          '&:hover': {
+                            backgroundColor: 'var(--hover-bg-light)',
+                            transform: 'scale(1.1)'
+                          },
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <HelpCircle size={18} />
+                      </IconButton>
+                    </CustomTooltip>
+                  </Box>
+                  <FormControl fullWidth variant="outlined">
+                    <Select
+                      name="whenExpiresTicket"
+                      value={values.whenExpiresTicket || "0"}
+                      onChange={(e) => setFieldValue('whenExpiresTicket', e.target.value)}
+                      sx={{
+                        backgroundColor: 'var(--bg-primary)',
+                        borderRadius: 2,
+                        fontSize: '0.875rem',
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'var(--border-primary)',
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'var(--color-accent)',
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'var(--color-accent)',
+                          borderWidth: '2px'
+                        },
+                        '& .MuiSelect-select': {
+                          color: 'var(--text-gray-medium)',
+                          fontSize: '0.875rem'
+                        }
+                      }}
+                    >
+                      <MenuItem value="0">Última mensagem de atendente</MenuItem>
+                      <MenuItem value="1">Última mensagem de cliente</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <Typography variant="caption" sx={{ 
+                    color: 'var(--text-gray-medium)', 
+                    fontSize: '0.75rem',
+                    mt: 1,
+                    display: 'block'
+                  }}>
+                    Condição para encerramento automático do chat
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Seção de Mensagens */}
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 3, 
+                mt: 2,
+                width: '100%'
+              }}>
+                {/* Mensagem de Inatividade */}
+                <Box sx={{ flex: 1 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'flex-start',
+                    mb: 3
+                  }}>
+                    <Typography variant="subtitle1" sx={{
+                      color: 'var(--text-gray-medium)',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      flex: 1
+                    }}>
+                      <Timer size={18} style={{ marginRight: 8, color: '#F59E0B' }} />
+                      Mensagem de Inatividade
+                    </Typography>
+                    <CustomTooltip title="Gerar mensagem automática">
+                      <IconButton
+                        onClick={() => generateAutoMessage('inactiveMessage', setFieldValue)}
+                        sx={{
+                          color: '#F59E0B',
+                          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                          border: '1px solid rgba(245, 158, 11, 0.3)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                            transform: 'scale(1.05)'
+                          },
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <Wand2 size={18} />
+                      </IconButton>
+                    </CustomTooltip>
+                  </Box>
+                  <TextField
+                    name="inactiveMessage"
+                    value={values.inactiveMessage || ''}
+                    onChange={(e) => setFieldValue('inactiveMessage', e.target.value)}
+                    multiline
+                    rows={4}
+                    fullWidth
+                    placeholder="⏰ Olá! Notamos que você está há um tempo sem responder. Se precisar de ajuda, estaremos aqui para atendê-lo!"
+                    variant="outlined"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'var(--bg-secondary)',
+                        border: '2px solid #F59E0B',
+                        borderRadius: 2,
+                        fontSize: '0.875rem',
+                        '& fieldset': {
+                          border: 'none',
+                        },
+                        '&:hover': {
+                          borderColor: '#D97706',
+                          boxShadow: '0 0 0 3px rgba(245, 158, 11, 0.1)'
+                        },
+                        '&.Mui-focused': {
+                          borderColor: '#D97706',
+                          boxShadow: '0 0 0 3px rgba(245, 158, 11, 0.2)'
+                        },
+                      },
+                      '& .MuiOutlinedInput-input': {
+                        color: 'var(--text-gray-medium)',
+                        fontSize: '0.875rem',
+                        '&::placeholder': {
+                          color: 'var(--text-gray-medium)',
+                          opacity: 0.8
+                        }
+                      }
+                    }}
+                  />
+                </Box>
+
+                {/* Mensagem de Encerramento por Inatividade */}
+                <Box sx={{ flex: 1 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'flex-start',
+                    mb: 3
+                  }}>
+                    <Typography variant="subtitle1" sx={{
+                      color: 'var(--text-gray-medium)',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      flex: 1
+                    }}>
+                      <Clock size={18} style={{ marginRight: 8, color: '#EF4444' }} />
+                      Mensagem de Encerramento por Inatividade
+                    </Typography>
+                    <CustomTooltip title="Gerar mensagem automática">
+                      <IconButton
+                        onClick={() => generateAutoMessage('expiresInactiveMessage', setFieldValue)}
+                        sx={{
+                          color: '#EF4444',
+                          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                            transform: 'scale(1.05)'
+                          },
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <Wand2 size={18} />
+                      </IconButton>
+                    </CustomTooltip>
+                  </Box>
+                  <TextField
+                    name="expiresInactiveMessage"
+                    value={values.expiresInactiveMessage || ''}
+                    onChange={(e) => setFieldValue('expiresInactiveMessage', e.target.value)}
+                    multiline
+                    rows={4}
+                    fullWidth
+                    placeholder="⏰ Devido ao tempo de inatividade, este atendimento será finalizado. Obrigado pelo contato!"
+                    variant="outlined"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'var(--bg-secondary)',
+                        border: '2px solid #EF4444',
+                        borderRadius: 2,
+                        fontSize: '0.875rem',
+                        '& fieldset': {
+                          border: 'none',
+                        },
+                        '&:hover': {
+                          borderColor: '#DC2626',
+                          boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.1)'
+                        },
+                        '&.Mui-focused': {
+                          borderColor: '#DC2626',
+                          boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.2)'
+                        },
+                      },
+                      '& .MuiOutlinedInput-input': {
+                        color: 'var(--text-gray-medium)',
+                        fontSize: '0.875rem',
+                        '&::placeholder': {
+                          color: 'var(--text-gray-medium)',
+                          opacity: 0.8
+                        }
+                      }
+                    }}
+                  />
+                </Box>
+              </Box>
+            </Box>
           </Box>
         );
 
