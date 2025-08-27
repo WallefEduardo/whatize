@@ -185,6 +185,9 @@ class Ticket extends Model<Ticket> {
 
   @Column
   typebotSessionTime: Date
+
+  @Column
+  lastRemoteJid: string;
 }
 
 export default Ticket;

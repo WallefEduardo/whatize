@@ -808,9 +808,17 @@ export const verifyMediaMessage = async (
         isPrivate
       };
 
-      await ticket.update({
-        lastMessage: body
-      });
+      // Só atualiza lastRemoteJid se NÃO for mensagem enviada por nós
+      if (!msg.key.fromMe) {
+        await ticket.update({
+          lastMessage: body,
+          lastRemoteJid: msg.key.remoteJid // Salva o JID/LID usado na última mensagem recebida
+        });
+      } else {
+        await ticket.update({
+          lastMessage: body
+        });
+      }
       logger.error(Error("ERR_WAPP_DOWNLOAD_MEDIA"));
       return CreateMessageService({ messageData, companyId: companyId });
     }
@@ -925,9 +933,17 @@ export const verifyMediaMessage = async (
       isPrivate
     };
 
-    await ticket.update({
-      lastMessage: body || media.filename
-    });
+    // Só atualiza lastRemoteJid se NÃO for mensagem enviada por nós
+    if (!msg.key.fromMe) {
+      await ticket.update({
+        lastMessage: body || media.filename,
+        lastRemoteJid: msg.key.remoteJid // Salva o JID/LID usado na última mensagem recebida
+      });
+    } else {
+      await ticket.update({
+        lastMessage: body || media.filename
+      });
+    }
 
     const newMessage = await CreateMessageService({
       messageData,
@@ -1029,9 +1045,17 @@ export const verifyMessage = async (
     isForwarded
   };
 
-  await ticket.update({
-    lastMessage: body
-  });
+  // Só atualiza lastRemoteJid se NÃO for mensagem enviada por nós
+  if (!msg.key.fromMe) {
+    await ticket.update({
+      lastMessage: body,
+      lastRemoteJid: msg.key.remoteJid // Salva o JID/LID usado na última mensagem recebida
+    });
+  } else {
+    await ticket.update({
+      lastMessage: body
+    });
+  }
 
   await CreateMessageService({ messageData, companyId: companyId });
 
@@ -3068,6 +3092,15 @@ const handleMessage = async (
 
     const isGroup = msg.key.remoteJid?.endsWith("@g.us");
 
+    // 🎯 LOG: Rastrear tipo de identificador recebido
+    logger.info(`📨 [LID-JID-TRACKING] Message received: {
+      remoteJid: '${msg.key.remoteJid}',
+      isLid: ${msg.key.remoteJid?.includes("@lid")},
+      isGroup: ${isGroup},
+      fromMe: ${msg.key.fromMe},
+      messageId: '${msg.key.id}'
+    }`);
+
     const whatsapp = await ShowWhatsAppService(wbot.id!, companyId);
 
     // 🚫 FILTRO MELHORADO: Bloquear grupos quando allowGroup = false, ANTES de qualquer processamento
@@ -3236,7 +3269,17 @@ const handleMessage = async (
 
         await messageToUpdate.update({ isEdited: true, body: bodyEdited });
 
-        await ticket.update({ lastMessage: bodyEdited })
+        // Só atualiza lastRemoteJid se NÃO for mensagem enviada por nós
+        if (!msg.key.fromMe) {
+          await ticket.update({ 
+            lastMessage: bodyEdited,
+            lastRemoteJid: msg.key.remoteJid // Salva o JID/LID usado na última mensagem recebida
+          })
+        } else {
+          await ticket.update({ 
+            lastMessage: bodyEdited
+          })
+        }
 
         
 
@@ -4001,13 +4044,32 @@ const wbotMessageListener = (wbot: Session, companyId: number): void => {
     }
   });
 
+  // Rate limiting para logs de MESSAGES-UPDATE
+  const messageUpdateStats = {
+    lastLogTime: 0,
+    totalUpdates: 0,
+    batchCount: 0
+  };
+  const LOG_THROTTLE_MS = 5000; // Log a cada 5 segundos máximo
+
   wbot.ev.on("messages.update", (messageUpdate: WAMessageUpdate[]) => {
-    logger.info(`🔄 [MESSAGES-UPDATE] INICIO: { companyId: ${companyId}, wbotId: ${wbot.id}, updatesCount: ${messageUpdate.length} }`);
+    const now = Date.now();
+    messageUpdateStats.totalUpdates += messageUpdate.length;
+    messageUpdateStats.batchCount++;
+    
+    // Log throttling - só loga a cada 5 segundos ou se for o primeiro
+    const shouldLog = (now - messageUpdateStats.lastLogTime) >= LOG_THROTTLE_MS || messageUpdateStats.lastLogTime === 0;
+    
+    if (shouldLog) {
+      logger.info(`🔄 [MESSAGES-UPDATE] BATCH: { companyId: ${companyId}, wbotId: ${wbot.id}, batchesProcessed: ${messageUpdateStats.batchCount}, totalUpdates: ${messageUpdateStats.totalUpdates}, currentBatchSize: ${messageUpdate.length} }`);
+      messageUpdateStats.lastLogTime = now;
+      messageUpdateStats.totalUpdates = 0; // Reset counter
+      messageUpdateStats.batchCount = 0;
+    }
     
     try {
       if (messageUpdate.length === 0) {
-        logger.info(`🔄 [MESSAGES-UPDATE] SEM UPDATES: Array vazio`);
-        return;
+        return; // Remove log desnecessário para arrays vazios
       }
       
       messageUpdate.forEach(async (message: WAMessageUpdate) => {
@@ -4038,7 +4100,10 @@ const wbotMessageListener = (wbot: Session, companyId: number): void => {
       }
     });
     
-    logger.info(`🔄 [MESSAGES-UPDATE] CONCLUIDO: { companyId: ${companyId}, wbotId: ${wbot.id} }`);
+    // Só loga conclusão se houve log de início (throttled)
+    if (shouldLog) {
+      logger.info(`🔄 [MESSAGES-UPDATE] CONCLUIDO: { companyId: ${companyId}, wbotId: ${wbot.id} }`);
+    }
     } catch (error) {
       logger.error(`❌ [MESSAGES-UPDATE] ERRO CRITICO: { companyId: ${companyId}, wbotId: ${wbot.id}, error: ${error.message}, stack: ${error.stack} }`);
       throw error;

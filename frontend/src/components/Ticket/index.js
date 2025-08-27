@@ -3,7 +3,7 @@ import { useParams, useHistory } from "react-router-dom";
 
 import clsx from "clsx";
 
-import { makeStyles, Paper } from "@material-ui/core";
+import { makeStyles, Paper, Tooltip } from "@material-ui/core";
 
 import ContactDrawer from "../ContactDrawer";
 import MessageInput from "../MessageInput";
@@ -39,20 +39,104 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     overflow: "hidden",
     borderLeft: "0",
-    marginRight: -drawerWidth,
+    marginRight: 0, // Removido marginRight negativo pois agora é sempre overlay
     transition: theme.transitions.create("margin", {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
+    [theme.breakpoints.down("md")]: {
+      height: "calc(100vh - 64px)", // Ajuste para header mobile
+    },
+    [theme.breakpoints.down("sm")]: {
+      height: "calc(100vh - 56px)",
+    },
+    "@media (max-width: 1366px)": {
+      maxWidth: "100%",
+    },
   },
 
   mainWrapperShift: {
-
     transition: theme.transitions.create("margin", {
       easing: theme.transitions.easing.easeOut,
       duration: theme.transitions.duration.enteringScreen,
     }),
     marginRight: 0,
+  },
+  
+  ticketActionButtonsWrapper: {
+    transition: "all 0.3s ease-in-out",
+    display: "flex",
+    alignItems: "center",
+    gap: "2px",
+    "@media (max-width: 1366px)": {
+      gap: "1px",
+    },
+  },
+  
+  ticketActionButtonsSmall: {
+    "@media (max-width: 1366px)": {
+      "& .MuiIconButton-root": {
+        padding: "2px",
+        margin: "0 1px",
+        "& svg": {
+          fontSize: "1.1rem",
+        },
+      },
+      "& .MuiButton-root": {
+        padding: "2px 6px",
+        fontSize: "0.7rem",
+        minWidth: "auto",
+      },
+    },
+    "@media (max-width: 1200px)": {
+      "& .MuiIconButton-root": {
+        padding: "1px",
+        margin: "0",
+        "& svg": {
+          fontSize: "1rem",
+        },
+      },
+    },
+  },
+  
+  ticketHeaderWrapper: {
+    "@media (max-width: 1366px)": {
+      "& #TicketHeader": {
+        minWidth: "200px !important",
+      },
+    },
+  },
+
+  // Seta flutuante indicativa
+  floatingIndicator: {
+    position: "fixed",
+    top: "50%",
+    right: "15px",
+    transform: "translateY(-50%)",
+    zIndex: 1200,
+    color: "#46c9b3", // Verde do sistema
+    cursor: "pointer",
+    animation: "$pulse 2s infinite",
+    transition: "all 0.3s ease",
+    "&:hover": {
+      transform: "translateY(-50%) scale(1.2)",
+      color: "#3ba896", // Verde mais escuro no hover
+    },
+  },
+
+  "@keyframes pulse": {
+    "0%": {
+      opacity: 0.7,
+      transform: "translateY(-50%) scale(1)",
+    },
+    "50%": {
+      opacity: 1,
+      transform: "translateY(-50%) scale(1.05)",
+    },
+    "100%": {
+      opacity: 0.7,
+      transform: "translateY(-50%) scale(1)",
+    },
   },
 }));
 
@@ -70,6 +154,10 @@ const Ticket = () => {
   const [contact, setContact] = useState({});
   const [ticket, setTicket] = useState({});
   const [dragDropFiles, setDragDropFiles] = useState([]);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [hasSpaceConflict, setHasSpaceConflict] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+  const headerRef = useRef(null);
   const { companyId } = user;
 
   useEffect(() => {
@@ -77,6 +165,67 @@ const Ticket = () => {
     console.log(ticket)
     console.log("===========================")
 }, [ticket])
+
+  // Detectar telas pequenas apenas para responsividade dos botões
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const width = window.innerWidth;
+      setIsSmallScreen(width <= 1366);
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+
+    return () => {
+      window.removeEventListener('resize', checkScreenSize);
+    };
+  }, []);
+
+  // Detectar quando precisa usar modo compacto
+  useEffect(() => {
+    const checkForCompactMode = () => {
+      if (!headerRef.current) return;
+      
+      const headerWidth = headerRef.current.offsetWidth;
+      const ticketInfoElement = document.getElementById('TicketHeader');
+      const ticketInfoWidth = ticketInfoElement ? ticketInfoElement.offsetWidth : 0;
+      
+      // Múltiplas condições para ativar modo compacto
+      const spaceRatio = ticketInfoWidth / headerWidth;
+      const hasLimitedSpace = spaceRatio > 0.45; // Threshold reduzido para 45%
+      const isNarrowScreen = headerWidth < 600; // Telas muito estreitas sempre usam compacto
+      
+      // Detectar se botões quebraram para segunda linha
+      const buttonsContainer = headerRef.current?.querySelector('[style*="flexShrink: 0"]');
+      const headerRect = headerRef.current?.getBoundingClientRect();
+      const buttonsRect = buttonsContainer?.getBoundingClientRect();
+      const buttonsWrapped = buttonsRect && headerRect && 
+        (buttonsRect.top > headerRect.top + 10); // 10px de tolerância
+      
+      const needsCompactMode = hasLimitedSpace || isNarrowScreen || buttonsWrapped;
+      
+      
+      
+      setHasSpaceConflict(needsCompactMode);
+      return needsCompactMode;
+    };
+
+    // Usar requestAnimationFrame para garantir que o layout esteja completo
+    const checkWithAnimation = () => {
+      requestAnimationFrame(() => {
+        setTimeout(checkForCompactMode, 50); // Pequeno delay adicional
+      });
+    };
+
+    checkWithAnimation();
+    
+    // Também verificar quando a janela for redimensionada
+    window.addEventListener('resize', checkWithAnimation);
+    
+    return () => {
+      window.removeEventListener('resize', checkWithAnimation);
+    };
+  }, [drawerOpen, ticket.id]); // Reagir a mudanças no drawer e ticket
 
   useEffect(() => {
     setLoading(true);
@@ -166,6 +315,7 @@ const Ticket = () => {
     setDrawerOpen(false);
   }, []);
 
+
   const renderMessagesList = () => {
     return (
       <>
@@ -192,26 +342,64 @@ const Ticket = () => {
 
   return (
     <div className={classes.root} id="drawer-container">
+      {/* Ícone flutuante indicativo do drawer */}
+      {!drawerOpen && (
+        <Tooltip title="Clique para ver informações do contato" placement="left">
+          <div 
+            className={classes.floatingIndicator}
+            onClick={handleDrawerOpen}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8.59 16.58L13.17 12L8.59 7.41L10 6L16 12L10 18L8.59 16.58Z"/>
+            </svg>
+          </div>
+        </Tooltip>
+      )}
+
       <Paper
         elevation={0}
-        className={clsx(classes.mainWrapper, {
-          [classes.mainWrapperShift]: drawerOpen,
-        })}
+        className={classes.mainWrapper}
       >
         {/* <div id="TicketHeader"> */}
         <TicketHeader loading={loading}>
-          {ticket.contact !== undefined && (
-            <div id="TicketHeader">
-              <TicketInfo
-                contact={contact}
+          <div 
+            ref={headerRef}
+            className={classes.ticketHeaderWrapper} 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              flexWrap: 'nowrap', // Sempre nowrap, deixamos o modo compacto lidar com overflow
+              gap: '8px'
+            }}
+          >
+            {ticket.contact !== undefined && (
+              <div id="TicketHeader" style={{ 
+                flex: '1', 
+                minWidth: '180px', // Sempre valor menor para mais flexibilidade
+                overflow: 'hidden' 
+              }}>
+                <TicketInfo
+                  contact={contact}
+                  ticket={ticket}
+                  onClick={handleDrawerOpen}
+                />
+              </div>
+            )}
+            <div 
+              className={clsx(
+                classes.ticketActionButtonsWrapper,
+                hasSpaceConflict && classes.ticketActionButtonsSmall
+              )}
+              style={{ flexShrink: 0 }}
+            >
+              <TicketActionButtons
                 ticket={ticket}
-                onClick={handleDrawerOpen}
+                compactMode={hasSpaceConflict}
               />
             </div>
-          )}
-          <TicketActionButtons
-            ticket={ticket}
-          />
+          </div>
         </TicketHeader>
         {/* </div> */}
         
@@ -230,6 +418,7 @@ const Ticket = () => {
         contact={contact}
         loading={loading}
         ticket={ticket}
+        isOverlay={true}
       />
 
     </div>

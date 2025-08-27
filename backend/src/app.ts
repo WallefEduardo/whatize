@@ -53,6 +53,8 @@ app.set("queues", {
 
 const allowedOrigins = [
   process.env.FRONTEND_URL || "https://whatize.pro",
+  "https://frontend.whatize.pro", // Adicionar explicitamente para garantir
+  "https://whatize.pro",
   "http://localhost:3000",
   "http://localhost:3002",
   "http://127.0.0.1:3000",
@@ -109,7 +111,7 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Authorization', 'Content-Type', 'Accept'],
+    allowedHeaders: ['Authorization', 'Content-Type', 'Accept', 'Origin', 'X-Requested-With'],
     exposedHeaders: ['Authorization']
   })
 );

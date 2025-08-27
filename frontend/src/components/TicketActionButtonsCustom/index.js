@@ -3,8 +3,8 @@ import { useHistory } from "react-router-dom";
 
 import { Can } from "../Can";
 import { makeStyles } from "@material-ui/core/styles";
-import { IconButton, Menu } from "@material-ui/core";
-import { DeviceHubOutlined, History, MoreVert, PictureAsPdf, Replay, SwapHorizOutlined } from "@material-ui/icons";
+import { IconButton, Menu, MenuItem, Switch } from "@material-ui/core";
+import { DeviceHubOutlined, History, MoreVert, PictureAsPdf, Replay, SwapHorizOutlined, Delete as DeleteIcon, Undo as UndoIcon, HighlightOff as HighlightOffIcon } from "@material-ui/icons";
 import { v4 as uuidv4 } from "uuid";
 
 import { i18n } from "../../translate/i18n";
@@ -21,18 +21,14 @@ import * as Yup from "yup";
 import { Formik, Form } from "formik";
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import DialogContent from '@material-ui/core/DialogContent';
 
 import Button from '@material-ui/core/Button';
 import TransferTicketModalCustom from "../TransferTicketModalCustom";
 import AcceptTicketWithouSelectQueue from "../AcceptTicketWithoutQueueModal";
 
-//icones
-import HighlightOffIcon from "@material-ui/icons/HighlightOff";
-import UndoIcon from '@material-ui/icons/Undo';
-
 import ScheduleModal from "../ScheduleModal";
-import MenuItem from "@material-ui/core/MenuItem";
-import { Switch } from "@material-ui/core";
 import ShowTicketOpen from "../ShowTicketOpenModal";
 import { toast } from "react-toastify";
 import useCompanySettings from "../../hooks/useSettings/companySettings";
@@ -47,10 +43,34 @@ const useStyles = makeStyles(theme => ({
         flex: "none",
         alignSelf: "center",
         marginLeft: "auto",
-        // flexBasis: "50%",
         display: "flex",
+        flexWrap: "nowrap",
+        gap: theme.spacing(0.25),
         "& > *": {
-            margin: theme.spacing(1),
+            margin: theme.spacing(0.25),
+        },
+        "@media (max-width: 1366px)": {
+            marginRight: 2,
+            gap: "2px",
+            "& > *": {
+                margin: "2px",
+            },
+        },
+        [theme.breakpoints.down("md")]: {
+            margin: theme.spacing(0.25),
+            "& > *": {
+                margin: theme.spacing(0.25),
+            },
+        },
+        [theme.breakpoints.down("sm")]: {
+            flexDirection: "row",
+            width: "100%",
+            justifyContent: "flex-end",
+            margin: 0,
+            "& > *": {
+                margin: theme.spacing(0.25),
+                minWidth: "auto",
+            },
         },
     },
     bottomButtonVisibilityIcon: {
@@ -71,7 +91,7 @@ const SessionSchema = Yup.object().shape({
     ratingId: Yup.string().required("Avaliação obrigatória"),
 });
 
-const TicketActionButtonsCustom = ({ ticket
+const TicketActionButtonsCustom = ({ ticket, compactMode = false
     // , showSelectMessageCheckbox,
     // selectedMessages,
     // forwardMessageModalOpen,
@@ -109,6 +129,8 @@ const TicketActionButtonsCustom = ({ ticket
 
     const [anchorEl, setAnchorEl] = useState(null);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [compactMenuAnchor, setCompactMenuAnchor] = useState(null);
+    const [compactMenuOpen, setCompactMenuOpen] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -253,6 +275,14 @@ const TicketActionButtonsCustom = ({ ticket
         setTransferTicketModalOpen(false);
     };
 
+    const handleCloseScheduleModal = () => {
+        setScheduleModalOpen(false);
+    };
+
+    const handleOpenTicketMessageDialog = () => {
+        setOpenTicketMessageDialog(true);
+    };
+
     const handleDeleteTicket = async () => {
         try {
             await api.delete(`/tickets/${ticket.id}`);
@@ -376,6 +406,276 @@ const TicketActionButtonsCustom = ({ ticket
         }
     };
 
+    const handleCompactMenuClick = (event) => {
+        setCompactMenuAnchor(event.currentTarget);
+        setCompactMenuOpen(true);
+    };
+
+    const handleCompactMenuClose = () => {
+        setCompactMenuAnchor(null);
+        setCompactMenuOpen(false);
+    };
+
+    const handleCompactMenuItemClick = (action) => {
+        handleCompactMenuClose();
+        action();
+    };
+
+    const renderResolveDialog = () => (
+        <Formik
+            enableReinitialize={true}
+            validationSchema={SessionSchema}
+            innerRef={formRef}
+            onSubmit={(values, actions) => {
+                setTimeout(() => {
+                    actions.setSubmitting(false);
+                    actions.resetForm();
+                }, 400);
+            }}
+        >
+            {({ values, touched, errors, isSubmitting, setFieldValue, resetForm }) => (
+                <Dialog
+                    open={open}
+                    onClose={handleClose}
+                    aria-labelledby="resolve-dialog-title"
+                    aria-describedby="resolve-dialog-description"
+                    maxWidth="sm"
+                    fullWidth
+                >
+                    <Form>
+                        <DialogTitle id="resolve-dialog-title">
+                            {i18n.t("messagesList.header.buttons.resolve")}
+                        </DialogTitle>
+                        <DialogContent>
+                            <p id="resolve-dialog-description">
+                                Deseja realmente resolver este ticket?
+                            </p>
+                        </DialogContent>
+                        <DialogActions className={classes.botoes}>
+                            <Button
+                                onClick={e => handleCloseTicketWithoutFarewellMsg()}
+                                style={{ background: theme.palette.primary.main, color: "white" }}
+                            >
+                                {i18n.t("messagesList.header.dialogRatingWithoutFarewellMsg")}
+                            </Button>
+
+                            <Button
+                                onClick={e => handleUpdateTicketStatus(e, "closed", user?.id, ticket?.queue?.id)}
+                                style={{ background: theme.palette.primary.main, color: "white" }}
+                            >
+                                {i18n.t("messagesList.header.dialogRatingCancel")}
+                            </Button>
+                        </DialogActions>
+                    </Form>
+                </Dialog>
+            )}
+        </Formik>
+    );
+
+    if (compactMode) {
+        return (
+            <>
+                {openAlert && (
+                    <ShowTicketOpen
+                        isOpen={openAlert}
+                        handleClose={handleCloseAlert}
+                        user={userTicketOpen}
+                        queue={queueTicketOpen}
+                    />
+                )}
+                {acceptTicketWithouSelectQueueOpen && (
+                    <AcceptTicketWithouSelectQueue
+                        modalOpen={acceptTicketWithouSelectQueueOpen}
+                        onClose={(e) => setAcceptTicketWithouSelectQueueOpen(false)}
+                        ticketId={ticket.id}
+                        ticket={ticket}
+                    />
+                )}
+                {showTicketLogOpen && (
+                    <ShowTicketLogModal
+                        isOpen={showTicketLogOpen}
+                        handleClose={(e) => setShowTicketLogOpen(false)}
+                        ticketId={ticket.id}
+                    />
+                )}
+                {openTicketMessageDialog && (
+                    <TicketMessagesDialog
+                        open={openTicketMessageDialog}
+                        handleClose={() => setOpenTicketMessageDialog(false)}
+                        ticketId={ticket.id}
+                    />
+                )}
+                {transferTicketModalOpen && (
+                    <TransferTicketModalCustom
+                        modalOpen={transferTicketModalOpen}
+                        onClose={handleCloseTransferTicketModal}
+                        ticketid={ticket.id}
+                    />
+                )}
+                {scheduleModalOpen && (
+                    <ScheduleModal
+                        open={scheduleModalOpen}
+                        onClose={handleCloseScheduleModal}
+                        aria-labelledby="schedule-modal-title"
+                        contactId={contactId}
+                    />
+                )}
+                {confirmationOpen && (
+                    <ConfirmationModal
+                        title={i18n.t("tickets.buttons.resolve")}
+                        open={confirmationOpen}
+                        onClose={setConfirmationOpen}
+                        onConfirm={handleDeleteTicket}
+                    >
+                        {i18n.t("tickets.confirmationModal.deleteMessage")}
+                    </ConfirmationModal>
+                )}
+
+                <div className={classes.actionButtons}>
+                    {/* Botões de Reabrir para tickets fechados no modo compacto */}
+                    {ticket.status === "closed" && (ticket.queueId === null || ticket.queueId === undefined) && (
+                        <ButtonWithSpinner
+                            loading={loading}
+                            startIcon={<Replay />}
+                            size="small"
+                            onClick={e => handleOpenAcceptTicketWithouSelectQueue()}
+                        >
+                            {i18n.t("messagesList.header.buttons.reopen")}
+                        </ButtonWithSpinner>
+                    )}
+                    {(ticket.status === "closed" && ticket.queueId !== null) && (
+                        <ButtonWithSpinner
+                            startIcon={<Replay />}
+                            loading={loading}
+                            onClick={e => handleAcepptTicket(ticket.id)}
+                        >
+                            {i18n.t("messagesList.header.buttons.reopen")}
+                        </ButtonWithSpinner>
+                    )}
+                    
+                    {/* Botões sempre visíveis no modo compacto */}
+                    {(ticket.status === "open" || ticket.status === "group") && (
+                        <>
+                            <IconButton className={classes.bottomButtonVisibilityIcon}>
+                                <Tooltip title={i18n.t("messagesList.header.buttons.resolve")}>
+                                    <HighlightOffIcon
+                                        onClick={handleClickOpen}
+                                    />
+                                </Tooltip>
+                            </IconButton>
+
+                            <IconButton className={classes.bottomButtonVisibilityIcon}>
+                                <Tooltip title={i18n.t("tickets.buttons.returnQueue")}>
+                                    <UndoIcon
+                                        onClick={(e) => handleUpdateTicketStatus(e, "pending", null)}
+                                    />
+                                </Tooltip>
+                            </IconButton>
+
+                            <IconButton className={classes.bottomButtonVisibilityIcon}>
+                                <Tooltip title="Transferir Ticket">
+                                    <SwapHorizOutlined
+                                        onClick={handleOpenTransferModal}
+                                    />
+                                </Tooltip>
+                            </IconButton>
+                        </>
+                    )}
+                    
+                    {/* Botão de Aceitar para tickets pendentes no modo compacto */}
+                    {ticket.status === "pending" && (ticket.queueId === null || ticket.queueId === undefined) && (
+                        <ButtonWithSpinner
+                            loading={loading}
+                            size="small"
+                            variant="contained"
+                            onClick={e => handleOpenAcceptTicketWithouSelectQueue()}
+                        >
+                            {i18n.t("messagesList.header.buttons.accept")}
+                        </ButtonWithSpinner>
+                    )}
+                    {ticket.status === "pending" && ticket.queueId !== null && (
+                        <ButtonWithSpinner
+                            loading={loading}
+                            size="small"
+                            variant="contained"
+                            onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+                        >
+                            {i18n.t("messagesList.header.buttons.accept")}
+                        </ButtonWithSpinner>
+                    )}
+
+                    <IconButton 
+                        className={classes.bottomButtonVisibilityIcon}
+                        onClick={handleCompactMenuClick}
+                    >
+                        <Tooltip title="Mais opções">
+                            <MoreVert />
+                        </Tooltip>
+                    </IconButton>
+
+                    <Menu
+                        anchorEl={compactMenuAnchor}
+                        open={compactMenuOpen}
+                        onClose={handleCompactMenuClose}
+                        anchorOrigin={{
+                            vertical: 'bottom',
+                            horizontal: 'right',
+                        }}
+                        transformOrigin={{
+                            vertical: 'top',
+                            horizontal: 'right',
+                        }}
+                        PaperProps={{
+                            style: {
+                                maxHeight: 48 * 6,
+                                width: '250px',
+                            },
+                        }}
+                    >
+                        {/* Switch de desabilitar chatbot */}
+                        <MenuItem onClick={(e) => e.stopPropagation()}>
+                            <Switch
+                                size="small"
+                                checked={disableBot}
+                                onChange={() => handleContactToggleDisableBot()}
+                                style={{ marginRight: 8 }}
+                            />
+                            {i18n.t("contactModal.form.chatBotContact")}
+                        </MenuItem>
+
+
+                        {/* Logs do Ticket */}
+                        <MenuItem onClick={() => handleCompactMenuItemClick(() => handleShowLogTicket())}>
+                            <History style={{ marginRight: 8 }} />
+                            {i18n.t("messagesList.header.buttons.logTicket")}
+                        </MenuItem>
+
+                        {/* Habilitar Integração */}
+                        <MenuItem onClick={() => handleCompactMenuItemClick(() => handleEnableIntegration())}>
+                            <DeviceHubOutlined style={{ marginRight: 8, color: enableIntegration ? "green" : "inherit" }} />
+                            {i18n.t("messagesList.header.buttons.enableIntegration")}
+                        </MenuItem>
+
+                        {/* Exportar em PDF */}
+                        <MenuItem onClick={() => handleCompactMenuItemClick(() => handleOpenTicketMessageDialog())}>
+                            <PictureAsPdf style={{ marginRight: 8 }} />
+                            Exportar em PDF
+                        </MenuItem>
+
+                        {/* Deletar ticket */}
+                        <MenuItem onClick={() => handleCompactMenuItemClick(() => handleClickOpen())}>
+                            <DeleteIcon style={{ marginRight: 8 }} />
+                            Deletar Ticket
+                        </MenuItem>
+                    </Menu>
+                </div>
+
+                {/* Diálogo de resolução compartilhado */}
+                {renderResolveDialog()}
+            </>
+        );
+    }
+
     return (
         <>
             {openAlert && (
@@ -477,33 +777,72 @@ const TicketActionButtonsCustom = ({ ticket
                                     />
                                 </Tooltip>
                             </IconButton>
+
+                            <IconButton 
+                                className={classes.bottomButtonVisibilityIcon}
+                                onClick={handleCompactMenuClick}
+                            >
+                                <Tooltip title="Mais opções">
+                                    <MoreVert />
+                                </Tooltip>
+                            </IconButton>
                         </>
 
-                        {/* {showSchedules && (
-                            <>
-                                <IconButton className={classes.bottomButtonVisibilityIcon}>
-                                    <Tooltip title={i18n.t("tickets.buttons.scredule")}>
-                                        <EventIcon
-                                            // color="primary"
-                                            onClick={handleOpenScheduleModal}
-                                        />
-                                    </Tooltip>
-                                </IconButton>
-                            </>
-                        )} */}
-
-                        <MenuItem className={classes.bottomButtonVisibilityIcon}>
-                            <Tooltip title={i18n.t("contactModal.form.chatBotContact")}>
+                        <Menu
+                            anchorEl={compactMenuAnchor}
+                            open={compactMenuOpen}
+                            onClose={handleCompactMenuClose}
+                            anchorOrigin={{
+                                vertical: 'bottom',
+                                horizontal: 'right',
+                            }}
+                            transformOrigin={{
+                                vertical: 'top',
+                                horizontal: 'right',
+                            }}
+                            PaperProps={{
+                                style: {
+                                    maxHeight: 48 * 4.5,
+                                    width: '250px',
+                                },
+                            }}
+                        >
+                            {/* Switch de desabilitar chatbot */}
+                            <MenuItem onClick={(e) => e.stopPropagation()}>
                                 <Switch
                                     size="small"
-                                    // color="primary"
                                     checked={disableBot}
                                     onChange={() => handleContactToggleDisableBot()}
+                                    style={{ marginRight: 8 }}
                                 />
-                            </Tooltip>
-                        </MenuItem>
+                                {i18n.t("contactModal.form.chatBotContact")}
+                            </MenuItem>
 
 
+                            {/* Logs do Ticket */}
+                            <MenuItem onClick={() => handleCompactMenuItemClick(() => handleShowLogTicket())}>
+                                <History style={{ marginRight: 8 }} />
+                                {i18n.t("messagesList.header.buttons.logTicket")}
+                            </MenuItem>
+
+                            {/* Habilitar Integração */}
+                            <MenuItem onClick={() => handleCompactMenuItemClick(() => handleEnableIntegration())}>
+                                <DeviceHubOutlined style={{ marginRight: 8, color: enableIntegration ? "green" : "inherit" }} />
+                                {i18n.t("messagesList.header.buttons.enableIntegration")}
+                            </MenuItem>
+
+                            {/* Exportar em PDF */}
+                            <MenuItem onClick={() => handleCompactMenuItemClick(() => handleOpenTicketMessageDialog())}>
+                                <PictureAsPdf style={{ marginRight: 8 }} />
+                                Exportar em PDF
+                            </MenuItem>
+
+                            {/* Deletar ticket */}
+                            <MenuItem onClick={() => handleCompactMenuItemClick(() => handleClickOpen())}>
+                                <DeleteIcon style={{ marginRight: 8 }} />
+                                Deletar Ticket
+                            </MenuItem>
+                        </Menu>
 
                         {confirmationOpen && (
                             <ConfirmationModal
@@ -601,48 +940,11 @@ const TicketActionButtonsCustom = ({ ticket
                     </MenuItem>
                 </Menu>
             </div>
-            <>
-                <Formik
-                    enableReinitialize={true}
-                    validationSchema={SessionSchema}
-                    innerRef={formRef}
-                    onSubmit={(values, actions) => {
-                        setTimeout(() => {
-                            actions.setSubmitting(false);
-                            actions.resetForm();
-                        }, 400);
-                    }}
-                >
-                    {({ values, touched, errors, isSubmitting, setFieldValue, resetForm }) => (
-                        <Dialog
-                            open={open}
-                            onClose={handleClose}
-                            aria-labelledby="alert-dialog-title"
-                            aria-describedby="alert-dialog-description"
-                        >
-                            <Form>
-                                <DialogActions className={classes.botoes}>
-                                    <Button
-                                        onClick={e => handleCloseTicketWithoutFarewellMsg()}
-                                        style={{ background: theme.palette.primary.main, color: "white" }}
-                                    >
-                                        {i18n.t("messagesList.header.dialogRatingWithoutFarewellMsg")}
-                                    </Button>
 
-                                    <Button
-                                        onClick={e => handleUpdateTicketStatus(e, "closed", user?.id, ticket?.queue?.id)}
-                                        style={{ background: theme.palette.primary.main, color: "white" }}
-                                    >
-                                        {i18n.t("messagesList.header.dialogRatingCancel")}
-                                    </Button>
-                                </DialogActions>
-                            </Form>
-                        </Dialog>
-                    )}
-                </Formik>
-            </>
+            {/* Diálogo de resolução compartilhado */}
+            {renderResolveDialog()}
         </>
     );
-};
+}
 
 export default TicketActionButtonsCustom;

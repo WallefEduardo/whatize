@@ -14,9 +14,9 @@ const GetDefaultWhatsApp = async (
     defaultWhatsapp = await Whatsapp.findOne({
       where: { id: whatsappId, companyId }
     });
-  }else {
-    await Whatsapp.findOne({
-      where: { status: "CONNECTED", companyId }
+  } else {
+    defaultWhatsapp = await Whatsapp.findOne({
+      where: { status: "CONNECTED", companyId, channel: "whatsapp" }
     });
   }
    
@@ -24,8 +24,10 @@ const GetDefaultWhatsApp = async (
   if (defaultWhatsapp?.status === 'CONNECTED') {
     connection = defaultWhatsapp;
   } else {
+    // Buscar qualquer conexão WhatsApp ativa
     const whatsapp = await Whatsapp.findOne({
-      where: { status: "CONNECTED", companyId }
+      where: { status: "CONNECTED", companyId, channel: "whatsapp" },
+      order: [["updatedAt", "DESC"]] // Pegar a mais recente
     });
     connection = whatsapp;
   }

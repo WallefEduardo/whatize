@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 import cacheLayer from "../libs/cache";
-import { removeWbot, restartWbot } from "../libs/wbot";
+import { removeWbot, restartWbot, cleanupWhatsAppSession } from "../libs/wbot";
 import Whatsapp from "../models/Whatsapp";
 import AppError from "../errors/AppError";
 import DeleteBaileysService from "../services/BaileysServices/DeleteBaileysService";
@@ -399,10 +399,11 @@ export const remove = async (
 
 
   if (whatsapp.channel === "whatsapp") {
-    await DeleteBaileysService(whatsappId);
+    // Usar limpeza unificada para delete
+    await cleanupWhatsAppSession(+whatsappId, 'delete');
+    
+    // Deletar do banco de dados
     await DeleteWhatsAppService(whatsappId);
-    await cacheLayer.delFromPattern(`sessions:${whatsappId}:*`);
-    removeWbot(+whatsappId);
 
     io.of(String(companyId))
       .emit(`company-${companyId}-whatsapp`, {
@@ -509,10 +510,11 @@ export const removeAdmin = async (
 
 
   if (whatsapp.channel === "whatsapp") {
-    await DeleteBaileysService(whatsappId);
+    // Usar limpeza unificada para delete (admin)
+    await cleanupWhatsAppSession(+whatsappId, 'delete');
+    
+    // Deletar do banco de dados
     await DeleteWhatsAppService(whatsappId);
-    await cacheLayer.delFromPattern(`sessions:${whatsappId}:*`);
-    removeWbot(+whatsappId);
 
     io.of(String(companyId))
       .emit(`admin-whatsapp`, {

@@ -42,6 +42,7 @@ export default async function ListTicketsServiceReport(
 	  t.id,
 	  w."name" as "whatsappName",
     c."name" as "contactName",
+    c."number" as "contactNumber",
 	  u."name" as "userName",
 	  q."name" as "queueName",
 	  t."lastMessage",
@@ -61,7 +62,19 @@ export default async function ListTicketsServiceReport(
       (date_part('hour', age(coalesce(tt."ratingAt", tt."finishedAt"), tt."createdAt"))) || ' hrs e ' ||
       (date_part('minutes', age(coalesce(tt."ratingAt", tt."finishedAt"), tt."createdAt"))) || ' m'
     ), '0') "supportTime",
-    coalesce(ur.rate, 0) "NPS"
+    coalesce(ur.rate, 0) "NPS",
+    COALESCE(
+      string_agg(DISTINCT tag."name", ', '), 
+      ''
+    ) as "tags",
+    COALESCE(
+      string_agg(DISTINCT CASE 
+        WHEN tag."name" IS NOT NULL AND funil."name" IS NOT NULL 
+        THEN tag."name" || ' / ' || funil."name"
+        ELSE NULL 
+      END, ', '), 
+      ''
+    ) as "etapaFunil"
   from "Tickets" t
   LEFT JOIN (
         SELECT DISTINCT ON ("ticketId") *
@@ -80,6 +93,9 @@ export default async function ListTicketsServiceReport(
       t."userId" = u.id 
     left join "Queues" q on
       t."queueId" = q.id 
+    LEFT JOIN "TicketTags" tt_tag ON t.id = tt_tag."ticketId"
+    LEFT JOIN "Tags" tag ON tt_tag."tagId" = tag.id
+    LEFT JOIN "FunilKanbans" funil ON tag."funilId" = funil.id
   -- filterPeriod`;
   } else {
     query = `
@@ -87,6 +103,7 @@ export default async function ListTicketsServiceReport(
 	  t.id,
 	  w."name" as "whatsappName",
     c."name" as "contactName",
+    c."number" as "contactNumber",
 	  u."name" as "userName",
 	  q."name" as "queueName",
 	  t."lastMessage",
@@ -106,7 +123,19 @@ export default async function ListTicketsServiceReport(
       (date_part('hour', age(coalesce(tt."ratingAt", tt."finishedAt"), tt."createdAt"))) || ' hrs e ' ||
       (date_part('minutes', age(coalesce(tt."ratingAt", tt."finishedAt"), tt."createdAt"))) || ' m'
     ), '0') "supportTime",
-    coalesce(ur.rate, 0) "NPS"
+    coalesce(ur.rate, 0) "NPS",
+    COALESCE(
+      string_agg(DISTINCT tag."name", ', '), 
+      ''
+    ) as "tags",
+    COALESCE(
+      string_agg(DISTINCT CASE 
+        WHEN tag."name" IS NOT NULL AND funil."name" IS NOT NULL 
+        THEN tag."name" || ' / ' || funil."name"
+        ELSE NULL 
+      END, ', '), 
+      ''
+    ) as "etapaFunil"
   from "Tickets" t
   LEFT JOIN (
         SELECT DISTINCT ON ("ticketId") *
@@ -124,6 +153,9 @@ export default async function ListTicketsServiceReport(
       t."userId" = u.id 
     left join "Queues" q on
       t."queueId" = q.id 
+    LEFT JOIN "TicketTags" tt_tag ON t.id = tt_tag."ticketId"
+    LEFT JOIN "Tags" tag ON tt_tag."tagId" = tag.id
+    LEFT JOIN "FunilKanbans" funil ON tag."funilId" = funil.id
   -- filterPeriod`;
   }
   let where = `where t."companyId" = ${companyId}`;
@@ -161,6 +193,9 @@ export default async function ListTicketsServiceReport(
   
   const finalQuery = query.replace("-- filterPeriod", where);
 
+  // Adicionar GROUP BY para consultas com agregação
+  const groupByClause = ` GROUP BY t.id, w."name", c."name", c."number", u."name", q."name", t."lastMessage", t.uuid, t.status, tt."createdAt", tt."finishedAt", tt."ratingAt", ur.rate`;
+  const finalQueryWithGroupBy = finalQuery + groupByClause;
 
   const totalTicketsQuery = `
     SELECT COUNT(*) as total FROM "Tickets" t
@@ -171,7 +206,7 @@ export default async function ListTicketsServiceReport(
   });
   const totalTickets = totalTicketsResult[0];
 
-  const paginatedQuery = `${finalQuery} ORDER BY t."createdAt" DESC LIMIT ${pageSize} OFFSET ${offset}`;
+  const paginatedQuery = `${finalQueryWithGroupBy} ORDER BY t."createdAt" DESC LIMIT ${pageSize} OFFSET ${offset}`;
 
   const responseData: any[] = await sequelize.query(paginatedQuery, {
     type: QueryTypes.SELECT

@@ -254,10 +254,12 @@ const Reports = () => {
           id: ticket.id,
           Conexão: ticket.whatsappName,
           Contato: ticket.contactName,
+          Telefone: ticket.contactNumber,
           Usuário: ticket.userName,
           Fila: ticket.queueName,
           Status: ticket.status,
-          ÚltimaMensagem: ticket.lastMessage,
+          Tags: ticket.tags,
+          EtapaFunil: ticket.etapaFunil,
           DataAbertura: dataCriacao,
           HoraAbertura: horaCriacao,
           DataFechamento: ticket.closedAt === null ? "" : dataFechamento,
@@ -557,10 +559,12 @@ const Reports = () => {
               <TableCell align="center">{i18n.t("reports.table.id")}</TableCell>
               <TableCell align="left">{i18n.t("reports.table.whatsapp")}</TableCell>
               <TableCell align="left">{i18n.t("reports.table.contact")}</TableCell>
+              <TableCell align="left">Telefone</TableCell>
               <TableCell align="left">{i18n.t("reports.table.user")}</TableCell>
               <TableCell align="left">{i18n.t("reports.table.queue")}</TableCell>
               <TableCell align="center">{i18n.t("reports.table.status")}</TableCell>
-              <TableCell align="left">{i18n.t("reports.table.lastMessage")}</TableCell>
+              <TableCell align="left">Tag</TableCell>
+              <TableCell align="left">Etapa/Funil</TableCell>
               <TableCell align="center">{i18n.t("reports.table.dateOpen")}</TableCell>
               <TableCell align="center">{i18n.t("reports.table.dateClose")}</TableCell>
               <TableCell align="center">{i18n.t("reports.table.supportTime")}</TableCell>
@@ -575,10 +579,34 @@ const Reports = () => {
                   <TableCell align="center">{ticket.id}</TableCell>
                   <TableCell align="left">{ticket?.whatsappName}</TableCell>
                   <TableCell align="left">{ticket?.contactName}</TableCell>
+                  <TableCell align="left">{ticket?.contactNumber}</TableCell>
                   <TableCell align="left">{ticket?.userName}</TableCell>
                   <TableCell align="left">{ticket?.queueName}</TableCell>
                   <TableCell align="center">{ticket?.status}</TableCell>
-                  <TableCell align="left">{ticket?.lastMessage}</TableCell>
+                  <TableCell align="left">
+                    {ticket?.tags ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {ticket.tags.split(', ').filter(tag => tag.trim() !== '').map((tag, index) => (
+                          <span
+                            key={index}
+                            style={{
+                              backgroundColor: '#e3f2fd',
+                              color: '#1976d2',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: 500
+                            }}
+                          >
+                            {tag.trim()}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+                  <TableCell align="left">{ticket?.etapaFunil || '-'}</TableCell>
                   <TableCell align="center">{ticket?.createdAt}</TableCell>
                   <TableCell align="center">{ticket?.closedAt}</TableCell>
                   <TableCell align="center">{ticket?.supportTime}</TableCell>

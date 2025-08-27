@@ -55,7 +55,8 @@ const ShowTicketService = async (
       "fromMe",
       "isOutOfHour",
       "isActiveDemand",
-      "typebotSessionTime"
+      "typebotSessionTime",
+      "lastRemoteJid"
     ],
     include: [
       {

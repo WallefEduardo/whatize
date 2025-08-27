@@ -55,11 +55,50 @@ const SendWhatsAppMessage = async ({
   const wbot = await GetTicketWbot(ticket) as Session;
   
   // ✅ TICKETZ COMPAT: Usar getJidOf para resolver JID corretamente
-  const targetJid = getJidOf(ticket);
+  let targetJid;
+  try {
+    // Garantir que o ticket tem contact carregado
+    if (ticket && !ticket.contact) {
+      console.log("⚠️ [SEND-MESSAGE] Ticket sem contact, recarregando...");
+      await ticket.reload({
+        include: [{
+          model: Contact,
+          as: "contact",
+          attributes: ["id", "number", "name", "isGroup", "companyId"]
+        }]
+      });
+    }
+    
+    targetJid = await getJidOf(ticket);
+    
+  } catch (error) {
+    console.error("❌ [SEND-MESSAGE] Erro ao obter JID:", error);
+    
+    // Tentar uma vez mais após recarregar
+    if (ticket) {
+      try {
+        await ticket.reload({
+          include: [{
+            model: Contact,
+            as: "contact",
+            attributes: ["id", "number", "name", "isGroup", "companyId"]
+          }]
+        });
+        targetJid = await getJidOf(ticket);
+      } catch (retryError) {
+        console.error("❌ [SEND-MESSAGE] Falha após retry:", retryError);
+        throw retryError;
+      }
+    } else {
+      throw error;
+    }
+  }
   logger.info(`📤 [WHATIZE-TICKETZ] SendWhatsAppMessage - Target JID resolved: {
     targetJid: '${targetJid}',
     isLidFormat: ${targetJid.includes("@lid")},
-    ticketContactNumber: '${ticket.contact.number}'
+    ticketContactNumber: '${ticket.contact.number}',
+    lastRemoteJid: '${ticket.lastRemoteJid || "not set"}',
+    usingLastRemoteJid: ${!!ticket.lastRemoteJid}
   }`);
 
   if (quotedMsg) {
@@ -165,7 +204,10 @@ const SendWhatsAppMessage = async ({
       messageId: '${sentMessage.key?.id}',
       messageKey: ${JSON.stringify(sentMessage.key)},
       fromMe: ${sentMessage.key?.fromMe},
-      remoteJid: '${sentMessage.key?.remoteJid}'
+      remoteJid: '${sentMessage.key?.remoteJid}',
+      sentToJid: '${targetJid}',
+      wasLidUsed: ${targetJid.includes("@lid")},
+      ticketLastRemoteJid: '${ticket.lastRemoteJid || "not set"}'
     }`);
 
     if (typeof wbot.cacheMessage === "function") {

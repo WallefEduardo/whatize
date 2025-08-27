@@ -325,6 +325,19 @@ const Connections = () => {
     if (confirmModalInfo.action === "disconnect") {
       try {
         await api.delete(`/whatsappsession/${confirmModalInfo.whatsAppId}`);
+        
+        // Re-fetch dados após 2 segundos para garantir atualização
+        setTimeout(async () => {
+          try {
+            const { data } = await api.get("/whatsapp/?session=0");
+            // Força atualização do contexto
+            const event = new CustomEvent('forceWhatsAppRefresh', { detail: data });
+            window.dispatchEvent(event);
+          } catch (error) {
+            // Silent catch for fallback
+          }
+        }, 2000);
+        
       } catch (err) {
         toastError(err);
       }
@@ -421,30 +434,19 @@ const Connections = () => {
             )}
           />
         )}
-        {whatsApp.status === "DISCONNECTED" && (
+        {(whatsApp.status === "DISCONNECTED" || whatsApp.status === "PENDING") && (
           <Can
             role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
             perform="connections-page:addConnection"
             yes={() => (
-              <>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  className={classes.actionButtons}
-                  style={{ marginRight: 8 }}
-                  onClick={() => handleStartWhatsAppSession(whatsApp.id)}
-                >
-                  {i18n.t("connections.buttons.tryAgain")}
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  className={classes.actionButtons}
-                  onClick={() => handleRequestNewQrCode(whatsApp.id)}
-                >
-                  {i18n.t("connections.buttons.newQr")}
-                </Button>
-              </>
+              <Button
+                size="small"
+                variant="outlined"
+                className={classes.actionButtons}
+                onClick={() => handleRequestNewQrCode(whatsApp.id)}
+              >
+                {i18n.t("connections.buttons.newQr")}
+              </Button>
             )}
           />
         )}
@@ -488,12 +490,12 @@ const Connections = () => {
   const renderStatusToolTips = (whatsApp) => {
     return (
       <div className={classes.customTableCell}>
-        {whatsApp.status === "DISCONNECTED" && (
+        {(whatsApp.status === "DISCONNECTED" || whatsApp.status === "PENDING") && (
           <CustomToolTip
-            title={i18n.t("connections.toolTips.disconnected.title")}
-            content={i18n.t("connections.toolTips.disconnected.content")}
+            title={whatsApp.status === "PENDING" ? "Aguardando Reconexão" : i18n.t("connections.toolTips.disconnected.title")}
+            content={whatsApp.status === "PENDING" ? "Sessão desconectada, pronta para nova conexão" : i18n.t("connections.toolTips.disconnected.content")}
           >
-            <SignalCellularConnectedNoInternet0Bar style={{ color: "#E57373" }} />
+            <SignalCellularConnectedNoInternet0Bar style={{ color: whatsApp.status === "PENDING" ? "#FF9800" : "#E57373" }} />
           </CustomToolTip>
         )}
         {whatsApp.status === "OPENING" && (
