@@ -181,6 +181,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
   return new Promise(async (resolve, reject) => {
     try {
       (async () => {
+        logger.info(`🔧 InitWASocket called - WhatsApp: ${whatsapp.name} (ID: ${whatsapp.id}, Status: ${whatsapp.status}, Channel: ${whatsapp.channel})`);
         logger.info(`Starting session ${whatsapp.name}`);
         
         const io = getIO();
@@ -330,7 +331,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
 
 
 
-                io.of(String(companyId))
+                io.of(`/${companyId}`)
                   .emit(`importMessages-${wpp.companyId}`, {
                     action: "update",
                     status: { this: -1, all: -1 }
@@ -338,7 +339,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
 
 
 
-                io.of(String(companyId))
+                io.of(`/${companyId}`)
                   .emit(`company-${companyId}-whatsappSession`, {
                     action: "update",
                     session: wpp
@@ -374,7 +375,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                     }
                   }
                 }
-                io.of(String(companyId))
+                io.of(`/${companyId}`)
                   .emit(`company-${companyId}-whatsappSession`, {
                     action: "update",
                     session: wpp
@@ -410,7 +411,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                 await whatsapp.update({ status: "PENDING", session: "" });
                 await DeleteBaileysService(whatsapp.id);
                 await cacheLayer.delFromPattern(`sessions:${whatsapp.id}:*`);
-                io.of(String(companyId))
+                io.of(`/${companyId}`)
                   .emit(`company-${whatsapp.companyId}-whatsappSession`, {
                     action: "update",
                     session: whatsapp
@@ -430,7 +431,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                 await whatsapp.update({ status: "PENDING", session: "" });
                 await DeleteBaileysService(whatsapp.id);
                 await cacheLayer.delFromPattern(`sessions:${whatsapp.id}:*`);
-                io.of(String(companyId))
+                io.of(`/${companyId}`)
                   .emit(`company-${whatsapp.companyId}-whatsappSession`, {
                     action: "update",
                     session: whatsapp
@@ -470,7 +471,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                   });
 
                   // Emitir erro para o frontend
-                  io.of(String(companyId))
+                  io.of(`/${companyId}`)
                     .emit(`company-${whatsapp.companyId}-whatsappSession`, {
                       action: "validation_error",
                       session: whatsapp,
@@ -492,11 +493,36 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                 number: phoneNumber
               });
 
-              io.of(String(companyId))
-                .emit(`company-${whatsapp.companyId}-whatsappSession`, {
+              // 🎯 CORREÇÃO: Recarregar objeto para ter status atualizado
+              await whatsapp.reload();
+              
+              console.log(`🔥 [CONNECTED] Emitindo socket para frontend - Status: ${whatsapp.status}, ID: ${whatsapp.id}`);
+              
+              console.log(`🔍 [CONNECTED-DEBUG] Tentando criar socketData...`);
+              
+              try {
+                // 🔍 DEBUG: Verificar dados do socket (serializar manualmente)
+                const socketData = {
                   action: "update",
-                  session: whatsapp
-                });
+                  session: {
+                    id: whatsapp.id,
+                    name: whatsapp.name,
+                    status: whatsapp.status,
+                    qrcode: whatsapp.qrcode || "",
+                    companyId: whatsapp.companyId
+                  }
+                };
+                
+                console.log(`🔍 [CONNECTED-DEBUG] SocketData criado com sucesso:`, socketData);
+                console.log(`🔍 [CONNECTED-DEBUG] Emitindo para namespace: /${companyId}`);
+
+                io.of(`/${companyId}`)
+                  .emit(`company-${whatsapp.companyId}-whatsappSession`, socketData);
+                  
+                console.log(`✅ [CONNECTED-DEBUG] Socket emitido com sucesso para namespace /${companyId}!`);
+              } catch (error) {
+                console.error(`❌ [CONNECTED-ERROR] Erro ao emitir socket:`, error);
+              }
 
               const sessionIndex = sessions.findIndex(
                 s => s.id === whatsapp.id
@@ -517,7 +543,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                 });
                 await DeleteBaileysService(whatsappUpdate.id);
                 await cacheLayer.delFromPattern(`sessions:${whatsapp.id}:*`);
-                io.of(String(companyId))
+                io.of(`/${companyId}`)
                   .emit(`company-${whatsapp.companyId}-whatsappSession`, {
                     action: "update",
                     session: whatsappUpdate
@@ -529,6 +555,15 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
               } else {
                 logger.info(`Session QRCode Generate ${name}`);
                 retriesQrCodeMap.set(id, (retriesQrCode += 1));
+                
+                // Debug QR Code format
+                logger.info(`🔍 QR Code Debug - Type: ${typeof qr}, Length: ${qr?.length}`);
+                logger.info(`🔍 QR Code First 200 chars: ${qr?.substring(0, 200)}`);
+                
+                // Check if QR has any unusual format
+                if (qr && qr.includes(',')) {
+                  logger.info(`🔍 QR contains comma - might be formatted`);
+                }
 
                 await whatsapp.update({
                   qrcode: qr,
@@ -536,6 +571,14 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                   retries: 0,
                   number: ""
                 });
+                
+                // Recarregar o objeto do banco para garantir dados atualizados
+                await whatsapp.reload();
+                
+                // Forçar status correto por segurança
+                whatsapp.status = "qrcode";
+                whatsapp.qrcode = qr;
+                
                 const sessionIndex = sessions.findIndex(
                   s => s.id === whatsapp.id
                 );
@@ -545,11 +588,13 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                   sessions.push(wsocket);
                 }
 
-                io.of(String(companyId))
+                logger.info(`📡 Emitting QR code to socket - Company: ${whatsapp.companyId}, WhatsApp ID: ${whatsapp.id}, QR Length: ${whatsapp.qrcode?.length}, Status: ${whatsapp.status}`);
+                io.of(`/${companyId}`)
                   .emit(`company-${whatsapp.companyId}-whatsappSession`, {
                     action: "update",
                     session: whatsapp
                   });
+                logger.info(`✅ QR code emitted via socket`);
               }
             }
             

@@ -44,6 +44,7 @@ import GradientButton from "../GradientButton";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
 const ModernQrCodeModal = ({ open, onClose, whatsAppId }) => {
+  // console.log('🎯 ModernQrCodeModal props:', { open, whatsAppId, hasOnClose: !!onClose });
   const [qrCode, setQrCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(45);
@@ -85,86 +86,118 @@ const ModernQrCodeModal = ({ open, onClose, whatsAppId }) => {
     const fetchSession = async () => {
       if (!whatsAppId) return;
 
-      setLoading(true);
       try {
+        console.log('🔍 Fetching QR for WhatsApp ID:', whatsAppId);
         const { data } = await api.get(`/whatsapp/${whatsAppId}`);
-        
-        // Se não tem QR code e está DISCONNECTED, inicia a sessão
-        if (!data.qrcode && data.status === 'DISCONNECTED') {
-          await api.post(`/whatsappsession/${whatsAppId}`);
-          // O QR code virá via socket, então não para o loading aqui
-        } else {
-          setQrCode(data.qrcode);
-          setLoading(false);
-        }
+        console.log('📱 WhatsApp data received:', {
+          id: data.id,
+          name: data.name,
+          status: data.status,
+          hasQrcode: !!data.qrcode,
+          qrLength: data.qrcode?.length,
+          qrFirst50: data.qrcode?.substring(0, 50) + '...'
+        });
+        setQrCode(data.qrcode);
       } catch (err) {
+        console.error('❌ Error fetching WhatsApp data:', err);
         toastError(err);
-        setLoading(false);
       }
     };
-    
-    if (open) {
-      fetchSession();
-    }
-  }, [whatsAppId, open]);
+    fetchSession();
+  }, [whatsAppId]);
 
   useEffect(() => {
-    if (!whatsAppId || !user.companyId) return;
-    
+    if (!whatsAppId) return;
     const companyId = user.companyId;
 
     const onWhatsappData = (data) => {
-      console.log('📡 Socket data received:', data);
+      console.log('🔥 [FRONTEND-SOCKET] Dados recebidos:', data);
+      console.log('🔥 [FRONTEND-SOCKET] Comparações:', {
+        action: data.action,
+        sessionId: data.session?.id,
+        currentWhatsAppId: whatsAppId,
+        status: data.session?.status,
+        qrcode: data.session?.qrcode,
+        idMatch: data.session?.id === whatsAppId,
+        actionMatch: data.action === "update",
+        qrcodeEmpty: data.session?.qrcode === ""
+      });
       
+      // Atualizar QR code quando recebido
       if (data.action === "update" && data.session.id === whatsAppId) {
-        console.log('🔄 Updating QR code from socket, qrCode:', data.session.qrcode ? 'YES' : 'NO');
         setQrCode(data.session.qrcode);
-        setLoading(false);
-        
-        // Se recebeu um novo QR code, reseta o timer
-        if (data.session.qrcode) {
-          console.log('⏰ Resetting timer to 45 seconds');
-          setTimeLeft(45);
-          setIsExpired(false);
-        }
       }
 
-      if (data.action === "update" && data.session.qrcode === "") {
-        console.log('🚪 Closing modal - QR code is empty');
+      // Fechar modal quando QR code é limpo (método original do Whatize)
+      if (data.action === "update" && data.session.id === whatsAppId && data.session.qrcode === "") {
+        console.log('✅ QR Code limpo - fechando modal (método original)');
         onClose();
+        
+        // Refresh da página após fechar
+        setTimeout(() => {
+          console.log('🔄 Fazendo refresh da página...');
+          window.location.reload();
+        }, 500);
       }
-    };
-    
-    if (socket && socket.on && typeof socket.on === 'function') {
-      socket.on(`company-${companyId}-whatsappSession`, onWhatsappData);
+      
+      // 🎯 NOVA FUNCIONALIDADE: Auto-close quando conectar + refresh da página
+      if (data.action === "update" && 
+          data.session.id === whatsAppId && 
+          data.session.status === "CONNECTED") {
+        console.log('🎉 WhatsApp CONECTADO! Fechando modal e recarregando página...');
+        console.log('🔍 [AUTO-CLOSE-DEBUG] Condições atendidas:', {
+          actionMatch: data.action === "update",
+          idMatch: data.session.id === whatsAppId,
+          statusMatch: data.session.status === "CONNECTED",
+          receivedSessionId: data.session.id,
+          expectedWhatsAppId: whatsAppId,
+          receivedStatus: data.session.status
+        });
+        
+        // Fechar modal imediatamente
+        onClose();
+        
+        // Aguardar um pouco para o modal fechar suavemente, depois refresh
+        setTimeout(() => {
+          console.log('🔄 Fazendo refresh silencioso da página...');
+          window.location.reload();
+        }, 500);
+      } else if (data.action === "update" && data.session.id === whatsAppId) {
+        // 🔍 DEBUG: Se chegou aqui, o ID bate mas o status não
+        console.log('⚠️ [AUTO-CLOSE-DEBUG] ID bateu mas status não:', {
+          receivedStatus: data.session.status,
+          expectedStatus: "CONNECTED",
+          receivedData: data.session
+        });
+      }
     }
+    socket.on(`company-${companyId}-whatsappSession`, onWhatsappData);
 
     return () => {
-      if (socket && socket.off && typeof socket.off === 'function') {
-        socket.off(`company-${companyId}-whatsappSession`, onWhatsappData);
-      }
+      socket.off(`company-${companyId}-whatsappSession`, onWhatsappData);
     };
-  }, [whatsAppId, onClose, socket, user.companyId]);
+  }, [whatsAppId, onClose]);
 
   const handleRefreshQR = async () => {
     if (!whatsAppId) return;
 
     setLoading(true);
     setIsExpired(false);
+    setQrCode(""); // Limpa o QR atual
     
     try {
-      // MESMA LÓGICA que funciona quando modal abre
-      const { data } = await api.get(`/whatsapp/${whatsAppId}`);
+      console.log('🔄 Refreshing QR Code for WhatsApp:', whatsAppId);
       
-      // Se não tem QR code e está DISCONNECTED, inicia a sessão
-      if (!data.qrcode && data.status === 'DISCONNECTED') {
-        await api.post(`/whatsappsession/${whatsAppId}`);
-        // O QR code virá via socket, então não para o loading aqui
-      } else {
-        setQrCode(data.qrcode);
-        setTimeLeft(45);
-        setLoading(false);
-      }
+      // Primeiro limpa o QR antigo (com timeout maior)
+      await api.put(`/whatsappsession/${whatsAppId}`, {}, { timeout: 60000 });
+      
+      // Aguarda um pouco
+      setTimeout(async () => {
+        // Depois pede novo QR (com timeout maior)
+        await api.post(`/whatsappsession/${whatsAppId}`, {}, { timeout: 60000 });
+        // O QR code virá via socket
+      }, 500);
+      
     } catch (err) {
       toastError(err);
       setLoading(false);
@@ -427,7 +460,7 @@ const ModernQrCodeModal = ({ open, onClose, whatsAppId }) => {
                         size={window.innerWidth < 600 ? 240 : 280}
                         level="M"
                         includeMargin={true}
-                        renderAs="svg"
+                        style={{ backgroundColor: "white", padding: '5px' }}
                       />
                     </Box>
                   ) : (

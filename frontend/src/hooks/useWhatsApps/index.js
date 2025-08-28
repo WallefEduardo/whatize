@@ -90,6 +90,7 @@ const useWhatsApps = () => {
 
   useEffect(() => {
     if (user.companyId) {
+      console.log('🔧 useWhatsApps socket setup - companyId:', user.companyId, 'socket exists:', !!socket);
 
       const companyId = user.companyId;
 //    const socket = socketManager.GetSocket();
@@ -97,8 +98,8 @@ const useWhatsApps = () => {
       const onCompanyWhatsapp = (data) => {
         console.log('🔥 Socket WhatsApp event received:', data);
         if (data.action === "update") {
-          console.log('📝 Updating WhatsApp:', data.whatsapp);
-          dispatch({ type: "UPDATE_WHATSAPPS", payload: data.whatsapp });
+          console.log('📝 Updating WhatsApp:', data.session || data.whatsapp);
+          dispatch({ type: "UPDATE_WHATSAPPS", payload: data.session || data.whatsapp });
         }
         if (data.action === "delete") {
           console.log('🗑️ Deleting WhatsApp:', data.whatsappId);
@@ -107,7 +108,15 @@ const useWhatsApps = () => {
       }
 
       const onCompanyWhatsappSession = (data) => {
+        console.log('🎯 whatsappSession socket received:', data);
+        
         if (data.action === "update") {
+          console.log('📱 Updating WhatsApp session:', {
+            id: data.session?.id,
+            status: data.session?.status,
+            name: data.session?.name,
+            hasQrcode: !!data.session?.qrcode
+          });
           dispatch({ type: "UPDATE_SESSION", payload: data.session });
         }
         
@@ -133,16 +142,17 @@ const useWhatsApps = () => {
       }
 
       if (socket && socket.on && typeof socket.on === 'function') {
-
-
+        console.log(`🔌 Setting up socket listener: company-${companyId}-whatsapp`);
         socket.on(`company-${companyId}-whatsapp`, onCompanyWhatsapp);
-
-
+      } else {
+        console.error('❌ Socket not available for company-whatsapp:', socket);
       }
+      
       if (socket && socket.on && typeof socket.on === 'function') {
-
+        console.log(`🔌 Setting up socket listener: company-${companyId}-whatsappSession`);
         socket.on(`company-${companyId}-whatsappSession`, onCompanyWhatsappSession);
-
+      } else {
+        console.error('❌ Socket not available for company-whatsappSession:', socket);
       }
 
       return () => {

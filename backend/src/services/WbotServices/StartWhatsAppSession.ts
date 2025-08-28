@@ -11,10 +11,26 @@ export const StartWhatsAppSession = async (
   whatsapp: Whatsapp,
   companyId: number
 ): Promise<void> => {
+  logger.info(`🚀 Starting WhatsApp Session - ID: ${whatsapp.id}, Name: ${whatsapp.name}, Company: ${companyId}, Status: ${whatsapp.status}`);
+  
+  // 🎯 NOVA FUNCIONALIDADE: Check if WhatsApp is already CONNECTED
+  if (whatsapp.status === "CONNECTED") {
+    logger.info(`✅ WhatsApp ${whatsapp.id} is already CONNECTED, emitting socket directly`);
+    
+    const io = getIO();
+    io.of(`/${companyId}`)
+      .emit(`company-${companyId}-whatsappSession`, {
+        action: "update",
+        session: whatsapp
+      });
+    
+    return; // Don't try to connect again
+  }
+  
   await whatsapp.update({ status: "OPENING" });
 
   const io = getIO();
-  io.of(String(companyId))
+  io.of(`/${companyId}`)
     .emit(`company-${companyId}-whatsappSession`, {
       action: "update",
       session: whatsapp

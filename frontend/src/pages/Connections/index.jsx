@@ -255,18 +255,30 @@ const Connections = () => {
 
   const handleStartWhatsAppSession = async (whatsAppId) => {
     try {
-      await api.post(`/whatsappsession/${whatsAppId}`);
+      console.log('🚀 Starting WhatsApp session for ID:', whatsAppId);
+      const response = await api.post(`/whatsappsession/${whatsAppId}`);
+      console.log('✅ Session start response:', response.data);
       // Context escuta atualizações via socket automaticamente
     } catch (err) {
+      console.error('❌ Error starting session:', err);
       toastError(err);
     }
   };
 
   const handleRequestNewQrCode = async (whatsAppId) => {
     try {
-      await api.put(`/whatsappsession/${whatsAppId}`);
+      console.log('🔄 Requesting new QR Code for WhatsApp:', whatsAppId);
+      // Primeiro limpa o QR antigo (com timeout maior)
+      await api.put(`/whatsappsession/${whatsAppId}`, {}, { timeout: 60000 });
+      // Aguarda um pouco para garantir limpeza
+      setTimeout(async () => {
+        // Depois inicia nova sessão para gerar novo QR (com timeout maior)
+        await api.post(`/whatsappsession/${whatsAppId}`, {}, { timeout: 60000 });
+        console.log('✅ New QR Code requested');
+      }, 500);
       // Context escuta atualizações via socket automaticamente
     } catch (err) {
+      console.error('❌ Error requesting new QR Code:', err);
       toastError(err);
     }
   };
@@ -321,6 +333,14 @@ const Connections = () => {
   };
 
   const handleOpenQrModal = (whatsApp) => {
+    console.log('📱 Opening QR Modal for WhatsApp:', whatsApp);
+    setSelectedWhatsApp(whatsApp);
+    setQrModalOpen(true);
+  };
+
+  // Nova função simples para abrir modal direto
+  const handleOpenQrModalDirect = (whatsApp) => {
+    console.log('🎯 Opening QR Modal DIRECT for WhatsApp:', whatsApp.id, whatsApp.name);
     setSelectedWhatsApp(whatsApp);
     setQrModalOpen(true);
   };
@@ -454,73 +474,25 @@ const Connections = () => {
   const renderActionButtons = (whatsApp) => {
     return (
       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-        {whatsApp.status === "qrcode" && (
-          <Can
-            role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
-            perform="connections-page:addConnection"
-            yes={() => (
-              <ActionButton
-                onClick={() => handleOpenQrModal(whatsApp)}
-                icon={QrCode}
-                tooltip="Novo QR Code"
-                color="#3b82f6"
-                hoverColor="#3b82f6"
-              />
-            )}
-          />
-        )}
-        {whatsApp.status === "DISCONNECTED" && (
-          <Can
-            role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
-            perform="connections-page:addConnection"
-            yes={() => (
-              <>
-                <ActionButton
-                  onClick={() => handleStartWhatsAppSession(whatsApp.id)}
-                  icon={RotateCcw}
-                  tooltip="Tentar Novamente"
-                  color="#f59e0b"
-                  hoverColor="#f59e0b"
-                />
-                <ActionButton
-                  onClick={() => handleOpenQrModal(whatsApp)}
-                  icon={QrCode}
-                  tooltip="Novo QR Code"
-                  color="#3b82f6"
-                  hoverColor="#3b82f6"
-                />
-              </>
-            )}
-          />
-        )}
-        {(whatsApp.status === "CONNECTED" ||
-          whatsApp.status === "PAIRING" ||
-          whatsApp.status === "TIMEOUT") && (
-            <Can
-              role={user.profile}
-              perform="connections-page:addConnection"
-              yes={() => (
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <ActionButton
-                    onClick={() => {
-                      handleOpenConfirmationModal("disconnect", whatsApp.id);
-                    }}
-                    icon={RefreshCw}
-                    tooltip="Desconectar"
-                    color="var(--color-danger)"
-                    hoverColor="var(--color-danger)"
-                  />
-                  {renderImportButton(whatsApp)}
-                </Box>
-              )}
-            />
-          )}
-        {whatsApp.status === "OPENING" && (
+        {whatsApp.status === "CONNECTED" ? (
+          // BOTÃO DESCONECTAR - Quando conectado (vermelho)
           <ActionButton
+            onClick={() => handleOpenConfirmationModal("disconnect", whatsApp.id)}
             icon={RefreshCw}
-            tooltip="Conectando..."
-            color="var(--text-secondary)"
-            disabled={true}
+            tooltip="Desconectar"
+            color="#ef4444"
+            hoverColor="#ef4444"
+            size={16}
+          />
+        ) : (
+          // BOTÃO QR DO WHATSAPP - Para todos os outros status (verde)
+          <ActionButton
+            onClick={() => handleOpenQrModalDirect(whatsApp)}
+            icon={QrCode}
+            tooltip="QR DO WHATSAPP"
+            color="#10b981"
+            hoverColor="#10b981"
+            size={16}
           />
         )}
       </Box>
@@ -985,11 +957,19 @@ const Connections = () => {
                             size={14}
                           />
                           <ActionButton
-                            onClick={() => handleOpenQrModal(whatsApp)}
+                            onClick={() => handleRequestNewQrCode(whatsApp.id)}
                             icon={QrCode}
                             tooltip="Novo QR Code"
                             color="#3b82f6"
                             hoverColor="#3b82f6"
+                            size={14}
+                          />
+                          <ActionButton
+                            onClick={() => handleOpenQrModalDirect(whatsApp)}
+                            icon={QrCode}
+                            tooltip="QR DO WHATSAPP"
+                            color="#10b981"
+                            hoverColor="#10b981"
                             size={14}
                           />
                         </>
@@ -1105,11 +1085,14 @@ const Connections = () => {
       />
 
       {qrModalOpen && (
-        <ModernQrCodeModal
-          open={qrModalOpen}
-          onClose={handleCloseQrModal}
-          whatsAppId={selectedWhatsApp?.id}
-        />
+        <>
+          {console.log('🎯 Rendering ModernQrCodeModal:', { qrModalOpen, selectedWhatsAppId: selectedWhatsApp?.id })}
+          <ModernQrCodeModal
+            open={qrModalOpen}
+            onClose={handleCloseQrModal}
+            whatsAppId={selectedWhatsApp?.id}
+          />
+        </>
       )}
 
 
