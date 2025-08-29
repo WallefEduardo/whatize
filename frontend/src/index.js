@@ -15,4 +15,5 @@ ReactDOM.render(
 	}
 );
 
-serviceworker.register()
+// serviceworker.register() // Desabilitado temporariamente para corrigir cache
+serviceworker.unregister()

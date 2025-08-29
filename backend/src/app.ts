@@ -56,9 +56,9 @@ const allowedOrigins = [
   "https://frontend.whatize.pro", // Adicionar explicitamente para garantir
   "https://whatize.pro",
   "http://localhost:3000",
-  "http://localhost:3002",
+  "http://localhost:3035",
   "http://127.0.0.1:3000",
-  "http://127.0.0.1:3002",
+  "http://127.0.0.1:3035",
   "https://a3a8efef6f16.ngrok-free.app",
   'https://apps-atm-powers-quebec.trycloudflare.com',
   
