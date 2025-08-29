@@ -447,6 +447,19 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
               statusImportMessages
             });
             wsocket.ev.on("messaging-history.set", async (messageSet: any) => {
+              // 🔍 DEBUG: Log para verificar se evento está sendo acionado
+              addLogs({
+                fileName: `debugMessagingHistorySet_${whatsapp.id}.txt`, text: `
+=== MESSAGING-HISTORY.SET ACIONADO ===
+Data/Hora: ${moment().format("DD/MM/YYYY HH:mm:ss")}
+WhatsApp ID: ${whatsapp.id}
+WhatsApp Nome: ${whatsapp.name}
+Messages count: ${messageSet.messages?.length || 0}
+isLatest: ${messageSet.isLatest}
+syncType: ${messageSet.syncType}
+=======================================
+`});
+
               //if(messageSet.isLatest){
 
               const statusImportMessages = new Date().getTime();
@@ -458,6 +471,17 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
               let filteredMessages = messageSet.messages
               let filteredDateMessages = []
               filteredMessages.forEach(msg => {
+                // 🔍 DEBUG: Log para verificar estrutura do messageTimestamp
+                addLogs({
+                  fileName: `debugMessageTimestamp_${whatsapp.id}.txt`, text: `
+=== DEBUG TIMESTAMP STRUCTURE ===
+messageTimestamp type: ${typeof msg.messageTimestamp}
+messageTimestamp value: ${JSON.stringify(msg.messageTimestamp)}
+messageTimestamp["low"]: ${msg.messageTimestamp["low"]}
+messageTimestamp direct: ${msg.messageTimestamp}
+=================================
+`});
+
                 const timestampMsg = Math.floor(msg.messageTimestamp["low"] * 1000)
                 if (isValidMsg(msg) && dateOldLimit < timestampMsg && dateRecentLimit > timestampMsg) {
                   if (msg.key?.remoteJid.split("@")[1] != "g.us") {
@@ -523,28 +547,84 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
 
                 const wpp = await Whatsapp.findByPk(whatsappId);
 
+                // 🔍 DEBUG: Log para verificar condições de execução do ImportWhatsAppMessageService
+                addLogs({
+                  fileName: `debugImportConditions_${whatsappId}.txt`, 
+                  text: `
+=== VERIFICANDO CONDIÇÕES PARA IMPORT ===
+Data/Hora: ${moment().format("DD/MM/YYYY HH:mm:ss")}
+wpp?.importOldMessages: ${!!wpp?.importOldMessages}
+wpp?.statusImportMessages: ${wpp?.statusImportMessages}
+dataMessages[${whatsappId}] count: ${dataMessages[whatsappId]?.length || 0}
+============================================
+`});
+
                 if (wpp?.importOldMessages) {
+                  // 🔒 BLOQUEIO: Se já está executando (status = "Running"), não executa novamente
+                  if (wpp?.statusImportMessages === "Running") {
+                    addLogs({
+                      fileName: `debugImportConditions_${whatsappId}.txt`, 
+                      text: `🔒 BLOQUEADO: Import já está executando (status = "Running")`});
+                    return;
+                  }
+
                   let isTimeStamp = !isNaN(
                     new Date(Math.floor(parseInt(wpp?.statusImportMessages))).getTime()
                   );
+
+                  addLogs({
+                    fileName: `debugImportConditions_${whatsappId}.txt`, 
+                    text: `
+=== CONDIÇÃO TIMESTAMP ===
+isTimeStamp: ${isTimeStamp}
+statusImportMessages parsed: ${Math.floor(parseInt(wpp?.statusImportMessages))}
+==========================
+`});
 
                   if (isTimeStamp) {
                     const ultimoStatus = new Date(
                       Math.floor(parseInt(wpp?.statusImportMessages))
                     ).getTime();
-                    const dataLimite = +add(ultimoStatus, { seconds: +45 }).getTime();
+                    const dataLimite = +add(ultimoStatus, { seconds: +30 }).getTime();
+                    const agora = new Date().getTime();
+
+                    addLogs({
+                      fileName: `debugImportConditions_${whatsappId}.txt`, 
+                      text: `
+=== CONDIÇÃO TEMPO ===
+ultimoStatus: ${moment(ultimoStatus).format("DD/MM/YYYY HH:mm:ss")}
+dataLimite: ${moment(dataLimite).format("DD/MM/YYYY HH:mm:ss")}
+agora: ${moment(agora).format("DD/MM/YYYY HH:mm:ss")}
+dataLimite < agora: ${dataLimite < agora}
+===================
+`});
 
                     if (dataLimite < new Date().getTime()) {
-                      //console.log("Pronto para come?ar")
+                      addLogs({
+                        fileName: `debugImportConditions_${whatsappId}.txt`, 
+                        text: `
+🚀 EXECUTANDO ImportWhatsAppMessageService(${wpp.id})
+Data/Hora: ${moment().format("DD/MM/YYYY HH:mm:ss")}
+`});
                       ImportWhatsAppMessageService(wpp.id)
                       wpp.update({
                         statusImportMessages: "Running"
                       })
 
                     } else {
-                      //console.log("Aguardando inicio")
+                      addLogs({
+                        fileName: `debugImportConditions_${whatsappId}.txt`, 
+                        text: `⏱️ AGUARDANDO: Ainda não passou os 30 segundos necessários`});
                     }
+                  } else {
+                    addLogs({
+                      fileName: `debugImportConditions_${whatsappId}.txt`, 
+                      text: `❌ TIMESTAMP INVÁLIDO: statusImportMessages não é um timestamp válido`});
                   }
+                } else {
+                  addLogs({
+                    fileName: `debugImportConditions_${whatsappId}.txt`, 
+                    text: `❌ IMPORT DESABILITADO: importOldMessages está false/null`});
                 }
                 io.of(String(companyId))
                   .emit(`company-${companyId}-whatsappSession`, {

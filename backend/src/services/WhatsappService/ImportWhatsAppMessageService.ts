@@ -14,6 +14,8 @@ import fs from 'fs';
 import moment from "moment";
 import { addLogs } from "../../helpers/addLogs";
 
+// 🔒 MUTEX: Controle para evitar múltiplas execuções simultâneas
+const importRunning = new Map<number | string, boolean>();
 
 export const closeTicketsImported = async (whatsappId) => {
 
@@ -67,17 +69,59 @@ function cleaner(array) {
 
 
 const ImportWhatsAppMessageService = async (whatsappId: number | string) => {
-  let whatsApp = await Whatsapp.findByPk(whatsappId);
+  // 🔒 MUTEX: Verificar se já está executando
+  if (importRunning.get(whatsappId)) {
+    addLogs({
+      fileName: `debugImportConditions_${whatsappId}.txt`, 
+      text: `🔒 MUTEX BLOQUEIO: Import já está executando para WhatsApp ${whatsappId}`});
+    return;
+  }
 
+  // 🔒 MUTEX: Marcar como executando
+  importRunning.set(whatsappId, true);
+
+  let whatsApp = await Whatsapp.findByPk(whatsappId);
 
   const wbot = getWbot(whatsApp.id);
 
   try {
 
     const io = getIO();
+    
+    // 🔄 RESET: Limpar status no frontend no início da importação
+    io.of(whatsApp.companyId.toString())
+      .emit(`importMessages-${whatsApp.companyId}`, {
+        action: "update",
+        status: { this: -1, all: 0, date: moment().format("DD/MM/YY HH:mm:ss") }
+      });
+    
+    // 🔍 DEBUG: Log para verificar dataMessages antes do processamento
+    addLogs({
+      fileName: `debugDataMessages_${whatsappId}.txt`, forceNewFile: true,
+      text: `
+=== DEBUG DATAMESSAGES CONTENT ===
+Data/Hora: ${moment().format("DD/MM/YYYY HH:mm:ss")}
+WhatsApp ID: ${whatsappId}
+dataMessages[${whatsappId}] exists: ${!!dataMessages[whatsappId]}
+Raw count before cleaner: ${dataMessages[whatsappId]?.length || 0}
+Sample message structure: ${JSON.stringify(dataMessages[whatsappId]?.[0], null, 2)}
+===================================
+`});
+
     const messages = cleaner(dataMessages[whatsappId])
     let dateOldLimit = new Date(whatsApp.importOldMessages).getTime();
     let dateRecentLimit = new Date(whatsApp.importRecentMessages).getTime();
+
+    // 🔍 DEBUG: Log adicional após cleaner
+    addLogs({
+      fileName: `debugDataMessages_${whatsappId}.txt`, 
+      text: `
+=== APÓS CLEANER FUNCTION ===
+Clean messages count: ${messages.length}
+Date limits - Old: ${moment(dateOldLimit).format("DD/MM/YYYY HH:mm:ss")}
+Date limits - Recent: ${moment(dateRecentLimit).format("DD/MM/YYYY HH:mm:ss")}
+=============================
+`});
 
     addLogs({
       fileName: `processImportMessagesWppId${whatsappId}.txt`, forceNewFile: true,
@@ -133,14 +177,34 @@ Mensagem ${i + 1} de ${qtd}
               action: "refresh",
             });
         }
-      } catch (error) { }
+      } catch (error) { 
+        // 🔍 DEBUG: Log de erros que estavam sendo silenciados
+        addLogs({
+          fileName: `errorImportMessages_${whatsappId}.txt`, 
+          text: `
+=== ERROR DURANTE PROCESSAMENTO DA MENSAGEM ${i + 1} ===
+Data/Hora: ${moment().format("DD/MM/YYYY HH:mm:ss")}
+Erro: ${error.message}
+Stack: ${error.stack}
+Mensagem index: ${i}
+Total mensagens: ${qtd}
+========================================================
+`});
+        
+        // Continua o processamento mesmo com erro (comportamento original preservado)
+      }
 
       i++
     }
 
 
   } catch (error) {
+    // 🔒 MUTEX: Limpar mutex em caso de erro
+    importRunning.delete(whatsappId);
     throw new AppError("ERR_NOT_MESSAGE_TO_IMPORT", 403);
+  } finally {
+    // 🔒 MUTEX: Sempre limpar o mutex no final
+    importRunning.delete(whatsappId);
   }
 
   return "whatsapps";
