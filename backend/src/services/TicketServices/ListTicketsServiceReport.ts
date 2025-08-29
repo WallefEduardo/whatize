@@ -64,13 +64,16 @@ export default async function ListTicketsServiceReport(
     ), '0') "supportTime",
     coalesce(ur.rate, 0) "NPS",
     COALESCE(
-      string_agg(DISTINCT tag."name", ', '), 
+      string_agg(DISTINCT CASE 
+        WHEN tag.kanban = 0 THEN tag."name" 
+        ELSE NULL 
+      END, ', '), 
       ''
     ) as "tags",
     COALESCE(
       string_agg(DISTINCT CASE 
-        WHEN tag."name" IS NOT NULL AND funil."name" IS NOT NULL 
-        THEN tag."name" || ' / ' || funil."name"
+        WHEN tag_funil."name" IS NOT NULL AND funil."name" IS NOT NULL 
+        THEN tag_funil."name" || ' / ' || funil."name"
         ELSE NULL 
       END, ', '), 
       ''
@@ -93,9 +96,11 @@ export default async function ListTicketsServiceReport(
       t."userId" = u.id 
     left join "Queues" q on
       t."queueId" = q.id 
+    LEFT JOIN "ContactTags" ct_tag ON c.id = ct_tag."contactId"
+    LEFT JOIN "Tags" tag ON ct_tag."tagId" = tag.id
     LEFT JOIN "TicketTags" tt_tag ON t.id = tt_tag."ticketId"
-    LEFT JOIN "Tags" tag ON tt_tag."tagId" = tag.id
-    LEFT JOIN "FunilKanbans" funil ON tag."funilId" = funil.id
+    LEFT JOIN "Tags" tag_funil ON tt_tag."tagId" = tag_funil.id
+    LEFT JOIN "FunilKanbans" funil ON tag_funil."funilId" = funil.id
   -- filterPeriod`;
   } else {
     query = `
@@ -125,13 +130,16 @@ export default async function ListTicketsServiceReport(
     ), '0') "supportTime",
     coalesce(ur.rate, 0) "NPS",
     COALESCE(
-      string_agg(DISTINCT tag."name", ', '), 
+      string_agg(DISTINCT CASE 
+        WHEN tag.kanban = 0 THEN tag."name" 
+        ELSE NULL 
+      END, ', '), 
       ''
     ) as "tags",
     COALESCE(
       string_agg(DISTINCT CASE 
-        WHEN tag."name" IS NOT NULL AND funil."name" IS NOT NULL 
-        THEN tag."name" || ' / ' || funil."name"
+        WHEN tag_funil."name" IS NOT NULL AND funil."name" IS NOT NULL 
+        THEN tag_funil."name" || ' / ' || funil."name"
         ELSE NULL 
       END, ', '), 
       ''
@@ -153,9 +161,11 @@ export default async function ListTicketsServiceReport(
       t."userId" = u.id 
     left join "Queues" q on
       t."queueId" = q.id 
+    LEFT JOIN "ContactTags" ct_tag ON c.id = ct_tag."contactId"
+    LEFT JOIN "Tags" tag ON ct_tag."tagId" = tag.id
     LEFT JOIN "TicketTags" tt_tag ON t.id = tt_tag."ticketId"
-    LEFT JOIN "Tags" tag ON tt_tag."tagId" = tag.id
-    LEFT JOIN "FunilKanbans" funil ON tag."funilId" = funil.id
+    LEFT JOIN "Tags" tag_funil ON tt_tag."tagId" = tag_funil.id
+    LEFT JOIN "FunilKanbans" funil ON tag_funil."funilId" = funil.id
   -- filterPeriod`;
   }
   let where = `where t."companyId" = ${companyId}`;
