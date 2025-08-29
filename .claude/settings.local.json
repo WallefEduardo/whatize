@@ -8,7 +8,8 @@
       "Read(//home/wallef/sistemas/whatize/frontend/src/hooks/useAuth.js/**)",
       "Read(//home/wallef/sistemas/whatize/frontend/src/pages/Tags/**)",
       "Read(//home/wallef/sistemas/DashTemplate/app/[lang]/(dashboard)/(forms)/form-wizard/**)",
-      "Read(/home/wallef/sistemas/whatize/frontend/src/pages/Connections/**)"
+      "Read(/home/wallef/sistemas/whatize/frontend/src/pages/Connections/**)",
+      "Read(/home/eduardo_wallef/sistemas/TemplateDash/**)"
     ],
     "deny": []
   }
