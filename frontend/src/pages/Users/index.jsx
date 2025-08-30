@@ -19,6 +19,8 @@ import {
   Card,
   CardContent
 } from "@mui/material";
+import UserRegister from "../../components/UserRegister";
+import UserProfile from "../../components/UserProfile";
 
 import {
   Search as SearchIcon,
@@ -194,6 +196,7 @@ const Users = () => {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [searchParam, setSearchParam] = useState("");
   const [users, dispatch] = useReducer(reducer, []);
+  const [currentView, setCurrentView] = useState('users'); // 'users', 'register', 'profile'
 
   useEffect(() => {
     dispatch({ type: "RESET" });
@@ -729,7 +732,47 @@ const Users = () => {
         <ForbiddenPage />
       ) : (
         <>
-          <div 
+          {currentView === 'register' && (
+            <Box>
+              <Button
+                onClick={() => setCurrentView('users')}
+                sx={{
+                  mb: 2,
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#4b5563'
+                  }
+                }}
+              >
+                ← Voltar para Usuários
+              </Button>
+              <UserRegister />
+            </Box>
+          )}
+          
+          {currentView === 'profile' && (
+            <Box>
+              <Button
+                onClick={() => setCurrentView('users')}
+                sx={{
+                  mb: 2,
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#4b5563'
+                  }
+                }}
+              >
+                ← Voltar para Usuários
+              </Button>
+              <UserProfile />
+            </Box>
+          )}
+          
+          {currentView === 'users' && (
+            <>
+            <div 
             className={classes.searchContainer}
             style={{
               display: "flex",
@@ -788,6 +831,36 @@ const Users = () => {
               flexShrink: 0,
               marginLeft: "auto"
             }}>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => setCurrentView('register')}
+                sx={{
+                  backgroundColor: '#ff9800',
+                  color: 'white',
+                  mr: 1,
+                  '&:hover': {
+                    backgroundColor: '#f57c00'
+                  }
+                }}
+              >
+                UserRegister
+              </Button>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => setCurrentView('profile')}
+                sx={{
+                  backgroundColor: '#2196f3',
+                  color: 'white',
+                  mr: 1,
+                  '&:hover': {
+                    backgroundColor: '#1976d2'
+                  }
+                }}
+              >
+                UserProfile
+              </Button>
               <GradientButton
                 icon={<Plus size={16} />}
                 size="small"
@@ -847,6 +920,8 @@ const Users = () => {
               minHeight={500}
             />
           </Box>
+            </>
+          )}
         </>
       )}
     </PageLayout>
