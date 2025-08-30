@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Box, Card, CardContent, Typography, Switch, FormControlLabel } from '@mui/material';
-import { User, MapPin, Settings, Shield, CreditCard, ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import { 
+  User, MapPin, Settings, Shield, CreditCard, ChevronLeft, ChevronRight, Save,
+  Eye, MessageSquare, X, BarChart3, Users, Zap, Monitor
+} from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Textarea } from '../ui/Textarea';
@@ -32,14 +35,16 @@ const UserRegister = ({ onClose }) => {
     horarioFim: '',
     tema: '',
     menuPadrao: '',
+    fila: '',
+    conexao: '',
+    perfil: '',
+    mensagemDespedida: '',
     // Permissões
     permissoes: {
-      criarContatos: false,
-      editarContatos: false,
-      excluirContatos: false,
-      verTodosContatos: false,
-      criarTickets: false,
-      editarTickets: false,
+      visualizarChamadosSemFila: false,
+      verConversasOutrasFilas: false,
+      permitirFecharTicketsPendentes: false,
+      verDashboard: false,
       permitirGrupos: false,
       verConversasOutrosUsuarios: false,
       acoesConexoes: false,
@@ -147,7 +152,7 @@ const UserRegister = ({ onClose }) => {
             Data de Admissão
           </Typography>
           <DatePicker
-            selected={formData.dataAdmissao}
+            value={formData.dataAdmissao}
             onChange={(date) => handleInputChange('dataAdmissao', date)}
           />
         </Box>
@@ -265,13 +270,34 @@ const UserRegister = ({ onClose }) => {
             value={formData.estado}
             onChange={(e) => handleInputChange('estado', e.target.value)}
           >
-            <option value="">Selecione</option>
-            <option value="SP">São Paulo</option>
-            <option value="RJ">Rio de Janeiro</option>
+            <option value="">Selecione um estado</option>
+            <option value="AC">Acre</option>
+            <option value="AL">Alagoas</option>
+            <option value="AP">Amapá</option>
+            <option value="AM">Amazonas</option>
+            <option value="BA">Bahia</option>
+            <option value="CE">Ceará</option>
+            <option value="DF">Distrito Federal</option>
+            <option value="ES">Espírito Santo</option>
+            <option value="GO">Goiás</option>
+            <option value="MA">Maranhão</option>
+            <option value="MT">Mato Grosso</option>
+            <option value="MS">Mato Grosso do Sul</option>
             <option value="MG">Minas Gerais</option>
-            <option value="RS">Rio Grande do Sul</option>
+            <option value="PA">Pará</option>
+            <option value="PB">Paraíba</option>
             <option value="PR">Paraná</option>
+            <option value="PE">Pernambuco</option>
+            <option value="PI">Piauí</option>
+            <option value="RJ">Rio de Janeiro</option>
+            <option value="RN">Rio Grande do Norte</option>
+            <option value="RS">Rio Grande do Sul</option>
+            <option value="RO">Rondônia</option>
+            <option value="RR">Roraima</option>
             <option value="SC">Santa Catarina</option>
+            <option value="SP">São Paulo</option>
+            <option value="SE">Sergipe</option>
+            <option value="TO">Tocantins</option>
           </Select>
         </Box>
       </Box>
@@ -346,6 +372,79 @@ const UserRegister = ({ onClose }) => {
           </Select>
         </Box>
       </Box>
+
+      {/* Linha 2: Fila, Conexão, Perfil - 3 campos em uma linha */}
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: '1fr 1fr 1fr', 
+        gap: 3, 
+        mb: 3,
+        '@media (max-width: 768px)': {
+          gridTemplateColumns: '1fr',
+          gap: 2,
+        }
+      }}>
+        <Box>
+          <Typography variant="body2" sx={{ mb: 1.5, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+            Fila
+          </Typography>
+          <Select
+            value={formData.fila}
+            onChange={(e) => handleInputChange('fila', e.target.value)}
+          >
+            <option value="">Selecione uma fila</option>
+            <option value="atendimento">Atendimento</option>
+            <option value="vendas">Vendas</option>
+            <option value="suporte">Suporte</option>
+            <option value="financeiro">Financeiro</option>
+            <option value="comercial">Comercial</option>
+          </Select>
+        </Box>
+        <Box>
+          <Typography variant="body2" sx={{ mb: 1.5, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+            Conexão
+          </Typography>
+          <Select
+            value={formData.conexao}
+            onChange={(e) => handleInputChange('conexao', e.target.value)}
+          >
+            <option value="">Selecione uma conexão</option>
+            <option value="whatsapp1">WhatsApp 1</option>
+            <option value="whatsapp2">WhatsApp 2</option>
+            <option value="whatsapp3">WhatsApp 3</option>
+            <option value="telegram">Telegram</option>
+            <option value="messenger">Messenger</option>
+          </Select>
+        </Box>
+        <Box>
+          <Typography variant="body2" sx={{ mb: 1.5, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+            Perfil
+          </Typography>
+          <Select
+            value={formData.perfil}
+            onChange={(e) => handleInputChange('perfil', e.target.value)}
+          >
+            <option value="">Selecione um perfil</option>
+            <option value="admin">Administrador</option>
+            <option value="supervisor">Supervisor</option>
+            <option value="user">Usuário</option>
+            <option value="atendente">Atendente</option>
+          </Select>
+        </Box>
+      </Box>
+
+      {/* Linha 3: Mensagem de Despedida */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="body2" sx={{ mb: 1.5, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+          Mensagem de Despedida <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>(Opcional)</span>
+        </Typography>
+        <Textarea
+          rows={3}
+          value={formData.mensagemDespedida}
+          onChange={(e) => handleInputChange('mensagemDespedida', e.target.value)}
+          placeholder="Digite uma mensagem de despedida personalizada para quando o atendimento for finalizado..."
+        />
+      </Box>
     </Box>
   );
 
@@ -353,73 +452,59 @@ const UserRegister = ({ onClose }) => {
   const renderPermissoes = () => {
     const permissions = [
       { 
-        key: 'criarContatos', 
-        label: 'Criar Contatos',
-        description: 'Permite criar novos contatos no sistema',
-        icon: User,
+        key: 'visualizarChamadosSemFila', 
+        label: 'Visualizar Chamados sem Fila',
+        description: 'Permite visualizar chamados que não possuem fila definida',
+        icon: Eye,
         color: '#3b82f6'
       },
       { 
-        key: 'editarContatos', 
-        label: 'Editar Contatos',
-        description: 'Permite editar contatos existentes',
-        icon: User,
+        key: 'verConversasOutrasFilas', 
+        label: 'Ver Conversas de Outras Filas',
+        description: 'Visualizar conversas de filas diferentes da sua',
+        icon: MessageSquare,
         color: '#10b981'
       },
       { 
-        key: 'excluirContatos', 
-        label: 'Excluir Contatos',
-        description: 'Permite excluir contatos do sistema',
-        icon: User,
-        color: '#ef4444'
+        key: 'permitirFecharTicketsPendentes', 
+        label: 'Permitir Fechar Tickets Pendentes',
+        description: 'Permite fechar tickets que estão com status pendente',
+        icon: X,
+        color: '#f59e0b'
       },
       { 
-        key: 'verTodosContatos', 
-        label: 'Ver Todos Contatos',
-        description: 'Visualizar contatos de todos os usuários',
-        icon: User,
+        key: 'verDashboard', 
+        label: 'Ver Dashboard',
+        description: 'Acesso ao painel principal com estatísticas e métricas',
+        icon: BarChart3,
         color: '#8b5cf6'
-      },
-      { 
-        key: 'criarTickets', 
-        label: 'Criar Tickets',
-        description: 'Permite criar novos tickets de atendimento',
-        icon: Shield,
-        color: '#06b6d4'
-      },
-      { 
-        key: 'editarTickets', 
-        label: 'Editar Tickets',
-        description: 'Permite editar tickets existentes',
-        icon: Shield,
-        color: '#84cc16'
       },
       { 
         key: 'permitirGrupos', 
         label: 'Permitir Grupos',
         description: 'Acesso para trabalhar com grupos do WhatsApp',
-        icon: Settings,
-        color: '#f59e0b'
+        icon: Users,
+        color: '#06b6d4'
       },
       { 
         key: 'verConversasOutrosUsuarios', 
         label: 'Ver Conversas de Outros Usuários',
         description: 'Visualizar conversas de outros atendentes',
-        icon: Settings,
+        icon: User,
         color: '#ec4899'
       },
       { 
         key: 'acoesConexoes', 
-        label: 'Ações em Conexões',
-        description: 'Gerenciar conexões do WhatsApp',
-        icon: Settings,
+        label: 'Permitir Ações nas Conexões',
+        description: 'Gerenciar e executar ações nas conexões do WhatsApp',
+        icon: Zap,
         color: '#6366f1'
       },
       { 
         key: 'verPainelAtendimentos', 
         label: 'Ver Painel de Atendimentos',
-        description: 'Acesso ao painel geral de atendimentos',
-        icon: Shield,
+        description: 'Acesso ao painel geral de atendimentos e métricas',
+        icon: Monitor,
         color: '#14b8a6'
       }
     ];
