@@ -758,7 +758,7 @@ const Users = () => {
               >
                 ← Voltar para Usuários
               </Button>
-              <UserProfile />
+              <UserProfile onClose={() => setCurrentView('users')} />
             </Box>
           )}
           

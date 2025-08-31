@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button as MuiButton } from '@mui/material';
 import { motion } from 'framer-motion';
-import { cn } from '../../utils/cn';
+import { cn } from '../../lib/utils';
 
 /**
  * ModernButton - Botão estilizado com variantes e micro-animações
