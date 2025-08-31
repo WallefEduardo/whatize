@@ -27,6 +27,20 @@ interface Request {
   defaultTicketsManagerWidth?: number;
   allowRealTime?: string;
   allowConnections?: string;
+  // Novos campos de dados pessoais/profissionais
+  telefone?: string;
+  cargo?: string;
+  departamento?: string;
+  dataAdmissao?: Date;
+  sobre?: string;
+  // Novos campos de endereço
+  cep?: string;
+  endereco?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
 }
 
 interface Response {
@@ -56,7 +70,21 @@ const CreateUserService = async ({
   showDashboard,
   defaultTicketsManagerWidth = 550,
   allowRealTime,
-  allowConnections
+  allowConnections,
+  // Novos campos de dados pessoais/profissionais
+  telefone,
+  cargo,
+  departamento,
+  dataAdmissao,
+  sobre,
+  // Novos campos de endereço
+  cep,
+  endereco,
+  numero,
+  complemento,
+  bairro,
+  cidade,
+  estado
 }: Request): Promise<Response> => {
   if (companyId !== undefined) {
     const company = await Company.findOne({
@@ -132,7 +160,21 @@ const CreateUserService = async ({
       showDashboard,
       defaultTicketsManagerWidth,
       allowRealTime,
-      allowConnections
+      allowConnections,
+      // Novos campos de dados pessoais/profissionais
+      telefone,
+      cargo,
+      departamento,
+      dataAdmissao,
+      sobre,
+      // Novos campos de endereço
+      cep,
+      endereco,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      estado
     },
     { include: ["queues", "company"] }
   );

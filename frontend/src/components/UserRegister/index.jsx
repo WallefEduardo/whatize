@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Box, Card, CardContent, Typography, Switch, FormControlLabel } from '@mui/material';
 import { 
   User, MapPin, Settings, Shield, CreditCard, ChevronLeft, ChevronRight, Save,
@@ -12,8 +12,19 @@ import { DatePicker } from '../ui/DatePicker';
 import { TimePicker } from '../ui/TimePicker';
 import FormButtons from '../ui/FormButtons';
 
+import api from "../../services/api";
+import toastError from "../../errors/toastError";
+import { toast } from "../ui/ToastProvider";
+import { AuthContext } from "../../context/Auth/AuthContext";
+import useWhatsApps from "../../hooks/useWhatsApps";
+import QueueSelect from "../QueueSelect";
+
 const UserRegister = ({ onClose }) => {
+  const { user: loggedInUser } = useContext(AuthContext);
+  const { loading, whatsApps } = useWhatsApps();
   const [activeStep, setActiveStep] = useState(0);
+  const [selectedQueueIds, setSelectedQueueIds] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     // Dados Gerais
     nome: '',
@@ -31,13 +42,13 @@ const UserRegister = ({ onClose }) => {
     cidade: '',
     estado: '',
     // Configurações
-    horarioInicio: '',
-    horarioFim: '',
-    tema: '',
-    menuPadrao: '',
+    horarioInicio: '00:00',
+    horarioFim: '23:59',
+    tema: 'light',
+    menuPadrao: 'open',
     fila: '',
     conexao: '',
-    perfil: '',
+    perfil: 'user',
     mensagemDespedida: '',
     // Permissões
     permissoes: {
@@ -82,8 +93,10 @@ const UserRegister = ({ onClose }) => {
   };
 
   const handleNext = () => {
-    if (activeStep < steps.length - 1) {
-      setActiveStep(activeStep + 1);
+    if (validateStep()) {
+      if (activeStep < steps.length - 1) {
+        setActiveStep(activeStep + 1);
+      }
     }
   };
 
@@ -93,11 +106,124 @@ const UserRegister = ({ onClose }) => {
     }
   };
 
-  const handleSubmit = () => {
-    console.log('Dados do formulário:', formData);
-    // Aqui você enviaria os dados para o backend
-    alert('Usuário cadastrado com sucesso!');
-    onClose();
+  // Validações
+  const validateStep = () => {
+    switch (activeStep) {
+      case 0: // Dados Gerais
+        if (!formData.nome.trim()) {
+          toast.error('Nome é obrigatório');
+          return false;
+        }
+        if (!formData.telefone.trim()) {
+          toast.error('Telefone é obrigatório');
+          return false;
+        }
+        break;
+      case 1: // Endereço - opcional
+        break;
+      case 2: // Configurações
+        if (formData.horarioInicio === '00:00' && formData.horarioFim === '00:00') {
+          toast.error('Início e fim de trabalho não podem ser ambos 00:00');
+          return false;
+        }
+        if (!formData.perfil) {
+          toast.error('Perfil é obrigatório');
+          return false;
+        }
+        break;
+      case 3: // Permissões - opcional
+        break;
+      case 4: // Dados da Conta
+        if (!formData.email.trim()) {
+          toast.error('Email é obrigatório');
+          return false;
+        }
+        if (!formData.senha) {
+          toast.error('Senha é obrigatória');
+          return false;
+        }
+        if (formData.senha !== formData.confirmarSenha) {
+          toast.error('Senhas não coincidem');
+          return false;
+        }
+        if (formData.senha.length < 5) {
+          toast.error('Senha deve ter pelo menos 5 caracteres');
+          return false;
+        }
+        break;
+      default:
+        break;
+    }
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateStep()) return;
+
+    setIsSubmitting(true);
+
+    try {
+      // Mapear dados do frontend para backend
+      const userData = {
+        // Campos básicos
+        name: formData.nome,
+        email: formData.email,
+        password: formData.senha,
+        profile: formData.perfil,
+        companyId: loggedInUser.companyId,
+        
+        // Configurações
+        startWork: formData.horarioInicio,
+        endWork: formData.horarioFim,
+        defaultTheme: formData.tema,
+        defaultMenu: formData.menuPadrao,
+        farewellMessage: formData.mensagemDespedida,
+        whatsappId: formData.conexao || null,
+        queueIds: selectedQueueIds,
+        
+        // Permissões (mapear para nomes do backend)
+        allTicket: formData.permissoes.visualizarChamadosSemFila ? 'enable' : 'disable',
+        allHistoric: formData.permissoes.verConversasOutrasFilas ? 'enabled' : 'disabled',
+        userClosePendingTicket: formData.permissoes.permitirFecharTicketsPendentes ? 'enabled' : 'disabled',
+        showDashboard: formData.permissoes.verDashboard ? 'enabled' : 'disabled',
+        allowGroup: formData.permissoes.permitirGrupos,
+        allUserChat: formData.permissoes.verConversasOutrosUsuarios ? 'enabled' : 'disabled',
+        allowConnections: formData.permissoes.acoesConexoes ? 'enabled' : 'disabled',
+        allowRealTime: formData.permissoes.verPainelAtendimentos ? 'enabled' : 'disabled',
+        
+        // Novos campos pessoais/profissionais
+        telefone: formData.telefone,
+        cargo: formData.cargo,
+        departamento: formData.departamento,
+        dataAdmissao: formData.dataAdmissao,
+        sobre: formData.sobre,
+        
+        // Novos campos de endereço
+        cep: formData.cep,
+        endereco: formData.endereco,
+        numero: formData.numero,
+        complemento: formData.complemento,
+        bairro: formData.bairro,
+        cidade: formData.cidade,
+        estado: formData.estado
+      };
+
+      console.log('Enviando dados:', userData);
+
+      const response = await api.post("/users", userData);
+      
+      toast.success('Usuário cadastrado com sucesso!');
+      onClose();
+      
+      // Opcional: recarregar lista de usuários se necessário
+      // window.location.reload();
+      
+    } catch (err) {
+      console.error('Erro ao cadastrar usuário:', err);
+      toastError(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Step 1: Dados Gerais
@@ -364,19 +490,27 @@ const UserRegister = ({ onClose }) => {
             value={formData.menuPadrao}
             onChange={(e) => handleInputChange('menuPadrao', e.target.value)}
           >
-            <option value="">Selecione uma página</option>
-            <option value="dashboard">Dashboard</option>
-            <option value="tickets">Tickets</option>
-            <option value="contacts">Contatos</option>
-            <option value="campaigns">Campanhas</option>
+            <option value="open">Aberto</option>
+            <option value="closed">Fechado</option>
           </Select>
         </Box>
       </Box>
 
-      {/* Linha 2: Fila, Conexão, Perfil - 3 campos em uma linha */}
+      {/* Linha 2: Fila, Conexão, Perfil */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="body2" sx={{ mb: 1.5, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+          Filas
+        </Typography>
+        <QueueSelect
+          selectedQueueIds={selectedQueueIds}
+          onChange={values => setSelectedQueueIds(values)}
+          fullWidth
+        />
+      </Box>
+
       <Box sx={{ 
         display: 'grid', 
-        gridTemplateColumns: '1fr 1fr 1fr', 
+        gridTemplateColumns: '1fr 1fr', 
         gap: 3, 
         mb: 3,
         '@media (max-width: 768px)': {
@@ -386,34 +520,18 @@ const UserRegister = ({ onClose }) => {
       }}>
         <Box>
           <Typography variant="body2" sx={{ mb: 1.5, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
-            Fila
-          </Typography>
-          <Select
-            value={formData.fila}
-            onChange={(e) => handleInputChange('fila', e.target.value)}
-          >
-            <option value="">Selecione uma fila</option>
-            <option value="atendimento">Atendimento</option>
-            <option value="vendas">Vendas</option>
-            <option value="suporte">Suporte</option>
-            <option value="financeiro">Financeiro</option>
-            <option value="comercial">Comercial</option>
-          </Select>
-        </Box>
-        <Box>
-          <Typography variant="body2" sx={{ mb: 1.5, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
-            Conexão
+            Conexão WhatsApp
           </Typography>
           <Select
             value={formData.conexao}
             onChange={(e) => handleInputChange('conexao', e.target.value)}
           >
-            <option value="">Selecione uma conexão</option>
-            <option value="whatsapp1">WhatsApp 1</option>
-            <option value="whatsapp2">WhatsApp 2</option>
-            <option value="whatsapp3">WhatsApp 3</option>
-            <option value="telegram">Telegram</option>
-            <option value="messenger">Messenger</option>
+            <option value="">Nenhuma conexão</option>
+            {whatsApps.map((whatsapp) => (
+              <option key={whatsapp.id} value={whatsapp.id}>
+                {whatsapp.name}
+              </option>
+            ))}
           </Select>
         </Box>
         <Box>
@@ -424,11 +542,8 @@ const UserRegister = ({ onClose }) => {
             value={formData.perfil}
             onChange={(e) => handleInputChange('perfil', e.target.value)}
           >
-            <option value="">Selecione um perfil</option>
             <option value="admin">Administrador</option>
-            <option value="supervisor">Supervisor</option>
             <option value="user">Usuário</option>
-            <option value="atendente">Atendente</option>
           </Select>
         </Box>
       </Box>
@@ -846,8 +961,13 @@ const UserRegister = ({ onClose }) => {
               // Botão Próximo/Salvar (muda no último step)
               showSave={true}
               onSave={activeStep === steps.length - 1 ? handleSubmit : handleNext}
-              saveText={activeStep === steps.length - 1 ? "Cadastrar Usuário" : "Próximo"}
+              saveText={
+                activeStep === steps.length - 1 
+                  ? (isSubmitting ? "Cadastrando..." : "Cadastrar Usuário")
+                  : "Próximo"
+              }
               saveIcon={activeStep === steps.length - 1 ? <Save size={16} /> : <ChevronRight size={16} />}
+              saveDisabled={isSubmitting}
             />
           </CardContent>
         </Card>

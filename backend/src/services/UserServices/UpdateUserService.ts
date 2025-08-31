@@ -28,6 +28,20 @@ interface UserData {
   allowRealTime?: string;
   allowConnections?: string;
   profileImage?: string;
+  // Novos campos de dados pessoais/profissionais
+  telefone?: string;
+  cargo?: string;
+  departamento?: string;
+  dataAdmissao?: Date;
+  sobre?: string;
+  // Novos campos de endereço
+  cep?: string;
+  endereco?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
 }
 
 interface Request {
@@ -89,7 +103,21 @@ const UpdateUserService = async ({
     allowConnections,
     defaultTicketsManagerWidth = 550,
     allowRealTime,
-    profileImage
+    profileImage,
+    // Novos campos de dados pessoais/profissionais
+    telefone,
+    cargo,
+    departamento,
+    dataAdmissao,
+    sobre,
+    // Novos campos de endereço
+    cep,
+    endereco,
+    numero,
+    complemento,
+    bairro,
+    cidade,
+    estado
   } = userData;
 
   // Validação específica para horários de trabalho
@@ -123,7 +151,21 @@ const UpdateUserService = async ({
     defaultTicketsManagerWidth,
     allowRealTime,
     profileImage,
-    allowConnections
+    allowConnections,
+    // Novos campos de dados pessoais/profissionais
+    telefone,
+    cargo,
+    departamento,
+    dataAdmissao,
+    sobre,
+    // Novos campos de endereço
+    cep,
+    endereco,
+    numero,
+    complemento,
+    bairro,
+    cidade,
+    estado
   });
 
   await user.$set("queues", queueIds);

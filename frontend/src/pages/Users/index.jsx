@@ -39,7 +39,6 @@ import whatsappIcon from '../../assets/nopicture.png'
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
-import UserModal from "../../components/UserModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -192,7 +191,6 @@ const Users = () => {
   const [hasMore, setHasMore] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [deletingUser, setDeletingUser] = useState(null);
-  const [userModalOpen, setUserModalOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [searchParam, setSearchParam] = useState("");
   const [users, dispatch] = useReducer(reducer, []);
@@ -250,12 +248,12 @@ const Users = () => {
 
   const handleOpenUserModal = () => {
     setSelectedUser(null);
-    setUserModalOpen(true);
+    setCurrentView('register');
   };
 
   const handleCloseUserModal = () => {
     setSelectedUser(null);
-    setUserModalOpen(false);
+    setCurrentView('users');
   };
 
   const handleSearch = (event) => {
@@ -721,12 +719,6 @@ const Users = () => {
         {i18n.t("users.confirmationModal.deleteMessage")}
       </ConfirmationModal>
 
-      <UserModal
-        open={userModalOpen}
-        onClose={handleCloseUserModal}
-        aria-labelledby="form-dialog-title"
-        userId={selectedUser && selectedUser.id}
-      />
 
       {loggedInUser.profile === "user" ? (
         <ForbiddenPage />
@@ -747,7 +739,7 @@ const Users = () => {
               >
                 ← Voltar para Usuários
               </Button>
-              <UserRegister />
+              <UserRegister onClose={handleCloseUserModal} />
             </Box>
           )}
           
@@ -831,21 +823,6 @@ const Users = () => {
               flexShrink: 0,
               marginLeft: "auto"
             }}>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => setCurrentView('register')}
-                sx={{
-                  backgroundColor: '#ff9800',
-                  color: 'white',
-                  mr: 1,
-                  '&:hover': {
-                    backgroundColor: '#f57c00'
-                  }
-                }}
-              >
-                UserRegister
-              </Button>
               <Button
                 variant="contained"
                 size="small"

@@ -34,7 +34,7 @@ import Brightness7Icon from "@mui/icons-material/Brightness7";
 import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
 import NotificationsVolume from "../components/NotificationsVolume";
-import UserModal from "../components/UserModal";
+// import UserModal from "../components/UserModal";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
@@ -266,7 +266,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   // Styled components used instead of makeStyles
   const [userToken, setUserToken] = useState("disabled");
   const [loadingUserToken, setLoadingUserToken] = useState(false);
-  const [userModalOpen, setUserModalOpen] = useState(false);
+  // const [userModalOpen, setUserModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const { handleLogout, loading } = useContext(AuthContext);
@@ -418,10 +418,10 @@ const LoggedInLayout = ({ children, themeToggle }) => {
     setMenuOpen(false);
   };
 
-  const handleOpenUserModal = () => {
-    setUserModalOpen(true);
-    handleCloseMenu();
-  };
+  // const handleOpenUserModal = () => {
+  //   setUserModalOpen(true);
+  //   handleCloseMenu();
+  // };
 
   const handleClickLogout = () => {
     handleCloseMenu();
@@ -624,14 +624,14 @@ const LoggedInLayout = ({ children, themeToggle }) => {
               />
             </StyledBadge>
 
-            <ErrorBoundary fallbackMessage="Erro no perfil do usuário. Tente recarregar a página.">
+            {/* <ErrorBoundary fallbackMessage="Erro no perfil do usuário. Tente recarregar a página.">
               <UserModal
                 open={userModalOpen}
                 onClose={() => setUserModalOpen(false)}
                 onImageUpdate={(newProfileUrl) => setProfileUrl(newProfileUrl)}
                 userId={currentUser?.id}
               />
-            </ErrorBoundary>
+            </ErrorBoundary> */}
 
             <Menu
               id="menu-appbar"
@@ -648,9 +648,9 @@ const LoggedInLayout = ({ children, themeToggle }) => {
               open={menuOpen}
               onClose={handleCloseMenu}
             >
-              <MenuItem onClick={handleOpenUserModal}>
+              {/* <MenuItem onClick={handleOpenUserModal}>
                 {i18n.t("mainDrawer.appBar.user.profile")}
-              </MenuItem>
+              </MenuItem> */}
               <MenuItem onClick={handleClickLogout}>
                 {i18n.t("mainDrawer.appBar.user.logout")}
               </MenuItem>

@@ -73,7 +73,21 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     companyName,
     planId,
     phone,
-    document
+    document,
+    // Novos campos de dados pessoais/profissionais
+    telefone,
+    cargo,
+    departamento,
+    dataAdmissao,
+    sobre,
+    // Novos campos de endereço
+    cep,
+    endereco,
+    numero,
+    complemento,
+    bairro,
+    cidade,
+    estado
   } = req.body;
 
   let userCompanyId: number | null = null;
@@ -346,7 +360,21 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       showDashboard,
       defaultTicketsManagerWidth,
       allowRealTime,
-      allowConnections
+      allowConnections,
+      // Novos campos de dados pessoais/profissionais
+      telefone,
+      cargo,
+      departamento,
+      dataAdmissao,
+      sobre,
+      // Novos campos de endereço
+      cep,
+      endereco,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      estado
     });
 
     const io = getIO();

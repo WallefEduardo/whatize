@@ -103,6 +103,44 @@ class User extends Model<User> {
   @Column(DataType.TEXT)
   farewellMessage: string;
 
+  // Novos campos de dados pessoais/profissionais
+  @Column
+  telefone: string;
+
+  @Column
+  cargo: string;
+
+  @Column
+  departamento: string;
+
+  @Column(DataType.DATEONLY)
+  dataAdmissao: Date;
+
+  @Column(DataType.TEXT)
+  sobre: string;
+
+  // Novos campos de endereço
+  @Column
+  cep: string;
+
+  @Column
+  endereco: string;
+
+  @Column
+  numero: string;
+
+  @Column
+  complemento: string;
+
+  @Column
+  bairro: string;
+
+  @Column
+  cidade: string;
+
+  @Column
+  estado: string;
+
   @CreatedAt
   createdAt: Date;
 
