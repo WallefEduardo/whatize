@@ -334,7 +334,8 @@ const ChatModerno = () => {
         gap: '16px',
         position: 'relative',
         overflow: 'hidden',
-        marginTop: '20px'
+        marginTop: '20px',
+        marginBottom: '30px'
       }}>
         {/* Overlay for mobile */}
         {isMobile && showSidebar && (
@@ -344,7 +345,7 @@ const ChatModerno = () => {
         {/* Sidebar - Lista de Contatos */}
         <SidebarContainer isOpen={showSidebar}>
           <Card sx={{ 
-            height: 'calc(100vh - 108px)', 
+            height: 'calc(100vh - 128px)', 
             display: 'flex', 
             flexDirection: 'column',
             overflow: 'hidden'
@@ -380,7 +381,7 @@ const ChatModerno = () => {
         {/* Chat Area */}
         <ChatArea>
           <Card sx={{ 
-            height: 'calc(100vh - 108px)', 
+            height: 'calc(100vh - 128px)', 
             display: 'flex', 
             flexDirection: 'column',
             overflow: 'hidden'

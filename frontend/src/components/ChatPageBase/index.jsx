@@ -32,8 +32,8 @@ const ChatPageBase = ({
   return (
     <Box 
       sx={{
-        height: '100vh',
-        maxHeight: '100vh',
+        height: 'calc(100vh - 78px)',
+        maxHeight: 'calc(100vh - 78px)',
         overflow: 'hidden',
         backgroundColor: 'var(--bg-page)',
         px: { xs: 1, sm: 1.5 },

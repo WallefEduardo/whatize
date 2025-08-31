@@ -21,7 +21,7 @@ import {
 
 const InfoContainer = styled(Box)(({ theme }) => ({
   width: '320px',
-  height: 'calc(100vh - 108px)',
+  height: 'calc(100vh - 128px)',
   backgroundColor: 'var(--bg-primary)',
   borderLeft: '1px solid var(--border-primary)',
   display: 'flex',
