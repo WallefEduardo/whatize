@@ -8,7 +8,7 @@ const useStyles = () => ({
 		padding: `16px`,
 		height: `calc(100% - 78px)`,
 		maxWidth: `100%`,
-		background: "#f5f5f5",
+		background: "#EEF1F9",
 	},
 
 	contentWrapper: {

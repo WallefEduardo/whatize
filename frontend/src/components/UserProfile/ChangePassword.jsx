@@ -3,7 +3,7 @@ import { Box, Typography } from '@mui/material';
 import { Lock, Eye, EyeOff, Shield, CheckCircle } from 'lucide-react';
 import { CardContent } from '../ui/Card';
 import { PasswordInput } from '../ui/PasswordInput';
-import ModernButton from '../ui/ModernButton';
+import FormButtons from '../ui/FormButtons';
 import { toast } from '../ui/ToastProvider';
 import api from '../../services/api';
 
@@ -110,13 +110,13 @@ const ChangePassword = ({ user }) => {
 
   return (
     <CardContent className="rounded-t-none pt-6">
-      <Box sx={{ maxWidth: 600 }}>
+      <Box sx={{ width: '100%' }}>
         
         {/* Título */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-          <Shield size={24} color="#3b82f6" />
+          <Shield size={24} color="var(--text-gray-medium)" />
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e293b' }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--text-gray-medium)' }}>
               Alterar Senha
             </Typography>
             <Typography variant="body2" sx={{ color: '#64748b' }}>
@@ -131,7 +131,7 @@ const ChangePassword = ({ user }) => {
           {/* Current Password */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Senha Atual
               </Typography>
               <PasswordInput
@@ -146,7 +146,7 @@ const ChangePassword = ({ user }) => {
           {/* New Password */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Nova Senha
               </Typography>
               <PasswordInput
@@ -157,7 +157,7 @@ const ChangePassword = ({ user }) => {
             </Box>
 
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Confirmar Nova Senha
               </Typography>
               <PasswordInput
@@ -178,7 +178,7 @@ const ChangePassword = ({ user }) => {
             border: '1px solid #e2e8f0',
             mb: 4 
           }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 2, color: '#374151' }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 2, color: 'var(--text-gray-medium)' }}>
               Requisitos da senha:
             </Typography>
             
@@ -226,29 +226,26 @@ const ChangePassword = ({ user }) => {
         )}
 
         {/* Action Buttons */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-          <ModernButton
-            variant="secondary"
-            onClick={() => {
-              setFormData({
-                currentPassword: '',
-                newPassword: '',
-                confirmPassword: ''
-              });
-            }}
-          >
-            Cancelar
-          </ModernButton>
-          
-          <ModernButton
-            variant="primary"
-            onClick={handleChangePassword}
-            disabled={isChanging || !formData.currentPassword || !isValidPassword || !passwordsMatch}
-            icon={isChanging ? null : <Lock size={16} />}
-          >
-            {isChanging ? 'Alterando...' : 'Alterar Senha'}
-          </ModernButton>
-        </Box>
+        <FormButtons
+          showSave={true}
+          showCancel={true}
+          showBack={false}
+          saveText="Alterar Senha"
+          cancelText="Cancelar"
+          onSave={handleChangePassword}
+          onCancel={() => {
+            setFormData({
+              currentPassword: '',
+              newPassword: '',
+              confirmPassword: ''
+            });
+          }}
+          saveLoading={isChanging}
+          saveDisabled={!formData.currentPassword || !isValidPassword || !passwordsMatch}
+          saveIcon={<Lock size={16} />}
+          justifyContent="flex-end"
+          gap={2}
+        />
 
         {/* Security Tips */}
         <Box sx={{ 

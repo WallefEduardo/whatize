@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Box, Typography } from '@mui/material';
-import { Save, User } from 'lucide-react';
+import { Save, User, Briefcase, MapPin, FileText } from 'lucide-react';
 import { CardContent } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Textarea } from '../ui/Textarea';
 import { DatePicker } from '../ui/DatePicker';
-import ModernButton from '../ui/ModernButton';
+import FormButtons from '../ui/FormButtons';
 import { toast } from '../ui/ToastProvider';
 import api from '../../services/api';
 
@@ -27,11 +27,6 @@ const PersonalDetails = ({ user, onUpdate }) => {
     bairro: user?.bairro || '',
     cidade: user?.cidade || '',
     estado: user?.estado || '',
-    // Configurações
-    startWork: user?.startWork || '08:00',
-    endWork: user?.endWork || '18:00',
-    defaultTheme: user?.defaultTheme || 'light',
-    defaultMenu: user?.defaultMenu || 'open',
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -69,9 +64,12 @@ const PersonalDetails = ({ user, onUpdate }) => {
         
         {/* Dados Básicos */}
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#1e293b' }}>
-            Dados Básicos
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <User size={20} color="var(--text-gray-medium)" />
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--text-gray-medium)' }}>
+              Dados Básicos
+            </Typography>
+          </Box>
           
           <Box sx={{ 
             display: 'grid', 
@@ -80,7 +78,7 @@ const PersonalDetails = ({ user, onUpdate }) => {
             mb: 3 
           }}>
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Nome Completo
               </Typography>
               <Input
@@ -91,7 +89,7 @@ const PersonalDetails = ({ user, onUpdate }) => {
             </Box>
             
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Email
               </Typography>
               <Input
@@ -103,7 +101,7 @@ const PersonalDetails = ({ user, onUpdate }) => {
             </Box>
             
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Telefone
               </Typography>
               <Input
@@ -114,7 +112,7 @@ const PersonalDetails = ({ user, onUpdate }) => {
             </Box>
             
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Data de Admissão
               </Typography>
               <DatePicker
@@ -128,9 +126,12 @@ const PersonalDetails = ({ user, onUpdate }) => {
 
         {/* Dados Profissionais */}
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#1e293b' }}>
-            Dados Profissionais
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <Briefcase size={20} color="var(--text-gray-medium)" />
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--text-gray-medium)' }}>
+              Dados Profissionais
+            </Typography>
+          </Box>
           
           <Box sx={{ 
             display: 'grid', 
@@ -139,7 +140,7 @@ const PersonalDetails = ({ user, onUpdate }) => {
             mb: 3 
           }}>
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Cargo
               </Typography>
               <Input
@@ -150,7 +151,7 @@ const PersonalDetails = ({ user, onUpdate }) => {
             </Box>
             
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Departamento
               </Typography>
               <Input
@@ -159,36 +160,17 @@ const PersonalDetails = ({ user, onUpdate }) => {
                 placeholder="Ex: TI, Vendas, Marketing, etc."
               />
             </Box>
-            
-            <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
-                Horário de Início
-              </Typography>
-              <Input
-                type="time"
-                value={formData.startWork}
-                onChange={(e) => handleInputChange('startWork', e.target.value)}
-              />
-            </Box>
-            
-            <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
-                Horário de Fim
-              </Typography>
-              <Input
-                type="time"
-                value={formData.endWork}
-                onChange={(e) => handleInputChange('endWork', e.target.value)}
-              />
-            </Box>
           </Box>
         </Box>
 
         {/* Endereço */}
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#1e293b' }}>
-            Endereço
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <MapPin size={20} color="var(--text-gray-medium)" />
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--text-gray-medium)' }}>
+              Endereço
+            </Typography>
+          </Box>
           
           <Box sx={{ 
             display: 'grid', 
@@ -197,7 +179,7 @@ const PersonalDetails = ({ user, onUpdate }) => {
             mb: 3 
           }}>
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 CEP
               </Typography>
               <Input
@@ -208,7 +190,7 @@ const PersonalDetails = ({ user, onUpdate }) => {
             </Box>
             
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Endereço
               </Typography>
               <Input
@@ -219,7 +201,7 @@ const PersonalDetails = ({ user, onUpdate }) => {
             </Box>
             
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Número
               </Typography>
               <Input
@@ -230,7 +212,7 @@ const PersonalDetails = ({ user, onUpdate }) => {
             </Box>
             
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Complemento
               </Typography>
               <Input
@@ -241,7 +223,7 @@ const PersonalDetails = ({ user, onUpdate }) => {
             </Box>
             
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Bairro
               </Typography>
               <Input
@@ -252,7 +234,7 @@ const PersonalDetails = ({ user, onUpdate }) => {
             </Box>
             
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Cidade
               </Typography>
               <Input
@@ -263,7 +245,7 @@ const PersonalDetails = ({ user, onUpdate }) => {
             </Box>
             
             <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
                 Estado
               </Typography>
               <Select
@@ -303,51 +285,15 @@ const PersonalDetails = ({ user, onUpdate }) => {
           </Box>
         </Box>
 
-        {/* Configurações */}
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#1e293b' }}>
-            Configurações
-          </Typography>
-          
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
-            gap: 3, 
-            mb: 3 
-          }}>
-            <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
-                Tema Padrão
-              </Typography>
-              <Select
-                value={formData.defaultTheme}
-                onChange={(e) => handleInputChange('defaultTheme', e.target.value)}
-              >
-                <option value="light">Claro</option>
-                <option value="dark">Escuro</option>
-              </Select>
-            </Box>
-            
-            <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
-                Menu Padrão
-              </Typography>
-              <Select
-                value={formData.defaultMenu}
-                onChange={(e) => handleInputChange('defaultMenu', e.target.value)}
-              >
-                <option value="open">Aberto</option>
-                <option value="closed">Fechado</option>
-              </Select>
-            </Box>
-          </Box>
-        </Box>
 
         {/* Sobre */}
         <Box>
-          <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#374151' }}>
-            Sobre você
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <FileText size={20} color="var(--text-gray-medium)" />
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--text-gray-medium)' }}>
+              Sobre você
+            </Typography>
+          </Box>
           <Textarea
             value={formData.sobre}
             onChange={(e) => handleInputChange('sobre', e.target.value)}
@@ -357,45 +303,36 @@ const PersonalDetails = ({ user, onUpdate }) => {
         </Box>
 
         {/* Action Buttons */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, pt: 2 }}>
-          <ModernButton
-            variant="secondary"
-            onClick={() => {
-              // Reset form
-              setFormData({
-                name: user?.name || '',
-                email: user?.email || '',
-                telefone: user?.telefone || '',
-                cargo: user?.cargo || '',
-                departamento: user?.departamento || '',
-                dataAdmissao: user?.dataAdmissao || null,
-                sobre: user?.sobre || '',
-                cep: user?.cep || '',
-                endereco: user?.endereco || '',
-                numero: user?.numero || '',
-                complemento: user?.complemento || '',
-                bairro: user?.bairro || '',
-                cidade: user?.cidade || '',
-                estado: user?.estado || '',
-                startWork: user?.startWork || '08:00',
-                endWork: user?.endWork || '18:00',
-                defaultTheme: user?.defaultTheme || 'light',
-                defaultMenu: user?.defaultMenu || 'open',
-              });
-            }}
-          >
-            Cancelar
-          </ModernButton>
-          
-          <ModernButton
-            variant="primary"
-            onClick={handleSave}
-            disabled={isSaving}
-            icon={isSaving ? null : <Save size={16} />}
-          >
-            {isSaving ? 'Salvando...' : 'Salvar Alterações'}
-          </ModernButton>
-        </Box>
+        <FormButtons
+          showSave={true}
+          showCancel={true}
+          showBack={false}
+          saveText="Salvar Alterações"
+          cancelText="Cancelar"
+          onSave={handleSave}
+          onCancel={() => {
+            // Reset form
+            setFormData({
+              name: user?.name || '',
+              email: user?.email || '',
+              telefone: user?.telefone || '',
+              cargo: user?.cargo || '',
+              departamento: user?.departamento || '',
+              dataAdmissao: user?.dataAdmissao || null,
+              sobre: user?.sobre || '',
+              cep: user?.cep || '',
+              endereco: user?.endereco || '',
+              numero: user?.numero || '',
+              complemento: user?.complemento || '',
+              bairro: user?.bairro || '',
+              cidade: user?.cidade || '',
+              estado: user?.estado || '',
+            });
+          }}
+          saveLoading={isSaving}
+          justifyContent="flex-end"
+          gap={2}
+        />
       </Box>
     </CardContent>
   );
