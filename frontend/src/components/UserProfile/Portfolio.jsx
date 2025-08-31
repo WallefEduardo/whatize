@@ -1,21 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import { Globe, Linkedin, Github, Twitter, X, Plus, Link as LinkIcon } from 'lucide-react';
 import { CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import ModernButton from '../ui/ModernButton';
+import api from '../../services/api';
+import { toast } from '../ui/ToastProvider';
 
 const Portfolio = ({ user, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [newLink, setNewLink] = useState({ type: '', url: '' });
 
-  // Links padrão ou do usuário
-  const [links, setLinks] = useState(user?.portfolio || [
-    { id: 1, type: 'website', url: 'https://meusite.com.br', icon: Globe },
-    { id: 2, type: 'linkedin', url: 'https://linkedin.com/in/usuario', icon: Linkedin },
-    { id: 3, type: 'github', url: 'https://github.com/usuario', icon: Github },
-  ]);
+  // Links do usuário (sem dados padrão)
+  const [links, setLinks] = useState(user?.portfolio || []);
+
+  // Atualizar links quando user prop mudar
+  useEffect(() => {
+    setLinks(user?.portfolio || []);
+  }, [user]);
 
   const linkTypes = [
     { value: 'website', label: 'Website', icon: Globe },
@@ -31,7 +34,19 @@ const Portfolio = ({ user, onUpdate }) => {
     return linkType ? linkType.icon : LinkIcon;
   };
 
-  const handleAddLink = () => {
+  const savePortfolio = async (updatedPortfolio) => {
+    try {
+      await api.put(`/users/${user.id}`, { portfolio: updatedPortfolio });
+      toast.success('Portfolio atualizado com sucesso!');
+      return true;
+    } catch (error) {
+      console.error('Erro ao salvar portfolio:', error);
+      toast.error('Erro ao salvar portfolio');
+      return false;
+    }
+  };
+
+  const handleAddLink = async () => {
     if (newLink.url && newLink.type) {
       const link = {
         id: Date.now(),
@@ -39,23 +54,50 @@ const Portfolio = ({ user, onUpdate }) => {
         url: newLink.url,
       };
       const updatedLinks = [...links, link];
+      
+      // Optimistic update
       setLinks(updatedLinks);
       setNewLink({ type: '', url: '' });
+      setIsEditing(false);
       
-      // Atualizar usuário
+      // Atualizar usuário local
       if (onUpdate) {
         onUpdate({ ...user, portfolio: updatedLinks });
+      }
+      
+      // Salvar no backend
+      const saved = await savePortfolio(updatedLinks);
+      if (!saved) {
+        // Rollback on error
+        setLinks(links);
+        setIsEditing(true);
+        if (onUpdate) {
+          onUpdate({ ...user, portfolio: links });
+        }
       }
     }
   };
 
-  const handleRemoveLink = (id) => {
+  const handleRemoveLink = async (id) => {
+    const previousLinks = [...links];
     const updatedLinks = links.filter(link => link.id !== id);
+    
+    // Optimistic update
     setLinks(updatedLinks);
     
-    // Atualizar usuário
+    // Atualizar usuário local
     if (onUpdate) {
       onUpdate({ ...user, portfolio: updatedLinks });
+    }
+    
+    // Salvar no backend
+    const saved = await savePortfolio(updatedLinks);
+    if (!saved) {
+      // Rollback on error
+      setLinks(previousLinks);
+      if (onUpdate) {
+        onUpdate({ ...user, portfolio: previousLinks });
+      }
     }
   };
 
@@ -73,7 +115,15 @@ const Portfolio = ({ user, onUpdate }) => {
   return (
     <>
       <CardHeader sx={{ borderBottom: 'none', paddingBottom: '12px' }}>
-        <CardTitle sx={{ fontSize: '18px', fontWeight: 500, color: 'var(--text-primary)' }}>
+        <CardTitle sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px', 
+          fontSize: '18px', 
+          fontWeight: 500, 
+          color: 'var(--text-gray-medium)' 
+        }}>
+          <LinkIcon size={18} />
           Portfolio & Links
         </CardTitle>
       </CardHeader>
@@ -105,7 +155,7 @@ const Portfolio = ({ user, onUpdate }) => {
                   width: 32,
                   height: 32,
                   borderRadius: '6px',
-                  backgroundColor: '#3b82f6',
+                  backgroundColor: 'var(--color-accent)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -169,7 +219,7 @@ const Portfolio = ({ user, onUpdate }) => {
             borderRadius: '8px',
             border: '1px solid var(--border-primary)'
           }}>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 2, color: 'var(--text-primary)' }}>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 2, color: 'var(--text-gray-medium)' }}>
               Adicionar Novo Link
             </Typography>
             
@@ -178,7 +228,6 @@ const Portfolio = ({ user, onUpdate }) => {
               <Select
                 value={newLink.type}
                 onChange={(e) => setNewLink({...newLink, type: e.target.value})}
-                placeholder="Selecione o tipo"
               >
                 <option value="">Selecione o tipo</option>
                 {linkTypes.map((type) => (
@@ -192,7 +241,6 @@ const Portfolio = ({ user, onUpdate }) => {
               <Input
                 value={newLink.url}
                 onChange={(e) => setNewLink({...newLink, url: e.target.value})}
-                placeholder="https://exemplo.com"
                 type="url"
               />
 
@@ -221,33 +269,57 @@ const Portfolio = ({ user, onUpdate }) => {
               </Box>
             </Box>
           </Box>
-        ) : (
-          <ModernButton
-            variant="secondary"
-            size="sm"
-            onClick={() => setIsEditing(true)}
-            className="w-full flex items-center justify-center gap-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700 border-blue-200"
-          >
-            <Plus size={16} />
-            Adicionar Link
-          </ModernButton>
-        )}
+        ) : null}
 
-        {/* Empty State */}
-        {links.length === 0 && !isEditing && (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Globe size={32} className="mx-auto text-gray-400 mb-2" />
-            <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 2 }}>
-              Nenhum link adicionado
-            </Typography>
+        {/* Show button when has links or empty state */}
+        {!isEditing && (
+          links.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Globe size={32} className="mx-auto text-gray-400 mb-2" />
+              <Typography variant="body2" sx={{ color: 'var(--text-gray-medium)', mb: 2 }}>
+                Nenhum link adicionado
+              </Typography>
+              <ModernButton
+                variant="primary"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+                sx={{
+                  color: '#3b82f6',
+                  borderColor: '#3b82f6',
+                  border: '1px solid #3b82f6',
+                  backgroundColor: 'transparent',
+                  '&:hover': {
+                    backgroundColor: '#eff6ff',
+                    color: '#3b82f6',
+                    borderColor: '#3b82f6'
+                  }
+                }}
+              >
+                Adicionar Primeiro Link
+              </ModernButton>
+            </Box>
+          ) : (
             <ModernButton
-              variant="primary"
+              variant="secondary"
               size="sm"
               onClick={() => setIsEditing(true)}
+              sx={{
+                width: 'auto',
+                minWidth: '140px',
+                color: '#3b82f6',
+                borderColor: '#3b82f6',
+                border: '1px solid #3b82f6',
+                '&:hover': {
+                  backgroundColor: '#eff6ff',
+                  color: '#3b82f6',
+                  borderColor: '#3b82f6'
+                }
+              }}
             >
-              Adicionar Primeiro Link
+              <Plus size={16} />
+              Adicionar Link
             </ModernButton>
-          </Box>
+          )
         )}
       </CardContent>
     </>

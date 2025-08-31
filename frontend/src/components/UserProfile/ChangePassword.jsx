@@ -7,7 +7,7 @@ import FormButtons from '../ui/FormButtons';
 import { toast } from '../ui/ToastProvider';
 import api from '../../services/api';
 
-const ChangePassword = ({ user }) => {
+const ChangePassword = ({ user, onCancel }) => {
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -137,7 +137,6 @@ const ChangePassword = ({ user }) => {
               <PasswordInput
                 value={formData.currentPassword}
                 onChange={(e) => handleInputChange('currentPassword', e.target.value)}
-                placeholder="Digite sua senha atual"
               />
             </Box>
             <Box></Box>
@@ -152,7 +151,6 @@ const ChangePassword = ({ user }) => {
               <PasswordInput
                 value={formData.newPassword}
                 onChange={(e) => handleInputChange('newPassword', e.target.value)}
-                placeholder="Digite sua nova senha"
               />
             </Box>
 
@@ -163,7 +161,6 @@ const ChangePassword = ({ user }) => {
               <PasswordInput
                 value={formData.confirmPassword}
                 onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                placeholder="Confirme sua nova senha"
               />
             </Box>
           </Box>
@@ -234,11 +231,16 @@ const ChangePassword = ({ user }) => {
           cancelText="Cancelar"
           onSave={handleChangePassword}
           onCancel={() => {
-            setFormData({
-              currentPassword: '',
-              newPassword: '',
-              confirmPassword: ''
-            });
+            if (onCancel) {
+              onCancel(); // Chama função para voltar à listagem de usuários
+            } else {
+              // Reset form se não houver onCancel
+              setFormData({
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: ''
+              });
+            }
           }}
           saveLoading={isChanging}
           saveDisabled={!formData.currentPassword || !isValidPassword || !passwordsMatch}

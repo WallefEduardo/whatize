@@ -42,6 +42,9 @@ interface UserData {
   bairro?: string;
   cidade?: string;
   estado?: string;
+  // Campos portfolio e skills
+  portfolio?: any[];
+  skills?: string[];
 }
 
 interface Request {
@@ -77,7 +80,17 @@ const UpdateUserService = async ({
     allHistoric: Yup.string(),
     email: Yup.string().email(),
     profile: Yup.string(),
-    password: Yup.string()
+    password: Yup.string(),
+    portfolio: Yup.array().of(
+      Yup.object().shape({
+        id: Yup.number(),
+        type: Yup.string().required(),
+        url: Yup.string().url().required()
+      })
+    ).max(10, "Máximo de 10 links no portfolio"),
+    skills: Yup.array().of(
+      Yup.string().max(50, "Cada habilidade deve ter no máximo 50 caracteres")
+    ).max(20, "Máximo de 20 habilidades")
   });
 
   const oldUserEmail = user.email;
@@ -117,7 +130,10 @@ const UpdateUserService = async ({
     complemento,
     bairro,
     cidade,
-    estado
+    estado,
+    // Campos portfolio e skills
+    portfolio,
+    skills
   } = userData;
 
   // Validação específica para horários de trabalho
@@ -126,7 +142,7 @@ const UpdateUserService = async ({
   }
 
   try {
-    await schema.validate({ email, password, profile, name });
+    await schema.validate({ email, password, profile, name, portfolio, skills });
   } catch (err: any) {
     throw new AppError(err.message);
   }
@@ -165,7 +181,10 @@ const UpdateUserService = async ({
     complemento,
     bairro,
     cidade,
-    estado
+    estado,
+    // Campos portfolio e skills
+    portfolio,
+    skills
   });
 
   await user.$set("queues", queueIds);

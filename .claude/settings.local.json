@@ -9,7 +9,11 @@
       "Read(//home/wallef/sistemas/whatize/frontend/src/pages/Tags/**)",
       "Read(//home/wallef/sistemas/DashTemplate/app/[lang]/(dashboard)/(forms)/form-wizard/**)",
       "Read(/home/wallef/sistemas/whatize/frontend/src/pages/Connections/**)",
-      "Read(/home/eduardo_wallef/sistemas/TemplateDash/**)"
+      "Read(/home/eduardo_wallef/sistemas/TemplateDash/**)",
+      "Read(/home/eduardo_wallef/sistemas/TemplateDash/**)",
+      "Read(/home/eduardo_wallef/sistemas/TemplateDash/**)",
+      "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(apps)/chat/**)",
+      "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(apps)/chat/**)"
     ],
     "deny": []
   }

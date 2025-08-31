@@ -297,6 +297,34 @@ class User extends Model<User> {
   })
   kanbanColumnOrder: string[];
 
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+    comment: "JSON string containing user portfolio links",
+    get() {
+      const value = this.getDataValue('portfolio' as any);
+      return value ? JSON.parse(value) : null;
+    },
+    set(value: any[] | null) {
+      this.setDataValue('portfolio' as any, value ? JSON.stringify(value) : null);
+    }
+  })
+  portfolio: any[];
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+    comment: "JSON string containing user skills/habilidades",
+    get() {
+      const value = this.getDataValue('skills' as any);
+      return value ? JSON.parse(value) : null;
+    },
+    set(value: string[] | null) {
+      this.setDataValue('skills' as any, value ? JSON.stringify(value) : null);
+    }
+  })
+  skills: string[];
+
   @BeforeDestroy
   static async updateChatbotsUsersReferences(user: User) {
     // Atualizar os registros na tabela Chatbots onde optQueueId é igual ao ID da fila que será excluída

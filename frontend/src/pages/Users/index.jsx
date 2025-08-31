@@ -262,7 +262,7 @@ const Users = () => {
 
   const handleEditUser = (user) => {
     setSelectedUser(user);
-    setUserModalOpen(true);
+    setCurrentView('profile');
   };
 
   const handleDeleteUser = async (userId) => {
@@ -703,7 +703,15 @@ const Users = () => {
 
   // UserProfile precisa renderizar fora do PageLayout para funcionar o modo dark
   if (currentView === 'profile') {
-    return <UserProfile onClose={() => setCurrentView('users')} />;
+    return (
+      <UserProfile 
+        user={selectedUser}
+        onClose={() => {
+          setCurrentView('users');
+          setSelectedUser(null);
+        }} 
+      />
+    );
   }
 
   return (

@@ -8,7 +8,7 @@ import FormButtons from '../ui/FormButtons';
 import { toast } from '../ui/ToastProvider';
 import api from '../../services/api';
 
-const Permissions = ({ user }) => {
+const Permissions = ({ user, onCancel }) => {
   const [permissions, setPermissions] = useState({
     visualizarChamadosSemFila: false,
     verConversasOutrasFilas: false,
@@ -74,18 +74,22 @@ const Permissions = ({ user }) => {
   };
 
   const handleCancel = () => {
-    // Reset para valores originais do usuário
-    if (user) {
-      setPermissions({
-        visualizarChamadosSemFila: user.allTicket === 'enable' || user.allTicket === 'enabled',
-        verConversasOutrasFilas: user.allHistoric === 'enable' || user.allHistoric === 'enabled',
-        permitirFecharTicketsPendentes: user.userClosePendingTicket === 'enable' || user.userClosePendingTicket === 'enabled',
-        verDashboard: user.showDashboard === 'enable' || user.showDashboard === 'enabled',
-        permitirGrupos: user.allowGroup === true || user.allowGroup === 'enabled',
-        verConversasOutrosUsuarios: user.allUserChat === 'enable' || user.allUserChat === 'enabled',
-        acoesConexoes: user.allowConnections === 'enable' || user.allowConnections === 'enabled',
-        verPainelAtendimentos: user.allowRealTime === 'enable' || user.allowRealTime === 'enabled',
-      });
+    if (onCancel) {
+      onCancel(); // Chama função para voltar à listagem de usuários
+    } else {
+      // Reset para valores originais do usuário
+      if (user) {
+        setPermissions({
+          visualizarChamadosSemFila: user.allTicket === 'enable' || user.allTicket === 'enabled',
+          verConversasOutrasFilas: user.allHistoric === 'enable' || user.allHistoric === 'enabled',
+          permitirFecharTicketsPendentes: user.userClosePendingTicket === 'enable' || user.userClosePendingTicket === 'enabled',
+          verDashboard: user.showDashboard === 'enable' || user.showDashboard === 'enabled',
+          permitirGrupos: user.allowGroup === true || user.allowGroup === 'enabled',
+          verConversasOutrosUsuarios: user.allUserChat === 'enable' || user.allUserChat === 'enabled',
+          acoesConexoes: user.allowConnections === 'enable' || user.allowConnections === 'enabled',
+          verPainelAtendimentos: user.allowRealTime === 'enable' || user.allowRealTime === 'enabled',
+        });
+      }
     }
   };
 

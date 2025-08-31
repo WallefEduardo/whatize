@@ -34,6 +34,7 @@ import CampaignsConfig from "../pages/CampaignsConfig";
 import CampaignReport from "../pages/CampaignReport";
 import Annoucements from "../pages/Annoucements";
 import Chat from "../pages/Chat";
+import ChatModerno from "../pages/ChatModerno";
 import Prompts from "../pages/Prompts";
 import AllConnections from "../pages/AllConnections";
 import Reports from "../pages/Reports";
@@ -115,6 +116,7 @@ const Routes = () => {
                   isPrivate
                 />
                 <Route exact path="/chats/:id?" component={Chat} isPrivate />
+                <Route exact path="/chat-moderno" component={ChatModerno} isPrivate />
                 <Route exact path="/files" component={Files} isPrivate />
                 <Route exact path="/moments" component={ChatMoments} isPrivate />
                 <Route exact path="/Kanban" component={Kanban} isPrivate />

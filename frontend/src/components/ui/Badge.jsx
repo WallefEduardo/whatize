@@ -85,6 +85,38 @@ const StyledBadge = styled(Box)(({ theme, variant = 'default', size = 'default',
       backgroundColor: 'var(--bg-primary)',
     },
   }),
+  ...(variant === 'online' && {
+    backgroundColor: '#22c55e',
+    color: 'transparent',
+    width: '8px',
+    height: '8px',
+    padding: 0,
+    border: '2px solid white',
+  }),
+  ...(variant === 'offline' && {
+    backgroundColor: '#6b7280',
+    color: 'transparent', 
+    width: '8px',
+    height: '8px',
+    padding: 0,
+    border: '2px solid white',
+  }),
+  ...(variant === 'busy' && {
+    backgroundColor: '#ef4444',
+    color: 'transparent',
+    width: '8px',
+    height: '8px', 
+    padding: 0,
+    border: '2px solid white',
+  }),
+  ...(variant === 'away' && {
+    backgroundColor: '#f59e0b',
+    color: 'transparent',
+    width: '8px',
+    height: '8px',
+    padding: 0,
+    border: '2px solid white',
+  }),
 }));
 
 export const Badge = React.forwardRef(({ 

@@ -32,7 +32,7 @@ const PageLayout = ({
     <Box 
       sx={{
         minHeight: '100vh',
-        backgroundColor: 'var(--bg-content)', // Fundo adaptável ao tema
+        backgroundColor: 'var(--bg-page)',
         px: { xs: 1.5, sm: 2 }, // 15px nas extremidades
         py: 3,
         width: '100%',

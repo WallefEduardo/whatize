@@ -1,0 +1,300 @@
+import React, { useState } from 'react';
+import { Box, Typography, IconButton } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { cn } from '../../../utils/cn';
+import { formatTime } from '../data/mockData';
+
+// Nossos componentes UI
+import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/Avatar';
+import Dropdown, { DropdownTrigger, DropdownContent, DropdownItem } from '../../../components/ui/Dropdown';
+
+// Icons
+import { 
+  EllipsisVerticalIcon, 
+  ArrowUturnLeftIcon,
+  TrashIcon,
+  ArrowTopRightOnSquareIcon,
+  BookmarkIcon,
+  CheckIcon,
+  ClockIcon
+} from '@heroicons/react/24/outline';
+import { 
+  BookmarkIcon as BookmarkSolidIcon,
+  MapPinIcon
+} from '@heroicons/react/24/solid';
+
+const MessageContainer = styled(Box)(({ theme, isSent }) => ({
+  display: 'flex',
+  gap: '8px',
+  alignItems: 'flex-start',
+  marginBottom: '16px',
+  padding: '0 16px',
+  flexDirection: isSent ? 'row-reverse' : 'row',
+  
+  '&:hover .message-actions': {
+    opacity: 1,
+  },
+}));
+
+const MessageContent = styled(Box)(({ theme, isSent }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  maxWidth: '70%',
+  gap: '4px',
+  alignItems: isSent ? 'flex-end' : 'flex-start',
+}));
+
+const MessageBubble = styled(Box)(({ theme, isSent }) => ({
+  padding: '8px 12px',
+  borderRadius: '12px',
+  wordBreak: 'break-word',
+  position: 'relative',
+  
+  ...(isSent ? {
+    backgroundColor: 'var(--color-accent)',
+    color: 'white',
+    borderBottomRightRadius: '4px',
+  } : {
+    backgroundColor: '#f5f5f5',
+    color: 'var(--text-primary)',
+    borderBottomLeftRadius: '4px',
+    border: '1px solid #e0e0e0',
+  }),
+}));
+
+const MessageTime = styled(Typography)(({ theme, isSent }) => ({
+  fontSize: '11px',
+  color: isSent ? 'rgba(255, 255, 255, 0.7)' : 'var(--text-secondary)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px',
+  marginTop: '2px',
+}));
+
+const MessageActions = styled(Box)(({ theme, isSent }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px',
+  opacity: 0,
+  transition: 'opacity 0.2s ease',
+  marginTop: '4px',
+  order: isSent ? 1 : 0,
+  
+  '& .MuiIconButton-root': {
+    padding: '4px',
+    borderRadius: '50%',
+    backgroundColor: 'var(--bg-secondary)',
+    '&:hover': {
+      backgroundColor: 'var(--bg-primary)',
+    },
+  },
+}));
+
+const ReplyMessage = styled(Box)(({ theme, isSent }) => ({
+  padding: '6px 10px',
+  marginBottom: '4px',
+  borderRadius: '8px',
+  backgroundColor: isSent ? 'rgba(255, 255, 255, 0.1)' : 'var(--bg-primary)',
+  borderLeft: isSent ? '3px solid rgba(255, 255, 255, 0.5)' : '3px solid var(--color-accent)',
+  fontSize: '13px',
+  color: isSent ? 'rgba(255, 255, 255, 0.8)' : 'var(--text-secondary)',
+}));
+
+const PinIndicator = styled(Box)(() => ({
+  position: 'absolute',
+  top: '-6px',
+  right: '8px',
+  zIndex: 1,
+  transform: 'rotate(45deg)',
+}));
+
+const MessageStatus = ({ status }) => {
+  switch (status) {
+    case 'sending':
+      return <ClockIcon style={{ width: '12px', height: '12px' }} />;
+    case 'sent':
+      return <CheckIcon style={{ width: '12px', height: '12px' }} />;
+    case 'delivered':
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+          <CheckIcon style={{ width: '12px', height: '12px' }} />
+          <CheckIcon style={{ width: '12px', height: '12px' }} />
+        </Box>
+      );
+    case 'read':
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+          <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--color-accent)' }} />
+          <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--color-accent)' }} />
+        </Box>
+      );
+    default:
+      return null;
+  }
+};
+
+const MessageItem = ({ 
+  message, 
+  contact, 
+  profile, 
+  onDelete, 
+  index, 
+  selectedChatId, 
+  handleReply, 
+  replyData,
+  handleForward,
+  handlePinMessage,
+  pinnedMessages
+}) => {
+  const { senderId, content, timestamp, status, isReply, replyTo, isPinned } = message;
+  
+  const isSent = senderId === 'user-1'; // Assumindo que 'user-1' é o usuário logado
+  const sender = isSent ? profile : contact;
+  
+  // Verificar se a mensagem está pinada
+  const isMessagePinned = pinnedMessages?.some(
+    pinnedMessage => pinnedMessage.id === message.id
+  ) || isPinned;
+
+  const handleDeleteMessage = () => {
+    onDelete(selectedChatId, index);
+  };
+
+  const handleReplyMessage = () => {
+    handleReply(content, contact);
+  };
+
+  const handleForwardMessage = () => {
+    handleForward();
+  };
+
+  const handlePinMessageLocal = () => {
+    const pinData = {
+      id: message.id,
+      content: content,
+      sender: sender,
+      timestamp: timestamp,
+      chatId: selectedChatId,
+      index: index
+    };
+    handlePinMessage(pinData);
+  };
+
+  // Get initials for avatar fallback
+  const getInitials = (name) => {
+    return name
+      ?.split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || '??';
+  };
+
+  return (
+    <MessageContainer isSent={isSent}>
+      {/* Avatar (apenas para mensagens recebidas) */}
+      {!isSent && (
+        <Box sx={{ flexShrink: 0, alignSelf: 'flex-end', mb: '20px' }}>
+          <Avatar size="md">
+            <AvatarImage src={sender?.avatar} alt={sender?.name} />
+            <AvatarFallback>{getInitials(sender?.name)}</AvatarFallback>
+          </Avatar>
+        </Box>
+      )}
+
+      {/* Message Actions */}
+      <MessageActions className="message-actions" isSent={isSent}>
+        <Dropdown>
+          <DropdownTrigger asChild>
+            <IconButton size="small">
+              <EllipsisVerticalIcon style={{ width: '16px', height: '16px' }} />
+            </IconButton>
+          </DropdownTrigger>
+          
+          <DropdownContent align={isSent ? "end" : "start"} side="top">
+            {!isSent && (
+              <DropdownItem onClick={handleReplyMessage} icon={<ArrowUturnLeftIcon style={{ width: '16px', height: '16px' }} />}>
+                Responder
+              </DropdownItem>
+            )}
+            
+            <DropdownItem onClick={handlePinMessageLocal} icon={isMessagePinned ? 
+              <BookmarkSolidIcon style={{ width: '16px', height: '16px' }} /> : 
+              <BookmarkIcon style={{ width: '16px', height: '16px' }} />
+            }>
+              {isMessagePinned ? 'Desafixar' : 'Fixar'}
+            </DropdownItem>
+            
+            <DropdownItem onClick={handleForwardMessage} icon={<ArrowTopRightOnSquareIcon style={{ width: '16px', height: '16px' }} />}>
+              Encaminhar
+            </DropdownItem>
+            
+            <DropdownItem 
+              onClick={handleDeleteMessage} 
+              destructive 
+              icon={<TrashIcon style={{ width: '16px', height: '16px' }} />}
+            >
+              Excluir
+            </DropdownItem>
+          </DropdownContent>
+        </Dropdown>
+      </MessageActions>
+
+      {/* Message Content */}
+      <MessageContent isSent={isSent}>
+        {/* Pin Indicator */}
+        {isMessagePinned && (
+          <PinIndicator>
+            <MapPinIcon style={{ width: '16px', height: '16px', color: 'var(--color-accent)' }} />
+          </PinIndicator>
+        )}
+
+        {/* Reply Preview */}
+        {isReply && replyData && (
+          <ReplyMessage isSent={isSent}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', mb: '2px' }}>
+              <ArrowUturnLeftIcon style={{ width: '12px', height: '12px' }} />
+              <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                Respondendo {isSent ? `a ${replyData?.contact?.name}` : 'você'}
+              </Typography>
+            </Box>
+            <Typography variant="caption" sx={{ 
+              display: 'block', 
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: '200px'
+            }}>
+              {replyData?.message || 'Mensagem original'}
+            </Typography>
+          </ReplyMessage>
+        )}
+
+        {/* Message Bubble */}
+        <MessageBubble isSent={isSent}>
+          <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
+            {content}
+          </Typography>
+        </MessageBubble>
+
+        {/* Message Time and Status */}
+        <MessageTime isSent={isSent}>
+          {formatTime(timestamp)}
+          {isSent && <MessageStatus status={status} />}
+        </MessageTime>
+      </MessageContent>
+
+      {/* Avatar (apenas para mensagens enviadas - perfil do usuário logado) */}
+      {isSent && (
+        <Box sx={{ flexShrink: 0, alignSelf: 'flex-end', mb: '20px' }}>
+          <Avatar size="md">
+            <AvatarImage src={profile?.avatar} alt={profile?.name} />
+            <AvatarFallback>{getInitials(profile?.name)}</AvatarFallback>
+          </Avatar>
+        </Box>
+      )}
+    </MessageContainer>
+  );
+};
+
+export default MessageItem;

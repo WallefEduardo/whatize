@@ -5,7 +5,7 @@ import { styled } from '@mui/material/styles';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { format } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const StyledButton = styled(Button)(({ theme }) => ({
@@ -43,6 +43,31 @@ const DatePicker = ({
 }) => {
   const [anchorEl, setAnchorEl] = useState(null);
 
+  // Função para formatar data de forma segura
+  const formatDateSafely = (dateValue) => {
+    if (!dateValue) return null;
+    
+    try {
+      // Se é uma string, tenta fazer parse
+      if (typeof dateValue === 'string') {
+        const parsedDate = parseISO(dateValue);
+        if (isValid(parsedDate)) {
+          return format(parsedDate, 'dd/MM/yyyy', { locale: ptBR });
+        }
+      }
+      
+      // Se já é um objeto Date
+      if (dateValue instanceof Date && isValid(dateValue)) {
+        return format(dateValue, 'dd/MM/yyyy', { locale: ptBR });
+      }
+      
+      return null;
+    } catch (error) {
+      console.warn('Erro ao formatar data:', error, dateValue);
+      return null;
+    }
+  };
+
   const handleClick = (event) => {
     if (!disabled) {
       setAnchorEl(event.currentTarget);
@@ -79,7 +104,7 @@ const DatePicker = ({
             color: value ? 'var(--text-secondary)' : 'var(--text-secondary)',
             opacity: value ? 1 : 0.6
           }}>
-            {value ? format(value, 'dd/MM/yyyy', { locale: ptBR }) : placeholder}
+            {value ? (formatDateSafely(value) || placeholder) : placeholder}
           </span>
           <CalendarDays size={16} color="var(--text-secondary)" />
         </StyledButton>
@@ -137,7 +162,7 @@ const DatePicker = ({
           }}
         >
           <StaticDatePicker
-            value={value}
+            value={value ? (typeof value === 'string' ? parseISO(value) : value) : null}
             onChange={handleDateChange}
             showDaysOutsideCurrentMonth
             displayStaticWrapperAs="desktop"

@@ -41,7 +41,24 @@ const ShowUserService = async (id: string | number, companyId: string | number):
         "kanbanSelectedTags",
         "kanbanSelectedUsers",
         "kanbanCollapsedColumns",
-        "kanbanColumnOrder"
+        "kanbanColumnOrder",
+        // Campos de dados pessoais/profissionais
+        "telefone",
+        "cargo",
+        "departamento",
+        "dataAdmissao",
+        "sobre",
+        // Campos de endereço
+        "cep",
+        "endereco",
+        "numero",
+        "complemento",
+        "bairro",
+        "cidade",
+        "estado",
+        // Campos de portfolio e skills
+        "portfolio",
+        "skills"
       ],
       include: [
         { model: Queue, as: "queues", attributes: ["id", "name", "color"] },

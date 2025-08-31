@@ -710,6 +710,12 @@ const MainListItems = ({ collapsed, drawerClose }) => {
             }
             tooltip={collapsed}
           />
+          <ListItemLink
+            to="/chat-moderno"
+            primary="Chat Moderno"
+            icon={<Messages1 />}
+            tooltip={collapsed}
+          />
         </>
       )}
 

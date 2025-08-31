@@ -1,15 +1,18 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Box, Typography, Button } from '@mui/material';
-import { User, Settings, Lock, Shield, ArrowLeft } from 'lucide-react';
+import { Box, Typography } from '@mui/material';
+import { User, Settings, Lock, Shield, Users, Home } from 'lucide-react';
 
 // Nossos componentes CVA
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { ModernTabs, ModernTabsList, ModernTabsTrigger, ModernTabsContent } from '../ui/ModernTabs';
+import PageLayout from '../PageLayout';
 import { AuthContext } from '../../context/Auth/AuthContext';
+import api from '../../services/api';
 
 // Componentes internos
 import CoverBanner from './CoverBanner';
-import UserMeta from './UserMeta';
+import UserAvatar from './UserAvatar';
+import ContactInfo from './ContactInfo';
 import Portfolio from './Portfolio';  
 import Skills from './Skills';
 import PersonalDetails from './PersonalDetails';
@@ -17,18 +20,40 @@ import ChangePassword from './ChangePassword';
 import Permissions from './Permissions';
 import UserSettings from './Settings';
 
-const UserProfile = ({ onClose }) => {
+const UserProfile = ({ onClose, user: propUser }) => {
   const { user: loggedInUser } = useContext(AuthContext);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    // Carregar dados do usuário atual
-    if (loggedInUser) {
-      setUserData(loggedInUser);
-      setLoading(false);
-    }
-  }, [loggedInUser]);
+    const fetchUserData = async () => {
+      setLoading(true);
+      try {
+        // Se há um usuário específico via prop (editando outro usuário)
+        if (propUser && propUser.id) {
+          console.log('Buscando dados completos do usuário:', propUser.id);
+          const { data } = await api.get(`/users/${propUser.id}`);
+          console.log('Dados completos recebidos:', data);
+          setUserData(data);
+        } 
+        // Senão usar dados do usuário logado
+        else if (loggedInUser) {
+          console.log('Usando dados do usuário logado:', loggedInUser.id);
+          const { data } = await api.get(`/users/${loggedInUser.id}`);
+          console.log('Dados do usuário logado recebidos:', data);
+          setUserData(data);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados do usuário:', error);
+        // Em caso de erro, usar os dados básicos disponíveis
+        setUserData(propUser || loggedInUser);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [propUser, loggedInUser]);
 
   const tabs = [
     {
@@ -55,97 +80,56 @@ const UserProfile = ({ onClose }) => {
 
   if (loading) {
     return (
-      <Box sx={{ 
-        width: '100%',
-        height: '100%',
-        backgroundColor: 'var(--bg-primary)',
-        minHeight: '100vh',
-        p: 3,
-        textAlign: 'center'
-      }}>
-        <Typography>Carregando perfil...</Typography>
-      </Box>
+      <PageLayout
+        title="Carregando..."
+        icon={<User size={20} />}
+        breadcrumbs={[
+          { href: "/", icon: <Home size={16} /> },
+          { href: "/users", icon: <Users size={16} /> },
+          { label: "Carregando..." }
+        ]}
+        showBreadcrumb={true}
+      >
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography>Carregando perfil...</Typography>
+        </Box>
+      </PageLayout>
     );
   }
 
+  // Definir breadcrumbs baseado no usuário
+  const breadcrumbs = [
+    { href: "/", icon: <Home size={16} /> },
+    { href: "/users", icon: <Users size={16} /> },
+    { label: propUser ? `Perfil de ${userData?.name || propUser.name}` : 'Meu Perfil' }
+  ];
+
   return (
-    <Box sx={{ 
-      width: '100%',
-      height: '100%',
-      backgroundColor: 'var(--bg-primary)',
-      minHeight: '100vh'
-    }}>
-      <Box sx={{ padding: 3 }}>
-        {/* Botão Voltar */}
-        <Button
-          onClick={onClose}
-          sx={{
-            mb: 3,
-            backgroundColor: '#6b7280',
-            color: 'white',
-            '&:hover': {
-              backgroundColor: '#4b5563'
-            }
-          }}
-        >
-          <ArrowLeft size={16} style={{ marginRight: 8 }} />
-          Voltar para Usuários
-        </Button>
+    <PageLayout
+      title={propUser ? `Perfil de ${userData?.name || propUser.name}` : 'Meu Perfil'}
+      icon={<User size={20} />}
+      breadcrumbs={breadcrumbs}
+      showBreadcrumb={true}
+    >
 
-        {/* Container Superior - Header do Perfil */}
-        <Card sx={{ 
-          marginBottom: 3, 
-          overflow: 'hidden',
-          borderRadius: '16px'
-        }}>
-          <Box sx={{ 
-            background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-green-hover, #00e608) 100%)',
-            color: 'white',
-            padding: 4,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 3
-          }}>
-            <Box sx={{
-              width: 64,
-              height: 64,
-              borderRadius: '50%',
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid rgba(255, 255, 255, 0.3)'
-            }}>
-              <User size={32} color="white" />
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h4" sx={{ fontWeight: 700, fontSize: '28px', mb: 1 }}>
-                Perfil do Usuário
-              </Typography>
-              <Typography variant="body1" sx={{ opacity: 0.9, fontSize: '16px' }}>
-                Visualize e edite as informações do seu perfil
-              </Typography>
-            </Box>
-          </Box>
-        </Card>
+      {/* Cover Banner */}
+      <Box sx={{ mb: 3 }}>
+        <CoverBanner user={userData} onUpdate={setUserData} />
+      </Box>
 
-        {/* Cover Banner */}
-        <Box sx={{ mb: 3 }}>
-          <CoverBanner user={userData} onUpdate={setUserData} />
-        </Box>
-
-        {/* Layout Grid */}
-        <Box sx={{ 
-          display: 'grid', 
-          gridTemplateColumns: { xs: '1fr', lg: '1fr 2fr' },
-          gap: 3
-        }}>
+      {/* Layout Grid */}
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: { xs: '1fr', lg: '1fr 2fr' },
+        gap: 3
+      }}>
         {/* Sidebar Esquerda */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {/* UserMeta Container */}
+          {/* UserAvatar Container */}
           <Card>
-            <UserMeta user={userData} onUpdate={setUserData} />
+            <UserAvatar user={userData} onUpdate={setUserData} />
           </Card>
+
 
           {/* Portfolio Container */}
           <Card>
@@ -178,25 +162,38 @@ const UserProfile = ({ onClose }) => {
             </CardHeader>
 
             <ModernTabsContent value="personal">
-              <PersonalDetails user={userData} onUpdate={setUserData} />
+              <PersonalDetails 
+                user={userData} 
+                onUpdate={setUserData}
+                onCancel={onClose}
+              />
             </ModernTabsContent>
 
             <ModernTabsContent value="password">
-              <ChangePassword user={userData} />
+              <ChangePassword 
+                user={userData}
+                onCancel={onClose}
+              />
             </ModernTabsContent>
 
             <ModernTabsContent value="permissions">
-              <Permissions user={userData} />
+              <Permissions 
+                user={userData}
+                onCancel={onClose}
+              />
             </ModernTabsContent>
 
             <ModernTabsContent value="settings">
-              <UserSettings user={userData} onUpdate={setUserData} />
+              <UserSettings 
+                user={userData} 
+                onUpdate={setUserData}
+                onCancel={onClose}
+              />
             </ModernTabsContent>
           </ModernTabs>
         </Card>
-        </Box>
       </Box>
-    </Box>
+    </PageLayout>
   );
 };
 

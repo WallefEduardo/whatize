@@ -5,9 +5,9 @@ import { styled } from '@mui/material/styles';
 // Styled Card Components usando Material-UI
 const StyledCard = styled(Box)(({ theme, variant = 'default' }) => ({
   borderRadius: '8px',
-  border: '1px solid var(--border-primary)',
+  border: '1px solid var(--border-card)',
   backgroundColor: 'var(--bg-primary)',
-  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+  boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.04), 0 1px 1px 0 rgba(0, 0, 0, 0.06)',
   overflow: 'hidden',
   transition: 'all 0.2s ease',
   

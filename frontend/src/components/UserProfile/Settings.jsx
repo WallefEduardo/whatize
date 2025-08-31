@@ -51,7 +51,7 @@ const StyledQueueSelect = styled(MuiSelect)(({ theme }) => ({
   },
 }));
 
-const UserSettings = ({ user, onUpdate }) => {
+const UserSettings = ({ user, onUpdate, onCancel }) => {
   const { user: loggedInUser } = useContext(AuthContext);
   const { loading, whatsApps } = useWhatsApps();
   const [selectedQueueIds, setSelectedQueueIds] = useState([]);
@@ -153,20 +153,24 @@ const UserSettings = ({ user, onUpdate }) => {
   };
 
   const handleCancel = () => {
-    // Reset para valores originais do usuário
-    if (user) {
-      setFormData({
-        horarioInicio: user.startWork || '08:00',
-        horarioFim: user.endWork || '18:00',
-        tema: user.defaultTheme || 'light',
-        menuPadrao: user.defaultMenu || 'open',
-        conexao: user.whatsappId || '',
-        perfil: user.profile || 'user',
-        mensagemDespedida: user.farewellMessage || '',
-      });
+    if (onCancel) {
+      onCancel(); // Chama função para voltar à listagem de usuários
+    } else {
+      // Reset para valores originais do usuário
+      if (user) {
+        setFormData({
+          horarioInicio: user.startWork || '08:00',
+          horarioFim: user.endWork || '18:00',
+          tema: user.defaultTheme || 'light',
+          menuPadrao: user.defaultMenu || 'open',
+          conexao: user.whatsappId || '',
+          perfil: user.profile || 'user',
+          mensagemDespedida: user.farewellMessage || '',
+        });
 
-      if (user.queues && Array.isArray(user.queues)) {
-        setSelectedQueueIds(user.queues.map(queue => queue.id));
+        if (user.queues && Array.isArray(user.queues)) {
+          setSelectedQueueIds(user.queues.map(queue => queue.id));
+        }
       }
     }
   };
@@ -209,7 +213,6 @@ const UserSettings = ({ user, onUpdate }) => {
               <TimePicker
                 value={formData.horarioInicio}
                 onChange={(e) => handleInputChange('horarioInicio', e.target.value)}
-                placeholder="Selecione o horário de início"
               />
             </Box>
             <Box>
@@ -219,7 +222,6 @@ const UserSettings = ({ user, onUpdate }) => {
               <TimePicker
                 value={formData.horarioFim}
                 onChange={(e) => handleInputChange('horarioFim', e.target.value)}
-                placeholder="Selecione o horário de fim"
               />
             </Box>
           </Box>
@@ -380,7 +382,6 @@ const UserSettings = ({ user, onUpdate }) => {
               rows={3}
               value={formData.mensagemDespedida}
               onChange={(e) => handleInputChange('mensagemDespedida', e.target.value)}
-              placeholder="Digite uma mensagem de despedida personalizada para quando o atendimento for finalizado..."
             />
           </Box>
         </Box>

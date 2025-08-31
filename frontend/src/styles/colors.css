@@ -53,6 +53,7 @@
   --bg-navbar: var(--color-primary);
   --bg-sidebar: var(--color-primary);
   --bg-content: var(--color-black-50);
+  --bg-page: #EEF1F9;
   
   --text-primary: var(--color-primary);
   --text-secondary: var(--color-black-600);
@@ -63,6 +64,7 @@
   --border-primary: var(--color-black-200);
   --border-secondary: var(--color-black-100);
   --border-focus: var(--color-accent);
+  --border-card: #e2e4e7;
 
   /* ===== ESTADOS INTERATIVOS ===== */
   --hover-bg-light: rgba(0, 195, 7, 0.05);
@@ -106,6 +108,7 @@
   --bg-navbar: var(--color-primary);
   --bg-sidebar: var(--color-primary);
   --bg-content: var(--color-primary);
+  --bg-page: var(--bg-primary);
   
   --text-primary: var(--color-white);
   --text-secondary: var(--color-black-200);
@@ -117,6 +120,7 @@
   --border-primary: var(--color-black-600);
   --border-secondary: var(--color-black-700);
   --border-focus: var(--color-accent);
+  --border-card: var(--border-primary);
 
   /* Ajustes de hover para modo dark */
   --hover-bg-light: rgba(0, 195, 7, 0.08);

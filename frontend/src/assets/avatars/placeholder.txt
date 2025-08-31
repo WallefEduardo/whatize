@@ -1,0 +1,14 @@
+# Avatars Placeholder
+
+Esta pasta é para armazenar imagens de avatar para o chat.
+As imagens referenciadas no mockData.js são links do Unsplash como fallback.
+
+Você pode adicionar suas próprias imagens aqui:
+- avatar1.jpg
+- avatar2.jpg
+- avatar3.jpg
+- avatar4.jpg
+- avatar5.jpg
+
+Formatos suportados: JPG, PNG, WebP
+Tamanho recomendado: 150x150px ou maior (quadrado)

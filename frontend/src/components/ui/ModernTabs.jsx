@@ -41,14 +41,15 @@ const TabsItem = styled(Box)(({ active }) => ({
   },
 }));
 
-// Texto do tab
-const TabText = styled(Typography)(({ active }) => ({
+// Texto do tab - usando span em vez de Typography para evitar nesting
+const TabText = styled('span')(({ active }) => ({
   fontSize: '14px',
   fontWeight: active ? 600 : 500,
   color: active ? 'var(--color-accent)' : '#64748b',
   transition: 'all 0.2s ease',
   fontFamily: 'Inter, sans-serif',
   userSelect: 'none',
+  lineHeight: 1.4,
 }));
 
 // Container do conteúdo
@@ -99,6 +100,7 @@ export const ModernTabsTrigger = ({ value, children, ...props }) => {
     <TabsItem 
       active={active}
       onClick={() => setActiveTab(value)}
+      data-active={active.toString()}
       {...props}
     >
       <TabText active={active}>

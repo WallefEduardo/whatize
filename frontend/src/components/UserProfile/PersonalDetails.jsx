@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 import { Save, User, Briefcase, MapPin, FileText } from 'lucide-react';
 import { CardContent } from '../ui/Card';
@@ -10,7 +10,7 @@ import FormButtons from '../ui/FormButtons';
 import { toast } from '../ui/ToastProvider';
 import api from '../../services/api';
 
-const PersonalDetails = ({ user, onUpdate }) => {
+const PersonalDetails = ({ user, onUpdate, onCancel }) => {
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -30,6 +30,29 @@ const PersonalDetails = ({ user, onUpdate }) => {
   });
 
   const [isSaving, setIsSaving] = useState(false);
+
+  // Atualizar formData quando user prop mudar
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        email: user.email || '',
+        telefone: user.telefone || '',
+        cargo: user.cargo || '',
+        departamento: user.departamento || '',
+        dataAdmissao: user.dataAdmissao || null,
+        sobre: user.sobre || '',
+        // Endereço
+        cep: user.cep || '',
+        endereco: user.endereco || '',
+        numero: user.numero || '',
+        complemento: user.complemento || '',
+        bairro: user.bairro || '',
+        cidade: user.cidade || '',
+        estado: user.estado || '',
+      });
+    }
+  }, [user]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -84,7 +107,6 @@ const PersonalDetails = ({ user, onUpdate }) => {
               <Input
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
-                placeholder="Digite seu nome completo"
               />
             </Box>
             
@@ -96,7 +118,6 @@ const PersonalDetails = ({ user, onUpdate }) => {
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 type="email"
-                placeholder="seu.email@exemplo.com"
               />
             </Box>
             
@@ -107,7 +128,6 @@ const PersonalDetails = ({ user, onUpdate }) => {
               <Input
                 value={formData.telefone}
                 onChange={(e) => handleInputChange('telefone', e.target.value)}
-                placeholder="(11) 99999-9999"
               />
             </Box>
             
@@ -118,7 +138,6 @@ const PersonalDetails = ({ user, onUpdate }) => {
               <DatePicker
                 value={formData.dataAdmissao}
                 onChange={(date) => handleInputChange('dataAdmissao', date)}
-                placeholder="Selecione a data"
               />
             </Box>
           </Box>
@@ -146,7 +165,6 @@ const PersonalDetails = ({ user, onUpdate }) => {
               <Input
                 value={formData.cargo}
                 onChange={(e) => handleInputChange('cargo', e.target.value)}
-                placeholder="Ex: Desenvolvedor, Gerente, etc."
               />
             </Box>
             
@@ -157,7 +175,6 @@ const PersonalDetails = ({ user, onUpdate }) => {
               <Input
                 value={formData.departamento}
                 onChange={(e) => handleInputChange('departamento', e.target.value)}
-                placeholder="Ex: TI, Vendas, Marketing, etc."
               />
             </Box>
           </Box>
@@ -185,7 +202,6 @@ const PersonalDetails = ({ user, onUpdate }) => {
               <Input
                 value={formData.cep}
                 onChange={(e) => handleInputChange('cep', e.target.value)}
-                placeholder="00000-000"
               />
             </Box>
             
@@ -196,7 +212,6 @@ const PersonalDetails = ({ user, onUpdate }) => {
               <Input
                 value={formData.endereco}
                 onChange={(e) => handleInputChange('endereco', e.target.value)}
-                placeholder="Rua, Avenida, etc."
               />
             </Box>
             
@@ -207,7 +222,6 @@ const PersonalDetails = ({ user, onUpdate }) => {
               <Input
                 value={formData.numero}
                 onChange={(e) => handleInputChange('numero', e.target.value)}
-                placeholder="123"
               />
             </Box>
             
@@ -218,7 +232,6 @@ const PersonalDetails = ({ user, onUpdate }) => {
               <Input
                 value={formData.complemento}
                 onChange={(e) => handleInputChange('complemento', e.target.value)}
-                placeholder="Apto, Sala, etc. (opcional)"
               />
             </Box>
             
@@ -229,7 +242,6 @@ const PersonalDetails = ({ user, onUpdate }) => {
               <Input
                 value={formData.bairro}
                 onChange={(e) => handleInputChange('bairro', e.target.value)}
-                placeholder="Nome do bairro"
               />
             </Box>
             
@@ -240,7 +252,6 @@ const PersonalDetails = ({ user, onUpdate }) => {
               <Input
                 value={formData.cidade}
                 onChange={(e) => handleInputChange('cidade', e.target.value)}
-                placeholder="Nome da cidade"
               />
             </Box>
             
@@ -297,7 +308,6 @@ const PersonalDetails = ({ user, onUpdate }) => {
           <Textarea
             value={formData.sobre}
             onChange={(e) => handleInputChange('sobre', e.target.value)}
-            placeholder="Conte um pouco sobre você, sua experiência e objetivos..."
             rows={4}
           />
         </Box>
@@ -311,23 +321,27 @@ const PersonalDetails = ({ user, onUpdate }) => {
           cancelText="Cancelar"
           onSave={handleSave}
           onCancel={() => {
-            // Reset form
-            setFormData({
-              name: user?.name || '',
-              email: user?.email || '',
-              telefone: user?.telefone || '',
-              cargo: user?.cargo || '',
-              departamento: user?.departamento || '',
-              dataAdmissao: user?.dataAdmissao || null,
-              sobre: user?.sobre || '',
-              cep: user?.cep || '',
-              endereco: user?.endereco || '',
-              numero: user?.numero || '',
-              complemento: user?.complemento || '',
-              bairro: user?.bairro || '',
-              cidade: user?.cidade || '',
-              estado: user?.estado || '',
-            });
+            if (onCancel) {
+              onCancel(); // Chama função para voltar à listagem de usuários
+            } else {
+              // Reset form se não houver onCancel
+              setFormData({
+                name: user?.name || '',
+                email: user?.email || '',
+                telefone: user?.telefone || '',
+                cargo: user?.cargo || '',
+                departamento: user?.departamento || '',
+                dataAdmissao: user?.dataAdmissao || null,
+                sobre: user?.sobre || '',
+                cep: user?.cep || '',
+                endereco: user?.endereco || '',
+                numero: user?.numero || '',
+                complemento: user?.complemento || '',
+                bairro: user?.bairro || '',
+                cidade: user?.cidade || '',
+                estado: user?.estado || '',
+              });
+            }
           }}
           saveLoading={isSaving}
           justifyContent="flex-end"
