@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Box, IconButton, Avatar, Typography } from '@mui/material';
 import { Camera, Upload } from 'lucide-react';
 import { Input } from '../ui/Input';
+import { getBackendUrl } from '../../config';
+import api from '../../services/api';
+import { toast } from '../ui/ToastProvider';
 
 const CoverBanner = ({ user, onUpdate }) => {
   const [uploading, setUploading] = useState(false);
@@ -18,31 +21,46 @@ const CoverBanner = ({ user, onUpdate }) => {
   };
 
   const handleCoverUpload = async (event) => {
+    console.log('handleCoverUpload called', event);
     const file = event.target.files[0];
-    if (!file) return;
-
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit for cover
-      alert('Arquivo muito grande. Tamanho máximo: 10MB');
+    console.log('Selected file:', file);
+    
+    if (!file) {
+      console.log('No file selected');
       return;
     }
 
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit for cover
+      toast.error('Arquivo muito grande. Tamanho máximo: 10MB');
+      return;
+    }
+
+    console.log('Starting cover upload for user:', user?.id);
     setCoverUploading(true);
     
     try {
-      // Simular upload - substitua pela lógica real
-      setTimeout(() => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          if (onUpdate) {
-            onUpdate({...user, coverImage: e.target.result});
-          }
-          setCoverUploading(false);
-        };
-        reader.readAsDataURL(file);
-      }, 1000);
+      const formData = new FormData();
+      formData.append('coverImage', file);
       
+      console.log('Sending request to:', `/users/${user.id}/cover-upload`);
+      const response = await api.post(`/users/${user.id}/cover-upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      console.log('Upload response:', response.data);
+      
+      if (onUpdate && response.data.user) {
+        console.log('Updating user data:', response.data.user);
+        onUpdate(response.data.user);
+      }
+      
+      toast.success('Capa atualizada com sucesso!');
     } catch (error) {
       console.error('Erro ao fazer upload da capa:', error);
+      toast.error('Erro ao fazer upload da capa: ' + (error.response?.data?.message || error.message));
+    } finally {
       setCoverUploading(false);
     }
   };
@@ -52,26 +70,31 @@ const CoverBanner = ({ user, onUpdate }) => {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      alert('Arquivo muito grande. Tamanho máximo: 5MB');
+      toast.error('Arquivo muito grande. Tamanho máximo: 5MB');
       return;
     }
 
     setUploading(true);
     
     try {
-      setTimeout(() => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          if (onUpdate) {
-            onUpdate({...user, profileImage: e.target.result});
-          }
-          setUploading(false);
-        };
-        reader.readAsDataURL(file);
-      }, 1000);
+      const formData = new FormData();
+      formData.append('profileImage', file);
       
+      const response = await api.post(`/users/${user.id}/media-upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      if (onUpdate && response.data.user) {
+        onUpdate(response.data.user);
+      }
+      
+      toast.success('Avatar atualizado com sucesso!');
     } catch (error) {
-      console.error('Erro ao fazer upload:', error);
+      console.error('Erro ao fazer upload do avatar:', error);
+      toast.error('Erro ao fazer upload do avatar');
+    } finally {
       setUploading(false);
     }
   };
@@ -89,9 +112,13 @@ const CoverBanner = ({ user, onUpdate }) => {
         borderRadius: '8px',
         overflow: 'hidden',
         backgroundColor: 'transparent',
-        backgroundImage: user?.coverImage 
-          ? `url(${user.coverImage})` 
-          : `url('/src/assets/capa-1200x250.jpg')`,
+        backgroundImage: (() => {
+          const imageUrl = user?.coverImage 
+            ? `url(${getBackendUrl()}/public/company${user.companyId}/${user.coverImage})`
+            : `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`;
+          console.log('Cover background image URL:', imageUrl, 'User:', user?.name, 'CoverImage:', user?.coverImage);
+          return imageUrl;
+        })(),
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -178,7 +205,7 @@ const CoverBanner = ({ user, onUpdate }) => {
           }}
         >
           <Avatar
-            src={user?.profileImage}
+            src={user?.profileImage ? `${getBackendUrl()}/public/company${user.companyId}/${user.profileImage}` : null}
             sx={{
               width: 120,
               height: 120,

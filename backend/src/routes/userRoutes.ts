@@ -23,6 +23,8 @@ userRoutes.delete("/users/:userId", isAuth, UserController.remove);
 
 userRoutes.post("/users/:userId/media-upload", isAuth, upload.array("profileImage"), UserController.mediaUpload);
 
+userRoutes.post("/users/:userId/cover-upload", isAuth, upload.array("coverImage"), UserController.coverUpload);
+
 userRoutes.put("/users/toggleChangeWidht/:userId", isAuth, UserController.toggleChangeWidht);
 
 userRoutes.put("/users/:userId/selected-queues", isAuth, UserController.updateSelectedQueues);

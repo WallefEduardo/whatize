@@ -17,6 +17,7 @@ const ShowUserService = async (id: string | number, companyId: string | number):
         "email",
         "profile",
         "profileImage",
+        "coverImage",
         "super",
         "whatsappId",
         "online",

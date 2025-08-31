@@ -48,6 +48,7 @@ import ChatPopover from "../pages/Chat/ChatPopover";
 
 import { useDate } from "../hooks/useDate";
 import ColorModeContext from "./themeContext";
+import { DrawerProvider } from "../context/DrawerContext";
 import BusinessIcon from '@mui/icons-material/Business';
 import InsertEmoticonIcon from '@mui/icons-material/InsertEmoticon';
 import { getBackendUrl } from "../config";
@@ -341,6 +342,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       setDrawerVariant("permanent");
     }
   }, [drawerOpen]);
+
 
   useEffect(() => {
 
@@ -662,7 +664,9 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       <ContentMain>
         <AppBarSpacer />
 
-        {children ? children : null}
+        <DrawerProvider drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}>
+          {children ? children : null}
+        </DrawerProvider>
       </ContentMain>
     </RootContainer>
   );

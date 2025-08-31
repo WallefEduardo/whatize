@@ -562,6 +562,58 @@ export const mediaUpload = async (
   }
 };
 
+export const coverUpload = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  console.log('coverUpload called');
+  console.log('userId:', req.params.userId);
+  console.log('companyId:', req.user.companyId);
+  console.log('files:', req.files);
+
+  const { userId } = req.params;
+  const { companyId } = req.user;
+  const files = req.files as Express.Multer.File[];
+  const file = head(files);
+
+  console.log('Processing file:', file?.filename);
+
+  if (!file) {
+    console.log('No file received');
+    throw new AppError('Nenhum arquivo recebido');
+  }
+
+  try {
+    let user = await User.findByPk(userId);
+    console.log('Found user:', user?.name);
+    
+    if (!user) {
+      throw new AppError('Usuário não encontrado');
+    }
+
+    user.coverImage = file.filename.replace('/', '-');
+    console.log('Setting coverImage to:', user.coverImage);
+
+    await user.save();
+    console.log('User saved successfully');
+
+    user = await ShowUserService(userId, companyId);
+    console.log('User reloaded:', user.coverImage);
+    
+    const io = getIO();
+    io.of(String(companyId))
+      .emit(`company-${companyId}-user`, {
+        action: "update",
+        user
+      });
+
+    return res.status(200).json({ user, message: "Capa atualizada" });
+  } catch (err: any) {
+    console.error('Error in coverUpload:', err);
+    throw new AppError(err.message);
+  }
+};
+
 export const toggleChangeWidht = async (req: Request, res: Response): Promise<Response> => {
   var { userId } = req.params;
   const { defaultTicketsManagerWidth } = req.body;

@@ -57,6 +57,10 @@ class User extends Model<User> {
   @Default(null)
   @Column
   profileImage: string;
+
+  @Default(null)
+  @Column
+  coverImage: string;
   
   @ForeignKey(() => Whatsapp)
   @Column

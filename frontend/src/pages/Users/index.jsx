@@ -30,6 +30,7 @@ import {
   AddCircleOutline
 } from "@mui/icons-material";
 
+
 import PageLayout from "../../components/PageLayout";
 import { Users as UsersIcon, Plus, BarChart3, Edit3, Trash2 } from "lucide-react";
 import SearchInput from "../../components/SearchInput";
@@ -338,9 +339,9 @@ const Users = () => {
         <Avatar
           src={
             user.id === loggedInUser.id
-              ? `${backendUrl}/public/company${user.companyId}/user/${profileImage || whatsappIcon}`
+              ? (profileImage ? `${backendUrl}/public/company${user.companyId}/${profileImage}` : whatsappIcon)
               : user.profileImage
-                ? `${backendUrl}/public/company${user.companyId}/user/${user.profileImage}`
+                ? `${backendUrl}/public/company${user.companyId}/${user.profileImage}`
                 : whatsappIcon
           }
           alt={user.name}
@@ -490,11 +491,9 @@ const Users = () => {
         border: '1px solid var(--border-primary)',
         borderRadius: 3,
         width: '100%',
-        height: 300,
-        minHeight: 300,
-        maxHeight: 300,
+        minHeight: 320,
         position: 'relative',
-        overflow: 'hidden',
+        overflow: 'visible',
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         background: `
           linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%),
@@ -526,10 +525,11 @@ const Users = () => {
       }}>
         <CardContent sx={{ 
           p: 2, 
-          height: '100%', 
+          pb: 3,
           display: 'flex', 
           flexDirection: 'column',
-          position: 'relative'
+          position: 'relative',
+          minHeight: '100%'
         }}>
           {/* Header com ID */}
           <Box sx={{ 
@@ -570,9 +570,9 @@ const Users = () => {
             <Avatar
               src={
                 user.id === loggedInUser.id
-                  ? `${backendUrl}/public/company${user.companyId}/user/${profileImage || whatsappIcon}`
+                  ? (profileImage ? `${backendUrl}/public/company${user.companyId}/${profileImage}` : whatsappIcon)
                   : user.profileImage
-                    ? `${backendUrl}/public/company${user.companyId}/user/${user.profileImage}`
+                    ? `${backendUrl}/public/company${user.companyId}/${user.profileImage}`
                     : whatsappIcon
               }
               alt={user.name}
@@ -661,7 +661,9 @@ const Users = () => {
             display: 'flex', 
             justifyContent: 'center', 
             gap: 1.5, 
-            pt: 1.5,
+            pt: 2,
+            pb: 1,
+            mt: 'auto',
             borderTop: '1px solid var(--border-primary)',
             position: 'relative',
             '&::before': {
@@ -818,21 +820,6 @@ const Users = () => {
               flexShrink: 0,
               marginLeft: "auto"
             }}>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => setCurrentView('profile')}
-                sx={{
-                  backgroundColor: '#2196f3',
-                  color: 'white',
-                  mr: 1,
-                  '&:hover': {
-                    backgroundColor: '#1976d2'
-                  }
-                }}
-              >
-                UserProfile
-              </Button>
               <GradientButton
                 icon={<Plus size={16} />}
                 size="small"

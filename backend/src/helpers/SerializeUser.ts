@@ -17,6 +17,7 @@ interface SerializedUser {
   allTicket: string;
   whatsappId: number;
   profileImage: string;
+  coverImage: string;
   defaultTheme: string;
   defaultMenu: string;
   allHistoric: string;
@@ -58,6 +59,7 @@ export const SerializeUser = async (user: User): Promise<SerializedUser> => {
     allTicket: user.allTicket,
     whatsappId: user.whatsappId,
     profileImage: user.profileImage,
+    coverImage: user.coverImage,
     defaultTheme: user.defaultTheme,
     defaultMenu: user.defaultMenu,
     allHistoric: user.allHistoric,

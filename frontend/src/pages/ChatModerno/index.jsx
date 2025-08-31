@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Typography, useMediaQuery, useTheme, TextField } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { cn } from '../../utils/cn';
 
@@ -17,6 +17,8 @@ import ChatHeader from '../Chat/components/ChatHeader';
 import MessageItem from '../Chat/components/MessageItem';
 import MessageInput from '../Chat/components/MessageInput';
 import ConversationInfo from '../Chat/components/ConversationInfo';
+import FilterDropdown from '../../components/ui/FilterDropdown';
+import { useDrawerControl } from '../../context/DrawerContext';
 
 // Mock data e API
 import {
@@ -58,7 +60,7 @@ const ChatContainer = styled(Box)(({ theme }) => ({
 }));
 
 const SidebarContainer = styled(Box)(({ theme, isOpen }) => ({
-  width: '320px',
+  width: '360px',
   flexShrink: 0,
   transition: 'all 0.3s ease',
   height: '100%',
@@ -135,6 +137,24 @@ const ChatModerno = () => {
   const [replyData, setReplyData] = useState({});
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [isForward, setIsForward] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Estados dos filtros
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [selectedConnections, setSelectedConnections] = useState([]);
+  const [selectedStatuses, setSelectedStatuses] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  
+  // Estados dos filtros salvos
+  const [savedFilters, setSavedFilters] = useState([]);
+  const [filterName, setFilterName] = useState('');
+  
+  // Estados do SidebarContainer
+  const [showSortOptions, setShowSortOptions] = useState(false);
+  const [sortBy, setSortBy] = useState('Data de Criação');
+  
+  // Estados para controle do drawer principal
+  const [shouldCollapseDrawer, setShouldCollapseDrawer] = useState(false);
   
   // Refs
   const messagesEndRef = useRef(null);
@@ -143,6 +163,11 @@ const ChatModerno = () => {
   // Hooks
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('lg')); // Para controle do drawer
+  
+  // Contexto do drawer
+  const { drawerOpen, setDrawerOpen } = useDrawerControl();
+  const [originalDrawerState, setOriginalDrawerState] = useState(null);
   
   // Scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -301,6 +326,81 @@ const ChatModerno = () => {
     setShowSidebar(!showSidebar);
   };
 
+  // Funções dos filtros salvos
+  const saveCurrentFilter = () => {
+    if (!filterName.trim()) return;
+    
+    const hasSelectedFilters = selectedTags.length > 0 || 
+                              selectedConnections.length > 0 || 
+                              selectedStatuses.length > 0 || 
+                              selectedUsers.length > 0;
+    
+    if (!hasSelectedFilters) return;
+    
+    const newFilter = {
+      id: Date.now().toString(),
+      name: filterName,
+      filters: {
+        tags: selectedTags,
+        connections: selectedConnections,
+        statuses: selectedStatuses,
+        users: selectedUsers
+      }
+    };
+    
+    setSavedFilters(prev => [...prev, newFilter]);
+    setFilterName('');
+  };
+
+  const applySavedFilter = (savedFilter) => {
+    setSelectedTags(savedFilter.filters.tags || []);
+    setSelectedConnections(savedFilter.filters.connections || []);
+    setSelectedStatuses(savedFilter.filters.statuses || []);
+    setSelectedUsers(savedFilter.filters.users || []);
+    
+    // Fechar filtros usando a função que controla o drawer
+    handleFilterToggle();
+  };
+
+  const deleteSavedFilter = (filterId) => {
+    setSavedFilters(prev => prev.filter(filter => filter.id !== filterId));
+  };
+
+  // Função para controlar o drawer principal
+  const handleFilterToggle = () => {
+    const newShowFilters = !showFilters;
+    setShowFilters(newShowFilters);
+    
+    // Se estamos em tela pequena (lg ou menor), colapsa/expande o drawer
+    if (isSmallScreen) {
+      if (newShowFilters) {
+        // Filtros sendo abertos - salvar estado original e colapsar drawer
+        if (originalDrawerState === null) {
+          setOriginalDrawerState(drawerOpen);
+        }
+        setShouldCollapseDrawer(true);
+        setDrawerOpen(false);
+      } else {
+        // Filtros sendo fechados - restaurar estado original
+        setShouldCollapseDrawer(false);
+        if (originalDrawerState !== null) {
+          setDrawerOpen(originalDrawerState);
+          setOriginalDrawerState(null);
+        }
+      }
+    }
+  };
+
+  // Limpar estado ao desmontar componente
+  useEffect(() => {
+    return () => {
+      // Restaurar drawer ao sair da página se estava colapsado
+      if (shouldCollapseDrawer && isSmallScreen && originalDrawerState !== null) {
+        setDrawerOpen(originalDrawerState);
+      }
+    };
+  }, [shouldCollapseDrawer, isSmallScreen, originalDrawerState, setDrawerOpen]);
+
   // Get selected contact
   const selectedContact = contacts.find(c => c.id === selectedChatId);
 
@@ -342,6 +442,302 @@ const ChatModerno = () => {
           <Overlay onClick={() => setShowSidebar(false)} />
         )}
 
+        {/* Filter Panel */}
+        {showFilters && (
+          <Box sx={{
+            width: '280px',
+            height: 'calc(100vh - 128px)',
+            backgroundColor: 'var(--bg-primary)',
+            border: '1px solid var(--border-primary)',
+            borderRadius: '12px',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+          }}>
+            {/* Filter Header */}
+            <Box sx={{ 
+              p: 2, 
+              borderBottom: '1px solid var(--border-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '16px' }}>
+                Filtros
+              </Typography>
+              <Box
+                onClick={() => handleFilterToggle()}
+                sx={{
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                  '&:hover': {
+                    backgroundColor: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                  }
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </Box>
+            </Box>
+
+            {/* Filter Content */}
+            <Box sx={{ p: 2, flex: 1, overflow: 'auto' }}>
+              {/* Etiquetas Dropdown */}
+              <Box sx={{ mb: 1.8 }}>
+                <Typography variant="subtitle2" sx={{ mb: 0.8, fontWeight: 600, fontSize: '14px' }}>
+                  Etiquetas
+                </Typography>
+                <FilterDropdown 
+                  placeholder="Selecionar etiquetas..."
+                  options={['Urgente', 'Suporte', 'Vendas', 'Bug', 'Reclamação', 'Dúvida']}
+                  value={selectedTags}
+                  onChange={setSelectedTags}
+                />
+              </Box>
+
+              {/* Conexão Dropdown */}
+              <Box sx={{ mb: 1.8 }}>
+                <Typography variant="subtitle2" sx={{ mb: 0.8, fontWeight: 600, fontSize: '14px' }}>
+                  Conexão
+                </Typography>
+                <FilterDropdown 
+                  placeholder="Selecionar conexão..."
+                  options={['WhatsApp Business', 'WhatsApp Web', 'Telegram', 'Instagram']}
+                  value={selectedConnections}
+                  onChange={setSelectedConnections}
+                />
+              </Box>
+
+              {/* Status Dropdown */}
+              <Box sx={{ mb: 1.8 }}>
+                <Typography variant="subtitle2" sx={{ mb: 0.8, fontWeight: 600, fontSize: '14px' }}>
+                  Status
+                </Typography>
+                <FilterDropdown 
+                  placeholder="Selecionar status..."
+                  options={['Aberto', 'Pendente', 'Resolvido', 'Fechado']}
+                  value={selectedStatuses}
+                  onChange={setSelectedStatuses}
+                />
+              </Box>
+
+              {/* Usuário Dropdown */}
+              <Box sx={{ mb: 1.5 }}>
+                <Typography variant="subtitle2" sx={{ mb: 0.8, fontWeight: 600, fontSize: '14px' }}>
+                  Usuário
+                </Typography>
+                <FilterDropdown 
+                  placeholder="Selecionar usuário..."
+                  options={['João Silva', 'Maria Santos', 'Pedro Costa', 'Ana Oliveira']}
+                  value={selectedUsers}
+                  onChange={setSelectedUsers}
+                />
+              </Box>
+
+              {/* Seção de Salvar Filtro */}
+              <Box sx={{ 
+                p: 2, 
+                borderTop: '1px solid var(--border-primary)',
+                borderBottom: '1px solid var(--border-primary)' 
+              }}>
+                <Typography variant="subtitle2" sx={{ mb: 0.8, fontWeight: 600, fontSize: '14px' }}>
+                  Salvar Filtro
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <TextField
+                    fullWidth
+                    placeholder="Nome do filtro..."
+                    size="small"
+                    value={filterName}
+                    onChange={(e) => setFilterName(e.target.value)}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '4px',
+                        backgroundColor: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-primary)',
+                        '& fieldset': { border: 'none' },
+                        '&:hover': {
+                          backgroundColor: 'var(--bg-tertiary)',
+                        },
+                        '&.Mui-focused': {
+                          backgroundColor: 'white',
+                          borderColor: 'var(--color-accent)',
+                        },
+                        '& input': {
+                          fontSize: '13px',
+                          padding: '8px 12px',
+                          color: 'var(--text-primary)',
+                        },
+                      }
+                    }}
+                  />
+                  <Box
+                    onClick={saveCurrentFilter}
+                    sx={{
+                      px: 2,
+                      py: 1,
+                      backgroundColor: 'var(--color-accent)',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      minWidth: 'fit-content',
+                      '&:hover': {
+                        backgroundColor: 'var(--color-green-hover)',
+                      }
+                    }}
+                  >
+                    Salvar
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Filtros Salvos */}
+              {savedFilters.length > 0 && (
+                <Box sx={{ p: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 0.8, fontWeight: 600, fontSize: '14px' }}>
+                    Filtros Salvos
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {savedFilters.map((savedFilter) => (
+                      <Box
+                        key={savedFilter.id}
+                        sx={{
+                          p: 1.5,
+                          backgroundColor: 'var(--bg-secondary)',
+                          borderRadius: '4px',
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          border: '1px solid var(--border-primary)',
+                          color: 'var(--text-primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          '&:hover': {
+                            backgroundColor: 'var(--bg-tertiary)',
+                            borderColor: 'var(--color-accent)',
+                          }
+                        }}
+                      >
+                        <Box onClick={() => applySavedFilter(savedFilter)} sx={{ flex: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '13px' }}>
+                            {savedFilter.name}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontSize: '11px' }}>
+                            {[
+                              savedFilter.filters.tags?.length && `${savedFilter.filters.tags.length} etiquetas`,
+                              savedFilter.filters.connections?.length && `${savedFilter.filters.connections.length} conexões`,
+                              savedFilter.filters.statuses?.length && `${savedFilter.filters.statuses.length} status`,
+                              savedFilter.filters.users?.length && `${savedFilter.filters.users.length} usuários`
+                            ].filter(Boolean).join(', ')}
+                          </Typography>
+                        </Box>
+                        <Box
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteSavedFilter(savedFilter.id);
+                          }}
+                          sx={{
+                            width: '20px',
+                            height: '20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '3px',
+                            color: 'var(--text-secondary)',
+                            '&:hover': {
+                              backgroundColor: 'var(--bg-tertiary)',
+                              color: 'red',
+                            }
+                          }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+            </Box>
+
+            {/* Filter Actions */}
+            <Box sx={{ 
+              p: 2, 
+              borderTop: '1px solid var(--border-primary)',
+              display: 'flex',
+              gap: 1
+            }}>
+              <Box
+                onClick={() => {
+                  setSelectedTags([]);
+                  setSelectedConnections([]);
+                  setSelectedStatuses([]);
+                  setSelectedUsers([]);
+                }}
+                sx={{
+                  flex: 1,
+                  py: 1.5,
+                  textAlign: 'center',
+                  backgroundColor: 'var(--bg-secondary)',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                  '&:hover': {
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)',
+                  }
+                }}
+              >
+                Limpar
+              </Box>
+              <Box
+                onClick={() => {
+                  // Aqui você pode implementar a lógica de aplicar filtros
+                  console.log('Filtros aplicados:', {
+                    tags: selectedTags,
+                    connections: selectedConnections,
+                    statuses: selectedStatuses,
+                    users: selectedUsers
+                  });
+                  handleFilterToggle();
+                }}
+                sx={{
+                  flex: 1,
+                  py: 1.5,
+                  textAlign: 'center',
+                  backgroundColor: 'var(--color-accent)',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: 'var(--color-green-hover)',
+                  }
+                }}
+              >
+                Aplicar
+              </Box>
+            </Box>
+          </Box>
+        )}
+
         {/* Sidebar - Lista de Contatos */}
         <SidebarContainer isOpen={showSidebar}>
           <Card sx={{ 
@@ -350,10 +746,235 @@ const ChatModerno = () => {
             flexDirection: 'column',
             overflow: 'hidden'
           }}>
-            <CardHeader sx={{ pb: 2, flexShrink: 0 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Conversas
-              </Typography>
+            <CardHeader sx={{ p: 2, flexShrink: 0 }}>
+              {/* Top Actions Row */}
+              <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '16px' }}>
+                  Conversas
+                </Typography>
+                
+                {/* Actions Icons */}
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  {/* Sort Dropdown */}
+                  <Box sx={{ position: 'relative' }}>
+                    <Box
+                      onClick={() => setShowSortOptions(!showSortOptions)}
+                      sx={{
+                        width: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '8px',
+                        backgroundColor: showSortOptions ? 'var(--color-accent)' : 'var(--bg-secondary)',
+                        border: '1px solid var(--border-primary)',
+                        color: showSortOptions ? 'white' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          backgroundColor: showSortOptions ? 'var(--color-green-hover)' : 'var(--bg-tertiary)',
+                          color: showSortOptions ? 'white' : 'var(--text-primary)',
+                        }
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 6H21M7 12H17M11 18H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </Box>
+                    
+                    {/* Sort Options Dropdown */}
+                    {showSortOptions && (
+                      <>
+                        <Box
+                          onClick={() => setShowSortOptions(false)}
+                          sx={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            zIndex: 999,
+                          }}
+                        />
+                        <Box sx={{
+                          position: 'absolute',
+                          top: '100%',
+                          right: 0,
+                          mt: 1,
+                          backgroundColor: 'var(--bg-primary)',
+                          border: '1px solid var(--border-primary)',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                          zIndex: 1000,
+                          minWidth: '180px'
+                        }}>
+                          <Typography variant="caption" sx={{ 
+                            p: 1.5, 
+                            borderBottom: '1px solid var(--border-primary)',
+                            display: 'block',
+                            fontWeight: 600,
+                            fontSize: '12px',
+                            color: 'var(--text-secondary)'
+                          }}>
+                            Ordenar por:
+                          </Typography>
+                          {['Data de Criação', 'Última Mensagem', 'Esperando Resposta'].map((option) => (
+                            <Box
+                              key={option}
+                              onClick={() => {
+                                setSortBy(option);
+                                setShowSortOptions(false);
+                              }}
+                              sx={{
+                                p: 1.5,
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                color: sortBy === option ? 'var(--color-accent)' : 'var(--text-primary)',
+                                fontWeight: sortBy === option ? 600 : 400,
+                                '&:hover': {
+                                  backgroundColor: 'var(--bg-secondary)',
+                                }
+                              }}
+                            >
+                              {option}
+                            </Box>
+                          ))}
+                        </Box>
+                      </>
+                    )}
+                  </Box>
+                  
+                  {/* New Conversation Button */}
+                  <Box
+                    onClick={() => {
+                      // Adicionar lógica de nova conversa
+                      console.log('Iniciar nova conversa');
+                    }}
+                    sx={{
+                      width: '32px',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--color-accent)',
+                      border: '1px solid var(--color-accent)',
+                      color: 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        backgroundColor: 'var(--color-green-hover)',
+                        borderColor: 'var(--color-green-hover)',
+                        transform: 'scale(1.05)',
+                      }
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Search Input */}
+              <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+                <TextField
+                  fullWidth
+                  placeholder="Buscar conversas..."
+                  size="small"
+                  InputProps={{
+                    startAdornment: (
+                      <Box sx={{ mr: 1, display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                          <path d="M21 21L16.514 16.506M19 10.5C19 15.194 15.194 19 10.5 19S2 15.194 2 10.5 5.806 2 10.5 2 19 5.806 19 10.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </Box>
+                    ),
+                    sx: {
+                      borderRadius: '12px',
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-primary)',
+                      '& fieldset': { border: 'none' },
+                      '&:hover': {
+                        backgroundColor: 'var(--bg-tertiary)',
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: 'white',
+                        borderColor: 'var(--color-accent)',
+                        boxShadow: '0 0 0 3px rgba(0, 195, 7, 0.1)',
+                      },
+                      '& input': {
+                        fontSize: '14px',
+                        padding: '8px 12px',
+                        color: 'var(--text-primary)',
+                        '&::placeholder': {
+                          color: 'var(--text-secondary)',
+                          opacity: 1,
+                        },
+                      },
+                    }
+                  }}
+                />
+                
+                {/* Filter Button */}
+                <Box
+                  onClick={handleFilterToggle}
+                  sx={{
+                    width: '40px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '12px',
+                    backgroundColor: showFilters ? 'var(--color-accent)' : 'var(--bg-secondary)',
+                    border: '1px solid var(--border-primary)',
+                    color: showFilters ? 'white' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      backgroundColor: showFilters ? 'var(--color-green-hover)' : 'var(--bg-tertiary)',
+                      borderColor: showFilters ? 'var(--color-green-hover)' : 'var(--color-accent)',
+                    }
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 4.6C3 4.03995 3 3.75992 3.10899 3.54601C3.20487 3.35785 3.35785 3.20487 3.54601 3.10899C3.75992 3 4.03995 3 4.6 3H19.4C19.9601 3 20.2401 3 20.4540 3.10899C20.6422 3.20487 20.7951 3.35785 20.8910 3.54601C21 3.75992 21 4.03995 21 4.6V6.33726C21 6.58185 21 6.70414 20.9724 6.81923C20.9479 6.92127 20.9075 7.01881 20.8526 7.10828C20.7908 7.2092 20.7043 7.29568 20.5314 7.46863L14.4686 13.5314C14.2957 13.7043 14.2092 13.7908 14.1474 13.8917C14.0925 13.9812 14.0521 14.0787 14.0276 14.1808C14 14.2959 14 14.4182 14 14.6627V17L10 21V14.6627C10 14.4182 10 14.2959 9.97237 14.1808C9.94787 14.0787 9.90747 13.9812 9.85264 13.8917C9.7908 13.7908 9.70432 13.7043 9.53137 13.5314L3.46863 7.46863C3.29568 7.29568 3.2092 7.2092 3.14736 7.10828C3.09253 7.01881 3.05213 6.92127 3.02763 6.81923C3 6.70414 3 6.58185 3 6.33726V4.6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </Box>
+              </Box>
+
+              {/* Tabs */}
+              <Box sx={{ 
+                display: 'flex',
+                backgroundColor: 'var(--bg-secondary)',
+                borderRadius: '8px',
+                padding: '4px',
+                gap: '2px'
+              }}>
+                {['Atendendo', 'Esperando', 'Finalizados', 'Grupos'].map((tab, index) => (
+                  <Box
+                    key={tab}
+                    sx={{
+                      flex: 1,
+                      textAlign: 'center',
+                      padding: '6px 8px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      backgroundColor: index === 0 ? 'var(--color-accent)' : 'transparent',
+                      color: index === 0 ? 'white' : 'var(--text-secondary)',
+                      '&:hover': {
+                        backgroundColor: index === 0 ? 'var(--color-accent)' : 'var(--bg-tertiary)',
+                        color: index === 0 ? 'white' : 'var(--text-primary)',
+                      }
+                    }}
+                  >
+                    {tab}
+                  </Box>
+                ))}
+              </Box>
             </CardHeader>
             
             <CardContent sx={{ 

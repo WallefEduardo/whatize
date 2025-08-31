@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, Avatar } from '@mui/material';
 import { CardContent } from '../ui/Card';
+import { getBackendUrl } from '../../config';
 
 const UserAvatar = ({ user, onUpdate }) => {
   const getInitials = (name) => {
@@ -29,7 +30,7 @@ const UserAvatar = ({ user, onUpdate }) => {
         mt: 1
       }}>
         <Avatar
-          src={user?.profileImage}
+          src={user?.profileImage ? `${getBackendUrl()}/public/company${user.companyId}/${user.profileImage}` : null}
           sx={{
             width: 100,
             height: 100,
