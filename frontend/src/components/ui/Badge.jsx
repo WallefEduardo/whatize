@@ -37,17 +37,17 @@ const StyledBadge = styled(Box)(({ theme, variant = 'default', size = 'default',
   
   // Variant styles
   ...(variant === 'default' && {
-    backgroundColor: '#3b82f6',
+    backgroundColor: 'var(--color-accent)',
     color: '#ffffff',
     '&:hover': {
-      backgroundColor: 'rgba(59, 130, 246, 0.8)',
+      backgroundColor: 'var(--color-green-hover)',
     },
   }),
   ...(variant === 'secondary' && {
-    backgroundColor: '#64748b',
+    backgroundColor: 'var(--text-secondary)',
     color: '#ffffff',
     '&:hover': {
-      backgroundColor: 'rgba(100, 116, 139, 0.8)',
+      backgroundColor: 'var(--text-primary)',
     },
   }),
   ...(variant === 'destructive' && {
@@ -59,11 +59,11 @@ const StyledBadge = styled(Box)(({ theme, variant = 'default', size = 'default',
   }),
   ...(variant === 'outline' && {
     backgroundColor: 'transparent',
-    borderColor: '#e2e8f0',
-    color: '#1e293b',
+    borderColor: 'var(--border-primary)',
+    color: 'var(--text-primary)',
     '&:hover': {
-      backgroundColor: '#f8fafc',
-      color: '#0f172a',
+      backgroundColor: 'var(--bg-secondary)',
+      color: 'var(--text-primary)',
     },
   }),
   ...(variant === 'success' && {
@@ -79,10 +79,10 @@ const StyledBadge = styled(Box)(({ theme, variant = 'default', size = 'default',
     color: '#1e40af',
   }),
   ...(variant === 'muted' && {
-    backgroundColor: '#f1f5f9',
-    color: '#64748b',
+    backgroundColor: 'var(--bg-secondary)',
+    color: 'var(--text-secondary)',
     '&:hover': {
-      backgroundColor: 'rgba(241, 245, 249, 0.8)',
+      backgroundColor: 'var(--bg-primary)',
     },
   }),
 }));

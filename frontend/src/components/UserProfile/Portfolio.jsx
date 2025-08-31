@@ -73,7 +73,7 @@ const Portfolio = ({ user, onUpdate }) => {
   return (
     <>
       <CardHeader sx={{ borderBottom: 'none', paddingBottom: '12px' }}>
-        <CardTitle sx={{ fontSize: '18px', fontWeight: 500, color: '#374151' }}>
+        <CardTitle sx={{ fontSize: '18px', fontWeight: 500, color: 'var(--text-primary)' }}>
           Portfolio & Links
         </CardTitle>
       </CardHeader>
@@ -90,13 +90,13 @@ const Portfolio = ({ user, onUpdate }) => {
                   alignItems: 'center',
                   gap: 2,
                   p: 2,
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: 'var(--bg-secondary)',
                   borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid var(--border-primary)',
                   transition: 'all 0.2s ease',
                   '&:hover': {
-                    backgroundColor: '#f1f5f9',
-                    borderColor: '#cbd5e1'
+                    backgroundColor: 'var(--bg-secondary)',
+                    borderColor: 'var(--border-primary)'
                   }
                 }}
               >
@@ -130,7 +130,7 @@ const Portfolio = ({ user, onUpdate }) => {
                     className="url-text"
                     variant="body2" 
                     sx={{ 
-                      color: '#475569',
+                      color: 'var(--text-secondary)',
                       fontSize: '13px',
                       fontWeight: 400,
                       transition: 'all 0.2s ease'
@@ -147,7 +147,7 @@ const Portfolio = ({ user, onUpdate }) => {
                   sx={{
                     width: 24,
                     height: 24,
-                    color: '#64748b',
+                    color: 'var(--text-secondary)',
                     '&:hover': {
                       backgroundColor: '#fee2e2',
                       color: '#dc2626'
@@ -165,11 +165,11 @@ const Portfolio = ({ user, onUpdate }) => {
         {isEditing ? (
           <Box sx={{ 
             p: 3, 
-            backgroundColor: '#f8fafc', 
+            backgroundColor: 'var(--bg-secondary)', 
             borderRadius: '8px',
-            border: '1px solid #e2e8f0'
+            border: '1px solid var(--border-primary)'
           }}>
-            <Typography variant="body2" sx={{ fontWeight: 500, mb: 2, color: '#374151' }}>
+            <Typography variant="body2" sx={{ fontWeight: 500, mb: 2, color: 'var(--text-primary)' }}>
               Adicionar Novo Link
             </Typography>
             
@@ -237,7 +237,7 @@ const Portfolio = ({ user, onUpdate }) => {
         {links.length === 0 && !isEditing && (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <Globe size={32} className="mx-auto text-gray-400 mb-2" />
-            <Typography variant="body2" sx={{ color: '#9ca3af', mb: 2 }}>
+            <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 2 }}>
               Nenhum link adicionado
             </Typography>
             <ModernButton

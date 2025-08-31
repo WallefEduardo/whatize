@@ -58,7 +58,7 @@ const Skills = ({ user, onUpdate }) => {
           gap: '8px', 
           fontSize: '18px', 
           fontWeight: 500, 
-          color: '#374151' 
+          color: 'var(--text-primary)' 
         }}>
           <Code size={18} />
           Skills
@@ -77,7 +77,7 @@ const Skills = ({ user, onUpdate }) => {
         }}>
           {skills.length === 0 ? (
             <Typography variant="body2" sx={{ 
-              color: '#9ca3af', 
+              color: 'var(--text-secondary)', 
               fontStyle: 'italic',
               textAlign: 'center',
               width: '100%'
@@ -93,11 +93,6 @@ const Skills = ({ user, onUpdate }) => {
                 onRemove={() => handleRemoveSkill(skill)}
                 sx={{
                   cursor: 'default',
-                  backgroundColor: '#f1f5f9',
-                  color: '#374151',
-                  '&:hover': {
-                    backgroundColor: '#e2e8f0',
-                  },
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -114,9 +109,9 @@ const Skills = ({ user, onUpdate }) => {
             gap: 1.5, 
             alignItems: 'center',
             p: 2,
-            backgroundColor: '#f8fafc',
+            backgroundColor: 'var(--bg-secondary)',
             borderRadius: '8px',
-            border: '1px solid #e2e8f0'
+            border: '1px solid var(--border-primary)'
           }}>
             <Input
               value={newSkill}
@@ -156,11 +151,11 @@ const Skills = ({ user, onUpdate }) => {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              color: '#2563eb',
-              borderColor: '#bfdbfe',
+              color: 'var(--color-accent)',
+              borderColor: 'var(--border-primary)',
               '&:hover': {
-                backgroundColor: '#eff6ff',
-                color: '#1d4ed8'
+                backgroundColor: 'var(--bg-secondary)',
+                color: 'var(--color-accent)'
               }
             }}
           >
@@ -173,7 +168,7 @@ const Skills = ({ user, onUpdate }) => {
         {isAdding && (
           <Box sx={{ mt: 2 }}>
             <Typography variant="caption" sx={{ 
-              color: '#64748b', 
+              color: 'var(--text-secondary)', 
               fontSize: '11px',
               fontWeight: 500,
               mb: 1.5,
@@ -197,14 +192,14 @@ const Skills = ({ user, onUpdate }) => {
                     sx={{
                       px: 1.5,
                       py: 0.5,
-                      backgroundColor: '#e0f2fe',
-                      color: '#0c4a6e',
+                      backgroundColor: 'var(--bg-secondary)',
+                      color: 'var(--color-accent)',
                       borderRadius: '12px',
                       fontSize: '11px',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       '&:hover': {
-                        backgroundColor: '#b3e5fc',
+                        backgroundColor: 'var(--bg-primary)',
                         transform: 'translateY(-1px)'
                       }
                     }}
@@ -222,7 +217,7 @@ const Skills = ({ user, onUpdate }) => {
 
         {/* Help Text */}
         <Typography variant="caption" sx={{ 
-          color: '#94a3b8', 
+          color: 'var(--text-secondary)', 
           fontSize: '11px',
           mt: 2,
           display: 'block',

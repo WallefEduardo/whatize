@@ -701,6 +701,11 @@ const Users = () => {
     );
   };
 
+  // UserProfile precisa renderizar fora do PageLayout para funcionar o modo dark
+  if (currentView === 'profile') {
+    return <UserProfile onClose={() => setCurrentView('users')} />;
+  }
+
   return (
     <PageLayout
       title="Usuários"
@@ -743,24 +748,6 @@ const Users = () => {
             </Box>
           )}
           
-          {currentView === 'profile' && (
-            <Box>
-              <Button
-                onClick={() => setCurrentView('users')}
-                sx={{
-                  mb: 2,
-                  backgroundColor: '#6b7280',
-                  color: 'white',
-                  '&:hover': {
-                    backgroundColor: '#4b5563'
-                  }
-                }}
-              >
-                ← Voltar para Usuários
-              </Button>
-              <UserProfile onClose={() => setCurrentView('users')} />
-            </Box>
-          )}
           
           {currentView === 'users' && (
             <>

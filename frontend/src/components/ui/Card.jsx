@@ -5,8 +5,8 @@ import { styled } from '@mui/material/styles';
 // Styled Card Components usando Material-UI
 const StyledCard = styled(Box)(({ theme, variant = 'default' }) => ({
   borderRadius: '8px',
-  border: '1px solid #e2e8f0',
-  backgroundColor: '#ffffff',
+  border: '1px solid var(--border-primary)',
+  backgroundColor: 'var(--bg-primary)',
   boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
   overflow: 'hidden',
   transition: 'all 0.2s ease',
@@ -16,13 +16,13 @@ const StyledCard = styled(Box)(({ theme, variant = 'default' }) => ({
   }),
   
   ...(variant === 'outline' && {
-    border: '2px solid #e2e8f0',
+    border: '2px solid var(--border-primary)',
     backgroundColor: 'transparent',
   }),
   
   ...(variant === 'filled' && {
-    backgroundColor: '#f8fafc',
-    border: '1px solid #f1f5f9',
+    backgroundColor: 'var(--bg-secondary)',
+    border: '1px solid var(--border-secondary)',
   }),
 }));
 
@@ -42,13 +42,13 @@ const StyledCardTitle = styled('h3')(() => ({
   fontWeight: 600,
   lineHeight: 1.2,
   letterSpacing: '-0.025em',
-  color: '#1e293b',
+  color: 'var(--text-primary)',
   margin: 0,
 }));
 
 const StyledCardDescription = styled('p')(() => ({
   fontSize: '14px',
-  color: '#64748b',
+  color: 'var(--text-secondary)',
   margin: 0,
   lineHeight: 1.5,
 }));

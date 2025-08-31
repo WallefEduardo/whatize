@@ -119,7 +119,7 @@ const ChangePassword = ({ user }) => {
             <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--text-gray-medium)' }}>
               Alterar Senha
             </Typography>
-            <Typography variant="body2" sx={{ color: '#64748b' }}>
+            <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
               Mantenha sua conta segura com uma senha forte
             </Typography>
           </Box>
@@ -173,9 +173,9 @@ const ChangePassword = ({ user }) => {
         {formData.newPassword && (
           <Box sx={{ 
             p: 3, 
-            backgroundColor: '#f8fafc', 
+            backgroundColor: 'var(--bg-secondary)', 
             borderRadius: '8px',
-            border: '1px solid #e2e8f0',
+            border: '1px solid var(--border-primary)',
             mb: 4 
           }}>
             <Typography variant="body2" sx={{ fontWeight: 600, mb: 2, color: 'var(--text-gray-medium)' }}>
@@ -205,7 +205,7 @@ const ChangePassword = ({ user }) => {
 
             {/* Passwords Match Indicator */}
             {formData.confirmPassword && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2, pt: 2, borderTop: '1px solid #e5e7eb' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2, pt: 2, borderTop: '1px solid var(--border-primary)' }}>
                 <CheckCircle 
                   size={16} 
                   color={passwordsMatch ? '#10b981' : '#ef4444'}
@@ -251,14 +251,14 @@ const ChangePassword = ({ user }) => {
         <Box sx={{ 
           mt: 4, 
           p: 3, 
-          backgroundColor: '#fef3c7', 
+          backgroundColor: 'var(--bg-secondary)', 
           borderRadius: '8px',
-          border: '1px solid #f59e0b' 
+          border: '1px solid var(--border-primary)' 
         }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: '#92400e' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: 'var(--text-primary)' }}>
             💡 Dicas de Segurança:
           </Typography>
-          <Box component="ul" sx={{ margin: 0, paddingLeft: 2, color: '#92400e' }}>
+          <Box component="ul" sx={{ margin: 0, paddingLeft: 2, color: 'var(--text-secondary)' }}>
             <Typography component="li" variant="body2" sx={{ fontSize: '13px', mb: 0.5 }}>
               Use uma senha única que você não usa em outros sites
             </Typography>

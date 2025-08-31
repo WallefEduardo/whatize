@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
-import { User, Settings, Lock, Shield } from 'lucide-react';
+import { Box, Typography, Button } from '@mui/material';
+import { User, Settings, Lock, Shield, ArrowLeft } from 'lucide-react';
 
 // Nossos componentes CVA
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
@@ -55,7 +55,14 @@ const UserProfile = ({ onClose }) => {
 
   if (loading) {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
+      <Box sx={{ 
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'var(--bg-primary)',
+        minHeight: '100vh',
+        p: 3,
+        textAlign: 'center'
+      }}>
         <Typography>Carregando perfil...</Typography>
       </Box>
     );
@@ -63,22 +70,76 @@ const UserProfile = ({ onClose }) => {
 
   return (
     <Box sx={{ 
-      minHeight: '100vh',
-      backgroundColor: '#EEF1F9'
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'var(--bg-primary)',
+      minHeight: '100vh'
     }}>
-      {/* Cover Banner */}
-      <Box sx={{ p: 3, pb: 0 }}>
-        <CoverBanner user={userData} onUpdate={setUserData} />
-      </Box>
+      <Box sx={{ padding: 3 }}>
+        {/* Botão Voltar */}
+        <Button
+          onClick={onClose}
+          sx={{
+            mb: 3,
+            backgroundColor: '#6b7280',
+            color: 'white',
+            '&:hover': {
+              backgroundColor: '#4b5563'
+            }
+          }}
+        >
+          <ArrowLeft size={16} style={{ marginRight: 8 }} />
+          Voltar para Usuários
+        </Button>
 
-      {/* Layout Grid */}
-      <Box sx={{ 
-        p: 3,
-        pt: 0,
-        display: 'grid', 
-        gridTemplateColumns: { xs: '1fr', lg: '1fr 2fr' },
-        gap: 3
-      }}>
+        {/* Container Superior - Header do Perfil */}
+        <Card sx={{ 
+          marginBottom: 3, 
+          overflow: 'hidden',
+          borderRadius: '16px'
+        }}>
+          <Box sx={{ 
+            background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-green-hover, #00e608) 100%)',
+            color: 'white',
+            padding: 4,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 3
+          }}>
+            <Box sx={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '2px solid rgba(255, 255, 255, 0.3)'
+            }}>
+              <User size={32} color="white" />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h4" sx={{ fontWeight: 700, fontSize: '28px', mb: 1 }}>
+                Perfil do Usuário
+              </Typography>
+              <Typography variant="body1" sx={{ opacity: 0.9, fontSize: '16px' }}>
+                Visualize e edite as informações do seu perfil
+              </Typography>
+            </Box>
+          </Box>
+        </Card>
+
+        {/* Cover Banner */}
+        <Box sx={{ mb: 3 }}>
+          <CoverBanner user={userData} onUpdate={setUserData} />
+        </Box>
+
+        {/* Layout Grid */}
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: { xs: '1fr', lg: '1fr 2fr' },
+          gap: 3
+        }}>
         {/* Sidebar Esquerda */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* UserMeta Container */}
@@ -133,6 +194,7 @@ const UserProfile = ({ onClose }) => {
             </ModernTabsContent>
           </ModernTabs>
         </Card>
+        </Box>
       </Box>
     </Box>
   );

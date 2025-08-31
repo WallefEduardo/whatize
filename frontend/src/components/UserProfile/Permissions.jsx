@@ -183,14 +183,14 @@ const Permissions = ({ user }) => {
                   display: 'flex',
                   alignItems: 'center',
                   p: 3,
-                  backgroundColor: '#ffffff',
-                  border: `1px solid ${isChecked ? 'var(--color-accent)' : '#e2e8f0'}`,
+                  backgroundColor: 'var(--bg-primary)',
+                  border: `1px solid ${isChecked ? 'var(--color-accent)' : 'var(--border-primary)'}`,
                   borderRadius: '8px',
                   transition: 'all 0.2s ease',
                   cursor: 'pointer',
                   '&:hover': {
                     borderColor: 'var(--color-accent)',
-                    backgroundColor: '#f8fafc',
+                    backgroundColor: 'var(--bg-secondary)',
                   }
                 }}
                 onClick={() => handlePermissionChange(permission.key, !isChecked)}
@@ -227,7 +227,7 @@ const Permissions = ({ user }) => {
                   <Typography 
                     variant="caption" 
                     sx={{ 
-                      color: '#64748b',
+                      color: 'var(--text-secondary)',
                       fontSize: '12px',
                       lineHeight: 1.3
                     }}
@@ -257,14 +257,14 @@ const Permissions = ({ user }) => {
         <Box sx={{ 
           mt: 3, 
           p: 3, 
-          backgroundColor: '#f8fafc', 
+          backgroundColor: 'var(--bg-secondary)', 
           borderRadius: '8px', 
-          border: '1px solid #e2e8f0' 
+          border: '1px solid var(--border-primary)' 
         }}>
-          <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 500, color: '#374151', mb: 1 }}>
+          <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', mb: 1 }}>
             Resumo das Permissões:
           </Typography>
-          <Typography variant="body2" sx={{ fontSize: '12px', color: '#64748b' }}>
+          <Typography variant="body2" sx={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
             {Object.values(permissions).filter(Boolean).length} de {permissionsList.length} permissões selecionadas
           </Typography>
         </Box>

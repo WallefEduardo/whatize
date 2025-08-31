@@ -61,7 +61,7 @@ const UserMeta = ({ user, onUpdate }) => {
           <Typography variant="h6" sx={{ 
             fontSize: '16px', 
             fontWeight: 600, 
-            color: '#1e293b',
+            color: 'var(--text-primary)',
             lineHeight: 1.2,
             mb: 0.5
           }}>
@@ -69,7 +69,7 @@ const UserMeta = ({ user, onUpdate }) => {
           </Typography>
           <Typography variant="body2" sx={{ 
             fontSize: '13px', 
-            color: '#64748b',
+            color: 'var(--text-secondary)',
             fontWeight: 500
           }}>
             {user?.cargo || 'Cargo'} {user?.departamento && ` • ${user.departamento}`}
@@ -80,7 +80,7 @@ const UserMeta = ({ user, onUpdate }) => {
         <Typography sx={{ 
           fontSize: '14px', 
           fontWeight: 600, 
-          color: '#374151',
+          color: 'var(--text-primary)',
           mb: 3,
           textAlign: 'center'
         }}>
@@ -112,7 +112,7 @@ const UserMeta = ({ user, onUpdate }) => {
                 width: 24,
                 height: 24,
                 borderRadius: '4px',
-                backgroundColor: '#f0f9ff',
+                backgroundColor: 'var(--bg-secondary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -120,12 +120,12 @@ const UserMeta = ({ user, onUpdate }) => {
               }}>
                 <Mail size={12} color="#0369a1" />
               </Box>
-              <Typography variant="caption" sx={{ color: '#64748b', fontSize: '9px', fontWeight: 600 }}>
+              <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontSize: '9px', fontWeight: 600 }}>
                 EMAIL
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ 
-              color: '#1e293b', 
+              color: 'var(--text-primary)', 
               fontSize: '11px',
               fontWeight: 500,
               overflow: 'hidden',
@@ -143,7 +143,7 @@ const UserMeta = ({ user, onUpdate }) => {
                 width: 24,
                 height: 24,
                 borderRadius: '4px',
-                backgroundColor: '#f0fdf4',
+                backgroundColor: 'var(--bg-secondary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -151,12 +151,12 @@ const UserMeta = ({ user, onUpdate }) => {
               }}>
                 <Phone size={12} color="#166534" />
               </Box>
-              <Typography variant="caption" sx={{ color: '#64748b', fontSize: '9px', fontWeight: 600 }}>
+              <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontSize: '9px', fontWeight: 600 }}>
                 TELEFONE
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ 
-              color: '#1e293b', 
+              color: 'var(--text-primary)', 
               fontSize: '11px', 
               fontWeight: 500,
               whiteSpace: 'nowrap'
@@ -172,7 +172,7 @@ const UserMeta = ({ user, onUpdate }) => {
                 width: 24,
                 height: 24,
                 borderRadius: '4px',
-                backgroundColor: '#fef7ff',
+                backgroundColor: 'var(--bg-secondary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -180,12 +180,12 @@ const UserMeta = ({ user, onUpdate }) => {
               }}>
                 <MapPin size={12} color="#a21caf" />
               </Box>
-              <Typography variant="caption" sx={{ color: '#64748b', fontSize: '9px', fontWeight: 600 }}>
+              <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontSize: '9px', fontWeight: 600 }}>
                 LOCAL
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ 
-              color: '#1e293b', 
+              color: 'var(--text-primary)', 
               fontSize: '11px', 
               fontWeight: 500,
               overflow: 'hidden',
@@ -211,7 +211,7 @@ const UserMeta = ({ user, onUpdate }) => {
                 width: 24,
                 height: 24,
                 borderRadius: '4px',
-                backgroundColor: '#fefce8',
+                backgroundColor: 'var(--bg-secondary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -219,12 +219,12 @@ const UserMeta = ({ user, onUpdate }) => {
               }}>
                 <Calendar size={12} color="#a16207" />
               </Box>
-              <Typography variant="caption" sx={{ color: '#64748b', fontSize: '9px', fontWeight: 600 }}>
+              <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontSize: '9px', fontWeight: 600 }}>
                 DATA DE ADMISSÃO
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ 
-              color: '#1e293b', 
+              color: 'var(--text-primary)', 
               fontSize: '11px', 
               fontWeight: 500
             }}>
@@ -245,7 +245,7 @@ const UserMeta = ({ user, onUpdate }) => {
                 width: 24,
                 height: 24,
                 borderRadius: '4px',
-                backgroundColor: '#fff1f2',
+                backgroundColor: 'var(--bg-secondary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -253,12 +253,12 @@ const UserMeta = ({ user, onUpdate }) => {
               }}>
                 <Briefcase size={12} color="#be123c" />
               </Box>
-              <Typography variant="caption" sx={{ color: '#64748b', fontSize: '9px', fontWeight: 600 }}>
+              <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontSize: '9px', fontWeight: 600 }}>
                 DEPARTAMENTO
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ 
-              color: '#1e293b', 
+              color: 'var(--text-primary)', 
               fontSize: '11px', 
               fontWeight: 500,
               overflow: 'hidden',

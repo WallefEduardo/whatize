@@ -182,7 +182,7 @@ const UserSettings = ({ user, onUpdate }) => {
             <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--text-gray-medium)' }}>
               Configurações do Sistema
             </Typography>
-            <Typography variant="body2" sx={{ color: '#64748b' }}>
+            <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
               Gerencie as configurações e preferências do usuário
             </Typography>
           </Box>
@@ -374,7 +374,7 @@ const UserSettings = ({ user, onUpdate }) => {
           <Box>
             <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
               Mensagem de Despedida 
-              <span style={{ color: '#64748b', fontWeight: 400 }}> (Opcional)</span>
+              <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}> (Opcional)</span>
             </Typography>
             <Textarea
               rows={3}
@@ -404,14 +404,14 @@ const UserSettings = ({ user, onUpdate }) => {
         <Box sx={{ 
           mt: 4, 
           p: 3, 
-          backgroundColor: '#eff6ff', 
+          backgroundColor: 'var(--bg-secondary)', 
           borderRadius: '8px',
-          border: '1px solid #3b82f6' 
+          border: '1px solid var(--border-primary)' 
         }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: '#1e40af' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: 'var(--text-primary)' }}>
             💡 Dica:
           </Typography>
-          <Typography variant="body2" sx={{ fontSize: '13px', color: '#1e40af' }}>
+          <Typography variant="body2" sx={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
             As configurações de horário de trabalho afetam a disponibilidade para atendimento automático. 
             A mensagem de despedida será enviada automaticamente quando um atendimento for finalizado.
           </Typography>
