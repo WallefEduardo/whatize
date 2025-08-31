@@ -724,6 +724,13 @@ const MainListItems = ({ collapsed, drawerClose }) => {
         primary={i18n.t("Anotações")}
         icon={<Task />}
       />
+      
+      <ListItemLink
+        to="/tasks-modern"
+        primary={i18n.t("Tarefas Modernas")}
+        icon={<CalendarEdit />}
+        tooltip={collapsed}
+      />
       {hasHelps && (
         <ListItemLink
           to="/helps"

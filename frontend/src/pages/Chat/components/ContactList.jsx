@@ -7,11 +7,8 @@ import { formatTime } from '../data/mockData';
 // Nossos componentes UI
 import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/Avatar';
 import Badge from '../../../components/ui/Badge';
-import StatusBadge from '../../../components/StatusBadge';
-
 // Icons
 import { CheckIcon } from '@heroicons/react/24/outline';
-import { TagIcon } from '@heroicons/react/24/outline';
 
 const StyledContactItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isSelected',
@@ -19,10 +16,10 @@ const StyledContactItem = styled(Box, {
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
-  padding: '16px 16px',
+  padding: '14px 16px',
   cursor: 'pointer',
   borderLeft: '3px solid transparent',
-  borderBottom: '1px solid rgba(0, 0, 0, 0.03)',
+  borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
   borderRadius: '0 8px 8px 0',
   transition: 'all 0.2s ease',
   position: 'relative',
@@ -120,101 +117,14 @@ const TypingIndicator = styled(Box)(() => ({
   },
 }));
 
-const TagsContainer = styled(Box)(() => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '4px',
-  marginTop: '4px',
-  flexWrap: 'wrap',
-}));
-
-const TagDropdown = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'isOpen',
-})(({ isOpen }) => ({
-  position: 'absolute',
-  bottom: '100%',
-  left: '0',
-  marginBottom: '8px',
-  backgroundColor: 'var(--bg-primary)',
-  border: '1px solid var(--border-primary)',
-  borderRadius: '8px',
-  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-  zIndex: 1000,
-  minWidth: '200px',
-  padding: '8px',
-  display: isOpen ? 'block' : 'none',
-}));
-
-const TagButton = styled(Box)(() => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '20px',
-  height: '20px',
-  borderRadius: '50%',
-  backgroundColor: 'var(--bg-secondary)',
-  border: '1px solid var(--border-primary)',
-  cursor: 'pointer',
-  transition: 'transform 0.2s ease',
-  position: 'relative',
-  
-  '& svg': {
-    color: 'var(--color-accent)',
-  },
-  
-  '&:hover': {
-    transform: 'scale(1.1)',
-  },
-}));
-
-const MultiTagBadge = styled(Box)(({ tagCount }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minWidth: '18px',
-  height: '18px',
-  borderRadius: '50%',
-  backgroundColor: 'var(--text-secondary)',
-  color: 'white',
-  fontSize: '10px',
-  fontWeight: 600,
-  cursor: 'pointer',
-  transition: 'all 0.2s ease',
-  position: 'relative',
-  
-  '&:hover': {
-    backgroundColor: 'var(--color-accent)',
-    transform: 'scale(1.1)',
-  },
-}));
 
 const ContactList = ({ contact, selectedChatId, openChat }) => {
   const { id, name, avatar, status, lastMessage, lastSeen, unreadCount, isTyping } = contact;
-  
-  // Tags mockadas para demonstração
-  const mockTags = [
-    { id: 1, name: 'Cliente VIP', color: '#4CAF50' },
-    { id: 2, name: 'Urgente', color: '#F44336' },
-    { id: 3, name: 'Suporte', color: '#2196F3' },
-    { id: 4, name: 'Vendas', color: '#FF9800' },
-    { id: 5, name: 'Marketing', color: '#9C27B0' }
-  ];
-  
-  // Simular tags diferentes para diferentes contatos
-  const tags = id % 3 === 0 ? mockTags.slice(0, 3) : 
-               id % 2 === 0 ? mockTags.slice(0, 1) : [];
-  
-  const [showTagDropdown, setShowTagDropdown] = useState(false);
   
   const isSelected = id === selectedChatId;
   
   const handleClick = () => {
     openChat(id);
-  };
-  
-  const toggleTagDropdown = (e) => {
-    e.stopPropagation();
-    setShowTagDropdown(!showTagDropdown);
   };
   
   // Status indicator variant based on contact status
@@ -264,13 +174,41 @@ const ContactList = ({ contact, selectedChatId, openChat }) => {
       {/* Contact Info */}
       <ContactInfo>
         <ContactMeta>
-          <ContactName variant="body2">
-            {name}
-          </ContactName>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <ContactName variant="body2">
+              {name}
+            </ContactName>
+            {unreadCount > 0 && (
+              <UnreadBadge unreadCount={unreadCount}>
+                {unreadCount}
+              </UnreadBadge>
+            )}
+          </Box>
           
-          <TimeStamp variant="caption">
-            {formatTime(lastSeen)}
-          </TimeStamp>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+            {/* Data/Hora em cima */}
+            <TimeStamp variant="caption">
+              {formatTime(lastSeen)}
+            </TimeStamp>
+            
+            {/* Avatar do usuário atendente no meio */}
+            <Box
+              sx={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--color-accent)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '10px',
+                fontWeight: 600,
+                color: 'white',
+              }}
+            >
+              U
+            </Box>
+          </Box>
         </ContactMeta>
         
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -284,13 +222,9 @@ const ContactList = ({ contact, selectedChatId, openChat }) => {
             </LastMessage>
           )}
           
-          {/* Unread Messages or Read Status */}
-          <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-            {unreadCount > 0 ? (
-              <UnreadBadge unreadCount={unreadCount}>
-                {unreadCount}
-              </UnreadBadge>
-            ) : (
+          {/* Status de lida */}
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {unreadCount === 0 && (
               <UnreadBadge unreadCount={0}>
                 <CheckIcon style={{ width: '12px', height: '12px' }} />
               </UnreadBadge>
@@ -298,102 +232,6 @@ const ContactList = ({ contact, selectedChatId, openChat }) => {
           </Box>
         </Box>
         
-        {/* Tags Section */}
-        <TagsContainer>
-          {/* Sempre mostra o ícone de etiqueta - clicável para abrir dropdown */}
-          <Box sx={{ position: 'relative' }}>
-            <TagButton onClick={toggleTagDropdown}>
-              <TagIcon style={{ width: '12px', height: '12px' }} />
-            </TagButton>
-            
-            {/* Dropdown com tags mockadas */}
-            <TagDropdown isOpen={showTagDropdown}>
-              <Typography 
-                variant="caption" 
-                sx={{ 
-                  display: 'block',
-                  mb: 1,
-                  color: 'var(--text-secondary)',
-                  fontWeight: 600,
-                  fontSize: '11px'
-                }}
-              >
-                Tags da Conversa
-              </Typography>
-              
-              {tags.length > 0 ? (
-                tags.map((tag, index) => (
-                  <Box key={tag.id} sx={{ mb: index < tags.length - 1 ? 1 : 0 }}>
-                    <StatusBadge
-                      label={tag.name}
-                      color={tag.color}
-                      variant="filled"
-                      size="small"
-                      sx={{ fontSize: '11px', width: '100%' }}
-                    />
-                  </Box>
-                ))
-              ) : (
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: 'var(--text-secondary)',
-                    fontSize: '10px',
-                    fontStyle: 'italic'
-                  }}
-                >
-                  Nenhuma tag aplicada
-                </Typography>
-              )}
-              
-              {/* Botão para adicionar nova tag */}
-              <Box sx={{ 
-                mt: 1.5, 
-                pt: 1.5, 
-                borderTop: '1px solid var(--border-primary)' 
-              }}>
-                <Box
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    console.log('Adicionar nova tag para conversa:', id);
-                  }}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '11px',
-                    color: 'var(--text-secondary)',
-                    '&:hover': {
-                      backgroundColor: 'var(--bg-secondary)',
-                      color: 'var(--color-accent)',
-                    }
-                  }}
-                >
-                  <TagIcon style={{ width: '12px', height: '12px' }} />
-                  <span>Adicionar tag</span>
-                </Box>
-              </Box>
-            </TagDropdown>
-            
-            {/* Overlay para fechar dropdown */}
-            {showTagDropdown && (
-              <Box
-                onClick={() => setShowTagDropdown(false)}
-                sx={{
-                  position: 'fixed',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  zIndex: 999,
-                }}
-              />
-            )}
-          </Box>
-        </TagsContainer>
       </ContactInfo>
     </StyledContactItem>
   );

@@ -13,7 +13,11 @@
       "Read(/home/eduardo_wallef/sistemas/TemplateDash/**)",
       "Read(/home/eduardo_wallef/sistemas/TemplateDash/**)",
       "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(apps)/chat/**)",
-      "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(apps)/chat/**)"
+      "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(apps)/chat/**)",
+      "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(apps)/task/**)",
+      "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(apps)/task/**)",
+      "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(apps)/task/components/**)",
+      "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(apps)/task/components/**)"
     ],
     "deny": []
   }

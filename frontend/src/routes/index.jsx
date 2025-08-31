@@ -48,6 +48,7 @@ import Subscription from "../pages/Subscription";
 import QueueIntegration from "../pages/QueueIntegration";
 import Files from "../pages/Files";
 import ToDoList from "../pages/ToDoList";
+import TasksModern from "../pages/TasksModern";
 import Kanban from "../pages/Kanban";
 import TagsKanban from "../pages/TagsKanban";
 import RecoverPassword from "../pages/RecoverPassword";
@@ -84,6 +85,7 @@ const Routes = () => {
                 <Route exact path="/connections" component={Connections} isPrivate />
                 <Route exact path="/quick-messages" component={QuickMessages} isPrivate />
                 <Route exact path="/todolist" component={ToDoList} isPrivate />
+                <Route exact path="/tasks-modern" component={TasksModern} isPrivate />
                 <Route exact path="/schedules" component={Schedules} isPrivate />
                 <Route exact path="/tags" component={Tags} isPrivate />
                 <Route exact path="/tagsv2" component={TagsV2} isPrivate />
