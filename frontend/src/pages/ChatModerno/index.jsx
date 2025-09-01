@@ -5,6 +5,7 @@ import { cn } from '../../utils/cn';
 
 // Context
 import { AuthContext } from '../../context/Auth/AuthContext';
+import { TicketsContext } from '../../context/Tickets/TicketsContext';
 
 // Nossos componentes UI
 import { Card, CardContent, CardHeader } from '../../components/ui/Card';
@@ -20,6 +21,11 @@ import ConversationInfo from '../Chat/components/ConversationInfo';
 import FilterDropdown from '../../components/ui/FilterDropdown';
 import { useDrawerControl } from '../../context/DrawerContext';
 
+// Componentes otimizados
+import OptimizedTabs from '../Chat/components/OptimizedTabs';
+import OptimizedContactList from '../Chat/components/OptimizedContactList';
+import VirtualizedContactList from '../Chat/components/VirtualizedContactList';
+
 // Mock data e API
 import {
   getContacts,
@@ -30,11 +36,16 @@ import {
   isObjectNotEmpty
 } from '../Chat/data/mockData';
 
+// Hooks otimizados
+import useOptimizedTickets from '../../hooks/useOptimizedTickets';
+
 // Icons
 import { 
   ChatBubbleLeftRightIcon,
   HomeIcon,
-  UserGroupIcon
+  UserGroupIcon,
+  EyeIcon,
+  EyeSlashIcon
 } from '@heroicons/react/24/outline';
 
 const ChatContainer = styled(Box)(({ theme }) => ({
@@ -122,6 +133,9 @@ const Overlay = styled(Box)(({ theme }) => ({
 }));
 
 const ChatModerno = () => {
+  // Context
+  const { tabOpen, setTabOpen, currentTicket, setCurrentTicket } = React.useContext(TicketsContext);
+  
   // Estados
   const [selectedChatId, setSelectedChatId] = useState(null);
   const [contacts, setContacts] = useState([]);
@@ -149,12 +163,18 @@ const ChatModerno = () => {
   const [savedFilters, setSavedFilters] = useState([]);
   const [filterName, setFilterName] = useState('');
   
+  // Estado para mostrar todos os tickets
+  const [showAllTickets, setShowAllTickets] = useState(false);
+  
   // Estados do SidebarContainer
   const [showSortOptions, setShowSortOptions] = useState(false);
   const [sortBy, setSortBy] = useState('Data de Criação');
   
   // Estados para controle do drawer principal
   const [shouldCollapseDrawer, setShouldCollapseDrawer] = useState(false);
+  
+  // Estado para forçar refresh dos tickets
+  const [forceRefresh, setForceRefresh] = useState(0);
   
   // Refs
   const messagesEndRef = useRef(null);
@@ -165,9 +185,38 @@ const ChatModerno = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('lg')); // Para controle do drawer
   
+  // Hook otimizado de tickets
+  const {
+    loading: ticketsLoading,
+    tickets,
+    counts,
+    refetch: refetchTickets
+  } = useOptimizedTickets({
+    status: tabOpen || 'open',
+    searchParam: '',
+    selectedQueueIds: [],
+    showAll: showAllTickets,
+    forceRefresh: forceRefresh
+  });
+  
   // Contexto do drawer
   const { drawerOpen, setDrawerOpen } = useDrawerControl();
   const [originalDrawerState, setOriginalDrawerState] = useState(null);
+  
+  // Função para forçar refresh dos tickets
+  const forceTicketsRefresh = useCallback(() => {
+    console.log('🔄 Forçando refresh dos tickets...');
+    setForceRefresh(prev => prev + 1);
+    // Também chamar refetch como backup
+    if (refetchTickets) {
+      refetchTickets();
+    }
+  }, [refetchTickets]);
+  
+  // Log quando showAllTickets muda
+  useEffect(() => {
+    console.log('👁️ Mostrar todos os tickets:', showAllTickets ? 'ATIVADO' : 'DESATIVADO');
+  }, [showAllTickets]);
   
   // Scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -749,12 +798,58 @@ const ChatModerno = () => {
             <CardHeader sx={{ p: 2, flexShrink: 0 }}>
               {/* Top Actions Row */}
               <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '16px' }}>
-                  Conversas
-                </Typography>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '16px' }}>
+                    Conversas
+                  </Typography>
+                  {showAllTickets && (
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: 'var(--color-accent)', 
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        display: 'block',
+                        mt: -0.5
+                      }}
+                    >
+                      Mostrando todos
+                    </Typography>
+                  )}
+                </Box>
                 
                 {/* Actions Icons */}
                 <Box sx={{ display: 'flex', gap: 1 }}>
+                  {/* Show All Button */}
+                  <Box
+                    onClick={() => setShowAllTickets(!showAllTickets)}
+                    sx={{
+                      width: '32px',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '8px',
+                      backgroundColor: showAllTickets ? 'var(--color-accent)' : 'var(--bg-secondary)',
+                      border: '1px solid var(--border-primary)',
+                      color: showAllTickets ? 'white' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        backgroundColor: showAllTickets ? 'var(--color-green-hover)' : 'var(--bg-tertiary)',
+                        color: showAllTickets ? 'white' : 'var(--text-primary)',
+                        transform: 'scale(1.05)',
+                      }
+                    }}
+                    title={showAllTickets ? 'Ocultar todos os tickets' : 'Mostrar todos os tickets'}
+                  >
+                    {showAllTickets ? (
+                      <EyeIcon style={{ width: '16px', height: '16px' }} />
+                    ) : (
+                      <EyeSlashIcon style={{ width: '16px', height: '16px' }} />
+                    )}
+                  </Box>
+                  
                   {/* Sort Dropdown */}
                   <Box sx={{ position: 'relative' }}>
                     <Box
@@ -951,29 +1046,58 @@ const ChatModerno = () => {
                 padding: '4px',
                 gap: '2px'
               }}>
-                {['Atendendo', 'Esperando', 'Finalizados', 'Grupos'].map((tab, index) => (
-                  <Box
-                    key={tab}
-                    sx={{
-                      flex: 1,
-                      textAlign: 'center',
-                      padding: '6px 8px',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      backgroundColor: index === 0 ? 'var(--color-accent)' : 'transparent',
-                      color: index === 0 ? 'white' : 'var(--text-secondary)',
-                      '&:hover': {
-                        backgroundColor: index === 0 ? 'var(--color-accent)' : 'var(--bg-tertiary)',
-                        color: index === 0 ? 'white' : 'var(--text-primary)',
-                      }
-                    }}
-                  >
-                    {tab}
-                  </Box>
-                ))}
+                {[
+                  { key: 'open', label: 'Atendendo', count: counts.open || 0 },
+                  { key: 'pending', label: 'Esperando', count: counts.pending || 0 }
+                ].map((tab, index) => {
+                  const isActive = tabOpen === tab.key;
+                  return (
+                    <Box
+                      key={tab.key}
+                      onClick={() => setTabOpen(tab.key)}
+                      sx={{
+                        flex: 1,
+                        textAlign: 'center',
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        backgroundColor: isActive ? 'var(--color-accent)' : 'transparent',
+                        color: isActive ? 'white' : 'var(--text-secondary)',
+                        '&:hover': {
+                          backgroundColor: isActive ? 'var(--color-accent)' : 'var(--bg-tertiary)',
+                          color: isActive ? 'white' : 'var(--text-primary)',
+                        },
+                        position: 'relative'
+                      }}
+                    >
+                      {tab.label}
+                      {tab.count > 0 && (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: '-8px',
+                            right: '-8px',
+                            backgroundColor: '#f44336',
+                            color: 'white',
+                            borderRadius: '50%',
+                            minWidth: '18px',
+                            height: '18px',
+                            fontSize: '10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {tab.count > 99 ? '99+' : tab.count}
+                        </Box>
+                      )}
+                    </Box>
+                  );
+                })}
               </Box>
             </CardHeader>
             
@@ -985,14 +1109,57 @@ const ChatModerno = () => {
             }}>
               <ScrollArea size="full">
                 <Box data-scrollable>
-                  {contacts.map((contact) => (
-                    <ContactList
-                      key={contact.id}
-                      contact={contact}
-                      selectedChatId={selectedChatId}
-                      openChat={openChat}
-                    />
-                  ))}
+                  {ticketsLoading ? (
+                    <Box sx={{ p: 2, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      Carregando conversas...
+                    </Box>
+                  ) : tickets.length === 0 ? (
+                    <Box sx={{ 
+                      p: 4, 
+                      textAlign: 'center', 
+                      color: 'var(--text-secondary)',
+                      fontSize: '14px' 
+                    }}>
+                      <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
+                        Nenhuma conversa encontrada
+                      </Typography>
+                      <Typography variant="caption">
+                        {tabOpen === 'open' ? 
+                          'Não há conversas em atendimento no momento' : 
+                          'Não há conversas esperando atendimento'
+                        }
+                      </Typography>
+                    </Box>
+                  ) : (
+                    tickets.map((ticket) => {
+                      // Converter ticket para formato de contact para manter compatibilidade
+                      const contactFromTicket = {
+                        id: ticket.uuid,
+                        name: ticket.contact?.name || 'Contato sem nome',
+                        avatar: ticket.contact?.profilePicUrl || ticket.contact?.urlPicture || null,
+                        status: ticket.status === 'open' ? 'online' : 'offline',
+                        lastMessage: ticket.lastMessage || 'Nova conversa',
+                        lastSeen: ticket.updatedAt,
+                        unreadCount: ticket.unreadMessages || 0,
+                        isTyping: false,
+                        // Informações do usuário responsável
+                        userAvatar: ticket.user?.profileImage || null,
+                        userName: ticket.user?.name || null
+                      };
+                      
+                      return (
+                        <ContactList
+                          key={ticket.uuid}
+                          contact={contactFromTicket}
+                          selectedChatId={selectedChatId}
+                          openChat={openChat}
+                          ticket={ticket}
+                          currentTab={tabOpen}
+                          onRefresh={forceTicketsRefresh}
+                        />
+                      );
+                    })
+                  )}
                 </Box>
               </ScrollArea>
             </CardContent>

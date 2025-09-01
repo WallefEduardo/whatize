@@ -24,14 +24,18 @@ import TaskForm from './components/TaskForm';
 import CustomPagination from './components/CustomPagination';
 import { i18n } from "../../translate/i18n";
 
+// API Services
+import { ListTasks, CreateTask, UpdateTask, DeleteTask, GetTaskStats } from '../../services/tasks';
+import { toast } from 'react-toastify';
+
 const TasksModern = () => {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.down('xl'));
 
   const [tasks, setTasks] = useState([]);
-  const [filteredTasks, setFilteredTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [stats, setStats] = useState({});
   
   // Modal states
   const [openCreateModal, setOpenCreateModal] = useState(false);
@@ -41,103 +45,112 @@ const TasksModern = () => {
 
   // Pagination
   const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalTasks, setTotalTasks] = useState(0);
 
-  // Mock data
-  useEffect(() => {
-    const mockTasks = [
-      {
-        id: 1,
-        title: 'Implementar autenticação',
-        status: 'todo',
-        priority: 'high',
-        assign: [
-          { id: 1, name: 'João Silva', image: { src: '/avatar1.jpg' } },
-          { id: 2, name: 'Maria Santos', image: { src: '/avatar2.jpg' } }
-        ],
-        date: '2024-01-15',
-        image: { src: '/task1.jpg' },
-        description: 'Implementar sistema completo de autenticação com JWT',
-        createdAt: new Date('2024-01-01'),
-        updatedAt: new Date('2024-01-01')
-      },
-      {
-        id: 2,
-        title: 'Criar dashboard de relatórios',
-        status: 'inprogress',
-        priority: 'medium',
-        assign: [
-          { id: 3, name: 'Carlos Oliveira', image: { src: '/avatar3.jpg' } }
-        ],
-        date: '2024-01-20',
-        image: { src: '/task2.jpg' },
-        description: 'Desenvolver dashboard interativo com gráficos',
-        createdAt: new Date('2024-01-02'),
-        updatedAt: new Date('2024-01-05')
-      },
-      {
-        id: 3,
-        title: 'Otimizar performance do chat',
-        status: 'completed',
-        priority: 'low',
-        assign: [
-          { id: 4, name: 'Ana Costa', image: { src: '/avatar4.jpg' } }
-        ],
-        date: '2024-01-10',
-        image: { src: '/task3.jpg' },
-        description: 'Melhorar velocidade de carregamento das mensagens',
-        createdAt: new Date('2024-01-03'),
-        updatedAt: new Date('2024-01-08')
-      },
-      {
-        id: 4,
-        title: 'Configurar CI/CD Pipeline',
-        status: 'todo',
-        priority: 'high',
-        assign: [
-          { id: 5, name: 'Roberto Silva', image: { src: '/avatar5.jpg' } },
-          { id: 6, name: 'Fernanda Lima', image: { src: '/avatar6.jpg' } }
-        ],
-        date: '2024-01-25',
-        image: { src: '/task4.jpg' },
-        description: 'Configurar pipeline de integração e deploy contínuo',
-        createdAt: new Date('2024-01-04'),
-        updatedAt: new Date('2024-01-04')
-      },
-      {
-        id: 5,
-        title: 'Revisar documentação da API',
-        status: 'inprogress',
-        priority: 'medium',
-        assign: [
-          { id: 7, name: 'Patricia Santos', image: { src: '/avatar7.jpg' } }
-        ],
-        date: '2024-01-18',
-        image: { src: '/task5.jpg' },
-        description: 'Atualizar e revisar toda documentação da API',
-        createdAt: new Date('2024-01-05'),
-        updatedAt: new Date('2024-01-06')
+  // Carregar tarefas
+  const fetchTasks = async () => {
+    try {
+      console.log('Buscando tarefas...', { searchTerm, pageNumber, pageSize });
+      setLoading(true);
+      const params = {
+        searchParam: searchTerm,
+        pageNumber,
+        limit: pageSize
+      };
+      
+      const response = await ListTasks(params);
+      console.log('Resposta da API:', response);
+      console.log('Tasks array:', response.tasks);
+      console.log('Tasks count:', response.tasks?.length);
+      console.log('Primeira tarefa completa:', JSON.stringify(response.tasks?.[0], null, 2));
+      setTasks(response.tasks || []);
+      setTotalPages(response.totalPages || 0);
+      setTotalTasks(response.count || 0);
+      
+      if (response.stats) {
+        setStats(response.stats);
       }
-    ];
+    } catch (error) {
+      console.error('Erro ao carregar tarefas:', error);
+      toast.error('Erro ao carregar tarefas');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    setTasks(mockTasks);
-    setFilteredTasks(mockTasks);
+  // Carregar estatísticas
+  const fetchStats = async () => {
+    try {
+      const response = await GetTaskStats();
+      setStats(response.stats || {});
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, [pageNumber, pageSize]);
+
+  useEffect(() => {
+    fetchStats();
   }, []);
 
-  // Filtrar tarefas baseado na busca
+  // Debounce para busca
   useEffect(() => {
-    let filtered = tasks;
+    const debounceTimer = setTimeout(() => {
+      setPageNumber(1);
+      fetchTasks();
+    }, 500);
 
-    if (searchTerm) {
-      filtered = filtered.filter(task =>
-        task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm]);
+
+  // Handlers para CRUD
+  const handleCreateTask = async (taskData) => {
+    try {
+      await CreateTask(taskData);
+      toast.success('Tarefa criada com sucesso!');
+      fetchTasks();
+      setOpenCreateModal(false);
+    } catch (error) {
+      console.error('Erro ao criar tarefa:', error);
+      toast.error('Erro ao criar tarefa');
     }
+  };
 
-    setFilteredTasks(filtered);
-    setPageNumber(1);
-  }, [tasks, searchTerm]);
+  const handleUpdateTask = async (taskData) => {
+    try {
+      await UpdateTask(selectedTask.id, taskData);
+      toast.success('Tarefa atualizada com sucesso!');
+      fetchTasks();
+      setOpenEditModal(false);
+      setSelectedTask(null);
+    } catch (error) {
+      console.error('Erro ao atualizar tarefa:', error);
+      toast.error('Erro ao atualizar tarefa');
+    }
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    if (window.confirm('Tem certeza que deseja excluir esta tarefa?')) {
+      try {
+        await DeleteTask(taskId);
+        toast.success('Tarefa excluída com sucesso!');
+        fetchTasks();
+      } catch (error) {
+        console.error('Erro ao excluir tarefa:', error);
+        toast.error('Erro ao excluir tarefa');
+      }
+    }
+  };
+
+  const handleEditTask = (task) => {
+    setSelectedTask(task);
+    setOpenEditModal(true);
+  };
 
   // Definir colunas da tabela
   const columns = [
@@ -146,225 +159,141 @@ const TasksModern = () => {
       title: 'Nome da Tarefa',
       sortable: true,
       render: (record) => (
-        <Typography variant="body2" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-          {record.title}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="subtitle2" fontWeight="medium">
+            {record.title}
+          </Typography>
+        </Box>
       )
     },
     {
       accessor: 'status',
       title: 'Status',
-      sortable: true,
-      textAlignment: 'center',
       render: (record) => {
-        const statusConfig = {
-          todo: { color: '#ff9800', bg: 'rgba(255, 152, 0, 0.1)', label: 'A Fazer' },
-          inprogress: { color: '#2196f3', bg: 'rgba(33, 150, 243, 0.1)', label: 'Em Andamento' },
-          completed: { color: '#4caf50', bg: 'rgba(76, 175, 80, 0.1)', label: 'Concluído' }
+        const getStatusColor = (status) => {
+          switch (status) {
+            case 'todo': return '#ff9800';
+            case 'inprogress': return '#2196f3';
+            case 'completed': return '#4caf50';
+            default: return '#757575';
+          }
         };
-        const config = statusConfig[record.status] || statusConfig.todo;
-        
-        return (
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              px: 2,
-              py: 0.5,
-              borderRadius: 1,
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              color: config.color,
-              backgroundColor: config.bg,
-              textTransform: 'capitalize'
-            }}
-          >
-            {config.label}
-          </Box>
-        );
-      }
-    },
-    {
-      accessor: 'assign',
-      title: 'Atribuído',
-      render: (record) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {record.assign && record.assign.length > 0 && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {record.assign.slice(0, 3).map((user, idx) => (
-                <Box
-                  key={idx}
-                  sx={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--color-accent)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    border: '2px solid white',
-                    marginLeft: idx > 0 ? '-8px' : 0
-                  }}
-                  title={user.name}
-                >
-                  {user.name.charAt(0)}
-                </Box>
-              ))}
-              {record.assign.length > 3 && (
-                <Box
-                  sx={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    backgroundColor: '#666',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    border: '2px solid white',
-                    marginLeft: '-8px'
-                  }}
-                >
-                  +{record.assign.length - 3}
-                </Box>
-              )}
-            </Box>
-          )}
-        </Box>
-      )
-    },
-    {
-      accessor: 'priority',
-      title: 'Prioridade',
-      sortable: true,
-      textAlignment: 'center',
-      render: (record) => {
-        const priorityConfig = {
-          high: { color: '#f44336', bg: 'rgba(244, 67, 54, 0.1)', label: 'Alta' },
-          medium: { color: '#ff9800', bg: 'rgba(255, 152, 0, 0.1)', label: 'Média' },
-          low: { color: '#4caf50', bg: 'rgba(76, 175, 80, 0.1)', label: 'Baixa' }
+
+        const getStatusLabel = (status) => {
+          switch (status) {
+            case 'todo': return 'A Fazer';
+            case 'inprogress': return 'Em Progresso';
+            case 'completed': return 'Concluída';
+            default: return status;
+          }
         };
-        const config = priorityConfig[record.priority] || priorityConfig.medium;
-        
+
         return (
           <Box
             sx={{
               display: 'inline-flex',
               alignItems: 'center',
               px: 1.5,
-              py: 0.3,
-              borderRadius: 0.5,
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              color: config.color,
-              backgroundColor: config.bg,
-              textTransform: 'capitalize'
+              py: 0.5,
+              borderRadius: 1,
+              backgroundColor: getStatusColor(record.status) + '20',
+              color: getStatusColor(record.status),
+              fontWeight: 'medium',
+              fontSize: '0.75rem'
             }}
           >
-            {config.label}
+            {getStatusLabel(record.status)}
           </Box>
         );
       }
     },
     {
-      accessor: 'date',
-      title: 'Data Limite',
-      sortable: true,
+      accessor: 'priority',
+      title: 'Prioridade',
+      render: (record) => {
+        const getPriorityColor = (priority) => {
+          switch (priority) {
+            case 'high': return '#f44336';
+            case 'medium': return '#ff9800';
+            case 'low': return '#4caf50';
+            default: return '#757575';
+          }
+        };
+
+        const getPriorityLabel = (priority) => {
+          switch (priority) {
+            case 'high': return 'Alta';
+            case 'medium': return 'Média';
+            case 'low': return 'Baixa';
+            default: return priority;
+          }
+        };
+
+        return (
+          <Box
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              px: 1.5,
+              py: 0.5,
+              borderRadius: 1,
+              backgroundColor: getPriorityColor(record.priority) + '20',
+              color: getPriorityColor(record.priority),
+              fontWeight: 'medium',
+              fontSize: '0.75rem'
+            }}
+          >
+            {getPriorityLabel(record.priority)}
+          </Box>
+        );
+      }
+    },
+    {
+      accessor: 'assignedTo',
+      title: 'Responsável',
       render: (record) => (
-        <Typography variant="body2" sx={{ color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-          {record.date ? new Date(record.date).toLocaleDateString('pt-BR') : 'N/A'}
+        <Typography variant="body2">
+          {record.assignedTo?.name || 'Não atribuído'}
+        </Typography>
+      )
+    },
+    {
+      accessor: 'dueDate',
+      title: 'Data de Vencimento',
+      render: (record) => (
+        <Typography variant="body2">
+          {record.dueDate ? new Date(record.dueDate).toLocaleDateString('pt-BR') : '-'}
         </Typography>
       )
     },
     {
       accessor: 'actions',
       title: 'Ações',
-      textAlignment: 'center',
       render: (record) => (
         <ActionGroup>
           <ActionButton
-            icon={Edit3}
-            tooltip="Editar tarefa"
+            icon={<Edit3 size={16} />}
             onClick={() => handleEditTask(record)}
-            color="var(--color-accent)"
-            hoverColor="var(--color-accent)"
-            size={16}
+            color="primary"
           />
           <ActionButton
-            icon={Trash2}
-            tooltip="Excluir tarefa"
+            icon={<Trash2 size={16} />}
             onClick={() => handleDeleteTask(record.id)}
-            color="#dc2626"
-            hoverColor="#b91c1c"
-            size={16}
+            color="error"
           />
         </ActionGroup>
       )
     }
   ];
 
-  // Handlers
-  const handleSearch = (value) => {
-    setSearchTerm(value);
-  };
-
-  const handleCreateTask = () => {
-    setOpenCreateModal(true);
-  };
-
-  const handleEditTask = (task) => {
-    setSelectedTask(task);
-    setOpenEditModal(true);
-  };
-
-  const handleDeleteTask = (taskId) => {
-    if (window.confirm('Tem certeza que deseja excluir esta tarefa?')) {
-      setTasks(prev => prev.filter(task => task.id !== taskId));
-    }
-  };
-
-  const handleSaveTask = (taskData) => {
-    if (selectedTask) {
-      // Editar tarefa existente
-      setTasks(prev => prev.map(task => 
-        task.id === selectedTask.id 
-          ? { ...task, ...taskData, updatedAt: new Date() }
-          : task
-      ));
-    } else {
-      // Criar nova tarefa
-      const newTask = {
-        ...taskData,
-        id: Date.now(),
-        assign: taskData.assignedTo ? taskData.assignedTo.map((name, idx) => ({
-          id: Date.now() + idx,
-          name: name,
-          image: { src: `/avatar${idx + 1}.jpg` }
-        })) : [],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      setTasks(prev => [...prev, newTask]);
-    }
-  };
-
-  const appHeight = {
-    height: 'calc(100vh - 140px)',
-    display: 'flex',
-    gap: theme.spacing(3),
-    position: 'relative',
-    overflow: 'hidden'
-  };
-
   const breadcrumbs = [
-    { href: "/", label: "Dashboard" },
-    { label: "Tarefas" }
+    { label: i18n.t("dashboard.breadcrumbs.root") },
+    { label: "Tarefas", active: true }
   ];
+
+  // Debug do estado do modal
+  console.log('openCreateModal state:', openCreateModal);
+  console.log('Tasks state for table:', tasks, 'length:', tasks.length);
 
   return (
     <PageLayout
@@ -372,165 +301,109 @@ const TasksModern = () => {
       icon={<CheckSquare size={24} />}
       breadcrumbs={breadcrumbs}
     >
-      {/* Main Content */}
-      <Box sx={appHeight}>
-        {/* Mobile Overlay */}
-        {isDesktop && showSidebar && (
-          <Box
-            sx={{
-              bgcolor: 'rgba(0, 0, 0, 0.6)',
-              backdropFilter: 'blur(4px)',
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              inset: 0,
-              zIndex: 99,
-              borderRadius: 1
-            }}
-            onClick={() => setShowSidebar(false)}
-          />
-        )}
-
+      <Box sx={{ display: 'flex', height: '100%', gap: 2 }}>
         {/* Sidebar */}
-        <Box
-          sx={{
-            transition: 'all 0.15s ease',
-            flexShrink: 0,
-            ...(isDesktop ? {
-              position: 'absolute',
-              height: '100%',
-              top: 0,
-              width: { xs: 200, md: 260 },
-              zIndex: 999,
-              left: showSidebar ? 0 : '-100%'
-            } : {
-              flexShrink: 0,
-              minWidth: 260
-            })
-          }}
-        >
-          <Card sx={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <CardHeader 
-              sx={{ 
-                position: 'sticky', 
-                top: 0, 
-                mb: 0, 
-                bgcolor: 'background.paper', 
-                zIndex: 50,
-                p: 2
-              }}
-              title={
-                <GradientButton
-                  onClick={handleCreateTask}
-                  icon={<Plus size={18} />}
-                  sx={{ width: '100%' }}
-                >
-                  + Adicionar Tarefa
-                </GradientButton>
-              }
-            />
-            <CardContent sx={{ flex: 1, p: { xs: 1, md: 3 }, overflow: 'auto' }}>
-              <TaskSidebar contacts={[]} />
-            </CardContent>
-          </Card>
-        </Box>
+        <TaskSidebar 
+          show={showSidebar} 
+          onClose={() => setShowSidebar(false)}
+          stats={stats}
+        />
 
-        {/* Main Table */}
-        <Card sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          {/* Search Header */}
+        {/* Conteúdo Principal */}
+        <Box sx={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column',
+          ml: isDesktop ? 0 : showSidebar ? '250px' : 0,
+          transition: 'margin-left 0.3s ease'
+        }}>
+          {/* Header com busca e botão */}
           <Box sx={{ 
-            p: { xs: 2, sm: 3 }, 
             display: 'flex', 
-            flexWrap: 'wrap',
+            justifyContent: 'space-between', 
             alignItems: 'center',
-            gap: 2,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            flexShrink: 0,
-            justifyContent: 'flex-end'
+            mb: 3 
           }}>
-            <Box sx={{ width: { xs: '100%', md: 300 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <SearchInput
-                placeholder="Buscar tarefas..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onSearch={handleSearch}
-                size="medium"
-                fullWidth={false}
+                onChange={setSearchTerm}
+                placeholder="Buscar tarefas..."
+                style={{ width: 300 }}
               />
             </Box>
+            <GradientButton
+              startIcon={<Plus size={20} />}
+              onClick={() => {
+                console.log('Botão clicado, abrindo modal...');
+                setOpenCreateModal(true);
+              }}
+            >
+              Nova Tarefa
+            </GradientButton>
           </Box>
 
-          {/* Table - ocupa toda altura disponível */}
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Tabela */}
+          <Paper sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {console.log('Passando para BaseTable - data:', tasks, 'columns:', columns.length)}
+            
+            {/* Debug simples - mostrar dados brutos */}
+            <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
+              <Typography variant="h6">DEBUG - Dados recebidos:</Typography>
+              <Typography variant="body2">Total de tarefas: {tasks.length}</Typography>
+              {tasks.map(task => (
+                <Box key={task.id} sx={{ mt: 1, p: 1, bgcolor: '#f5f5f5' }}>
+                  <Typography><strong>ID:</strong> {task.id}</Typography>
+                  <Typography><strong>Título:</strong> {task.title}</Typography>
+                  <Typography><strong>Status:</strong> {task.status}</Typography>
+                  <Typography><strong>Responsável:</strong> {task.assignedTo?.name}</Typography>
+                </Box>
+              ))}
+            </Box>
+            
             <BaseTable
-              records={filteredTasks}
+              data={tasks}
               columns={columns}
               loading={loading}
-              pageNumber={pageNumber}
-              pageSize={pageSize}
-              totalRecords={filteredTasks.length}
-              onPageChange={setPageNumber}
-              onPageSizeChange={setPageSize}
-              noRecordsTitle="Nenhuma tarefa encontrada"
-              noRecordsText="Crie sua primeira tarefa ou ajuste a busca"
-              noRecordsIcon={<CheckSquare size={48} />}
-              initialSortBy="date"
-              initialSortOrder="asc"
-              minHeight="calc(100vh - 300px)"
-              enableViewToggle={false}
-              showPagination={false}
+              pagination={{
+                page: pageNumber,
+                limit: pageSize,
+                total: totalTasks,
+                onPageChange: setPageNumber,
+                onLimitChange: setPageSize,
+              }}
             />
-          </Box>
-          
-          {/* Custom Pagination */}
-          <CustomPagination
-            currentPage={pageNumber}
-            totalPages={Math.ceil(filteredTasks.length / pageSize)}
-            totalRecords={filteredTasks.length}
-            recordsPerPage={pageSize}
-            onPageChange={setPageNumber}
-            selectedRows={0}
-          />
-        </Card>
+          </Paper>
+        </Box>
       </Box>
 
-      {/* Modals */}
+      {/* Modal de Criar Tarefa */}
       <ModernModal
         open={openCreateModal}
-        onClose={() => setOpenCreateModal(false)}
-        title="Criar Tarefa"
-        size="lg"
+        onClose={() => {
+          console.log('Modal fechando...');
+          setOpenCreateModal(false);
+        }}
+        title="Nova Tarefa"
+        maxWidth="md"
       >
         <TaskForm
-          onSave={(data) => {
-            handleSaveTask(data);
-            setOpenCreateModal(false);
-          }}
+          onSubmit={handleCreateTask}
           onCancel={() => setOpenCreateModal(false)}
         />
       </ModernModal>
 
+      {/* Modal de Editar Tarefa */}
       <ModernModal
         open={openEditModal}
-        onClose={() => {
-          setOpenEditModal(false);
-          setSelectedTask(null);
-        }}
+        onClose={() => setOpenEditModal(false)}
         title="Editar Tarefa"
-        size="lg"
+        maxWidth="md"
       >
         <TaskForm
-          task={selectedTask}
-          onSave={(data) => {
-            handleSaveTask(data);
-            setOpenEditModal(false);
-            setSelectedTask(null);
-          }}
-          onCancel={() => {
-            setOpenEditModal(false);
-            setSelectedTask(null);
-          }}
+          initialData={selectedTask}
+          onSubmit={handleUpdateTask}
+          onCancel={() => setOpenEditModal(false)}
         />
       </ModernModal>
     </PageLayout>

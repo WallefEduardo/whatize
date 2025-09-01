@@ -8,7 +8,7 @@ import { Textarea } from '../../../components/ui/Textarea';
 import { DatePicker } from '../../../components/ui/DatePicker';
 import useUsers from '../../../hooks/useUsers';
 
-const TaskForm = ({ task, onSave, onCancel }) => {
+const TaskForm = ({ initialData, onSubmit, onCancel }) => {
   const { users, loading: usersLoading } = useUsers();
   
   const [formData, setFormData] = useState({
@@ -16,8 +16,8 @@ const TaskForm = ({ task, onSave, onCancel }) => {
     description: '',
     status: 'todo',
     priority: 'medium',
-    assignedTo: [],
-    dueDate: ''
+    assignedToId: '',
+    dueDate: null
   });
 
   const [errors, setErrors] = useState({});
@@ -40,17 +40,17 @@ const TaskForm = ({ task, onSave, onCancel }) => {
 
   // Carregar dados da tarefa se estivermos editando
   useEffect(() => {
-    if (task) {
+    if (initialData) {
       setFormData({
-        title: task.title || '',
-        description: task.description || '',
-        status: task.status || 'todo',
-        priority: task.priority || 'medium',
-        assignedTo: task.assignedTo || [],
-        dueDate: task.dueDate || ''
+        title: initialData.title || '',
+        description: initialData.description || '',
+        status: initialData.status || 'todo',
+        priority: initialData.priority || 'medium',
+        assignedToId: initialData.assignedToId || initialData.assignedTo?.id || '',
+        dueDate: initialData.dueDate ? new Date(initialData.dueDate) : null
       });
     }
-  }, [task]);
+  }, [initialData]);
 
   const handleInputChange = (field) => (event) => {
     const value = event.target.value;
@@ -69,13 +69,11 @@ const TaskForm = ({ task, onSave, onCancel }) => {
   };
 
   const handleAssignedToChange = (event) => {
-    const value = typeof event.target.value === 'string' 
-      ? event.target.value.split(',') 
-      : event.target.value;
+    const value = event.target.value;
     
     setFormData(prev => ({
       ...prev,
-      assignedTo: value
+      assignedToId: value
     }));
   };
 
@@ -86,19 +84,30 @@ const TaskForm = ({ task, onSave, onCancel }) => {
       newErrors.title = 'Título é obrigatório';
     }
 
-    if (!formData.description.trim()) {
-      newErrors.description = 'Descrição é obrigatória';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e) => {
+    console.log('TaskForm handleSubmit chamado!');
     e.preventDefault();
     
     if (validateForm()) {
-      onSave(formData);
+      console.log('TaskForm validation passed, formData:', formData);
+      // Preparar dados para envio
+      const submitData = {
+        title: formData.title.trim(),
+        description: formData.description?.trim() || null,
+        status: formData.status,
+        priority: formData.priority,
+        assignedToId: formData.assignedToId || null,
+        dueDate: formData.dueDate || null
+      };
+      
+      console.log('TaskForm submitData:', submitData);
+      onSubmit(submitData);
+    } else {
+      console.log('TaskForm validation failed, errors:', errors);
     }
   };
 
@@ -221,8 +230,8 @@ const TaskForm = ({ task, onSave, onCancel }) => {
               Responsáveis
             </FormLabel>
             <Select
-              value={formData.assignedTo[0] || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, assignedTo: e.target.value ? [e.target.value] : [] }))}
+              value={formData.assignedToId}
+              onChange={handleAssignedToChange}
               removeWrapper
               disabled={usersLoading}
             >
@@ -294,11 +303,15 @@ const TaskForm = ({ task, onSave, onCancel }) => {
           </GradientButton>
           
           <GradientButton
-            type="submit"
             variant="primary"
             icon={<Save size={18} />}
+            onClick={(e) => {
+              console.log('Botão Criar Tarefa clicado diretamente!');
+              e.preventDefault();
+              handleSubmit(e);
+            }}
           >
-            {task ? 'Atualizar Tarefa' : 'Criar Tarefa'}
+            {initialData ? 'Atualizar Tarefa' : 'Criar Tarefa'}
           </GradientButton>
         </Box>
       </Box>

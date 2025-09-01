@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useContext, Fragment } from "react";
 
-import { useForm, Controller, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { Formik, Form, Field, FieldArray } from "formik";
+import * as Yup from "yup";
 import { toast } from "../../components/ui/ToastProvider";
 
 import { Box, FormControl, FormControlLabel, Grid, InputLabel, MenuItem, Paper, Select, Tab, Tabs } from "@mui/material";
@@ -51,22 +50,22 @@ import ColorBoxModal from "../ColorBoxModal";
 
 
 
-const queueSchema = z.object({
-  name: z.string().min(2, "Too Short!").max(50, "Too Long!").nonempty("Required"),
-  color: z.string().min(3, "Too Short!").max(9, "Too Long!").nonempty("Required"),
-  greetingMessage: z.string().optional(),
-  outOfHoursMessage: z.string().optional(),
-  orderQueue: z.string().optional(),
-  tempoRoteador: z.number().optional(),
-  ativarRoteador: z.boolean().optional(),
-  integrationId: z.string().optional(),
-  fileListId: z.string().optional(),
-  closeTicket: z.boolean().optional(),
-  chatbots: z.array(z.object({
-    name: z.string().min(4, "too short").nonempty("Required"),
-    greetingMessage: z.string().optional(),
-    options: z.array(z.any()).optional()
-  })).optional()
+const queueSchema = Yup.object().shape({
+  name: Yup.string().min(2, "Too Short!").max(50, "Too Long!").required("Required"),
+  color: Yup.string().min(3, "Too Short!").max(9, "Too Long!").required("Required"),
+  greetingMessage: Yup.string(),
+  outOfHoursMessage: Yup.string(),
+  orderQueue: Yup.string(),
+  tempoRoteador: Yup.number(),
+  ativarRoteador: Yup.boolean(),
+  integrationId: Yup.string(),
+  fileListId: Yup.string(),
+  closeTicket: Yup.boolean(),
+  chatbots: Yup.array().of(Yup.object().shape({
+    name: Yup.string().min(4, "too short").required("Required"),
+    greetingMessage: Yup.string(),
+    options: Yup.array()
+  }))
 });
 
 const QueueModal = ({ open, onClose, queueId, onEdit }) => {
@@ -87,18 +86,6 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
 
   const [colorPickerModalOpen, setColorPickerModalOpen] = useState(false);
   const [queue, setQueue] = useState(initialState);
-
-  const { control, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm({
-    resolver: zodResolver(queueSchema),
-    defaultValues: initialState
-  });
-
-  const { fields: chatbotFields, append: appendChatbot, remove: removeChatbot, update: updateChatbot } = useFieldArray({
-    control,
-    name: "chatbots"
-  });
-
-  const watchedValues = watch();
   const greetingRef = useRef();
   const [activeStep, setActiveStep] = useState(null);
   const [selectedQueue, setSelectedQueue] = useState(null);
@@ -262,11 +249,6 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
     })();
   }, []);
 
-  useEffect(() => {
-    if (queue) {
-      reset(queue);
-    }
-  }, [queue, reset]);
 
   useEffect(() => {
 
@@ -437,44 +419,47 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
           {schedulesEnabled && <Tab label={i18n.t("queueModal.title.text")} />}
         </Tabs>
         {tab === 0 && (
-          <Box component="form" onSubmit={handleSubmit(handleSaveQueue)}>
-            <DialogContent dividers>
-              <Controller
-                name="name"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
+          <Formik
+            initialValues={queue}
+            enableReinitialize={true}
+            validationSchema={queueSchema}
+            onSubmit={(values, actions) => {
+              setTimeout(() => {
+                handleSaveQueue(values);
+                actions.setSubmitting(false);
+              }, 400);
+            }}
+          >
+            {({ touched, errors, isSubmitting, values, setFieldValue }) => (
+              <Form>
+                <DialogContent dividers>
+                  <Field
+                    as={TextField}
+                    name="name"
                     label={i18n.t("queueModal.form.name")}
                     autoFocus
-                    error={Boolean(errors.name)}
-                    helperText={errors.name?.message}
+                    error={touched.name && Boolean(errors.name)}
+                    helperText={touched.name && errors.name}
                     variant="outlined"
                     margin="dense"
                     sx={{ mr: 1, flex: 1 }}
                   />
-                )}
-              />
-              <Controller
-                name="color"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
+                  <Field
+                    as={TextField}
+                    name="color"
                     label={i18n.t("queueModal.form.color")}
                     id="color"
                     onFocus={() => {
                       setColorPickerModalOpen(true);
-                      greetingRef.current.focus();
+                      greetingRef.current && greetingRef.current.focus();
                     }}
-                    error={Boolean(errors.color)}
-                    helperText={errors.color?.message}
+                    error={touched.color && Boolean(errors.color)}
+                    helperText={touched.color && errors.color}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
                           <div
-                            style={{ backgroundColor: watchedValues.color }}
-                            sx={{ width: 20, height: 20 }}
+                            style={{ backgroundColor: values.color, width: 20, height: 20, borderRadius: '50%', border: '1px solid #ccc' }}
                           ></div>
                         </InputAdornment>
                       ),
@@ -491,49 +476,37 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                     variant="outlined"
                     margin="dense"
                   />
-                )}
-              />
-              <ColorBoxModal
-                open={colorPickerModalOpen}
-                handleClose={() => setColorPickerModalOpen(false)}
-                onChange={(color) => {
-                  setValue("color", `#${color.hex}`);
-                }}
-                currentColor={watchedValues.color}
-              />
+                  <ColorBoxModal
+                    open={colorPickerModalOpen}
+                    handleClose={() => setColorPickerModalOpen(false)}
+                    onChange={(color) => {
+                      setFieldValue("color", `#${color.hex}`);
+                    }}
+                    currentColor={values.color}
+                  />
                   
-              <Controller
-                name="orderQueue"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
+                  <Field
+                    as={TextField}
+                    name="orderQueue"
                     label={i18n.t("queueModal.form.orderQueue")}
                     type="number"
-                    error={Boolean(errors.orderQueue)}
-                    helperText={errors.orderQueue?.message}
+                    error={touched.orderQueue && Boolean(errors.orderQueue)}
+                    helperText={touched.orderQueue && errors.orderQueue}
                     variant="outlined"
                     margin="dense"
                     sx={{ m: 1, minWidth: 120 }}
                   />
-                )}
-              />
-              <FormControlLabel
-                control={
-                  <Controller
-                    name="closeTicket"
-                    control={control}
-                    render={({ field }) => (
-                      <Switch
-                        {...field}
-                        checked={field.value}
+                  <FormControlLabel
+                    control={
+                      <Field
+                        as={Switch}
+                        name="closeTicket"
                         color="primary"
+                        checked={values.closeTicket || false}
                       />
-                    )}
+                    }
+                    label={i18n.t("queueModal.form.closeTicket")}
                   />
-                }
-                label={i18n.t("queueModal.form.closeTicket")}
-              />
                   <div>
                     <FormControlLabel
                       control={
@@ -541,7 +514,7 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                           as={Switch}
                           color="primary"
                           name="ativarRoteador"
-                          checked={values.ativarRoteador}
+                          checked={values.ativarRoteador || false}
                         />
                       }
                       label={i18n.t("queueModal.form.rotate")}
@@ -553,9 +526,8 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                       id="tempoRoteador"
                       variant="outlined"
                       margin="dense"
-                      className={classes.selectField}
                     >
-                      <MenuItem value="0" selected disabled>{i18n.t("queueModal.form.timeRotate")}</MenuItem>
+                      <MenuItem value="0" disabled>{i18n.t("queueModal.form.timeRotate")}</MenuItem>
                       <MenuItem value="2">2 minutos</MenuItem>
                       <MenuItem value="5">5 minutos</MenuItem>
                       <MenuItem value="10">10 minutos</MenuItem>
@@ -570,7 +542,6 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                       <FormControl
                         variant="outlined"
                         margin="dense"
-                        className={classes.FormControl}
                         fullWidth
                       >
                         <InputLabel id="integrationId-selection-label">
@@ -598,7 +569,6 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                     <FormControl
                       variant="outlined"
                       margin="dense"
-                      className={classes.FormControl}
                       fullWidth
                     >
                       <InputLabel id="fileListId-selection-label">{i18n.t("queueModal.form.fileListId")}</InputLabel>
@@ -612,7 +582,7 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                         value={values.fileListId || ""}
                       >
                         <MenuItem value={""} >{"Nenhum"}</MenuItem>
-                        {file.map(f => (
+                        {file && file.map(f => (
                           <MenuItem key={f.id} value={f.id}>
                             {f.name}
                           </MenuItem>
@@ -695,10 +665,9 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                                     {isNameEdit !== index &&
                                       queue.chatbots[index]?.name ? (
                                       <div
-                                        className={classes.greetingMessage}
                                         variant="body1"
                                       >
-                                        {values.chatbots[index].name}
+                                        {values.chatbots && values.chatbots[index] && values.chatbots[index].name}
 
                                         <IconButton
                                           size="small"
@@ -782,7 +751,7 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                                                 as={Checkbox}
                                                 color="primary"
                                                 name={`chatbots[${index}].closeTicket`}
-                                                checked={values.chatbots[index].closeTicket || false}
+                                                checked={values.chatbots && values.chatbots[index] && values.chatbots[index].closeTicket || false}
                                               />
                                             }
                                             labelPlacement="top"
@@ -792,7 +761,7 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                                           <IconButton
                                             size="small"
                                             onClick={() =>
-                                              values.chatbots[index].name
+                                              values.chatbots && values.chatbots[index] && values.chatbots[index].name
                                                 ? handleSaveBot(values)
                                                 : null
                                             }
@@ -818,8 +787,7 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                                       <>
                                         {isGreetingMessageEdit !== index ? (
                                           <div
-                                            className={classes.greetingMessage}
-                                          >
+                                              >
                                             <Typography
                                               color="textSecondary"
                                               variant="body1"
@@ -828,8 +796,8 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                                             </Typography>
 
                                             {
-                                              values.chatbots[index]
-                                                .greetingMessage
+                                              values.chatbots && values.chatbots[index] &&
+                                                values.chatbots[index].greetingMessage
                                             }
 
                                             {!queue.chatbots[index]
@@ -858,8 +826,7 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                                         ) : (
                                           <Grid spacing={2} container>
                                             <div
-                                              className={classes.greetingMessage}
-                                            >
+                                                  >
                                               {queue.chatbots[index].queueType === "text" && (
                                                 <Grid xs={12} md={12} item>
                                                   <Field
@@ -910,8 +877,7 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                                                   <FormControl
                                                     variant="outlined"
                                                     margin="dense"
-                                                    className={classes.FormControl}
-                                                    fullWidth
+                                                                                fullWidth
                                                   >
                                                     <InputLabel id="queue-selection-label">{i18n.t("queueModal.form.queue")}</InputLabel>
                                                     <Field
@@ -965,15 +931,15 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                                                     value={queue.chatbots[index].user}
                                                     onChange={(e, newValue) => {
                                                       if (newValue != null) {
-                                                        setFieldValue(`chatbots[${index}].optUserId`, newValue.id);
+                                                        setValue(`chatbots[${index}].optUserId`, newValue.id);
                                                       } else {
-                                                        setFieldValue(`chatbots[${index}].optUserId`, null);
+                                                        setValue(`chatbots[${index}].optUserId`, null);
 
                                                       }
                                                       if (newValue != null && Array.isArray(newValue.queues)) {
                                                         if (newValue.queues.length === 1) {
                                                           setSelectedQueueOption(newValue.queues[0].id);
-                                                          setFieldValue(`chatbots[${index}].optQueueId`, newValue.queues[0].id);
+                                                          setValue(`chatbots[${index}].optQueueId`, newValue.queues[0].id);
                                                         }
                                                         setQueues(newValue.queues);
 
@@ -1026,7 +992,7 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                                                       value={selectedQueueOption}
                                                       onChange={(e) => {
                                                         setSelectedQueueOption(e.target.value)
-                                                        setFieldValue(`chatbots[${index}].optQueueId`, e.target.value);
+                                                        setValue(`chatbots[${index}].optQueueId`, e.target.value);
                                                       }}
                                                       label={i18n.t("transferTicketModal.fieldQueuePlaceholder")}
                                                     >
@@ -1066,8 +1032,7 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                                                   <FormControl
                                                     variant="outlined"
                                                     margin="dense"
-                                                    className={classes.FormControl}
-                                                    fullWidth
+                                                                                fullWidth
                                                   >
                                                     <InputLabel id="optIntegrationId-selection-label">{i18n.t("queueModal.form.integration")}</InputLabel>
                                                     <Field
@@ -1120,7 +1085,7 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                                                   helpertext={touched?.chatbots?.[index]?.optFileId && errors?.chatbots?.[index]?.optFileId}
                                                   sx={{ m: 1, minWidth: 120 }}
                                                 >
-                                                  {file.map(f => (
+                                                  {file && file.map(f => (
                                                     <MenuItem key={f.id} value={f.id}>
                                                       {f.name}
                                                     </MenuItem>
@@ -1164,9 +1129,7 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                 <DialogActions>
                   <Button
                     onClick={handleClose}
-                    // color="secondary"
                     disabled={isSubmitting}
-                  // variant="outlined"
                   >
                     {i18n.t("queueModal.buttons.cancel")}
                   </Button>
@@ -1184,18 +1147,20 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                       <CircularProgress
                         size={24}
                         sx={{
-              color: green[500],
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              marginTop: -1.5,
-              marginLeft: -1.5,
-            }}
+                          color: green[500],
+                          position: "absolute",
+                          top: "50%",
+                          left: "50%",
+                          marginTop: -1.5,
+                          marginLeft: -1.5,
+                        }}
                       />
                     )}
                   </Button>
-            </DialogActions>
-          </Box>
+                </DialogActions>
+              </Form>
+            )}
+          </Formik>
         )}
         {tab === 1 && (
           <Paper style={{ padding: 20 }}>

@@ -2,204 +2,341 @@ import React, { useState, useContext, useEffect } from "react";
 import { useHistory } from "react-router-dom";
 
 import {
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    FormControl,
-    InputLabel,
-    makeStyles,
-    MenuItem,
-    Select
- } from "@mui/material";
-import { v4 as uuidv4 } from "uuid";
+    Box,
+    Typography
+} from "@mui/material";
+import { MessageSquare } from "lucide-react";
 
 import api from "../../services/api";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import ButtonWithSpinner from "../ButtonWithSpinner";
+import ModernModal from "../ModernModal";
+import { Select } from "../ui/Select";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
-// Removido: Formik não usado - componente usa useState
 import ShowTicketOpen from "../ShowTicketOpenModal";
 import useCompanySettings from "../../hooks/useSettings/companySettings";
 import { TicketsContext } from "../../context/Tickets/TicketsContext";
 
-// const filter = createFilterOptions({
-// 	trim: true,
-// });
-
-const useStyles = () => ({
-	autoComplete: { 
-		width: 300,
-		// marginBottom: 20 
-	},
-	maxWidth: {
-		width: "100%",
-	},
-	buttonColorError: {
-		color: "var(--color-primary)",
-		borderColor: "var(--color-primary)",
-	},
-});
-
 const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket }) => {
 	const history = useHistory();
-	const classes = useStyles();
 	const [selectedQueue, setSelectedQueue] = useState('');
 	const [loading, setLoading] = useState(false);
+	const [queues, setQueues] = useState([]);
+	const [loadingQueues, setLoadingQueues] = useState(true);
 	const { user } = useContext(AuthContext);
-	const [ openAlert, setOpenAlert ] = useState(false);
-	const [ userTicketOpen, setUserTicketOpen] = useState("");
-	const [ queueTicketOpen, setQueueTicketOpen] = useState("");
+	const [openAlert, setOpenAlert] = useState(false);
+	const [userTicketOpen, setUserTicketOpen] = useState("");
+	const [queueTicketOpen, setQueueTicketOpen] = useState("");
 	const { tabOpen, setTabOpen } = useContext(TicketsContext);
 
-	const {get:getSetting} = useCompanySettings();
+	const { get: getSetting } = useCompanySettings();
 
-useEffect(() => {
-	try {
-	if (user?.queues?.length === 1) {
-        setSelectedQueue(user.queues[0].id)
-      }
-	} catch (err) {
-		setLoading(false);
-		toastError(err);
-	}
-},[selectedQueue])
-
-const handleClose = () => {
-	onClose();
-	setSelectedQueue("");
-};
-
-const handleCloseAlert = () => {
-	setOpenAlert(false);
-	setLoading(false)
-};
-
-const handleSendMessage = async (id) => {
-
-	let isGreetingMessage = false;
-
-	try {
-		const  setting  = await getSetting({
-			"column":"sendGreetingAccepted"
-		});
-		if (setting.sendGreetingAccepted === "enabled") isGreetingMessage = true;
-	} catch (err) {
-		toastError(err);
-	}
-	
-	let settingMessage
-	try {
-		settingMessage = await getSetting({
-			"column": "greetingAcceptedMessage"
-		})
-	} catch (err) {
-		toastError(err);
-	}
-	
-	// console.log(ticket)
-	if (isGreetingMessage && (!ticket.isGroup || ticket.whatsapp?.groupAsTicket === "enabled") && ticket.status === "pending") {
-		const msg = `${settingMessage.greetingAcceptedMessage}`;
-		// const msg = `{{ms}} *{{name}}*, ${i18n.t("mainDrawer.appBar.user.myName")} *${user?.name}* ${i18n.t("mainDrawer.appBar.user.continuity")}.`;
-		const message = {
-			read: 1,
-			fromMe: true,
-			mediaUrl: "",
-			body: `${msg.trim()}`,
+	// Buscar filas disponíveis
+	useEffect(() => {
+		const fetchQueues = async () => {
+			try {
+				setLoadingQueues(true);
+				const response = await api.get("/queue");
+				const availableQueues = response.data;
+				setQueues(availableQueues);
+				
+				// Auto-selecionar se houver apenas uma fila
+				if (availableQueues.length === 1) {
+					setSelectedQueue(availableQueues[0].id.toString());
+				}
+			} catch (err) {
+				console.error("Erro ao buscar filas:", err);
+				toastError(err);
+				// Fallback para user.queues se a API falhar
+				if (user?.queues?.length > 0) {
+					setQueues(user.queues);
+					if (user.queues.length === 1) {
+						setSelectedQueue(user.queues[0].id.toString());
+					}
+				}
+			} finally {
+				setLoadingQueues(false);
+			}
 		};
+
+		if (modalOpen) {
+			fetchQueues();
+		}
+	}, [modalOpen, user]);
+
+	const handleClose = () => {
+		onClose();
+		setSelectedQueue("");
+	};
+
+	const handleCloseAlert = () => {
+		setOpenAlert(false);
+		setLoading(false)
+	};
+
+	const handleSendMessage = async (id) => {
+		let isGreetingMessage = false;
+
 		try {
-			await api.post(`/messages/${id}`, message);
+			const setting = await getSetting({
+				"column": "sendGreetingAccepted"
+			});
+			if (setting.sendGreetingAccepted === "enabled") isGreetingMessage = true;
 		} catch (err) {
 			toastError(err);
 		}
-	}
-};
 
-const handleUpdateTicketStatus = async (queueId) => {
-	setLoading(true);
-	try {
-		const otherTicket = await api.put(`/tickets/${ticketId}`, {
-			status: ticket.isGroup && ticket.channel === 'whatsapp' ? "group" : "open",
-			userId: user?.id || null,
-			queueId: queueId
-		});
-
-		if (otherTicket.data.id !== ticket.id) {
-			if (otherTicket.data.userId !== user?.id) {
-				setOpenAlert(true)
-				setUserTicketOpen(otherTicket.data.user.name)
-				setQueueTicketOpen(otherTicket.data.queue.name)
-			} else {
-				setLoading(false);
-				setTabOpen(otherTicket.isGroup ? "group" : "open");
-				history.push(`/tickets/${otherTicket.data.uuid}`);
-			}
-		} else {
-			handleSendMessage(ticket.id)
-			setLoading(false);
-			setTabOpen(ticket.isGroup ? "group" : "open");
-			history.push(`/tickets/${ticket.uuid}`);
-			handleClose();
+		let settingMessage
+		try {
+			settingMessage = await getSetting({
+				"column": "greetingAcceptedMessage"
+			})
+		} catch (err) {
+			toastError(err);
 		}
-	} catch (err) {
-		setLoading(false);
-		toastError(err);
-	}
-};
 
-return (
-	<>
-		<Dialog open={modalOpen} onClose={handleClose}>
-			<DialogTitle id="form-dialog-title">
-				{i18n.t("ticketsList.acceptModal.title")}
-			</DialogTitle>
-			<DialogContent dividers>
-				<FormControl variant="outlined" className={classes.maxWidth}>
-					<InputLabel>{i18n.t("ticketsList.acceptModal.queue")}</InputLabel>
-					<Select
-						value={selectedQueue}
-						className={classes.autoComplete}
-						onChange={(e) => setSelectedQueue(e.target.value)}
-						label={i18n.t("ticketsList.acceptModal.queue")}
-					>
-						<MenuItem value={''}>&nbsp;</MenuItem>
-						{user?.queues?.map((queue) => (
-							<MenuItem key={queue.id} value={queue.id}>{queue.name}</MenuItem>
-						)) || []}
-					</Select>
-				</FormControl>
-			</DialogContent>
-			<DialogActions>
-				<Button
-					onClick={handleClose}
-					className={classes.buttonColorError}
-					disabled={loading}
-					variant="outlined"
-				>
-					{i18n.t("ticketsList.buttons.cancel")}
-				</Button>
-				<ButtonWithSpinner
-					variant="contained"
-					type="button"
-					disabled={(selectedQueue === "")}
-					onClick={() => handleUpdateTicketStatus(selectedQueue)}
-					color="primary"
-					loading={loading}
-				>
-					{i18n.t("ticketsList.buttons.start")}
-				</ButtonWithSpinner>
-			</DialogActions>
+		if (isGreetingMessage && (!ticket.isGroup || ticket.whatsapp?.groupAsTicket === "enabled") && ticket.status === "pending") {
+			const msg = `${settingMessage.greetingAcceptedMessage}`;
+			const message = {
+				read: 1,
+				fromMe: true,
+				mediaUrl: "",
+				body: `${msg.trim()}`,
+			};
+			try {
+				await api.post(`/messages/${id}`, message);
+			} catch (err) {
+				toastError(err);
+			}
+		}
+	};
+
+	const handleUpdateTicketStatus = async (queueId) => {
+		setLoading(true);
+		try {
+			console.log('🎯 Atualizando status do ticket:', ticketId, 'para fila:', queueId);
+			
+			const otherTicket = await api.put(`/tickets/${ticketId}`, {
+				status: ticket.isGroup && ticket.channel === 'whatsapp' ? "group" : "open",
+				userId: user?.id || null,
+				queueId: queueId
+			});
+
+			console.log('✅ Ticket atualizado com sucesso:', otherTicket.data);
+
+			if (otherTicket.data.id !== ticket.id) {
+				if (otherTicket.data.userId !== user?.id) {
+					setOpenAlert(true)
+					setUserTicketOpen(otherTicket.data.user.name)
+					setQueueTicketOpen(otherTicket.data.queue.name)
+				} else {
+					setLoading(false);
+					setTabOpen(otherTicket.isGroup ? "group" : "open");
+					history.push(`/tickets/${otherTicket.data.uuid}`);
+				}
+			} else {
+				await handleSendMessage(ticket.id);
+				setLoading(false);
+				setTabOpen(ticket.isGroup ? "group" : "open");
+				console.log('🔄 Navegando para:', `/tickets/${ticket.uuid}`);
+				history.push(`/tickets/${ticket.uuid}`);
+				handleClose();
+			}
+		} catch (err) {
+			console.error('❌ Erro ao aceitar ticket:', err);
+			setLoading(false);
+			toastError(err);
+		}
+	};
+
+	const handleStart = () => {
+		handleUpdateTicketStatus(selectedQueue);
+	};
+
+	const actions = [
+		{
+			type: 'cancel',
+			label: i18n.t("ticketsList.buttons.cancel"),
+			onClick: handleClose,
+			disabled: loading
+		},
+		{
+			type: 'primary',
+			label: i18n.t("ticketsList.buttons.start"),
+			onClick: handleStart,
+			disabled: selectedQueue === "" || loading || loadingQueues
+		}
+	];
+
+	return (
+		<>
+			<ModernModal
+				open={modalOpen}
+				onClose={handleClose}
+				title={i18n.t("ticketsList.acceptModal.title")}
+				size="sm"
+				actions={actions}
+			>
+				<Box sx={{ py: 1 }}>
+					{/* Cabeçalho com ícone */}
+					<Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+						<Box
+							sx={{
+								width: '36px',
+								height: '36px',
+								borderRadius: '8px',
+								backgroundColor: 'var(--color-accent)',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								color: 'white'
+							}}
+						>
+							<MessageSquare size={18} />
+						</Box>
+						<Box>
+							<Typography 
+								variant="h6" 
+								sx={{ 
+									fontSize: '16px',
+									fontWeight: 600,
+									color: 'var(--text-primary)',
+									mb: 0.5
+								}}
+							>
+								Aceitar Conversa
+							</Typography>
+							<Typography 
+								variant="body2" 
+								sx={{ 
+									color: 'var(--text-secondary)',
+									fontSize: '13px',
+									lineHeight: 1.4
+								}}
+							>
+								Selecione uma fila para aceitar esta conversa e iniciar o atendimento
+							</Typography>
+						</Box>
+					</Box>
+					
+					{/* Campo de seleção de fila */}
+					<Box sx={{ mb: 2 }}>
+						<Typography 
+							variant="body2" 
+							sx={{ 
+								mb: 1, 
+								color: 'var(--text-primary)',
+								fontSize: '14px',
+								fontWeight: 600
+							}}
+						>
+							{i18n.t("ticketsList.acceptModal.queue")}
+						</Typography>
+						
+						{loadingQueues ? (
+							<Box 
+								sx={{ 
+									display: 'flex', 
+									alignItems: 'center', 
+									justifyContent: 'center', 
+									py: 2,
+									color: 'var(--text-secondary)'
+								}}
+							>
+								Carregando filas...
+							</Box>
+						) : (
+							<Select
+								value={selectedQueue}
+								onChange={(e) => setSelectedQueue(e.target.value)}
+								size="md"
+								variant="bordered"
+								radius="md"
+								disabled={loadingQueues || queues.length === 0}
+							>
+								<option value="" disabled>
+									Selecione uma fila...
+								</option>
+								{queues.map((queue) => (
+									<option key={queue.id} value={queue.id.toString()}>
+										{queue.name}
+									</option>
+								))}
+							</Select>
+						)}
+					</Box>
+					
+					{/* Preview da fila selecionada */}
+					{selectedQueue && queues.length > 0 && (
+						<Box 
+							sx={{ 
+								mt: 2, 
+								p: 2, 
+								backgroundColor: 'var(--bg-secondary)', 
+								borderRadius: '8px',
+								border: '1px solid var(--border-primary)'
+							}}
+						>
+							<Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
+								Fila selecionada:
+							</Typography>
+							<Typography 
+								variant="body2" 
+								sx={{ 
+									color: 'var(--text-primary)', 
+									fontWeight: 600,
+									mt: 0.5,
+									display: 'flex',
+									alignItems: 'center',
+									gap: 1
+								}}
+							>
+								<Box
+									sx={{
+										width: '8px',
+										height: '8px',
+										borderRadius: '50%',
+										backgroundColor: queues.find(q => q.id.toString() === selectedQueue)?.color || 'var(--color-accent)',
+									}}
+								/>
+								{queues.find(q => q.id.toString() === selectedQueue)?.name}
+							</Typography>
+						</Box>
+					)}
+
+					{/* Mensagem quando não há filas */}
+					{!loadingQueues && queues.length === 0 && (
+						<Box 
+							sx={{ 
+								p: 2, 
+								backgroundColor: 'var(--bg-secondary)', 
+								borderRadius: '8px',
+								border: '1px solid var(--border-primary)',
+								textAlign: 'center'
+							}}
+						>
+							<Typography 
+								variant="body2" 
+								sx={{ 
+									color: 'var(--text-secondary)',
+									fontSize: '13px'
+								}}
+							>
+								Nenhuma fila disponível para este usuário.
+							</Typography>
+						</Box>
+					)}
+				</Box>
+			</ModernModal>
+
 			<ShowTicketOpen
 				isOpen={openAlert}
 				handleClose={handleCloseAlert}
 				user={userTicketOpen}
 				queue={queueTicketOpen}
 			/>
-		</Dialog>
-	</>
-);
+		</>
+	);
 };
 
 export default AcceptTicketWithouSelectQueue;

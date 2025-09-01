@@ -3,7 +3,7 @@ import { useParams, useHistory } from "react-router-dom";
 
 import clsx from "clsx";
 
-import { Paper } from "@mui/material";
+import { Paper, useTheme } from "@mui/material";
 
 import ContactDrawer from "../ContactDrawer";
 import MessageInput from "../MessageInput";
@@ -24,7 +24,9 @@ import { TicketsContext } from "../../context/Tickets/TicketsContext";
 
 const drawerWidth = 320;
 
-const useStyles = () => ({
+const useStyles = () => {
+  const theme = useTheme();
+  return ({
   root: {
     display: "flex",
     height: "100%",
@@ -54,7 +56,7 @@ const useStyles = () => ({
     }),
     marginRight: 0,
   },
-});
+})};
 
 const Ticket = () => {
   const { ticketId } = useParams();

@@ -517,7 +517,6 @@ const MessagesList = ({
   const [anchorEl, setAnchorEl] = useState(null);
   const messageOptionsMenuOpen = Boolean(anchorEl);
   const { ticketId } = useParams();
-
   const currentTicketId = useRef(ticketId);
   const { getAll } = useCompanySettings();
   const [dragActive, setDragActive] = useState(false);
@@ -611,16 +610,16 @@ const MessagesList = ({
     }
 
     const onAppMessageMessagesList = (data) => {
-      if (data.action === "create" && data.ticket.uuid === ticketId) {
+      if (data.action === "create" && (data.ticket.uuid === ticketId || data.ticket.id == ticketId)) {
         dispatch({ type: "ADD_MESSAGE", payload: data.message });
         scrollToBottom();
       }
 
-      if (data.action === "update" && data?.message?.ticket?.uuid === ticketId) {
+      if (data.action === "update" && (data?.message?.ticket?.uuid === ticketId || data?.message?.ticket?.id == ticketId)) {
         dispatch({ type: "UPDATE_MESSAGE", payload: data.message });
       }
 
-      if (data.action == "delete" && data.message.ticket?.uuid === ticketId) {
+      if (data.action == "delete" && (data.message.ticket?.uuid === ticketId || data.message.ticket?.id == ticketId)) {
         dispatch({ type: "DELETE_MESSAGE", payload: data.messageId });
       }
     }

@@ -1,104 +1,34 @@
 import React, { useEffect, useReducer, useState, useContext } from "react";
-
+import { toast } from "../../components/ui/ToastProvider";
 import {
-  Button,
-  IconButton,
-  makeStyles,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-  TextField,
-  InputAdornment,
+  Box,
+  Card,
+  CardContent,
+  Typography
 } from "@mui/material";
 
 import {
-  DeleteOutline,
-  Edit,
-  Search as SearchIcon,
-  AddCircleOutline,
-} from "@mui/icons-material";
+  Edit3,
+  Trash2,
+  PlusCircle,
+  Settings,
+  BarChart3
+} from "lucide-react";
 
-import MainContainer from "../../components/MainContainer";
-import MainHeader from "../../components/MainHeader";
-import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
-import TableRowSkeleton from "../../components/TableRowSkeleton";
-import Title from "../../components/Title";
+// Componentes modernos
+import PageLayout from "../../components/PageLayout";
+import BaseTable, { ActionButton, ActionGroup } from "../../components/BaseTable";
+import SearchInput from "../../components/SearchInput";
+import GradientButton from "../../components/GradientButton";
+import QueueForm from "../../components/QueueForm";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
 import QueueModal from "../../components/QueueModal";
-import { toast } from "../../components/ui/ToastProvider";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import ForbiddenPage from "../../components/ForbiddenPage";
 
-const useStyles = () => ({
-  mainPaper: {
-    flex: 1,
-    padding: 0,
-    overflowY: "scroll",
-    borderRadius: 0,
-    boxShadow: "none",
-    backgroundColor: "#f5f5f5",
-  },
-  searchContainer: {
-    backgroundColor: "white",
-    padding: 16,
-    borderRadius: 8,
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-    marginBottom: 16,
-  },
-  tableContainer: {
-    backgroundColor: "white",
-    borderRadius: 8,
-    padding: 16,
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
-  },
-  customTable: {
-    "& .MuiTableCell-head": {
-      fontWeight: 600,
-      color: "#333",
-      borderBottom: "2px solid #f5f5f5",
-    },
-    "& .MuiTableCell-body": {
-      borderBottom: "1px solid #f5f5f5",
-    },
-    "& .MuiTableRow-root:hover": {
-      backgroundColor: "#f9f9f9",
-    },
-  },
-  actionButtons: {
-    backgroundColor: "#00C307",
-    color: "white",
-    "&:hover": {
-      backgroundColor: "#029907",
-    },
-  },
-  iconButton: {
-    padding: 8,
-    backgroundColor: "#f5f5f5",
-    marginLeft: 8,
-    "&.edit": {
-      color: "#00C307",
-    },
-    "&.delete": {
-      color: "#E57373",
-    },
-  },
-  customTableCell: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_QUEUES") {
@@ -144,8 +74,6 @@ const reducer = (state, action) => {
 };
 
 const Queues = () => {
-  const classes = useStyles();
-
   const [queues, dispatch] = useReducer(reducer, []);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -153,8 +81,17 @@ const Queues = () => {
   const [queueModalOpen, setQueueModalOpen] = useState(false);
   const [selectedQueue, setSelectedQueue] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [searchParam, setSearchParam] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [editingQueue, setEditingQueue] = useState(null);
   const { user, socket } = useContext(AuthContext);
   const companyId = user.companyId;
+
+  // Filtrar filas baseado na busca
+  const filteredQueues = queues.filter(queue => 
+    queue.name.toLowerCase().includes(searchParam.toLowerCase()) ||
+    queue.greetingMessage?.toLowerCase().includes(searchParam.toLowerCase())
+  );
 
   useEffect(() => {
     (async () => {
@@ -224,6 +161,46 @@ const Queues = () => {
     }
     setSelectedQueue(null);
   };
+
+  const handleSearch = (event) => {
+    const newSearchParam = event.target.value.toLowerCase();
+    setSearchParam(newSearchParam);
+  };
+
+  const handleSearchSubmit = (searchValue) => {
+    setSearchParam(searchValue.toLowerCase());
+  };
+
+  const handleNewQueue = () => {
+    setEditingQueue(null);
+    setShowForm(true);
+  };
+
+  const handleEditQueueForm = (queue) => {
+    setEditingQueue(queue);
+    setShowForm(true);
+  };
+
+  const handleBackToList = () => {
+    setShowForm(false);
+    setEditingQueue(null);
+  };
+
+  const handleSaveQueue = async (queueData) => {
+    try {
+      if (editingQueue) {
+        await api.put(`/queue/${editingQueue.id}`, queueData);
+        toast.success("Fila atualizada com sucesso!");
+      } else {
+        await api.post("/queue", queueData);
+        toast.success("Fila criada com sucesso!");
+      }
+      setShowForm(false);
+      setEditingQueue(null);
+    } catch (err) {
+      toastError(err);
+    }
+  };
   const loadMore = () => {
     setPageNumber((prevState) => prevState + 1);
   };
@@ -235,14 +212,22 @@ const Queues = () => {
     }
   };
   return (
-    <MainContainer>
+    <PageLayout
+      title="Gerenciar Filas"
+      icon={<Settings size={24} style={{ color: 'var(--color-accent)' }} />}
+      breadcrumbs={[
+        { label: "Dashboard", href: "/", icon: <BarChart3 size={16} /> },
+        { label: "Filas", icon: <Settings size={16} /> }
+      ]}
+    >
+      {/* Modals */}
       <ConfirmationModal
-        title={selectedQueue && `${i18n.t("queues.confirmationModal.deleteTitle")} ${selectedQueue.name}?`}
+        title={selectedQueue && `Excluir fila ${selectedQueue.name}?`}
         open={confirmModalOpen}
         onClose={handleCloseConfirmationModal}
         onConfirm={() => handleDeleteQueue(selectedQueue.id)}
       >
-        {i18n.t("queues.confirmationModal.deleteMessage")}
+        Tem certeza que deseja excluir esta fila? Esta ação não pode ser desfeita.
       </ConfirmationModal>
 
       <QueueModal
@@ -260,113 +245,397 @@ const Queues = () => {
 
       {user.profile === "user" ? (
         <ForbiddenPage />
+      ) : showForm ? (
+        <QueueForm 
+          onBack={handleBackToList}
+          onSave={handleSaveQueue}
+          initialData={editingQueue}
+        />
       ) : (
         <>
-          <div className={classes.searchContainer}>
-            <div style={{
-              display: "flex",
-              gap: "16px",
-              alignItems: "center"
-            }}>
-              <Typography variant="h6" style={{ color: '#333' }}>
-                {i18n.t("queues.title")} ({queues.length})
-              </Typography>
-            </div>
+          {/* Container Único com Filtros e Tabela */}
+          <Card 
+            elevation={1}
+            sx={{
+              mb: 4,
+              borderRadius: 3,
+              background: 'var(--bg-primary)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid var(--border-primary)',
+              overflow: 'visible',
+              width: '100%',
+              maxWidth: 'none',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+            }}
+          >
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              {/* Seção de Filtros */}
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                gap: 2,
+                flexWrap: 'wrap',
+                mb: 3,
+                pb: 3,
+                borderBottom: '1px solid var(--border-primary)'
+              }}>
+                <SearchInput
+                  placeholder="Buscar filas..."
+                  value={searchParam}
+                  onChange={handleSearch}
+                  onSearch={handleSearchSubmit}
+                  size="medium"
+                  fullWidth={false}
+                  sx={{
+                    flex: 1,
+                    maxWidth: "550px",
+                    minWidth: "350px",
+                  }}
+                />
 
-            <Button
-              variant="contained"
-              onClick={handleOpenQueueModal}
-              className={classes.actionButtons}
-              startIcon={<AddCircleOutline />}
-            >
-              {i18n.t("queues.buttons.add")}
-            </Button>
-          </div>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <GradientButton
+                    onClick={handleNewQueue}
+                    icon={<PlusCircle size={20} />}
+                    variant="primary"
+                    size="medium"
+                  >
+                    Nova Fila
+                  </GradientButton>
+                  
+                  <GradientButton
+                    onClick={handleOpenQueueModal}
+                    icon={<Settings size={20} />}
+                    variant="secondary"
+                    size="medium"
+                  >
+                    Modal (temp)
+                  </GradientButton>
+                </Box>
+              </Box>
 
-          <Paper className={classes.mainPaper}>
-            <div className={classes.tableContainer}>
-              <Table size="small" className={classes.customTable}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell align="center">{i18n.t("queues.table.ID")}</TableCell>
-                    <TableCell align="center">{i18n.t("queues.table.name")}</TableCell>
-                    <TableCell align="center">{i18n.t("queues.table.color")}</TableCell>
-                    <TableCell align="center">{i18n.t("queues.table.orderQueue")}</TableCell>
-                    <TableCell align="center">{i18n.t("queues.table.greeting")}</TableCell>
-                    <TableCell align="center">{i18n.t("queues.table.actions")}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {queues.map((queue) => (
-                    <TableRow key={queue.id}>
-                      <TableCell align="center">{queue.id}</TableCell>
-                      <TableCell align="center">{queue.name}</TableCell>
-                      <TableCell align="center">
-                        <div className={classes.customTableCell}>
-                          <span
-                            style={{
-                              backgroundColor: queue.color,
-                              width: 60,
-                              height: 20,
-                              alignSelf: "center",
+              {/* Seção da Tabela */}
+              <BaseTable
+                records={filteredQueues}
+                loading={loading}
+                noRecordsTitle="Nenhuma fila encontrada"
+                noRecordsText="Crie sua primeira fila ou ajuste os filtros de busca"
+                noRecordsIcon={<Settings size={48} />}
+                showPagination={false}
+                minHeight={700}
+                enableSorting={true}
+                enableViewToggle={true}
+                defaultView="table"
+                initialSortBy="id"
+                initialSortOrder="asc"
+                renderCard={(queue, index) => (
+                  <Card sx={{ 
+                    backgroundColor: 'var(--bg-primary)',
+                    border: '1px solid var(--border-primary)',
+                    borderRadius: 3,
+                    width: '100%',
+                    height: 280,
+                    minHeight: 280,
+                    maxHeight: 280,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    background: `
+                      linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%),
+                      var(--bg-primary)
+                    `,
+                    '&:hover': {
+                      borderColor: queue.color || 'var(--color-accent)',
+                      boxShadow: `
+                        0 10px 25px -5px rgba(0, 0, 0, 0.1),
+                        0 10px 10px -5px rgba(0, 0, 0, 0.04),
+                        0 0 0 1px ${queue.color || 'var(--color-accent)'}33
+                      `,
+                      '&::before': {
+                        opacity: 1,
+                      }
+                    },
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '4px',
+                      background: `linear-gradient(90deg, ${queue.color || 'var(--color-accent)'}, ${queue.color || 'var(--color-accent)'}CC)`,
+                      opacity: 0,
+                      transition: 'opacity 0.3s ease',
+                      borderRadius: '12px 12px 0 0',
+                    }
+                  }}>
+                    <CardContent sx={{ 
+                      p: 3, 
+                      height: '100%', 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      position: 'relative'
+                    }}>
+                      {/* Header com ID */}
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'flex-start',
+                        mb: 2
+                      }}>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            color: 'var(--text-secondary)',
+                            fontWeight: 700,
+                            fontSize: '0.7rem',
+                            opacity: 0.6
+                          }}
+                        >
+                          #{queue.id}
+                        </Typography>
+                        <Box sx={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: '50%',
+                          backgroundColor: queue.color || 'var(--color-accent)',
+                          boxShadow: `0 0 0 3px ${queue.color || 'var(--color-accent)'}22`
+                        }} />
+                      </Box>
+
+                      {/* Nome da Fila */}
+                      <Box sx={{ flex: 1, mb: 2 }}>
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            fontSize: '1.1rem',
+                            fontWeight: 600,
+                            color: 'var(--text-primary)',
+                            mb: 1
+                          }}
+                        >
+                          {queue.name}
+                        </Typography>
+                        
+                        {/* Ordem */}
+                        {queue.orderQueue && (
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: 'var(--text-secondary)',
+                              fontSize: '0.875rem'
                             }}
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell align="center">
-                        <div className={classes.customTableCell}>
-                          <Typography
-                            style={{ width: 300, align: "center" }}
-                            noWrap
-                            variant="body2"
                           >
-                            {queue.orderQueue}
+                            Ordem: {queue.orderQueue}
                           </Typography>
-                        </div>
-                      </TableCell>
-                      <TableCell align="center">
-                        <div className={classes.customTableCell}>
-                          <Typography
-                            style={{ width: 300, align: "center" }}
-                            noWrap
-                            variant="body2"
-                          >
-                            {queue.greetingMessage}
-                          </Typography>
-                        </div>
-                      </TableCell>
-                      <TableCell align="center">
-                        <div style={{ display: 'flex', justifyContent: 'center' }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEditQueue(queue)}
-                            className={`${classes.iconButton} edit`}
-                          >
-                            <Edit fontSize="small" />
-                          </IconButton>
+                        )}
+                      </Box>
 
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setSelectedQueue(queue);
-                              setConfirmModalOpen(true);
-                            }}
-                            className={`${classes.iconButton} delete`}
-                          >
-                            <DeleteOutline fontSize="small" />
-                          </IconButton>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {loading && <TableRowSkeleton columns={6} />}
-                </TableBody>
-              </Table>
-            </div>
-          </Paper>
+                      {/* Mensagem de Saudação */}
+                      <Box sx={{ mb: 3 }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'var(--text-secondary)',
+                            fontWeight: 600,
+                            mb: 0.5
+                          }}
+                        >
+                          Mensagem:
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'var(--text-primary)',
+                            fontSize: '0.875rem',
+                            overflow: 'hidden',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical',
+                            lineHeight: 1.4
+                          }}
+                        >
+                          {queue.greetingMessage || "Sem mensagem configurada"}
+                        </Typography>
+                      </Box>
+                      
+                      {/* Ações */}
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        gap: 1.5, 
+                        mt: 'auto',
+                        pt: 2.5,
+                        borderTop: '1px solid var(--border-primary)',
+                        position: 'relative',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          width: '40px',
+                          height: '1px',
+                          background: queue.color || 'var(--color-accent)',
+                          opacity: 0.3
+                        }
+                      }}>
+                        <ActionButton
+                          onClick={() => handleEditQueueForm(queue)}
+                          icon={Edit3}
+                          tooltip="Editar fila"
+                          color={queue.color || 'var(--color-accent)'}
+                          hoverColor={queue.color || 'var(--color-accent)'}
+                        />
+                        <ActionButton
+                          onClick={() => {
+                            setConfirmModalOpen(true);
+                            setSelectedQueue(queue);
+                          }}
+                          icon={Trash2}
+                          tooltip="Excluir fila"
+                          color="#E57373"
+                          hoverColor="#d32f2f"
+                        />
+                      </Box>
+                      
+                      {/* Elemento decorativo */}
+                      <Box sx={{
+                        position: 'absolute',
+                        top: -20,
+                        right: -20,
+                        width: 40,
+                        height: 40,
+                        borderRadius: '50%',
+                        background: queue.color || 'var(--color-accent)',
+                        opacity: 0.05,
+                        pointerEvents: 'none'
+                      }} />
+                    </CardContent>
+                  </Card>
+                )}
+                columns={[
+                  { 
+                    accessor: 'id', 
+                    title: "ID",
+                    textAlignment: 'center',
+                    width: 80,
+                    render: ({ id }) => (
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: 'var(--text-gray-medium)', 
+                          fontWeight: 500,
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        #{id}
+                      </Typography>
+                    )
+                  },
+                  { 
+                    accessor: 'name', 
+                    title: "Nome",
+                    width: '25%',
+                    render: ({ name, color }) => (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: '50%',
+                          backgroundColor: color || 'var(--color-accent)',
+                          boxShadow: `0 0 0 3px ${color || 'var(--color-accent)'}22`
+                        }} />
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {name}
+                        </Typography>
+                      </Box>
+                    )
+                  },
+                  { 
+                    accessor: 'color', 
+                    title: "Cor",
+                    textAlignment: 'center',
+                    width: '15%',
+                    render: ({ color }) => (
+                      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                        <Box
+                          sx={{
+                            backgroundColor: color || '#ccc',
+                            width: 60,
+                            height: 20,
+                            borderRadius: 1,
+                            border: '1px solid var(--border-primary)'
+                          }}
+                        />
+                      </Box>
+                    )
+                  },
+                  { 
+                    accessor: 'orderQueue', 
+                    title: "Ordem",
+                    textAlignment: 'center',
+                    width: '10%',
+                    render: ({ orderQueue }) => (
+                      <Typography variant="body2">
+                        {orderQueue || '-'}
+                      </Typography>
+                    )
+                  },
+                  { 
+                    accessor: 'greetingMessage', 
+                    title: "Mensagem",
+                    width: '30%',
+                    render: ({ greetingMessage }) => (
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          maxWidth: 300,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {greetingMessage || "Sem mensagem"}
+                      </Typography>
+                    )
+                  },
+                  { 
+                    accessor: 'actions', 
+                    title: "Ações",
+                    textAlignment: 'center',
+                    width: 140,
+                    sortable: false,
+                    render: (queue) => (
+                      <ActionGroup>
+                        <ActionButton
+                          onClick={() => handleEditQueueForm(queue)}
+                          icon={Edit3}
+                          tooltip="Editar fila"
+                          color="var(--color-accent)"
+                          hoverColor="var(--color-accent)"
+                        />
+
+                        <ActionButton
+                          onClick={() => {
+                            setConfirmModalOpen(true);
+                            setSelectedQueue(queue);
+                          }}
+                          icon={Trash2}
+                          tooltip="Excluir fila"
+                          color="#E57373"
+                          hoverColor="#d32f2f"
+                        />
+                      </ActionGroup>
+                    )
+                  }
+                ]}
+              />
+            </CardContent>
+          </Card>
         </>
       )}
-    </MainContainer>
+    </PageLayout>
   );
 };
 

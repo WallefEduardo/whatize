@@ -2,24 +2,30 @@ import io from "socket.io-client";
 
 class SocketWorker {
   constructor(companyId , userId) {
-    if (!SocketWorker.instance) {
+    const instanceKey = `${companyId}_${userId}`;
+    
+    if (!SocketWorker.instance || SocketWorker.instanceKey !== instanceKey) {
+      // Limpar instância anterior se existir
+      if (SocketWorker.instance?.socket) {
+        SocketWorker.instance.socket.disconnect();
+      }
+      
       this.companyId = companyId
       this.userId = userId
       this.socket = null;
       this.configureSocket();
-      this.eventListeners = {}; // Armazena os ouvintes de eventos registrados
+      this.eventListeners = {};
+      
       SocketWorker.instance = this;
-
-    } 
+      SocketWorker.instanceKey = instanceKey;
+    }
 
     return SocketWorker.instance;
   }
 
   configureSocket() {
-    // Em desenvolvimento, usar proxy; em produção, usar URL completa
-    const socketUrl = import.meta.env.DEV 
-      ? `/${this?.companyId}` 
-      : `${import.meta.env.VITE_BACKEND_URL}/${this?.companyId}`;
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+    const socketUrl = `${backendUrl}/${this?.companyId}`;
     
     this.socket = io(socketUrl , {
       autoConnect: true,
@@ -30,11 +36,15 @@ class SocketWorker {
     });
 
     this.socket.on("connect", () => {
-      console.log("Conectado ao servidor Socket.IO");
+      console.log(`✅ [SOCKET-WORKER] Conectado: ${socketUrl}`);
     });
 
-    this.socket.on("disconnect", () => {
-      console.log("Desconectado do servidor Socket.IO");
+    this.socket.on("connect_error", (error) => {
+      console.error(`🚨 Socket.IO erro: ${error.message}`);
+    });
+
+    this.socket.on("disconnect", (reason) => {
+      console.log(`⚠️ Socket.IO desconectado: ${reason}`);
       this.reconnectAfterDelay();
     });
   }

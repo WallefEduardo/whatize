@@ -202,6 +202,7 @@ const DatePicker = ({
             onChange={handleDateChange}
             showDaysOutsideCurrentMonth
             displayStaticWrapperAs="desktop"
+            renderInput={() => null}
             slots={{
               actionBar: () => null // Remove action bar
             }}

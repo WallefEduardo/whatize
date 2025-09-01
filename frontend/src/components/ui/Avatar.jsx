@@ -49,7 +49,9 @@ const StyledAvatar = styled(Box)(({ theme, size = "lg", variant = "default" }) =
     width: '100%',
     height: '100%',
     objectFit: 'cover',
-    borderRadius: 'inherit'
+    objectPosition: 'center center', // ✅ Centraliza perfeitamente
+    borderRadius: 'inherit',
+    display: 'block' // Remove espaços em branco
   }
 }));
 
@@ -101,6 +103,15 @@ export const AvatarImage = React.forwardRef(({
       alt={alt}
       className={className}
       onError={handleError}
+      style={{
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        objectPosition: 'center center',
+        display: 'block',
+        borderRadius: 'inherit',
+        ...props.style
+      }}
       {...props}
     />
   );

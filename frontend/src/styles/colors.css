@@ -55,7 +55,7 @@
   --bg-content: var(--color-black-50);
   --bg-page: #EEF1F9;
   
-  --text-primary: var(--color-primary);
+  --text-primary: var(--text-gray-medium);
   --text-secondary: var(--color-black-600);
   --text-tertiary: var(--color-black-400);
   --text-on-dark: var(--color-white);

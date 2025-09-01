@@ -119,13 +119,16 @@ const ModernModal = ({
 
   // Controlar visibilidade e animação
   useEffect(() => {
+    console.log('ModernModal useEffect - open:', open);
     if (open) {
+      console.log('ModernModal - Setting visible to true');
       setIsVisible(true);
       setIsAnimating(true);
       document.body.style.overflow = 'hidden';
     } else {
       setIsAnimating(false);
       const timer = setTimeout(() => {
+        console.log('ModernModal - Setting visible to false');
         setIsVisible(false);
       }, 150); // Tempo para animação de saída
       document.body.style.overflow = 'unset';
@@ -150,7 +153,11 @@ const ModernModal = ({
     };
   }, [open, onClose]);
 
-  if (!isVisible) return null;
+  console.log('ModernModal render - isVisible:', isVisible, 'open:', open);
+  if (!isVisible) {
+    console.log('ModernModal - Not visible, returning null');
+    return null;
+  }
 
   const modalContent = (
     <div
