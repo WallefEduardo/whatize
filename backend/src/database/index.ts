@@ -57,6 +57,7 @@ import FunilKanban from "../models/FunilKanban";
 import FunilUser from "../models/FunilUser";
 import UserKanbanColumnOrder from "../models/UserKanbanColumnOrder";
 import WhatsappLidMap from "../models/WhatsappLidMap";
+import Task from "../models/Task";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -122,6 +123,7 @@ const models = [
   FunilKanban,
   UserKanbanColumnOrder,
   WhatsappLidMap,
+  Task,
 ];
 
 sequelize.addModels(models);

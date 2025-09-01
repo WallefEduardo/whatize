@@ -12,6 +12,7 @@ import {
   Grow
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { cn } from '../../utils/cn';
 
 // Styled components
 const StyledDropdownContent = styled(Paper)(({ theme }) => ({
@@ -65,22 +66,25 @@ const DropdownContext = React.createContext({});
 // Dropdown Root Component
 export const Dropdown = ({ children, open: controlledOpen, onOpenChange }) => {
   const [open, setOpen] = React.useState(false);
+  const [anchorEl, setAnchorEl] = React.useState(null);
   
   const isControlled = controlledOpen !== undefined;
   const isOpen = isControlled ? controlledOpen : open;
   
-  const handleOpenChange = React.useCallback((newOpen) => {
+  const handleOpenChange = React.useCallback((newOpen, element = null) => {
     if (isControlled) {
       onOpenChange?.(newOpen);
     } else {
       setOpen(newOpen);
     }
+    setAnchorEl(element);
   }, [isControlled, onOpenChange]);
 
   const value = React.useMemo(() => ({
     open: isOpen,
     onOpenChange: handleOpenChange,
-  }), [isOpen, handleOpenChange]);
+    anchorEl,
+  }), [isOpen, handleOpenChange, anchorEl]);
 
   return (
     <DropdownContext.Provider value={value}>
@@ -102,7 +106,7 @@ export const DropdownTrigger = React.forwardRef(({
   const handleClick = (event) => {
     event.preventDefault();
     event.stopPropagation();
-    onOpenChange?.(!open);
+    onOpenChange?.(!open, event.currentTarget);
   };
 
   if (asChild && React.isValidElement(children)) {
@@ -140,27 +144,18 @@ export const DropdownContent = React.forwardRef(({
   sideOffset = 4,
   ...props 
 }, ref) => {
-  const { open, onOpenChange } = React.useContext(DropdownContext);
-  const anchorRef = React.useRef(null);
-  
-  React.useEffect(() => {
-    // Find the trigger element
-    const trigger = document.querySelector('[aria-expanded="true"]');
-    if (trigger) {
-      anchorRef.current = trigger;
-    }
-  }, [open]);
+  const { open, onOpenChange, anchorEl } = React.useContext(DropdownContext);
 
   const handleClickAway = () => {
     onOpenChange?.(false);
   };
 
-  if (!open) return null;
+  if (!open || !anchorEl) return null;
 
   return (
     <Popper
       open={open}
-      anchorEl={anchorRef.current}
+      anchorEl={anchorEl}
       placement={`${side}-${align}`}
       transition
       style={{ zIndex: 1000 }}

@@ -16,7 +16,8 @@ import {
   ArrowTopRightOnSquareIcon,
   BookmarkIcon,
   CheckIcon,
-  ClockIcon
+  ClockIcon,
+  FaceSmileIcon
 } from '@heroicons/react/24/outline';
 import { 
   BookmarkIcon as BookmarkSolidIcon,
@@ -29,7 +30,8 @@ const MessageContainer = styled(Box)(({ theme, isSent }) => ({
   alignItems: 'flex-start',
   marginBottom: '16px',
   padding: '0 16px',
-  flexDirection: isSent ? 'row-reverse' : 'row',
+  flexDirection: 'row',
+  justifyContent: isSent ? 'flex-end' : 'flex-start', // Justifica para direita se enviada
   
   '&:hover .message-actions': {
     opacity: 1,
@@ -64,7 +66,7 @@ const MessageBubble = styled(Box)(({ theme, isSent }) => ({
 
 const MessageTime = styled(Typography)(({ theme, isSent }) => ({
   fontSize: '11px',
-  color: isSent ? 'rgba(255, 255, 255, 0.7)' : 'var(--text-secondary)',
+  color: isSent ? 'rgba(0, 0, 0, 0.6)' : 'var(--text-secondary)', // Mudou para cor mais escura nas mensagens enviadas
   display: 'flex',
   alignItems: 'center',
   gap: '4px',
@@ -78,7 +80,7 @@ const MessageActions = styled(Box)(({ theme, isSent }) => ({
   opacity: 0,
   transition: 'opacity 0.2s ease',
   marginTop: '4px',
-  order: isSent ? 1 : 0,
+  order: isSent ? 0 : 2, // Para mensagens enviadas: antes do conteúdo, para recebidas: depois
   
   '& .MuiIconButton-root': {
     padding: '4px',
@@ -192,9 +194,9 @@ const MessageItem = ({
 
   return (
     <MessageContainer isSent={isSent}>
-      {/* Avatar (apenas para mensagens recebidas) */}
+      {/* Avatar para mensagens recebidas (esquerda) */}
       {!isSent && (
-        <Box sx={{ flexShrink: 0, alignSelf: 'flex-end', mb: '20px' }}>
+        <Box sx={{ flexShrink: 0, alignSelf: 'flex-end', mb: '20px', order: 0 }}>
           <Avatar size="md">
             <AvatarImage src={sender?.avatar} alt={sender?.name} />
             <AvatarFallback>{getInitials(sender?.name)}</AvatarFallback>
@@ -212,36 +214,51 @@ const MessageItem = ({
           </DropdownTrigger>
           
           <DropdownContent align={isSent ? "end" : "start"} side="top">
-            {!isSent && (
-              <DropdownItem onClick={handleReplyMessage} icon={<ArrowUturnLeftIcon style={{ width: '16px', height: '16px' }} />}>
-                Responder
-              </DropdownItem>
+            {isSent ? (
+              // Options for sent messages (right side)
+              <>
+                <DropdownItem 
+                  onClick={handleDeleteMessage} 
+                  destructive 
+                  icon={<TrashIcon style={{ width: '16px', height: '16px' }} />}
+                >
+                  Deletar
+                </DropdownItem>
+                
+                <DropdownItem onClick={handleReplyMessage} icon={<ArrowUturnLeftIcon style={{ width: '16px', height: '16px' }} />}>
+                  Responder
+                </DropdownItem>
+                
+                <DropdownItem onClick={handleForwardMessage} icon={<ArrowTopRightOnSquareIcon style={{ width: '16px', height: '16px' }} />}>
+                  Encaminhar
+                </DropdownItem>
+                
+                <DropdownItem onClick={() => {}} icon={<FaceSmileIcon style={{ width: '16px', height: '16px' }} />}>
+                  Reagir
+                </DropdownItem>
+              </>
+            ) : (
+              // Options for received messages (left side)
+              <>
+                <DropdownItem onClick={handleReplyMessage} icon={<ArrowUturnLeftIcon style={{ width: '16px', height: '16px' }} />}>
+                  Responder
+                </DropdownItem>
+                
+                <DropdownItem onClick={handleForwardMessage} icon={<ArrowTopRightOnSquareIcon style={{ width: '16px', height: '16px' }} />}>
+                  Encaminhar
+                </DropdownItem>
+                
+                <DropdownItem onClick={() => {}} icon={<FaceSmileIcon style={{ width: '16px', height: '16px' }} />}>
+                  Reagir
+                </DropdownItem>
+              </>
             )}
-            
-            <DropdownItem onClick={handlePinMessageLocal} icon={isMessagePinned ? 
-              <BookmarkSolidIcon style={{ width: '16px', height: '16px' }} /> : 
-              <BookmarkIcon style={{ width: '16px', height: '16px' }} />
-            }>
-              {isMessagePinned ? 'Desafixar' : 'Fixar'}
-            </DropdownItem>
-            
-            <DropdownItem onClick={handleForwardMessage} icon={<ArrowTopRightOnSquareIcon style={{ width: '16px', height: '16px' }} />}>
-              Encaminhar
-            </DropdownItem>
-            
-            <DropdownItem 
-              onClick={handleDeleteMessage} 
-              destructive 
-              icon={<TrashIcon style={{ width: '16px', height: '16px' }} />}
-            >
-              Excluir
-            </DropdownItem>
           </DropdownContent>
         </Dropdown>
       </MessageActions>
 
       {/* Message Content */}
-      <MessageContent isSent={isSent}>
+      <MessageContent isSent={isSent} sx={{ order: 1 }}>
         {/* Pin Indicator */}
         {isMessagePinned && (
           <PinIndicator>
@@ -284,9 +301,9 @@ const MessageItem = ({
         </MessageTime>
       </MessageContent>
 
-      {/* Avatar (apenas para mensagens enviadas - perfil do usuário logado) */}
+      {/* Avatar para mensagens enviadas (direita) */}
       {isSent && (
-        <Box sx={{ flexShrink: 0, alignSelf: 'flex-end', mb: '20px' }}>
+        <Box sx={{ flexShrink: 0, alignSelf: 'flex-end', mb: '20px', order: 2 }}>
           <Avatar size="md">
             <AvatarImage src={profile?.avatar} alt={profile?.name} />
             <AvatarFallback>{getInitials(profile?.name)}</AvatarFallback>

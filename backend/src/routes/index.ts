@@ -51,6 +51,7 @@ import webHook from "./webHookRoutes";
 import flowBuilder from "./flowBuilderRoutes";
 import flowCampaignRoutes from "./flowCampaignRoutes";
 import raceConditionRoutes from "./raceConditionRoutes";
+import taskRoutes from "./taskRoutes";
 
 
 const routes = Router();
@@ -105,6 +106,7 @@ routes.use(flowDefaultRoutes);
 routes.use(webHook)
 routes.use(flowBuilder)
 routes.use(flowCampaignRoutes)
+routes.use(taskRoutes);
 
 
 routes.use(promptRoutes);

@@ -16,12 +16,20 @@ import {
   Plus,
   Paperclip,
   Mic,
-  X,
-  Image as ImageIcon,
-  FileImage,
-  FileText,
-  AudioLines
+  X
 } from 'lucide-react';
+
+// Heroicons para ícones mais bonitos
+import {
+  PhotoIcon,
+  GifIcon
+} from '@heroicons/react/24/outline';
+
+// SVGs customizados do projeto
+import AdicionarIcon from '../../../assets/iconeswhatize/adicionar.svg';
+import NovoArquivoIcon from '../../../assets/iconeswhatize/novo-arquivo.svg';
+import GaleriaImagensIcon from '../../../assets/iconeswhatize/galeria-de-imagens.svg';
+import MandarIcon from '../../../assets/iconeswhatize/mandar.svg';
 
 const InputContainer = styled(Box)(({ theme }) => ({
   padding: '12px 16px',
@@ -62,7 +70,7 @@ const ReplyMessage = styled(Typography)(() => ({
 
 const InputRow = styled(Box)(() => ({
   display: 'flex',
-  alignItems: 'flex-end',
+  alignItems: 'center',
   gap: '8px',
   width: '100%',
 }));
@@ -76,6 +84,7 @@ const ActionsContainer = styled(Box)(() => ({
 const MessageTextArea = styled(TextField)(({ theme }) => ({
   flex: 1,
   width: '100%',
+  alignSelf: 'center',
   
   '& .MuiOutlinedInput-root': {
     borderRadius: '8px',
@@ -87,6 +96,8 @@ const MessageTextArea = styled(TextField)(({ theme }) => ({
     paddingLeft: '16px',
     paddingRight: '50px',
     fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
     
     '& .MuiInputBase-inputMultiline': {
       overflow: 'hidden',
@@ -133,6 +144,9 @@ const EmojiButton = styled(IconButton)(() => ({
   transform: 'translateY(-50%)',
   padding: '6px',
   color: 'var(--text-secondary)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
   
   '&:hover': {
     color: 'var(--color-accent)',
@@ -140,23 +154,26 @@ const EmojiButton = styled(IconButton)(() => ({
   },
 }));
 
-const SendButton = styled(ModernButton)(() => ({
+const SendButton = styled(IconButton)(() => ({
   minWidth: '44px',
   width: '44px', 
   height: '44px',
   borderRadius: '50%',
   padding: 0,
-  backgroundColor: 'var(--color-accent)',
+  backgroundColor: 'var(--color-accent) !important',
   boxShadow: '0 2px 8px rgba(0, 195, 7, 0.3)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
   
   '&:hover': {
-    backgroundColor: 'var(--color-green-hover)',
+    backgroundColor: 'var(--color-green-hover) !important',
     boxShadow: '0 4px 12px rgba(0, 195, 7, 0.4)',
     transform: 'translateY(-1px)',
   },
   
   '&:disabled': {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E2E8F0 !important',
     color: '#94A3B8',
     boxShadow: 'none',
     transform: 'none',
@@ -295,21 +312,23 @@ const MessageInput = ({
               <Tooltip title="Anexar arquivo">
                 <IconButton
                   sx={{
-                    p: 0.5,
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
+                    p: 1,
                     color: 'var(--color-accent)',
-                    backgroundColor: '#E5F3E5',
-                    border: '1px solid var(--color-accent)',
                     '&:hover': { 
-                      color: 'white',
-                      backgroundColor: 'var(--color-accent)',
-                      borderColor: 'var(--color-accent)'
+                      color: 'var(--color-green-hover)',
+                      backgroundColor: 'rgba(0, 195, 7, 0.1)'
                     }
                   }}
                 >
-                  <Plus size={18} />
+                  <img 
+                    src={AdicionarIcon} 
+                    alt="Adicionar" 
+                    style={{ 
+                      width: '20px', 
+                      height: '20px',
+                      filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
+                    }} 
+                  />
                 </IconButton>
               </Tooltip>
             </DropdownTrigger>
@@ -317,13 +336,29 @@ const MessageInput = ({
             <DropdownContent align="start" side="top">
               <DropdownItem 
                 onClick={handleFileAttach}
-                icon={<ImageIcon size={16} />}
+                icon={<img 
+                  src={GaleriaImagensIcon} 
+                  alt="Foto" 
+                  style={{ 
+                    width: '16px', 
+                    height: '16px',
+                    filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
+                  }} 
+                />}
               >
                 Foto ou Vídeo
               </DropdownItem>
               <DropdownItem 
                 onClick={handleFileAttach}
-                icon={<Paperclip size={16} />}
+                icon={<img 
+                  src={NovoArquivoIcon} 
+                  alt="Documento" 
+                  style={{ 
+                    width: '16px', 
+                    height: '16px',
+                    filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
+                  }} 
+                />}
               >
                 Documento
               </DropdownItem>
@@ -333,7 +368,7 @@ const MessageInput = ({
                 Áudio
               </DropdownItem>
               <DropdownItem 
-                icon={<FileImage size={16} />}
+                icon={<GifIcon style={{ width: '16px', height: '16px' }} />}
               >
                 GIF
               </DropdownItem>
@@ -345,43 +380,48 @@ const MessageInput = ({
             <IconButton
               onClick={handleFileAttach}
               sx={{
-                p: 0.5,
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
+                p: 1,
                 color: 'var(--color-accent)',
-                backgroundColor: '#E5F3E5',
-                border: '1px solid var(--color-accent)',
                 '&:hover': { 
-                  color: 'white',
-                  backgroundColor: 'var(--color-accent)',
-                  borderColor: 'var(--color-accent)'
+                  color: 'var(--color-green-hover)',
+                  backgroundColor: 'rgba(0, 195, 7, 0.1)'
                 }
               }}
             >
-              <ImageIcon size={18} />
+              <img 
+                src={GaleriaImagensIcon} 
+                alt="Galeria" 
+                style={{ 
+                  width: '20px', 
+                  height: '20px',
+                  filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
+                }} 
+              />
             </IconButton>
           </Tooltip>
 
-          {/* GIF Icon */}
-          <Tooltip title="Enviar GIF">
+          {/* Document Icon */}
+          <Tooltip title="Enviar documento">
             <IconButton
+              onClick={handleFileAttach}
               sx={{
-                p: 0.5,
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
+                p: 1,
                 color: 'var(--color-accent)',
-                backgroundColor: '#E5F3E5',
-                border: '1px solid var(--color-accent)',
                 '&:hover': { 
-                  color: 'white',
-                  backgroundColor: 'var(--color-accent)',
-                  borderColor: 'var(--color-accent)'
+                  color: 'var(--color-green-hover)',
+                  backgroundColor: 'rgba(0, 195, 7, 0.1)'
                 }
               }}
             >
-              <FileImage size={18} />
+              <img 
+                src={NovoArquivoIcon} 
+                alt="Documento" 
+                style={{ 
+                  width: '20px', 
+                  height: '20px',
+                  filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
+                }} 
+              />
             </IconButton>
           </Tooltip>
 
@@ -457,11 +497,18 @@ const MessageInput = ({
 
         {/* Send Button */}
         <SendButton
-          variant={message.trim() ? 'filled' : 'outline'}
           onClick={handleSubmit}
           disabled={!message.trim() || disabled}
         >
-          <Send size={18} />
+          <img 
+            src={MandarIcon} 
+            alt="Enviar" 
+            style={{ 
+              width: '18px', 
+              height: '18px',
+              filter: 'brightness(0) invert(1)'
+            }} 
+          />
         </SendButton>
       </InputRow>
     </InputContainer>

@@ -121,6 +121,10 @@ const DatePicker = ({
             vertical: 'top',
             horizontal: 'left',
           }}
+          disablePortal={false}
+          sx={{
+            zIndex: 999999
+          }}
           PaperProps={{
             sx: {
               mt: 1,
@@ -128,9 +132,13 @@ const DatePicker = ({
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
               border: '1px solid var(--border-primary)',
               backgroundColor: 'var(--bg-primary)',
+              zIndex: 999999,
+              width: anchorEl ? anchorEl.offsetWidth : 'auto',
               '& .MuiDateCalendar-root': {
                 backgroundColor: 'var(--bg-primary)',
-                color: 'var(--text-primary)'
+                color: 'var(--text-primary)',
+                width: '100%',
+                maxWidth: 'none'
               },
               '& .MuiPickersCalendarHeader-root': {
                 backgroundColor: 'var(--bg-primary)',
@@ -141,16 +149,44 @@ const DatePicker = ({
               },
               '& .MuiPickersDay-root': {
                 color: 'var(--text-secondary)',
+                minWidth: `${anchorEl ? Math.max(Math.floor(anchorEl.offsetWidth / 10), 24) : 36}px`,
+                height: `${anchorEl ? Math.max(Math.floor(anchorEl.offsetWidth / 10), 24) : 36}px`,
+                fontSize: `${anchorEl ? Math.max(Math.floor(anchorEl.offsetWidth / 30), 10) : 14}px`,
+                margin: '1px',
+                padding: 0,
+                fontWeight: 600,
                 '&:hover': {
                   backgroundColor: 'var(--bg-secondary)'
                 },
                 '&.Mui-selected': {
                   backgroundColor: 'var(--color-accent) !important',
-                  color: 'white !important'
+                  color: 'white !important',
+                  fontWeight: 700
                 },
                 '&.MuiPickersDay-today': {
-                  border: '1px solid var(--color-accent)'
+                  border: '1px solid var(--color-accent)',
+                  fontWeight: 700
+                },
+                '&.MuiPickersDay-outsideCurrentMonth': {
+                  color: 'var(--text-secondary)',
+                  opacity: 0.3,
+                  fontWeight: 400,
+                  '&:hover': {
+                    backgroundColor: 'var(--bg-secondary)',
+                    opacity: 0.5
+                  }
                 }
+              },
+              '& .MuiDayCalendar-weekContainer': {
+                justifyContent: 'space-between',
+                margin: 0
+              },
+              '& .MuiDayCalendar-weekDayLabel': {
+                color: 'var(--text-secondary)',
+                fontSize: `${anchorEl ? Math.max(Math.floor(anchorEl.offsetWidth / 35), 9) : 12}px`,
+                width: `${anchorEl ? Math.max(Math.floor(anchorEl.offsetWidth / 10), 24) : 36}px`,
+                minWidth: `${anchorEl ? Math.max(Math.floor(anchorEl.offsetWidth / 10), 24) : 36}px`,
+                margin: '1px'
               },
               '& .MuiPickersArrowSwitcher-button': {
                 color: 'var(--text-secondary)',
@@ -168,6 +204,10 @@ const DatePicker = ({
             displayStaticWrapperAs="desktop"
             slots={{
               actionBar: () => null // Remove action bar
+            }}
+            sx={{
+              width: '100%',
+              maxWidth: 'none'
             }}
           />
         </Popover>

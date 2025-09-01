@@ -5,9 +5,12 @@ import GradientButton from '../../../components/GradientButton';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { Textarea } from '../../../components/ui/Textarea';
-import DatePicker from '../../../components/ui/DatePicker';
+import { DatePicker } from '../../../components/ui/DatePicker';
+import useUsers from '../../../hooks/useUsers';
 
 const TaskForm = ({ task, onSave, onCancel }) => {
+  const { users, loading: usersLoading } = useUsers();
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -32,16 +35,8 @@ const TaskForm = ({ task, onSave, onCancel }) => {
     { value: 'low', label: 'Baixa' }
   ];
 
-  // Mock de usuários - substitua por dados reais
-  const userOptions = [
-    'João Silva',
-    'Maria Santos',
-    'Carlos Oliveira',
-    'Ana Costa',
-    'Roberto Silva',
-    'Fernanda Lima',
-    'Patricia Santos'
-  ];
+  // Opções de usuários vindos da API
+  const userOptions = users || [];
 
   // Carregar dados da tarefa se estivermos editando
   useEffect(() => {
@@ -110,7 +105,7 @@ const TaskForm = ({ task, onSave, onCancel }) => {
   return (
     <Box component="form" onSubmit={handleSubmit}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        {/* Primeira linha: Nome da Tarefa (maior) + Data Limite (menor) */}
+        {/* Primeira linha: Nome da Tarefa (maior) + Data Limite (maior) */}
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Box sx={{ flex: 2 }}>
             <FormLabel
@@ -140,7 +135,7 @@ const TaskForm = ({ task, onSave, onCancel }) => {
             )}
           </Box>
           
-          <Box sx={{ flex: 1 }}>
+          <Box sx={{ flex: 1.5, minWidth: '320px' }}>
             <FormLabel
               sx={{ 
                 color: 'var(--text-secondary)', 
@@ -155,10 +150,8 @@ const TaskForm = ({ task, onSave, onCancel }) => {
             <DatePicker
               value={formData.dueDate}
               onChange={(date) => {
-                const formattedDate = date ? (typeof date === 'string' ? date : date.toISOString().split('T')[0]) : '';
-                setFormData(prev => ({ ...prev, dueDate: formattedDate }));
+                setFormData(prev => ({ ...prev, dueDate: date }));
               }}
-              placeholder="Selecione uma data"
             />
           </Box>
         </Box>
@@ -231,11 +224,14 @@ const TaskForm = ({ task, onSave, onCancel }) => {
               value={formData.assignedTo[0] || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, assignedTo: e.target.value ? [e.target.value] : [] }))}
               removeWrapper
+              disabled={usersLoading}
             >
-              <option value="">Selecione um responsável</option>
+              <option value="">
+                {usersLoading ? "Carregando usuários..." : "Selecione um responsável"}
+              </option>
               {userOptions.map(user => (
-                <option key={user} value={user}>
-                  {user}
+                <option key={user.id} value={user.id}>
+                  {user.name}
                 </option>
               ))}
             </Select>
