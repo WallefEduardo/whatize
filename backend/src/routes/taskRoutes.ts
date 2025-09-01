@@ -1,6 +1,5 @@
 import { Router } from "express";
 import isAuth from "../middleware/isAuth";
-import isAuthCompany from "../middleware/isAuthCompany";
 
 import * as TaskController from "../controllers/TaskController";
 
@@ -8,7 +7,6 @@ const taskRoutes = Router();
 
 // Middleware de autenticação aplicado a todas as rotas
 taskRoutes.use(isAuth);
-taskRoutes.use(isAuthCompany);
 
 // CRUD básico
 taskRoutes.get("/tasks", TaskController.index);              // GET /tasks - Listar tarefas

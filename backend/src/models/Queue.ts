@@ -112,6 +112,10 @@ class Queue extends Model<Queue> {
   @Column
   closeTicket: boolean;
 
+  @Default("Users")
+  @Column
+  icon: string;
+
   @HasMany(() => Prompt, {
     onUpdate: "SET NULL",
     onDelete: "SET NULL",

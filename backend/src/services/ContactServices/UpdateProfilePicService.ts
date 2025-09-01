@@ -1,16 +1,19 @@
 import Contact from "../../models/Contact";
 import GetProfilePicUrl from "../WbotServices/GetProfilePicUrl";
+import { GetProfilePicUrlSmart } from "../WbotServices/GetOptimizedProfilePicUrl";
 import { getWbot } from "../../libs/wbot";
 import logger from "../../utils/logger";
 
 interface Request {
   contactId: number;
   companyId: number;
+  useOptimized?: boolean; // Feature flag
 }
 
 const UpdateProfilePicService = async ({
   contactId,
-  companyId
+  companyId,
+  useOptimized = true  // ✅ ATIVADO por padrão
 }: Request): Promise<string> => {
   try {
     const contact = await Contact.findOne({
@@ -39,13 +42,21 @@ const UpdateProfilePicService = async ({
       logger.debug(`📷 [UPDATE-PIC] Erro ao buscar wbot para contato ${contactId}: ${error.message}`);
     }
 
-    // Busca a foto (com cache)
-    const profilePicUrl = await GetProfilePicUrl(
+    // Busca a foto com sistema inteligente (otimizado ou original)
+    const profilePicUrl = await GetProfilePicUrlSmart(
       contact.number,
       companyId,
       contact,
-      wbot
+      wbot,
+      useOptimized
     );
+
+    // Log da escolha do sistema
+    if (useOptimized) {
+      logger.debug(`🚀 [UPDATE-PIC] Usando sistema otimizado para contato ${contactId}`);
+    } else {
+      logger.debug(`📷 [UPDATE-PIC] Usando sistema original para contato ${contactId}`);
+    }
 
     // Só atualiza se mudou
     if (profilePicUrl && profilePicUrl !== contact.profilePicUrl && !profilePicUrl.includes("nopicture")) {
