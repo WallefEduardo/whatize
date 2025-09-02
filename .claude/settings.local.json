@@ -17,7 +17,9 @@
       "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(apps)/task/**)",
       "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(apps)/task/**)",
       "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(apps)/task/components/**)",
-      "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(apps)/task/components/**)"
+      "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(apps)/task/components/**)",
+      "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(forms)/autocomplete/**)",
+      "Read(/home/eduardo_wallef/sistemas/TemplateDash/components/ui/**)"
     ],
     "deny": []
   }

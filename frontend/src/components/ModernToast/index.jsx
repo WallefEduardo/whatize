@@ -34,7 +34,7 @@ const ModernToast = ({
         icon: CheckCircle,
         iconColor: '#ffffff',
         borderColor: 'var(--color-accent, #00C307)',
-        backgroundColor: 'rgba(0, 195, 7, 0.1)',
+        backgroundColor: '#ffffff',
         textColor: 'var(--color-accent, #00C307)',
         borderLeftColor: 'var(--color-accent, #00C307)',
         title: 'Sucesso!'
@@ -43,7 +43,7 @@ const ModernToast = ({
         icon: ErrorIcon,
         iconColor: '#ffffff',
         borderColor: '#dc2626',
-        backgroundColor: 'rgba(220, 38, 38, 0.1)',
+        backgroundColor: '#ffffff',
         textColor: '#dc2626',
         borderLeftColor: '#dc2626',
         title: 'Erro!'
@@ -52,7 +52,7 @@ const ModernToast = ({
         icon: WarningIcon,
         iconColor: '#ffffff',
         borderColor: '#f59e0b',
-        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+        backgroundColor: '#ffffff',
         textColor: '#f59e0b',
         borderLeftColor: '#f59e0b',
         title: 'Atenção!'
@@ -61,7 +61,7 @@ const ModernToast = ({
         icon: InfoIcon,
         iconColor: '#ffffff',
         borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        backgroundColor: '#ffffff',
         textColor: '#3b82f6',
         borderLeftColor: '#3b82f6',
         title: 'Informação!'

@@ -1,29 +1,28 @@
 import React from "react";
 import { Tooltip } from "@mui/material";
-import { green, grey } from '@mui/material/colors';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
-
-const useStyles = () => ({
-    on: {
-        color: green[600],
-        fontSize: '20px'
-    },
-    off: {
-        color: grey[600],
-        fontSize: '20px'
-    }
-});
+import { UserX } from 'lucide-react';
 
 const UserStatusIcon = ({ user }) => {
-    const classes = useStyles();
     return user.online ?
-        <Tooltip title="Online">
-            <CheckCircleIcon className={classes.on} />
+        <Tooltip title="Online" arrow>
+            <CheckCircleIcon 
+                sx={{ 
+                    color: '#4caf50', // Verde direto
+                    fontSize: '16px',
+                    cursor: 'pointer'
+                }} 
+            />
         </Tooltip>
         :
-        <Tooltip title="Offline">
-            <ErrorIcon className={classes.off} />
+        <Tooltip title="Offline" arrow>
+            <UserX 
+                size={16}
+                style={{ 
+                    color: '#f44336', // Vermelho direto
+                    cursor: 'pointer'
+                }} 
+            />
         </Tooltip>
 }
 

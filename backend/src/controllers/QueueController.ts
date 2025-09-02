@@ -32,7 +32,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     greetingMessage,
     outOfHoursMessage,
     schedules,
-    chatbots,
+    // chatbots, // REMOVIDO: Não usar mais chatbots em filas
     orderQueue, 
     tempoRoteador, 
     ativarRoteador,
@@ -52,7 +52,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     tempoRoteador: tempoRoteador ===""? 0 : tempoRoteador, 
     ativarRoteador,
     schedules,
-    chatbots, 
+    // chatbots: REMOVIDO - Não usar mais chatbots em filas
     orderQueue: orderQueue === "" ? null : orderQueue,
     integrationId: integrationId === "" ? null : integrationId,
     fileListId: fileListId === "" ? null : fileListId,
@@ -92,7 +92,7 @@ export const update = async (
     greetingMessage,
     outOfHoursMessage,
     schedules,
-    chatbots,
+    // chatbots, // REMOVIDO: Não usar mais chatbots em filas
     orderQueue, 
     tempoRoteador, 
     ativarRoteador,
@@ -110,7 +110,7 @@ export const update = async (
     tempoRoteador: tempoRoteador ===""? 0 : tempoRoteador, 
     ativarRoteador,
     schedules,
-    chatbots, 
+    // chatbots, // REMOVIDO: Não usar mais chatbots em filas
     orderQueue: orderQueue === "" ? null : orderQueue,
     integrationId: integrationId === "" ? null : integrationId,
     fileListId: fileListId === "" ? null : fileListId,

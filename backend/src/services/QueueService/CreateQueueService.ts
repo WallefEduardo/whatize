@@ -13,7 +13,7 @@ interface QueueData {
   greetingMessage?: string;
   outOfHoursMessage?: string;
   schedules?: any[];
-  chatbots?: Chatbot[];
+  // chatbots?: Chatbot[]; // REMOVIDO: Não usar mais chatbots em filas
   orderQueue?: number;
   ativarRoteador?: boolean;
   tempoRoteador: number;
@@ -93,22 +93,24 @@ const CreateQueueService = async (queueData: QueueData): Promise<Queue> => {
     throw new AppError(err.message);
   }
 
-  const queue = await Queue.create(queueData, {
-    include: [
-      {
-        model: Chatbot,
-        as: "chatbots",
-        include: [
-          {
-            model: User,
-            as: "user"
-          }
-        ],
-        // attributes: ["id", "name", "greetingMessage", "isAgent"],
-        order: [[{ model: Chatbot, as: "chatbots" }, "id", "asc"]]
-      }
-    ]
-  });
+  const queue = await Queue.create(queueData
+    // REMOVIDO: Não incluir mais chatbots ao criar filas
+    // {
+    //   include: [
+    //     {
+    //       model: Chatbot,
+    //       as: "chatbots",
+    //       include: [
+    //         {
+    //           model: User,
+    //           as: "user"
+    //         }
+    //       ],
+    //       order: [[{ model: Chatbot, as: "chatbots" }, "id", "asc"]]
+    //     }
+    //   ]
+    // }
+  );
 
   return queue;
 };

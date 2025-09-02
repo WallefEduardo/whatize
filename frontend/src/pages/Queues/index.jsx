@@ -12,7 +12,25 @@ import {
   Trash2,
   PlusCircle,
   Settings,
-  BarChart3
+  BarChart3,
+  Users,
+  Headphones,
+  MessageCircle,
+  Phone,
+  Mail,
+  Clock,
+  Star,
+  Heart,
+  Shield,
+  Zap,
+  Target,
+  Award,
+  CheckCircle,
+  AlertCircle,
+  Info,
+  HelpCircle,
+  UserCheck,
+  UserPlus
 } from "lucide-react";
 
 // Componentes modernos
@@ -22,12 +40,14 @@ import SearchInput from "../../components/SearchInput";
 import GradientButton from "../../components/GradientButton";
 import QueueForm from "../../components/QueueForm";
 import { i18n } from "../../translate/i18n";
-import toastError from "../../errors/toastError";
+import toastError, { toastSuccess } from "../../errors/toastError";
 import api from "../../services/api";
 import QueueModal from "../../components/QueueModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import ForbiddenPage from "../../components/ForbiddenPage";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "../../components/ui/Dialog";
+import StatusBadge from "../../components/StatusBadge";
 
 
 const reducer = (state, action) => {
@@ -84,8 +104,20 @@ const Queues = () => {
   const [searchParam, setSearchParam] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingQueue, setEditingQueue] = useState(null);
+  const [messageModalOpen, setMessageModalOpen] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
   const { user, socket } = useContext(AuthContext);
   const companyId = user.companyId;
+
+  // Mapeamento de ícones
+  const getIconComponent = (iconName) => {
+    const iconMap = {
+      Users, Headphones, MessageCircle, Phone, Mail, Clock, Settings,
+      Star, Heart, Shield, Zap, Target, Award, CheckCircle, 
+      AlertCircle, Info, HelpCircle, UserCheck, UserPlus
+    };
+    return iconMap[iconName] || Users;
+  };
 
   // Filtrar filas baseado na busca
   const filteredQueues = queues.filter(queue => 
@@ -93,18 +125,21 @@ const Queues = () => {
     queue.greetingMessage?.toLowerCase().includes(searchParam.toLowerCase())
   );
 
+  // Função para carregar as filas
+  const fetchQueues = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get("/queue");
+      dispatch({ type: "LOAD_QUEUES", payload: data });
+      setLoading(false);
+    } catch (err) {
+      toastError(err);
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const { data } = await api.get("/queue");
-        dispatch({ type: "LOAD_QUEUES", payload: data });
-        setLoading(false);
-      } catch (err) {
-        toastError(err);
-        setLoading(false);
-      }
-    })();
+    fetchQueues();
   }, []);
 
   useEffect(() => {
@@ -155,7 +190,8 @@ const Queues = () => {
   const handleDeleteQueue = async (queueId) => {
     try {
       await api.delete(`/queue/${queueId}`);
-      toast.success(i18n.t("Queue deleted successfully!"));
+      toastSuccess("Fila excluída com sucesso!");
+      await fetchQueues(); // Recarrega a lista após exclusão
     } catch (err) {
       toastError(err);
     }
@@ -187,17 +223,27 @@ const Queues = () => {
   };
 
   const handleSaveQueue = async (queueData) => {
+    console.log('🏁 handleSaveQueue chamado com dados:', queueData);
     try {
       if (editingQueue) {
+        console.log('📝 Editando fila:', editingQueue.id);
         await api.put(`/queue/${editingQueue.id}`, queueData);
-        toast.success("Fila atualizada com sucesso!");
+        toastSuccess("Fila atualizada com sucesso!");
       } else {
+        console.log('➕ Criando nova fila');
         await api.post("/queue", queueData);
-        toast.success("Fila criada com sucesso!");
+        toastSuccess("Fila criada com sucesso!");
       }
+      
+      console.log('🔄 Redirecionando para lista e recarregando...');
+      // Redirecionar para lista e recarregar dados
       setShowForm(false);
       setEditingQueue(null);
+      await fetchQueues(); // Recarrega a lista de filas
+      console.log('✅ Redirecionamento concluído!');
+      
     } catch (err) {
+      console.error('❌ Erro em handleSaveQueue:', err);
       toastError(err);
     }
   };
@@ -537,20 +583,28 @@ const Queues = () => {
                     accessor: 'name', 
                     title: "Nome",
                     width: '25%',
-                    render: ({ name, color }) => (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{
-                          width: 12,
-                          height: 12,
-                          borderRadius: '50%',
-                          backgroundColor: color || 'var(--color-accent)',
-                          boxShadow: `0 0 0 3px ${color || 'var(--color-accent)'}22`
-                        }} />
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {name}
-                        </Typography>
-                      </Box>
-                    )
+                    render: ({ name, icon, color }) => {
+                      const IconComponent = getIconComponent(icon);
+                      return (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Box sx={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: '6px',
+                            backgroundColor: color || 'var(--color-accent)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white'
+                          }}>
+                            <IconComponent size={16} />
+                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {name}
+                          </Typography>
+                        </Box>
+                      );
+                    }
                   },
                   { 
                     accessor: 'color', 
@@ -559,45 +613,18 @@ const Queues = () => {
                     width: '15%',
                     render: ({ color }) => (
                       <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                        <Box
+                        <StatusBadge
+                          label=""
+                          color={color || '#ccc'}
+                          variant="filled"
+                          size="small"
                           sx={{
-                            backgroundColor: color || '#ccc',
-                            width: 60,
-                            height: 20,
-                            borderRadius: 1,
-                            border: '1px solid var(--border-primary)'
+                            minWidth: '60px',
+                            height: '20px',
+                            backgroundColor: `${color || '#ccc'}BF` // 75% de opacidade
                           }}
                         />
                       </Box>
-                    )
-                  },
-                  { 
-                    accessor: 'orderQueue', 
-                    title: "Ordem",
-                    textAlignment: 'center',
-                    width: '10%',
-                    render: ({ orderQueue }) => (
-                      <Typography variant="body2">
-                        {orderQueue || '-'}
-                      </Typography>
-                    )
-                  },
-                  { 
-                    accessor: 'greetingMessage', 
-                    title: "Mensagem",
-                    width: '30%',
-                    render: ({ greetingMessage }) => (
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          maxWidth: 300,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        {greetingMessage || "Sem mensagem"}
-                      </Typography>
                     )
                   },
                   { 

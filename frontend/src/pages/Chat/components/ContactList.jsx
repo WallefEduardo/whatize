@@ -10,6 +10,7 @@ import Badge from '../../../components/ui/Badge';
 // Icons
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { Check, X } from 'lucide-react';
+import thumbtacksIcon from '../../../assets/iconeswhatize/thumbtacks.svg';
 import { useContext } from 'react';
 import { AuthContext } from '../../../context/Auth/AuthContext';
 import { TicketsContext } from '../../../context/Tickets/TicketsContext';
@@ -18,6 +19,8 @@ import toastError from '../../../errors/toastError';
 import { Tooltip } from '@mui/material';
 import AcceptTicketWithoutQueueModal from '../../../components/AcceptTicketWithoutQueueModal';
 import ConversationDropdown from '../../../components/ui/ConversationDropdown';
+import TransferTicketModernModal from '../../../components/TransferTicketModernModal';
+import ConfirmationModal from '../../../components/ConfirmationModal';
 
 const StyledContactItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isSelected',
@@ -48,7 +51,8 @@ const ContactInfo = styled(Box)(() => ({
   minWidth: 0, // Para permitir text-overflow
   display: 'flex',
   flexDirection: 'column',
-  gap: '4px',
+  justifyContent: 'center',
+  gap: '0px',
 }));
 
 const ContactMeta = styled(Box)(() => ({
@@ -65,6 +69,7 @@ const ContactName = styled(Typography)(() => ({
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
+  marginBottom: '5px',
 }));
 
 const LastMessage = styled(Typography)(() => ({
@@ -127,11 +132,13 @@ const TypingIndicator = styled(Box)(() => ({
 }));
 
 
-const ContactList = ({ contact, selectedChatId, openChat, ticket = null, currentTab = null, onRefresh = null }) => {
+const ContactList = ({ contact, selectedChatId, openChat, ticket = null, currentTab = null, onRefresh = null, isPinned = false, onPinConversation = null }) => {
   const { id, name, avatar, status, lastMessage, lastSeen, unreadCount, isTyping, userAvatar, userName } = contact;
   const { user: currentUser } = useContext(AuthContext);
   const { setCurrentTicket } = useContext(TicketsContext);
   const [acceptModalOpen, setAcceptModalOpen] = useState(false);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
   
   const isSelected = id === selectedChatId;
 
@@ -197,7 +204,11 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
   };
 
   // Dropdown handlers
-  const handleFinalizarConversa = async () => {
+  const handleFinalizarConversa = () => {
+    setConfirmationModalOpen(true);
+  };
+
+  const handleConfirmFinalizarConversa = async () => {
     try {
       await api.put(`/tickets/${ticket.id}`, {
         status: "closed",
@@ -210,9 +221,26 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
     }
   };
 
+  const handleFinalizarSemDespedida = async () => {
+    try {
+      await api.put(`/tickets/${ticket.id}`, {
+        status: "closed",
+        userId: currentUser.id,
+        sendFarewellMessage: false,
+        amountUsedBotQueues: 0
+      });
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
   const handleTransferirConversa = () => {
-    // TODO: Implementar modal de transferência
-    console.log('Transferir conversa:', ticket.id);
+    setTransferModalOpen(true);
+  };
+
+  const handleCloseTransferModal = () => {
+    setTransferModalOpen(false);
   };
 
   const handleMarcarNaoLido = async () => {
@@ -278,85 +306,90 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
       {/* Contact Info */}
       <ContactInfo>
         <ContactMeta>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
             <ContactName variant="body2">
               {name}
             </ContactName>
+            
+            {/* Mensagem logo abaixo do nome */}
+            {isTyping ? (
+              <TypingIndicator>
+                digitando...
+              </TypingIndicator>
+            ) : (
+              <LastMessage variant="caption">
+                {lastMessage}
+              </LastMessage>
+            )}
           </Box>
           
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'flex-end', // ✅ Alinha à direita
-            justifyContent: 'flex-start', // ✅ Alinha ao topo
-            position: 'relative',
-            top: '-18px', // ✅ Sobe para quase o topo do card
-            height: 'fit-content',
-            minHeight: 0,
-            '@media (max-width: 768px)': {
-              top: '-15px', // ✅ Responsivo: mobile
-              fontSize: '10px'
-            },
-            '@media (max-width: 480px)': {
-              top: '-12px', // ✅ Responsivo: mobile pequeno
-              fontSize: '9px'
-            }
-          }}>
-            {/* Data/Hora no topo */}
-            <TimeStamp 
-              variant="caption"
-              sx={{
-                fontSize: { xs: '10px', sm: '11px', md: '12px' }, // ✅ Responsivo
-                lineHeight: 1,
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {formatTime(lastSeen)}
-            </TimeStamp>
-          </Box>
-        </ContactMeta>
-        
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          marginTop: '-15px'
-        }}>
-          {isTyping ? (
-            <TypingIndicator>
-              digitando...
-            </TypingIndicator>
-          ) : (
-            <LastMessage variant="caption">
-              {lastMessage}
-            </LastMessage>
-          )}
-          
-          {/* Status de lida OU Avatar do usuário */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {/* Prioridade: Avatar do usuário > Check de lida */}
-            {userAvatar || userName ? (
-              <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                <Box
-                  title={`Responsável: ${userName || 'Usuário'}`}
-                  sx={{ 
-                    cursor: 'help',
-                    '&:hover': {
-                      transform: 'scale(1.1)',
-                      transition: 'transform 0.2s ease'
-                    }
-                  }}
-                >
-                  <Avatar 
-                    src={userAvatar ? `${process.env.REACT_APP_BACKEND_URL || ''}/public/company${currentUser?.companyId}/users/${userAvatar}` : null}
-                    alt={userName || 'Usuário'} 
-                    size="sm" 
-                    fallbackText={userName ? userName.charAt(0).toUpperCase() : 'U'}
-                  />
-                </Box>
+          {/* Coluna direita: Data/Horário, Avatar, Badge */}
+          {userAvatar || userName ? (
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 0.5,
+              ml: 1
+            }}>
+              {/* Data/Horário no topo */}
+              <TimeStamp 
+                variant="caption"
+                sx={{
+                  fontSize: { xs: '10px', sm: '11px', md: '12px' },
+                  lineHeight: 1,
+                  whiteSpace: 'nowrap',
+                  color: 'var(--text-secondary)',
+                  textAlign: 'center'
+                }}
+              >
+                {formatTime(lastSeen)}
+              </TimeStamp>
 
-                {/* ConversationDropdown */}
-                {ticket && ticket.status === 'open' && (
+              {/* Avatar do usuário no meio */}
+              <Box
+                title={`Responsável: ${userName || 'Usuário'}`}
+                sx={{ 
+                  cursor: 'pointer',
+                  '&:hover': {
+                    transform: 'scale(1.1)',
+                    transition: 'transform 0.2s ease'
+                  }
+                }}
+              >
+                <Avatar 
+                  src={userAvatar ? `${(process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080').replace(/"/g, '')}/public/company${currentUser?.companyId}/${userAvatar}` : null}
+                  alt={userName || 'Usuário'} 
+                  size="sm" 
+                  fallbackText={userName ? userName.charAt(0).toUpperCase() : 'U'}
+                />
+              </Box>
+
+              {/* Badge "Geral" e ícone de Pin */}
+              {ticket && ticket.status === 'open' && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {/* Ícone de Pin quando fixada - lado esquerdo */}
+                  {isPinned && (
+                    <Box sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '14px',
+                      height: '14px',
+                    }}>
+                      <img 
+                        src={thumbtacksIcon} 
+                        alt="Fixada" 
+                        style={{ 
+                          width: '12px', 
+                          height: '12px', 
+                          filter: 'grayscale(1) brightness(0.6)' // cinza
+                        }} 
+                      />
+                    </Box>
+                  )}
+                  
                   <ConversationDropdown
                     triggerText="Geral"
                     triggerColor="success"
@@ -365,17 +398,35 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
                     onFinalizarConversa={handleFinalizarConversa}
                     onTransferirConversa={handleTransferirConversa}
                     onMarcarNaoLido={handleMarcarNaoLido}
+                    onAdicionarEtiqueta={() => console.log('Adicionar Etiqueta')}
+                    onSilenciarNotificacoes={() => console.log('Silenciar Notificações')}
+                    onFixarConversa={onPinConversation}
+                    isPinned={isPinned}
                   />
-                )}
-              </Box>
-            ) : unreadCount === 0 ? (
-              <UnreadBadge unreadCount={0}>
-                <CheckIcon style={{ width: '12px', height: '12px' }} />
-              </UnreadBadge>
-            ) : null}
-          </Box>
-        </Box>
-        
+                </Box>
+              )}
+            </Box>
+          ) : (
+            <TimeStamp 
+              variant="caption"
+              sx={{
+                fontSize: { xs: '10px', sm: '11px', md: '12px' },
+                lineHeight: 1,
+                whiteSpace: 'nowrap',
+                color: 'var(--text-secondary)'
+              }}
+            >
+              {formatTime(lastSeen)}
+            </TimeStamp>
+          )}
+          
+          {/* Check de lida se não tiver avatar */}
+          {!(userAvatar || userName) && unreadCount === 0 && (
+            <UnreadBadge unreadCount={0}>
+              <CheckIcon style={{ width: '12px', height: '12px' }} />
+            </UnreadBadge>
+          )}
+        </ContactMeta>
       </ContactInfo>
 
 
@@ -445,6 +496,29 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
         ticketId={ticket?.id}
         ticket={ticket}
       />
+
+      {/* Modal de transferência */}
+      {transferModalOpen && (
+        <TransferTicketModernModal
+          modalOpen={transferModalOpen}
+          onClose={handleCloseTransferModal}
+          ticketid={ticket.id}
+          ticket={ticket}
+        />
+      )}
+
+      {/* Modal de confirmação para finalizar */}
+      <ConfirmationModal
+        title={`Finalizar conversa #${ticket?.id}?`}
+        open={confirmationModalOpen}
+        onClose={() => setConfirmationModalOpen(false)}
+        onConfirm={handleConfirmFinalizarConversa}
+        confirmText="Com despedida"
+        cancelText="Sem despedida"
+        onCancel={handleFinalizarSemDespedida}
+      >
+        Deseja finalizar esta conversa? Você pode escolher enviar ou não uma mensagem de despedida.
+      </ConfirmationModal>
     </StyledContactItem>
   );
 };

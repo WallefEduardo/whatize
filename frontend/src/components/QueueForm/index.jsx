@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Card,
@@ -40,6 +40,9 @@ import {
 import { Input } from "../ui/Input";
 import TwitterColorPicker from "../TwitterColorPicker";
 import FormButtons from "../ui/FormButtons";
+import api from "../../services/api";
+import toastError, { toastSuccess } from "../../errors/toastError";
+import CustomTooltip from "../CustomTooltip";
 
 /**
  * QueueForm - Formulário integrado para criação/edição de filas
@@ -62,10 +65,29 @@ const QueueForm = ({
     ativarRoteador: initialData?.ativarRoteador || false,
     icon: initialData?.icon || "Users",
     tempoRoteador: initialData?.tempoRoteador || 0,
-    ...initialData
+    // Não incluir chatbots vazios que causam erro
+    ...(initialData || {})
   });
 
   const [loading, setLoading] = useState(false);
+  const [usedColors, setUsedColors] = useState([]);
+
+  // Buscar cores já usadas
+  useEffect(() => {
+    const fetchUsedColors = async () => {
+      try {
+        const { data } = await api.get("/queue");
+        const colors = data
+          .filter(queue => initialData ? queue.id !== initialData.id : true)
+          .map(queue => queue.color);
+        setUsedColors(colors);
+      } catch (error) {
+        console.error('Erro ao buscar cores usadas:', error);
+      }
+    };
+    
+    fetchUsedColors();
+  }, [initialData]);
 
   // Ícones disponíveis para filas
   const availableIcons = [
@@ -99,15 +121,23 @@ const QueueForm = ({
   };
 
   const handleSubmit = async () => {
+    console.log('🔄 handleSubmit chamado', formData);
+    
     if (!formData.name.trim()) {
+      toastError('Nome da fila é obrigatório!');
       return;
     }
 
     setLoading(true);
     try {
+      console.log('📡 Chamando onSave com dados:', formData);
       await onSave(formData);
+      console.log('✅ onSave executado com sucesso');
+      // Toast será mostrado na página pai (Queues)
     } catch (error) {
-      console.error('Erro ao salvar fila:', error);
+      console.error('❌ Erro ao salvar fila:', error);
+      // Propagar erro para página pai tratar
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -177,30 +207,33 @@ const QueueForm = ({
           {/* Container de Cores */}
           <Box sx={{ 
             flex: 1,
-            p: 3,
+            p: 2,
             backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--border-primary)',
-            borderRadius: 2
+            borderRadius: 2,
+            height: 'fit-content'
           }}>
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: 'var(--text-primary)' }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'var(--text-primary)' }}>
               Escolher Cor
             </Typography>
             <TwitterColorPicker
               color={formData.color}
               onChange={(color) => handleInputChange('color', color.hex)}
               width="100%"
+              usedColors={usedColors}
             />
           </Box>
 
           {/* Container de Ícones */}
           <Box sx={{ 
             flex: 1,
-            p: 3,
+            p: 2,
             backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--border-primary)',
-            borderRadius: 2
+            borderRadius: 2,
+            height: 'fit-content'
           }}>
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: 'var(--text-primary)' }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'var(--text-primary)' }}>
               Ícone da Fila
             </Typography>
             
@@ -259,9 +292,31 @@ const QueueForm = ({
                 <X size={18} />
               </Box>
               <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Fechar Ticket
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Fechar Ticket
+                  </Typography>
+                  <CustomTooltip title={
+                    <Box sx={{ p: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: '#fff' }}>
+                        Como funciona:
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1, color: '#fff', lineHeight: 1.5 }}>
+                        • Tickets são fechados automaticamente após transferência
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1, color: '#fff', lineHeight: 1.5 }}>
+                        • Ideal para filas de triagem e direcionamento
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.5 }}>
+                        • Não há necessidade de acompanhamento posterior
+                      </Typography>
+                    </Box>
+                  }>
+                    <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'help' }}>
+                      <Info size={16} color="#00C307" />
+                    </Box>
+                  </CustomTooltip>
+                </Box>
                 <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
                   Fecha automaticamente quando transferido
                 </Typography>
@@ -311,9 +366,34 @@ const QueueForm = ({
                 <RotateCcw size={18} />
               </Box>
               <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Ativar Rodízio
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Ativar Rodízio
+                  </Typography>
+                  <CustomTooltip title={
+                    <Box sx={{ p: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: '#fff' }}>
+                        Sistema de Distribuição:
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1, color: '#fff', lineHeight: 1.5 }}>
+                        • Distribui tickets automaticamente entre atendentes
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1, color: '#fff', lineHeight: 1.5 }}>
+                        • Garante carga equilibrada de trabalho
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1, color: '#fff', lineHeight: 1.5 }}>
+                        • Distribuição sequencial por ordem de disponibilidade
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#fff', lineHeight: 1.5 }}>
+                        • Tempo define intervalo mínimo entre distribuições
+                      </Typography>
+                    </Box>
+                  }>
+                    <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'help' }}>
+                      <Info size={16} color="#00C307" />
+                    </Box>
+                  </CustomTooltip>
+                </Box>
                 <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
                   Distribui tickets entre atendentes
                 </Typography>

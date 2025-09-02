@@ -165,6 +165,7 @@ const ChatModerno = () => {
   
   // Estado para mostrar todos os tickets
   const [showAllTickets, setShowAllTickets] = useState(false);
+  const [pinnedConversations, setPinnedConversations] = useState(new Set());
   
   // Estados do SidebarContainer
   const [showSortOptions, setShowSortOptions] = useState(false);
@@ -175,6 +176,33 @@ const ChatModerno = () => {
   
   // Estado para forçar refresh dos tickets
   const [forceRefresh, setForceRefresh] = useState(0);
+
+  // Função para fixar/desafixar conversa
+  const handlePinConversation = (ticketId) => {
+    setPinnedConversations(prev => {
+      const newPinned = new Set(prev);
+      if (newPinned.has(ticketId)) {
+        newPinned.delete(ticketId);
+      } else {
+        newPinned.add(ticketId);
+      }
+      // Salvar no localStorage para persistir
+      localStorage.setItem('pinnedConversations', JSON.stringify([...newPinned]));
+      return newPinned;
+    });
+  };
+
+  // Carregar conversas fixadas do localStorage
+  useEffect(() => {
+    const savedPinned = localStorage.getItem('pinnedConversations');
+    if (savedPinned) {
+      try {
+        setPinnedConversations(new Set(JSON.parse(savedPinned)));
+      } catch (error) {
+        console.error('Erro ao carregar conversas fixadas:', error);
+      }
+    }
+  }, []);
   
   // Refs
   const messagesEndRef = useRef(null);
@@ -1131,7 +1159,19 @@ const ChatModerno = () => {
                       </Typography>
                     </Box>
                   ) : (
-                    tickets.map((ticket) => {
+                    tickets
+                      .sort((a, b) => {
+                        // Primeiro critério: conversas fixadas vêm antes
+                        const aIsPinned = pinnedConversations.has(a.id);
+                        const bIsPinned = pinnedConversations.has(b.id);
+                        
+                        if (aIsPinned && !bIsPinned) return -1;
+                        if (!aIsPinned && bIsPinned) return 1;
+                        
+                        // Se ambas são fixadas ou não fixadas, ordenar por data
+                        return new Date(b.updatedAt) - new Date(a.updatedAt);
+                      })
+                      .map((ticket) => {
                       // Converter ticket para formato de contact para manter compatibilidade
                       const contactFromTicket = {
                         id: ticket.uuid,
@@ -1142,10 +1182,11 @@ const ChatModerno = () => {
                         lastSeen: ticket.updatedAt,
                         unreadCount: ticket.unreadMessages || 0,
                         isTyping: false,
-                        // Informações do usuário responsável
+                        // Informações do usuário responsável  
                         userAvatar: ticket.user?.profileImage || null,
                         userName: ticket.user?.name || null
                       };
+                      
                       
                       return (
                         <ContactList
@@ -1156,6 +1197,8 @@ const ChatModerno = () => {
                           ticket={ticket}
                           currentTab={tabOpen}
                           onRefresh={forceTicketsRefresh}
+                          isPinned={pinnedConversations.has(ticket.id)}
+                          onPinConversation={() => handlePinConversation(ticket.id)}
                         />
                       );
                     })

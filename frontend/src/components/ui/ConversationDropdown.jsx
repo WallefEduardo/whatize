@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { ChevronDown, X, ArrowRightLeft, Mail } from 'lucide-react';
+import { ChevronDown, X, ArrowRightLeft, Mail, Users, Tag, BellOff, Pin } from 'lucide-react';
 
 // Styled Trigger Button
 const StyledTrigger = styled(Box)(({ triggerColor, triggerSize }) => ({
@@ -9,9 +9,9 @@ const StyledTrigger = styled(Box)(({ triggerColor, triggerSize }) => ({
   alignItems: 'center',
   justifyContent: 'center',
   borderRadius: '6px',
-  fontSize: triggerSize === 'xs' ? '10px' : triggerSize === 'sm' ? '11px' : '12px',
+  fontSize: triggerSize === 'xs' ? '9px' : triggerSize === 'sm' ? '11px' : '12px',
   fontWeight: 600,
-  padding: triggerSize === 'xs' ? '2px 6px' : triggerSize === 'sm' ? '4px 8px' : '6px 10px',
+  padding: triggerSize === 'xs' ? '1px 4px' : triggerSize === 'sm' ? '4px 8px' : '6px 10px',
   gap: triggerSize === 'xs' ? '2px' : '4px',
   cursor: 'pointer',
   transition: 'all 0.2s ease',
@@ -40,7 +40,7 @@ const StyledDropdownContent = styled(Box)(({ align }) => ({
   [align === 'start' ? 'left' : align === 'center' ? 'left' : 'right']: align === 'center' ? '50%' : 0,
   transform: align === 'center' ? 'translateX(-50%)' : 'none',
   marginTop: '4px',
-  minWidth: '196px',
+  minWidth: '220px',
   backgroundColor: 'white',
   border: '1px solid rgba(0,0,0,0.1)',
   borderRadius: '8px',
@@ -134,6 +134,10 @@ const ConversationDropdown = ({
   onFinalizarConversa,
   onTransferirConversa,
   onMarcarNaoLido,
+  onAdicionarEtiqueta,
+  onSilenciarNotificacoes,
+  onFixarConversa,
+  isPinned = false,
   disabled = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -214,7 +218,7 @@ const ConversationDropdown = ({
             onClick={handleItemClick(onTransferirConversa)}
           >
             <StyledIconContainer className="menu-icon">
-              <ArrowRightLeft size={14} />
+              <Users size={14} />
             </StyledIconContainer>
             <StyledTitle className="menu-title">
               Transferir Conversa
@@ -230,6 +234,42 @@ const ConversationDropdown = ({
             </StyledIconContainer>
             <StyledTitle className="menu-title">
               Marcar como não Lido
+            </StyledTitle>
+          </StyledMenuItem>
+
+          {/* Adicionar Etiqueta */}
+          <StyledMenuItem
+            onClick={handleItemClick(onAdicionarEtiqueta)}
+          >
+            <StyledIconContainer className="menu-icon">
+              <Tag size={14} />
+            </StyledIconContainer>
+            <StyledTitle className="menu-title">
+              Adicionar Etiqueta
+            </StyledTitle>
+          </StyledMenuItem>
+
+          {/* Silenciar Notificações */}
+          <StyledMenuItem
+            onClick={handleItemClick(onSilenciarNotificacoes)}
+          >
+            <StyledIconContainer className="menu-icon">
+              <BellOff size={14} />
+            </StyledIconContainer>
+            <StyledTitle className="menu-title">
+              Silenciar Notificações
+            </StyledTitle>
+          </StyledMenuItem>
+
+          {/* Fixar Conversa */}
+          <StyledMenuItem
+            onClick={handleItemClick(onFixarConversa)}
+          >
+            <StyledIconContainer className="menu-icon">
+              <Pin size={14} />
+            </StyledIconContainer>
+            <StyledTitle className="menu-title">
+              {isPinned ? 'Desafixar Conversa' : 'Fixar Conversa'}
             </StyledTitle>
           </StyledMenuItem>
         </StyledDropdownContent>

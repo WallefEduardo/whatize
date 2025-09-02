@@ -1,6 +1,5 @@
 import React from "react";
-import { TwitterPicker } from 'react-color';
-import { Box } from "@mui/material";
+import { Box, Tooltip } from "@mui/material";
 
 /**
  * TwitterColorPicker - Componente de seletor de cores estilo Twitter
@@ -11,12 +10,14 @@ import { Box } from "@mui/material";
  * @param {Function} props.onChange - Callback quando a cor muda
  * @param {Array} props.colors - Cores customizadas (opcional)
  * @param {string} props.width - Largura do picker
+ * @param {Array} props.usedColors - Cores já utilizadas (serão bloqueadas)
  */
 const TwitterColorPicker = ({
   color,
   onChange,
   colors,
   width = "400px",
+  usedColors = [],
   ...props
 }) => {
   // Paleta de cores otimizada para badges - organizada em fileiras para layout mais largo
@@ -39,28 +40,98 @@ const TwitterColorPicker = ({
 
   const pickerColors = colors || defaultColors;
 
+  // Função para verificar se uma cor está bloqueada
+  const isColorUsed = (colorHex) => {
+    return usedColors.includes(colorHex.toUpperCase()) || usedColors.includes(colorHex.toLowerCase());
+  };
+
+  // Handler para mudança de cor
+  const handleColorChange = (selectedColor) => {
+    if (isColorUsed(selectedColor)) {
+      return; // Bloqueia cores já usadas
+    }
+    
+    onChange({ hex: selectedColor });
+  };
+
   return (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        justifyContent: 'center',
-        '& .twitter-picker': {
-          backgroundColor: 'transparent !important',
-          boxShadow: 'none !important',
-        },
-        '& .twitter-picker > div': {
-          backgroundColor: 'transparent !important',
-        }
-      }}
-    >
-      <TwitterPicker
-        color={color}
-        onChange={onChange}
-        colors={pickerColors}
-        width={width}
-        triangle="hide"
-        {...props}
-      />
+    <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+      <Box sx={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(8, 1fr)',
+        gap: 0.5,
+        padding: 1,
+        maxWidth: width,
+        width: '100%'
+      }}>
+        {pickerColors.map((colorHex, index) => {
+          const isUsed = isColorUsed(colorHex);
+          const isSelected = color === colorHex;
+          
+          const colorButton = (
+            <Box
+              key={`${colorHex}-${index}`}
+              onClick={() => handleColorChange(colorHex)}
+              sx={{
+                width: 28,
+                height: 28,
+                backgroundColor: colorHex,
+                borderRadius: '4px',
+                cursor: isUsed ? 'not-allowed' : 'pointer',
+                border: isSelected ? '3px solid #000' : '1px solid rgba(0,0,0,0.1)',
+                position: 'relative',
+                transition: 'all 0.2s ease',
+                opacity: isUsed ? 0.3 : 1,
+                transform: isSelected ? 'scale(1.1)' : 'scale(1)',
+                '&:hover': !isUsed ? {
+                  transform: isSelected ? 'scale(1.1)' : 'scale(1.05)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                } : {},
+                // Overlay para cores usadas
+                '&::after': isUsed ? {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                } : {},
+                // X para cores usadas
+                '&::before': isUsed ? {
+                  content: '"✕"',
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  zIndex: 1,
+                  color: '#666',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                } : {}
+              }}
+            />
+          );
+
+          if (isUsed) {
+            return (
+              <Tooltip 
+                key={`tooltip-${colorHex}-${index}`}
+                title="Cor já utilizada por outra fila"
+                placement="top"
+              >
+                <span>{colorButton}</span>
+              </Tooltip>
+            );
+          }
+
+          return colorButton;
+        })}
+      </Box>
     </Box>
   );
 };

@@ -126,7 +126,7 @@ export const toast = {
   error: (message, options = {}) => {
     // Apenas log crítico se necessário
     if (message && message !== 'undefined') {
-      logger.development.error(`Toast error: ${message}`);
+      console.error(`Toast error: ${message}`);
     }
     
     const title = options.title || undefined;
