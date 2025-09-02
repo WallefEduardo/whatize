@@ -33,7 +33,36 @@ import {
   UserCheck,
   UserPlus,
   X,
-  RotateCcw
+  RotateCcw,
+  Home,
+  User,
+  Building,
+  Calendar,
+  Database,
+  FileText,
+  Gift,
+  Globe,
+  Key,
+  Lock,
+  Monitor,
+  Package,
+  Printer,
+  Search,
+  Truck,
+  Wifi,
+  Download,
+  Upload,
+  Cloud,
+  Server,
+  Smartphone,
+  Tablet,
+  Laptop,
+  Camera,
+  Video,
+  Music,
+  Image,
+  Book,
+  Bookmark
 } from "lucide-react";
 
 // Componentes
@@ -109,7 +138,36 @@ const QueueForm = ({
     { name: "Info", icon: Info, label: "Informações" },
     { name: "HelpCircle", icon: HelpCircle, label: "Ajuda" },
     { name: "UserCheck", icon: UserCheck, label: "Validação" },
-    { name: "UserPlus", icon: UserPlus, label: "Cadastro" }
+    { name: "UserPlus", icon: UserPlus, label: "Cadastro" },
+    { name: "Home", icon: Home, label: "Casa" },
+    { name: "User", icon: User, label: "Usuário" },
+    { name: "Building", icon: Building, label: "Empresa" },
+    { name: "Calendar", icon: Calendar, label: "Agenda" },
+    { name: "Database", icon: Database, label: "Dados" },
+    { name: "FileText", icon: FileText, label: "Documento" },
+    { name: "Gift", icon: Gift, label: "Presente" },
+    { name: "Globe", icon: Globe, label: "Global" },
+    { name: "Key", icon: Key, label: "Chave" },
+    { name: "Lock", icon: Lock, label: "Seguro" },
+    { name: "Monitor", icon: Monitor, label: "Monitor" },
+    { name: "Package", icon: Package, label: "Pacote" },
+    { name: "Printer", icon: Printer, label: "Impressora" },
+    { name: "Search", icon: Search, label: "Busca" },
+    { name: "Truck", icon: Truck, label: "Entrega" },
+    { name: "Wifi", icon: Wifi, label: "WiFi" },
+    { name: "Download", icon: Download, label: "Download" },
+    { name: "Upload", icon: Upload, label: "Upload" },
+    { name: "Cloud", icon: Cloud, label: "Nuvem" },
+    { name: "Server", icon: Server, label: "Servidor" },
+    { name: "Smartphone", icon: Smartphone, label: "Celular" },
+    { name: "Tablet", icon: Tablet, label: "Tablet" },
+    { name: "Laptop", icon: Laptop, label: "Notebook" },
+    { name: "Camera", icon: Camera, label: "Câmera" },
+    { name: "Video", icon: Video, label: "Vídeo" },
+    { name: "Music", icon: Music, label: "Música" },
+    { name: "Image", icon: Image, label: "Imagem" },
+    { name: "Book", icon: Book, label: "Livro" },
+    { name: "Bookmark", icon: Bookmark, label: "Favorito" }
   ];
 
   // Handlers
@@ -193,7 +251,6 @@ const QueueForm = ({
             Nome da Fila
           </Typography>
           <Input
-            placeholder="Ex: Suporte Técnico"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
             size="lg"
@@ -203,7 +260,7 @@ const QueueForm = ({
         </Box>
 
         {/* LINHA 2 - Container Cores + Container Ícones */}
-        <Box sx={{ display: 'flex', gap: 3, mb: 3 }}>
+        <Box sx={{ display: 'flex', gap: 3, mb: 3, alignItems: 'stretch' }}>
           {/* Container de Cores */}
           <Box sx={{ 
             flex: 1,
@@ -211,7 +268,8 @@ const QueueForm = ({
             backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--border-primary)',
             borderRadius: 2,
-            height: 'fit-content'
+            display: 'flex',
+            flexDirection: 'column'
           }}>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'var(--text-primary)' }}>
               Escolher Cor
@@ -231,13 +289,21 @@ const QueueForm = ({
             backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--border-primary)',
             borderRadius: 2,
-            height: 'fit-content'
+            display: 'flex',
+            flexDirection: 'column'
           }}>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'var(--text-primary)' }}>
               Ícone da Fila
             </Typography>
             
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexWrap: 'wrap', 
+              gap: 1, 
+              justifyContent: 'center',
+              flex: 1,
+              alignContent: 'flex-start'
+            }}>
               {availableIcons.map((iconData) => {
                 const IconComponent = iconData.icon;
                 const isSelected = formData.icon === iconData.name;

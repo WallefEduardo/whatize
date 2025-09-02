@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Typography, Link } from "@mui/material";
 import { BarChart3 } from "lucide-react";
 import { motion } from "framer-motion";
+import CustomTooltip from "../CustomTooltip";
 
 /**
  * PageLayout - Componente de layout padrão para páginas baseado no design do Reports
@@ -91,33 +92,32 @@ const PageLayout = ({
                       
                       <Box component="li">
                         {crumb.href ? (
-                          <Link 
-                            href={crumb.href}
-                            sx={{ 
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1,
-                              px: 2,
-                              py: 1,
-                              backgroundColor: 'var(--bg-primary)',
-                              border: '1px solid var(--border-primary)',
-                              borderRadius: 2,
-                              color: 'var(--text-gray-medium)',
-                              textDecoration: 'none',
-                              fontSize: '0.875rem',
-                              fontWeight: 500,
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                              transition: 'all 0.2s ease',
-                              '&:hover': { 
-                                color: 'var(--color-accent)',
-                                borderColor: 'var(--color-accent)',
-                                transform: 'translateY(-1px)'
-                              }
-                            }}
-                          >
-                            {crumb.icon && React.cloneElement(crumb.icon, { size: 16 })}
-                            {crumb.label}
-                          </Link>
+                          <CustomTooltip title={crumb.label}>
+                            <Link 
+                              href={crumb.href}
+                              sx={{ 
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 36,
+                                height: 36,
+                                backgroundColor: 'var(--bg-primary)',
+                                border: '1px solid var(--border-primary)',
+                                borderRadius: 2,
+                                color: 'var(--text-gray-medium)',
+                                textDecoration: 'none',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                transition: 'all 0.2s ease',
+                                '&:hover': { 
+                                  color: 'var(--color-accent)',
+                                  borderColor: 'var(--color-accent)',
+                                  transform: 'translateY(-1px)'
+                                }
+                              }}
+                            >
+                              {crumb.icon && React.cloneElement(crumb.icon, { size: 16 })}
+                            </Link>
+                          </CustomTooltip>
                         ) : (
                           <Box
                             sx={{ 
@@ -140,7 +140,7 @@ const PageLayout = ({
                               size: 16, 
                               color: isLastCrumb ? 'var(--color-accent)' : 'var(--text-gray-medium)' 
                             })}
-                            {crumb.label}
+                            {isLastCrumb && crumb.label}
                           </Box>
                         )}
                       </Box>

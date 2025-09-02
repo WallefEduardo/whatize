@@ -20,7 +20,7 @@ const TwitterColorPicker = ({
   usedColors = [],
   ...props
 }) => {
-  // Paleta de cores otimizada para badges - organizada em fileiras para layout mais largo
+  // Paleta de cores expandida para preencher melhor o espaço
   const defaultColors = [
     // Fileira 1 - Vermelhos e laranjas vibrantes
     '#FF6B6B', '#E74C3C', '#C0392B', '#FF4757', '#FF3838', '#FF9500', '#F39C12', '#E67E22',
@@ -35,7 +35,13 @@ const TwitterColorPicker = ({
     '#FD79A8', '#E84393', '#FF7675', '#FF69B4', '#1ABC9C', '#16A085', '#00CEC9', '#81ECEC',
     
     // Fileira 5 - Tons escuros e cinzas modernos
-    '#34495E', '#2C3E50', '#2D3436', '#636E72', '#95A5A6', '#7F8C8D', '#BDC3C7', '#F8F9FA'
+    '#34495E', '#2C3E50', '#2D3436', '#636E72', '#95A5A6', '#7F8C8D', '#BDC3C7', '#F8F9FA',
+    
+    // Fileira 6 - Cores adicionais para preencher
+    '#FF5722', '#795548', '#607D8B', '#9E9E9E', '#00BCD4', '#009688', '#4CAF50', '#8BC34A',
+    
+    // Fileira 7 - Mais variações
+    '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800', '#FF5722', '#E91E63', '#9C27B0', '#673AB7'
   ];
 
   const pickerColors = colors || defaultColors;
@@ -59,8 +65,8 @@ const TwitterColorPicker = ({
       <Box sx={{
         display: 'grid',
         gridTemplateColumns: 'repeat(8, 1fr)',
-        gap: 0.5,
-        padding: 1,
+        gap: 0.3,
+        padding: 0.5,
         maxWidth: width,
         width: '100%'
       }}>
@@ -73,8 +79,8 @@ const TwitterColorPicker = ({
               key={`${colorHex}-${index}`}
               onClick={() => handleColorChange(colorHex)}
               sx={{
-                width: 28,
-                height: 28,
+                width: 22,
+                height: 22,
                 backgroundColor: colorHex,
                 borderRadius: '4px',
                 cursor: isUsed ? 'not-allowed' : 'pointer',

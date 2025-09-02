@@ -42,7 +42,6 @@ import QueueForm from "../../components/QueueForm";
 import { i18n } from "../../translate/i18n";
 import toastError, { toastSuccess } from "../../errors/toastError";
 import api from "../../services/api";
-import QueueModal from "../../components/QueueModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import ForbiddenPage from "../../components/ForbiddenPage";
@@ -98,7 +97,6 @@ const Queues = () => {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
-  const [queueModalOpen, setQueueModalOpen] = useState(false);
   const [selectedQueue, setSelectedQueue] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [searchParam, setSearchParam] = useState("");
@@ -166,21 +164,6 @@ const Queues = () => {
       }
     };
   }, [socket, companyId]);
-
-  const handleOpenQueueModal = () => {
-    setQueueModalOpen(true);
-    setSelectedQueue(null);
-  };
-
-  const handleCloseQueueModal = () => {
-    setQueueModalOpen(false);
-    setSelectedQueue(null);
-  };
-
-  const handleEditQueue = (queue) => {
-    setSelectedQueue(queue);
-    setQueueModalOpen(true);
-  };
 
   const handleCloseConfirmationModal = () => {
     setConfirmModalOpen(false);
@@ -257,14 +240,28 @@ const Queues = () => {
       loadMore();
     }
   };
+  // Breadcrumbs dinâmicos baseados no estado
+  const getBreadcrumbs = () => {
+    const baseBreadcrumbs = [
+      { label: "Dashboard", href: "/", icon: <BarChart3 size={16} /> },
+      { label: "Filas", icon: <Settings size={16} /> }
+    ];
+
+    if (showForm) {
+      baseBreadcrumbs.push({
+        label: editingQueue ? "Edição" : "Cadastro",
+        icon: editingQueue ? <Edit3 size={16} /> : <PlusCircle size={16} />
+      });
+    }
+
+    return baseBreadcrumbs;
+  };
+
   return (
     <PageLayout
-      title="Gerenciar Filas"
+      title={showForm ? (editingQueue ? "Editar Fila" : "Nova Fila") : "Gerenciar Filas"}
       icon={<Settings size={24} style={{ color: 'var(--color-accent)' }} />}
-      breadcrumbs={[
-        { label: "Dashboard", href: "/", icon: <BarChart3 size={16} /> },
-        { label: "Filas", icon: <Settings size={16} /> }
-      ]}
+      breadcrumbs={getBreadcrumbs()}
     >
       {/* Modals */}
       <ConfirmationModal
@@ -275,19 +272,6 @@ const Queues = () => {
       >
         Tem certeza que deseja excluir esta fila? Esta ação não pode ser desfeita.
       </ConfirmationModal>
-
-      <QueueModal
-        open={queueModalOpen}
-        onClose={handleCloseQueueModal}
-        queueId={selectedQueue?.id}
-        onEdit={(res) => {
-          if (res) {
-            setTimeout(() => {
-              handleEditQueue(res)
-            }, 500)
-          }
-        }}
-      />
 
       {user.profile === "user" ? (
         <ForbiddenPage />
@@ -349,15 +333,6 @@ const Queues = () => {
                   >
                     Nova Fila
                   </GradientButton>
-                  
-                  <GradientButton
-                    onClick={handleOpenQueueModal}
-                    icon={<Settings size={20} />}
-                    variant="secondary"
-                    size="medium"
-                  >
-                    Modal (temp)
-                  </GradientButton>
                 </Box>
               </Box>
 
@@ -381,9 +356,9 @@ const Queues = () => {
                     border: '1px solid var(--border-primary)',
                     borderRadius: 3,
                     width: '100%',
-                    height: 280,
-                    minHeight: 280,
-                    maxHeight: 280,
+                    height: 200,
+                    minHeight: 200,
+                    maxHeight: 200,
                     position: 'relative',
                     overflow: 'hidden',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -422,7 +397,7 @@ const Queues = () => {
                       flexDirection: 'column',
                       position: 'relative'
                     }}>
-                      {/* Header com ID */}
+                      {/* Header com ID e Ícone */}
                       <Box sx={{ 
                         display: 'flex', 
                         justifyContent: 'space-between', 
@@ -441,12 +416,21 @@ const Queues = () => {
                           #{queue.id}
                         </Typography>
                         <Box sx={{
-                          width: 12,
-                          height: 12,
-                          borderRadius: '50%',
+                          width: 32,
+                          height: 32,
+                          borderRadius: '8px',
                           backgroundColor: queue.color || 'var(--color-accent)',
-                          boxShadow: `0 0 0 3px ${queue.color || 'var(--color-accent)'}22`
-                        }} />
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          boxShadow: `0 2px 8px ${queue.color || 'var(--color-accent)'}44`
+                        }}>
+                          {(() => {
+                            const IconComponent = getIconComponent(queue.icon);
+                            return <IconComponent size={18} />;
+                          })()}
+                        </Box>
                       </Box>
 
                       {/* Nome da Fila */}
@@ -477,33 +461,6 @@ const Queues = () => {
                         )}
                       </Box>
 
-                      {/* Mensagem de Saudação */}
-                      <Box sx={{ mb: 3 }}>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: 'var(--text-secondary)',
-                            fontWeight: 600,
-                            mb: 0.5
-                          }}
-                        >
-                          Mensagem:
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            color: 'var(--text-primary)',
-                            fontSize: '0.875rem',
-                            overflow: 'hidden',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: 'vertical',
-                            lineHeight: 1.4
-                          }}
-                        >
-                          {queue.greetingMessage || "Sem mensagem configurada"}
-                        </Typography>
-                      </Box>
                       
                       {/* Ações */}
                       <Box sx={{ 

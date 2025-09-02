@@ -1,8 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { cn } from '../../../utils/cn';
 import { formatTime } from '../data/mockData';
+
+// Função de formatação personalizada de tempo
+const formatCustomTime = (dateString) => {
+  if (!dateString) return '';
+  
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInMs = now - date;
+  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+  const diffInWeeks = Math.floor(diffInDays / 7);
+  const diffInMonths = Math.floor(diffInDays / 30);
+  const diffInYears = Math.floor(diffInDays / 365);
+
+  // Menos de 1 dia - mostra hora (ex: 20h00)
+  if (diffInDays < 1) {
+    return date.toLocaleTimeString('pt-BR', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    }).replace(':', 'h');
+  }
+  
+  // 1 dia - mostra "ontem"
+  if (diffInDays === 1) {
+    return 'ontem';
+  }
+  
+  // 2-6 dias - mostra "X dias atrás"
+  if (diffInDays < 7) {
+    return `${diffInDays} dias atrás`;
+  }
+  
+  // 1-3 semanas - mostra "X semana(s) atrás"
+  if (diffInWeeks < 4) {
+    return diffInWeeks === 1 ? '1 semana atrás' : `${diffInWeeks} semanas atrás`;
+  }
+  
+  // 1-11 meses - mostra "X mês(meses) atrás"
+  if (diffInMonths < 12) {
+    return diffInMonths === 1 ? '1 mês atrás' : `${diffInMonths} meses atrás`;
+  }
+  
+  // 1+ anos - mostra "X ano(s) atrás"
+  return diffInYears === 1 ? '1 ano atrás' : `${diffInYears} anos atrás`;
+};
 
 // Nossos componentes UI
 import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/AvatarOptimized';
@@ -21,6 +68,7 @@ import AcceptTicketWithoutQueueModal from '../../../components/AcceptTicketWitho
 import ConversationDropdown from '../../../components/ui/ConversationDropdown';
 import TransferTicketModernModal from '../../../components/TransferTicketModernModal';
 import ConfirmationModal from '../../../components/ConfirmationModal';
+import ResolverTicketModal from '../../../components/ResolverTicketModal';
 
 const StyledContactItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isSelected',
@@ -139,8 +187,14 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
   const [acceptModalOpen, setAcceptModalOpen] = useState(false);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
+  const [resolverModalOpen, setResolverModalOpen] = useState(false);
   
   const isSelected = id === selectedChatId;
+  
+  // Debug do estado resolverModalOpen
+  useEffect(() => {
+    console.log('resolverModalOpen mudou para:', resolverModalOpen);
+  }, [resolverModalOpen]);
 
   
   const handleClick = () => {
@@ -205,7 +259,10 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
 
   // Dropdown handlers
   const handleFinalizarConversa = () => {
-    setConfirmationModalOpen(true);
+    console.log('handleFinalizarConversa chamado - abrindo modal resolver');
+    console.log('Estado antes:', resolverModalOpen);
+    setResolverModalOpen(true);
+    console.log('setResolverModalOpen(true) executado');
   };
 
   const handleConfirmFinalizarConversa = async () => {
@@ -331,7 +388,8 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
               alignItems: 'center',
               justifyContent: 'center',
               gap: 0.5,
-              ml: 1
+              ml: 1,
+              marginRight: '5px'
             }}>
               {/* Data/Horário no topo */}
               <TimeStamp 
@@ -344,7 +402,7 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
                   textAlign: 'center'
                 }}
               >
-                {formatTime(lastSeen)}
+                {formatCustomTime(lastSeen)}
               </TimeStamp>
 
               {/* Avatar do usuário no meio */}
@@ -368,7 +426,7 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
 
               {/* Badge "Geral" e ícone de Pin */}
               {ticket && ticket.status === 'open' && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', marginRight: '5px' }}>
                   {/* Ícone de Pin quando fixada - lado esquerdo */}
                   {isPinned && (
                     <Box sx={{
@@ -413,10 +471,11 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
                 fontSize: { xs: '10px', sm: '11px', md: '12px' },
                 lineHeight: 1,
                 whiteSpace: 'nowrap',
-                color: 'var(--text-secondary)'
+                color: 'var(--text-secondary)',
+                marginRight: '5px'
               }}
             >
-              {formatTime(lastSeen)}
+              {formatCustomTime(lastSeen)}
             </TimeStamp>
           )}
           
@@ -506,6 +565,15 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
           ticket={ticket}
         />
       )}
+
+      {/* Modal de resolução moderno */}
+      <ResolverTicketModal
+        isVisible={resolverModalOpen}
+        onClose={() => setResolverModalOpen(false)}
+        onResolverSemMensagem={handleFinalizarSemDespedida}
+        onResolverComMensagem={handleConfirmFinalizarConversa}
+        contactName={name}
+      />
 
       {/* Modal de confirmação para finalizar */}
       <ConfirmationModal
