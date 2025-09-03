@@ -51,6 +51,8 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 0,
     boxShadow: "none",
     backgroundColor: "#f5f5f5",
+    height: "calc(100vh - 200px)",
+    overflow: "auto",
     ...theme.scrollbarStyles,
   },
   searchContainer: {

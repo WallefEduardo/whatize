@@ -510,6 +510,7 @@ const TicketActionButtonsCustom = ({ ticket, compactMode = false
                         modalOpen={transferTicketModalOpen}
                         onClose={handleCloseTransferTicketModal}
                         ticketid={ticket.id}
+                        ticket={ticket}
                     />
                 )}
                 {scheduleModalOpen && (

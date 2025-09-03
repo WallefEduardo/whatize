@@ -43,7 +43,7 @@
 		"formik-material-ui": "^3.0.1",
 		"framer-motion": "^10.16.16",
 		"gn-api-sdk-node": "^3.0.2",
-		"html2pdf.js": "^0.10.1",
+		"html2pdf.js": "^0.9.3",
 		"i18next": "^19.8.2",
 		"i18next-browser-languagedetector": "^6.0.1",
 		"icons": "^1.0.0",

@@ -586,6 +586,7 @@ const UpdateTicketService = async ({
     return { ticket, oldStatus, oldUserId };
   } catch (err) {
     console.error("erro ao atualizar o ticket", ticketId, "ticketData", ticketData);
+    console.error("Erro detalhado na transferência:", err.message, err.stack);
     throw new AppError("ERR_EDITING_WAPP_MSG");
   }
 };
