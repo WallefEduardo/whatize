@@ -115,7 +115,8 @@ async function handleVerifySchedules(job) {
         status: "PENDENTE",
         sentAt: null,
         sendAt: {
-          [Op.lte]: moment().format("YYYY-MM-DD HH:mm:ss")
+          [Op.gte]: moment().format("YYYY-MM-DD HH:mm:ss"),
+          [Op.lte]: moment().add("30", "seconds").format("YYYY-MM-DD HH:mm:ss")
         }
       },
       include: [{ model: Contact, as: "contact" }, { model: User, as: "user", attributes: ["name"] }],

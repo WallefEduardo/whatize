@@ -62,6 +62,7 @@
     "link-preview-js": "^3.0.5",
     "lodash": "^4.17.21",
     "microsoft-cognitiveservices-speech-sdk": "1.31.0",
+    "moment": "^2.30.1",
     "multer": "^1.4.4",
     "mustache": "^4.2.0",
     "mysql2": "^2.3.3",
