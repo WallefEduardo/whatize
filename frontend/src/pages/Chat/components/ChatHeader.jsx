@@ -51,7 +51,9 @@ const ContactName = styled(Typography)(() => ({
   textOverflow: 'ellipsis',
 }));
 
-const ContactStatus = styled(Typography)(({ isOnline }) => ({
+const ContactStatus = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isOnline',
+})(({ isOnline }) => ({
   fontSize: '13px',
   color: isOnline ? 'var(--color-accent)' : 'var(--text-secondary)',
   fontWeight: isOnline ? 500 : 400,

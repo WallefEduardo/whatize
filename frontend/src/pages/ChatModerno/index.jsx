@@ -29,12 +29,14 @@ import VirtualizedContactList from '../Chat/components/VirtualizedContactList';
 // Mock data e API
 import {
   getContacts,
-  getMessages,
   getProfile,
   sendMessage,
   deleteMessage,
   isObjectNotEmpty
 } from '../Chat/data/mockData';
+
+// API real para mensagens
+import api from '../../services/api';
 
 // Hooks otimizados
 import useOptimizedTickets from '../../hooks/useOptimizedTickets';
@@ -143,6 +145,7 @@ const ChatModerno = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
+  const [selectedContact, setSelectedContact] = useState(null);
   
   // Estados do chat
   const [showSidebar, setShowSidebar] = useState(false);
@@ -282,17 +285,44 @@ const ChatModerno = () => {
   useEffect(() => {
     if (!selectedChatId) {
       setMessages([]);
+      setSelectedContact(null);
       return;
     }
     
     const loadMessages = async () => {
       setMessagesLoading(true);
       try {
-        const messagesData = await getMessages(selectedChatId);
-        setMessages(messagesData.chat?.chat || []);
+        // Buscar mensagens reais da API usando o ticketId
+        const response = await api.get(`/messages/${selectedChatId}`);
+        const messagesData = response.data.messages || []; // <- Correção aqui!
+        
+        // Buscar dados do ticket
+        const ticketResponse = await api.get(`/tickets/${selectedChatId}`);
+        const ticketData = ticketResponse.data;
+        
+        // NÃO chamar setCurrentTicket para evitar redirecionamento
+        // setCurrentTicket(ticketData); <- REMOVIDO para evitar redirecionamento
+        
+        // Garantir que messages é sempre um array
+        setMessages(Array.isArray(messagesData) ? messagesData : []);
+        
+        // Definir contato selecionado baseado no ticket
+        if (ticketData?.contact) {
+          setSelectedContact({
+            id: ticketData.contact.id,
+            name: ticketData.contact.name,
+            avatar: ticketData.contact.profilePicUrl || ticketData.contact.urlPicture,
+            phone: ticketData.contact.number
+          });
+        }
+        
+        console.log('🔄 Mensagens carregadas:', messagesData?.length, 'mensagens para ticket:', selectedChatId);
+        console.log('📊 Estrutura da resposta da API:', { responseData: response.data, messages: messagesData });
       } catch (error) {
         console.error('Error loading messages:', error);
         setMessages([]);
+        // setCurrentTicket(null); <- REMOVIDO para evitar redirecionamento
+        setSelectedContact(null);
       } finally {
         setMessagesLoading(false);
       }
@@ -478,8 +508,11 @@ const ChatModerno = () => {
     };
   }, [shouldCollapseDrawer, isSmallScreen, originalDrawerState, setDrawerOpen]);
 
-  // Get selected contact
-  const selectedContact = contacts.find(c => c.id === selectedChatId);
+  // Update selected contact when selectedChatId or contacts change
+  useEffect(() => {
+    const contact = contacts.find(c => c.id === selectedChatId);
+    setSelectedContact(contact || null);
+  }, [selectedChatId, contacts]);
 
   // Loading state
   if (loading) {
@@ -1174,7 +1207,7 @@ const ChatModerno = () => {
                       .map((ticket) => {
                       // Converter ticket para formato de contact para manter compatibilidade
                       const contactFromTicket = {
-                        id: ticket.uuid,
+                        id: ticket.id, // Usar ticket.id em vez de uuid
                         name: ticket.contact?.name || 'Contato sem nome',
                         avatar: ticket.contact?.profilePicUrl || ticket.contact?.urlPicture || null,
                         status: ticket.status === 'open' ? 'online' : 'offline',
@@ -1190,7 +1223,7 @@ const ChatModerno = () => {
                       
                       return (
                         <ContactList
-                          key={ticket.uuid}
+                          key={ticket.id}
                           contact={contactFromTicket}
                           selectedChatId={selectedChatId}
                           openChat={openChat}
@@ -1253,7 +1286,8 @@ const ChatModerno = () => {
                           </Box>
                         ) : (
                           <>
-                            {messages.map((message, index) => (
+                            {Array.isArray(messages) && messages.length > 0 ? (
+                              messages.map((message, index) => (
                               <MessageItem
                                 key={`message-${index}-${message.id}`}
                                 message={message}
@@ -1268,7 +1302,19 @@ const ChatModerno = () => {
                                 handlePinMessage={handlePinMessage}
                                 pinnedMessages={pinnedMessages}
                               />
-                            ))}
+                            ))
+                            ) : (
+                              <Box sx={{ 
+                                display: 'flex', 
+                                justifyContent: 'center', 
+                                alignItems: 'center',
+                                py: 8 
+                              }}>
+                                <Typography color="textSecondary">
+                                  Nenhuma mensagem encontrada para esta conversa.
+                                </Typography>
+                              </Box>
+                            )}
                             <div ref={messagesEndRef} />
                           </>
                         )}

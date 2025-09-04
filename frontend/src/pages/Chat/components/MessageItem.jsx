@@ -148,22 +148,27 @@ const MessageItem = ({
   handlePinMessage,
   pinnedMessages
 }) => {
-  const { senderId, content, timestamp, status, isReply, replyTo, isPinned } = message;
+  // Adaptar para API real - usar campos reais da mensagem
+  const messageText = message.body || message.content || '';
+  const messageTime = message.createdAt || message.timestamp;
+  const messageId = message.id;
+  const isSent = message.fromMe || false; // Campo real da API
+  const ack = message.ack; // Status de entrega
+  const quotedMsg = message.quotedMsg; // Mensagem citada/reply
   
-  const isSent = senderId === 'user-1'; // Assumindo que 'user-1' é o usuário logado
   const sender = isSent ? profile : contact;
   
-  // Verificar se a mensagem está pinada
+  // Verificar se a mensagem está pinada (apenas pelo array pinnedMessages)
   const isMessagePinned = pinnedMessages?.some(
     pinnedMessage => pinnedMessage.id === message.id
-  ) || isPinned;
+  ) || false;
 
   const handleDeleteMessage = () => {
     onDelete(selectedChatId, index);
   };
 
   const handleReplyMessage = () => {
-    handleReply(content, contact);
+    handleReply(messageText, contact);
   };
 
   const handleForwardMessage = () => {
@@ -172,10 +177,10 @@ const MessageItem = ({
 
   const handlePinMessageLocal = () => {
     const pinData = {
-      id: message.id,
-      content: content,
+      id: messageId,
+      content: messageText,
       sender: sender,
-      timestamp: timestamp,
+      timestamp: messageTime,
       chatId: selectedChatId,
       index: index
     };
@@ -267,12 +272,12 @@ const MessageItem = ({
         )}
 
         {/* Reply Preview */}
-        {isReply && replyData && (
+        {quotedMsg && (
           <ReplyMessage isSent={isSent}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', mb: '2px' }}>
               <ArrowUturnLeftIcon style={{ width: '12px', height: '12px' }} />
               <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                Respondendo {isSent ? `a ${replyData?.contact?.name}` : 'você'}
+                Respondendo {isSent ? `a ${quotedMsg?.contact?.name}` : 'você'}
               </Typography>
             </Box>
             <Typography variant="caption" sx={{ 
@@ -282,7 +287,7 @@ const MessageItem = ({
               whiteSpace: 'nowrap',
               maxWidth: '200px'
             }}>
-              {replyData?.message || 'Mensagem original'}
+              {quotedMsg?.body || 'Mensagem original'}
             </Typography>
           </ReplyMessage>
         )}
@@ -290,14 +295,14 @@ const MessageItem = ({
         {/* Message Bubble */}
         <MessageBubble isSent={isSent}>
           <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
-            {content}
+            {messageText}
           </Typography>
         </MessageBubble>
 
         {/* Message Time and Status */}
         <MessageTime isSent={isSent}>
-          {formatTime(timestamp)}
-          {isSent && <MessageStatus status={status} />}
+          {formatTime(messageTime)}
+          {isSent && <MessageStatus status={ack} />}
         </MessageTime>
       </MessageContent>
 

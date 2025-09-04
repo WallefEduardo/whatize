@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { cn } from '../../../utils/cn';
@@ -69,6 +69,7 @@ import ConversationDropdown from '../../../components/ui/ConversationDropdown';
 import TransferTicketModernModal from '../../../components/TransferTicketModernModal';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 import ResolverTicketModal from '../../../components/ResolverTicketModal';
+import TagSelector from '../../../components/ui/TagSelector';
 
 const StyledContactItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isSelected',
@@ -188,6 +189,39 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
   const [resolverModalOpen, setResolverModalOpen] = useState(false);
+  const [tagModalOpen, setTagModalOpen] = useState(false);
+  const [availableTags, setAvailableTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState([]);
+  const tagButtonRef = useRef(null);
+
+  // Buscar etiquetas disponíveis
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const { data } = await api.get('/tags/list', { params: { kanban: 0 } });
+        setAvailableTags(data || []);
+      } catch (err) {
+        console.error('Erro ao buscar etiquetas:', err);
+      }
+    };
+    fetchTags();
+  }, []);
+
+  // Buscar etiquetas do ticket atual
+  useEffect(() => {
+    if (ticket?.id) {
+      const fetchTicketTags = async () => {
+        try {
+          const { data } = await api.get(`/ticket-tags/${ticket.id}`);
+          setSelectedTags(data || []);
+        } catch (err) {
+          console.error('Erro ao buscar etiquetas do ticket:', err);
+          setSelectedTags([]);
+        }
+      };
+      fetchTicketTags();
+    }
+  }, [ticket?.id]);
   
   const isSelected = id === selectedChatId;
   
@@ -311,6 +345,38 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
     }
   };
 
+  // Função para adicionar/remover etiqueta
+  const handleTagToggle = async (tag) => {
+    if (!ticket?.id) return;
+
+    try {
+      const isSelected = selectedTags.some(t => t.id === tag.id);
+      
+      if (isSelected) {
+        // Remover etiqueta
+        await api.delete(`/ticket-tags/${ticket.id}/${tag.id}`);
+        setSelectedTags(prev => prev.filter(t => t.id !== tag.id));
+      } else {
+        // Adicionar etiqueta
+        await api.put(`/ticket-tags/${ticket.id}/${tag.id}`);
+        setSelectedTags(prev => [...prev, tag]);
+      }
+      
+      // Atualizar lista de tickets se houver callback
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      console.error('Erro ao atualizar etiqueta:', err);
+      toastError(err);
+    }
+  };
+
+  // Função para criar nova etiqueta
+  const handleCreateTag = () => {
+    setTagModalOpen(false);
+    // Aqui você pode abrir o modal de criar etiqueta
+    // setCreateTagModalOpen(true);
+  };
+
   return (
     <StyledContactItem 
       isSelected={isSelected}
@@ -374,9 +440,44 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
                 digitando...
               </TypingIndicator>
             ) : (
-              <LastMessage variant="caption">
-                {lastMessage}
-              </LastMessage>
+              <>
+                <LastMessage variant="caption">
+                  {lastMessage}
+                </LastMessage>
+                
+                {/* Badge das etiquetas */}
+                {selectedTags.length > 0 && (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexWrap: 'wrap', 
+                    gap: 0.5, 
+                    mt: 0.5,
+                    alignItems: 'flex-start'
+                  }}>
+                    {selectedTags.map((tag) => (
+                      <Box
+                        key={tag.id}
+                        sx={{
+                          backgroundColor: tag.color || '#00BCD4',
+                          color: 'white',
+                          fontSize: '9px',
+                          fontWeight: 600,
+                          padding: '2px 6px',
+                          borderRadius: '8px',
+                          lineHeight: 1,
+                          maxWidth: '80px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          textTransform: 'uppercase'
+                        }}
+                      >
+                        {tag.name}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </>
             )}
           </Box>
           
@@ -456,7 +557,20 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
                     onFinalizarConversa={handleFinalizarConversa}
                     onTransferirConversa={handleTransferirConversa}
                     onMarcarNaoLido={handleMarcarNaoLido}
-                    onAdicionarEtiqueta={() => console.log('Adicionar Etiqueta')}
+                    onAdicionarEtiqueta={(e) => {
+                      // Captura a posição do clique antes do menu fechar
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const fixedPosition = {
+                        top: rect.top,
+                        left: rect.left,
+                        right: rect.right,
+                        bottom: rect.bottom,
+                        width: rect.width,
+                        height: rect.height
+                      };
+                      tagButtonRef.current = fixedPosition;
+                      setTagModalOpen(true);
+                    }}
                     onSilenciarNotificacoes={() => console.log('Silenciar Notificações')}
                     onFixarConversa={onPinConversation}
                     isPinned={isPinned}
@@ -573,6 +687,18 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
         onResolverSemMensagem={handleFinalizarSemDespedida}
         onResolverComMensagem={handleConfirmFinalizarConversa}
         contactName={name}
+      />
+
+      {/* Seletor de etiquetas - renderizado via Portal */}
+      <TagSelector
+        isOpen={tagModalOpen}
+        onClose={() => setTagModalOpen(false)}
+        anchorEl={tagButtonRef.current}
+        availableTags={availableTags}
+        selectedTags={selectedTags}
+        onTagToggle={handleTagToggle}
+        onCreateTag={handleCreateTag}
+        entityType="Conversa"
       />
 
       {/* Modal de confirmação para finalizar */}

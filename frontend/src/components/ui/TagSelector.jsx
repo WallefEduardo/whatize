@@ -1,20 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { Box, Typography, TextField, Button } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { Search, Plus, X } from 'lucide-react';
 import StatusBadge from '../StatusBadge';
 
-const SelectorContainer = styled(Box)(({ isOpen, showAbove }) => ({
-  position: 'absolute',
-  ...(showAbove ? {
-    bottom: '100%',
-    marginBottom: '10px',
-  } : {
-    top: '100%',
-    marginTop: '10px',
-  }),
-  left: '50%',
-  transform: 'translateX(-50%)',
+const SelectorContainer = styled(Box)(({ position }) => ({
+  position: 'fixed',
+  top: position?.top || 0,
+  left: position?.left || 0,
   backgroundColor: 'var(--bg-primary)',
   border: '1px solid var(--border-primary)',
   borderRadius: '12px',
@@ -22,8 +16,12 @@ const SelectorContainer = styled(Box)(({ isOpen, showAbove }) => ({
   zIndex: 9999,
   width: '280px',
   maxHeight: '400px',
-  display: isOpen ? 'block' : 'none',
   overflow: 'hidden',
+  animation: 'fadeIn 0.2s ease-out',
+  '@keyframes fadeIn': {
+    from: { opacity: 0, transform: 'scale(0.95)' },
+    to: { opacity: 1, transform: 'scale(1)' }
+  }
 }));
 
 const Header = styled(Box)(() => ({
@@ -117,11 +115,14 @@ const TagSelector = ({
   selectedTags = [],
   onTagToggle,
   onCreateTag,
-  entityType = 'Conversa'
+  entityType = 'Conversa',
+  skipPortal = false,
+  anchorEl = null
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAbove, setShowAbove] = useState(false);
-  const containerRef = useRef(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef(null);
+  const dropdownRef = useRef(null);
   
   // Tags mockadas para demonstração
   const mockTags = [
@@ -157,24 +158,66 @@ const TagSelector = ({
     }
   };
   
-  // Detecta se deve aparecer acima ou abaixo
+  // Calcula a posição do dropdown baseado no trigger ou anchorEl
   useEffect(() => {
-    if (isOpen && containerRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const dropdownHeight = 400;
-      const spaceBelow = viewportHeight - containerRect.bottom;
+    const elementRef = anchorEl || triggerRef.current;
+    if (isOpen && elementRef && !skipPortal) {
+      const calculatePosition = () => {
+        // Se elementRef é um objeto com coordenadas (posição fixa)
+        let triggerRect;
+        if (elementRef.getBoundingClientRect) {
+          triggerRect = elementRef.getBoundingClientRect();
+        } else if (elementRef.current?.getBoundingClientRect) {
+          triggerRect = elementRef.current.getBoundingClientRect();
+        } else if (elementRef.top !== undefined) {
+          // É um objeto de posição fixa
+          triggerRect = elementRef;
+        } else {
+          return;
+        }
+        const dropdownWidth = 280;
+        const dropdownHeight = 400;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const margin = 8;
+        
+        let top = triggerRect.bottom + margin;
+        let left = triggerRect.left + (triggerRect.width / 2) - (dropdownWidth / 2);
+        
+        // Verifica se há espaço abaixo
+        if (top + dropdownHeight > viewportHeight - 20) {
+          // Mostra acima se não houver espaço abaixo
+          top = triggerRect.top - dropdownHeight - margin;
+        }
+        
+        // Ajusta horizontalmente se necessário
+        if (left < 10) {
+          left = 10;
+        } else if (left + dropdownWidth > viewportWidth - 10) {
+          left = viewportWidth - dropdownWidth - 10;
+        }
+        
+        setDropdownPosition({ top, left });
+      };
       
-      // Se não há espaço embaixo, mostra em cima
-      setShowAbove(spaceBelow < dropdownHeight + 20);
+      calculatePosition();
+      
+      // Recalcula ao redimensionar a janela
+      window.addEventListener('resize', calculatePosition);
+      window.addEventListener('scroll', calculatePosition, true);
+      
+      return () => {
+        window.removeEventListener('resize', calculatePosition);
+        window.removeEventListener('scroll', calculatePosition, true);
+      };
     }
-  }, [isOpen]);
+  }, [isOpen, anchorEl, skipPortal]);
   
-  return (
-    <Box ref={containerRef} sx={{ position: 'relative', display: 'inline-block' }}>
-      <SelectorContainer isOpen={isOpen} showAbove={showAbove}>
-          {/* Header */}
-          <Header>
+  // Conteúdo do dropdown
+  const dropdownContent = isOpen && (
+    <SelectorContainer position={dropdownPosition} ref={dropdownRef}>
+      {/* Header */}
+        <Header>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Typography variant="body2" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                 Etiquetas
@@ -251,7 +294,7 @@ const TagSelector = ({
                 </Box>
                 
                 <Checkbox checked={isTagSelected(tag.id)}>
-                  <Plus />
+                  {isTagSelected(tag.id) && <Plus size={10} />}
                 </Checkbox>
               </TagItem>
             ))}
@@ -272,22 +315,44 @@ const TagSelector = ({
               </Typography>
             )}
           </TagsList>
-        </SelectorContainer>
-        
-      
-      {/* Overlay para fechar */}
-      {isOpen && (
-        <Box
-          onClick={onClose}
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 9998,
-          }}
-        />
+    </SelectorContainer>
+  );
+  
+  // Overlay separado
+  const overlay = isOpen && (
+    <Box
+      onClick={onClose}
+      sx={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9998,
+      }}
+    />
+  );
+  
+  // Se skipPortal, renderiza direto; senão usa Portal
+  if (skipPortal) {
+    return (
+      <>
+        {dropdownContent}
+        {overlay}
+      </>
+    );
+  }
+  
+  // Renderiza com Portal
+  return (
+    <Box ref={triggerRef} sx={{ position: 'relative', display: 'inline-block' }}>
+      {/* O dropdown é renderizado via Portal quando não skipPortal */}
+      {isOpen && ReactDOM.createPortal(
+        <>
+          {dropdownContent}
+          {overlay}
+        </>,
+        document.body
       )}
     </Box>
   );

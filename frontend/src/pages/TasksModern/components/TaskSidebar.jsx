@@ -68,10 +68,25 @@ const priorityFilters = [
   },
 ];
 
-const TaskSidebar = ({ contacts }) => {
+const TaskSidebar = ({ contacts, show, onClose, stats }) => {
 
   return (
-    <Box>
+    <Box
+      sx={{
+        width: '280px',
+        minWidth: '280px',
+        height: '100%',
+        backgroundColor: 'white',
+        border: '1px solid #e0e0e0',
+        borderRadius: '8px',
+        overflowY: 'auto',
+        px: 3,
+        py: 3,
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
+      <Box>
       {/* Task Filters */}
       <List sx={{ p: 0 }}>
         {taskFilters.map((item, index) => (
@@ -253,6 +268,7 @@ const TaskSidebar = ({ contacts }) => {
           </Box>
         )}
       </Box>
+    </Box>
     </Box>
   );
 };

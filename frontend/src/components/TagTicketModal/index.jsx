@@ -27,7 +27,7 @@ import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { IconButton, InputAdornment, FormControl } from "@mui/material";
+import { IconButton, InputAdornment, FormControl, Box } from "@mui/material";
 
 
 const useStyles = () => ({
@@ -62,11 +62,6 @@ const useStyles = () => ({
 		width: 20,
 		height: 20,
 	},
-    multFieldLine: {
-    	display: 'flex',
-    	flexDirection: 'row',
-    	alignItems: 'center',
-  	},
 });
 
 const TagSchema = Yup.object().shape({
@@ -75,7 +70,7 @@ const TagSchema = Yup.object().shape({
 		.required("Obrigatório")
 });
 
-const TagModal = ({ open, onClose, tagId, reload }) => {
+const TagTicketModal = ({ open, onClose, tagId, reload }) => {
 	const classes = useStyles();
 	const { user } = useContext(AuthContext);
 	const [colorPickerModalOpen, setColorPickerModalOpen] = useState(false);
@@ -136,10 +131,10 @@ const handleKanbanChange = (e) => {
     setTag((prev) => ({
       ...prev,
       kanban: kanbanValue,
-    });
+    }));
   };
 	return (
-		<Box sx={tagModalStyles.root}>
+		<Box sx={classes.root}>
 			<Dialog
 				open={open}
 				onClose={handleClose}
@@ -150,70 +145,54 @@ const handleKanbanChange = (e) => {
 				<DialogTitle id="form-dialog-title">
 					{ (tagId ? `${i18n.t("tagModal.title.edit")}` : `${i18n.t("tagModal.title.add")}`) }
 				</DialogTitle>
-				<Box component="form" onSubmit={handleSubmit(handleSaveTag)}>
+				<Box component="form" onSubmit={(e) => { e.preventDefault(); handleSaveTag(tag); }}>
 					<DialogContent dividers>
-						<Box sx={tagModalStyles.multFieldLine}>
-							<Controller
-								name="name"
-								control={control}
-								render={({ field }) => (
-									<TextField
-										{...field}
-										label={i18n.t("tagModal.form.name")}
-										error={Boolean(errors.name)}
-										helperText={errors.name?.message}
-										variant="outlined"
-										margin="dense"
-										onChange={(e) => {
-											field.onChange(e);
-											setTag(prev => ({ ...prev, name: e.target.value });
-										}}
-										fullWidth
-									/>
-								)}
+						<Box sx={classes.multFieldLine}>
+							<TextField
+								label={i18n.t("tagModal.form.name")}
+								value={tag.name}
+								variant="outlined"
+								margin="dense"
+								onChange={(e) => {
+									setTag(prev => ({ ...prev, name: e.target.value }));
+								}}
+								fullWidth
 							/>
 						</Box>
 						<br />
-						<Box sx={tagModalStyles.multFieldLine}>
-							<Controller
-								name="color"
-								control={control}
-								render={({ field }) => (
-									<TextField
-										{...field}
-										fullWidth
-										label={i18n.t("tagModal.form.color")}
-										id="color"
-										error={Boolean(errors.color)}
-										helperText={errors.color?.message}
-										InputProps={{
-											startAdornment: (
-												<InputAdornment position="start">
-													<div
-														style={{ backgroundColor: watchedValues.color }}
-														sx={tagModalStyles.colorAdorment}
-													></div>
-												</InputAdornment>
-											),
-											endAdornment: (
-												<IconButton
-													size="small"
-													color="default"
-													onClick={() => setColorPickerModalOpen(!colorPickerModalOpen)}
-												>
-													<Colorize />
-												</IconButton>
-											),
-										}}
-										variant="outlined"
-										margin="dense"
-									/>
-								)}
+						<Box sx={classes.multFieldLine}>
+							<TextField
+								fullWidth
+								label={i18n.t("tagModal.form.color")}
+								id="color"
+								value={tag.color}
+								InputProps={{
+									startAdornment: (
+										<InputAdornment position="start">
+											<div
+												style={{ backgroundColor: tag.color }}
+												sx={classes.colorAdorment}
+											></div>
+										</InputAdornment>
+									),
+									endAdornment: (
+										<IconButton
+											size="small"
+											color="default"
+											onClick={() => setColorPickerModalOpen(!colorPickerModalOpen)}
+										>
+											<Colorize />
+										</IconButton>
+									),
+								}}
+								variant="outlined"
+								margin="dense"
+								onChange={(e) => setTag(prev => ({ ...prev, color: e.target.value }))}
 							/>
 						</Box>
                                 {(user.profile === "admin" || user.profile === "supervisor") && (
                                 <>
-						<Box sx={tagModalStyles.multFieldLineRow}>
+						<Box sx={classes.multFieldLine}>
         						<FormControlLabel
           							control={
             							<Checkbox
@@ -240,8 +219,7 @@ const handleKanbanChange = (e) => {
 									value={tag.color}
 									onChange={val => {
 										const newColor = `#${val.hex}`;
-										setTag(prev => ({ ...prev, color: newColor });
-										setValue('color', newColor);
+										setTag(prev => ({ ...prev, color: newColor }));
 									}}
 								/>
 							</div>
@@ -251,7 +229,6 @@ const handleKanbanChange = (e) => {
 						<Button
 							onClick={handleClose}
 							color="secondary"
-							disabled={isSubmitting}
 							variant="outlined"
 						>
 							{i18n.t("tagModal.buttons.cancel")}
@@ -259,19 +236,12 @@ const handleKanbanChange = (e) => {
 						<Button
 							type="submit"
 							color="primary"
-							disabled={isSubmitting}
 							variant="contained"
-							sx={tagModalStyles.btnWrapper}
+							sx={classes.btnWrapper}
 						>
 							{tagId
 								? `${i18n.t("tagModal.buttons.okEdit")}`
 								: `${i18n.t("tagModal.buttons.okAdd")}`}
-							{isSubmitting && (
-								<CircularProgress
-									size={24}
-									sx={tagModalStyles.buttonProgress}
-								/>
-							)}
 						</Button>
 					</DialogActions>
 				</Box>
@@ -280,4 +250,4 @@ const handleKanbanChange = (e) => {
 	);
 };
 
-export default TagModal;
+export default TagTicketModal;

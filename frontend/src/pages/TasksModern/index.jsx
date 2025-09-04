@@ -2,12 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Paper,
   Typography,
-  Box,
-  useMediaQuery,
-  useTheme,
-  Card,
-  CardContent,
-  CardHeader,
+  Box
 } from '@mui/material';
 import { CheckSquare, Plus, Edit3, Trash2 } from 'lucide-react';
 
@@ -29,8 +24,6 @@ import { ListTasks, CreateTask, UpdateTask, DeleteTask, GetTaskStats } from '../
 import { toast } from 'react-toastify';
 
 const TasksModern = () => {
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.down('xl'));
 
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -41,7 +34,6 @@ const TasksModern = () => {
   const [openCreateModal, setOpenCreateModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
-  const [showSidebar, setShowSidebar] = useState(false);
 
   // Pagination
   const [pageNumber, setPageNumber] = useState(1);
@@ -272,12 +264,12 @@ const TasksModern = () => {
       render: (record) => (
         <ActionGroup>
           <ActionButton
-            icon={<Edit3 size={16} />}
+            icon={Edit3}
             onClick={() => handleEditTask(record)}
             color="primary"
           />
           <ActionButton
-            icon={<Trash2 size={16} />}
+            icon={Trash2}
             onClick={() => handleDeleteTask(record.id)}
             color="error"
           />
@@ -291,9 +283,6 @@ const TasksModern = () => {
     { label: "Tarefas", active: true }
   ];
 
-  // Debug do estado do modal
-  console.log('openCreateModal state:', openCreateModal);
-  console.log('Tasks state for table:', tasks, 'length:', tasks.length);
 
   return (
     <PageLayout
@@ -301,68 +290,41 @@ const TasksModern = () => {
       icon={<CheckSquare size={24} />}
       breadcrumbs={breadcrumbs}
     >
-      <Box sx={{ display: 'flex', height: '100%', gap: 2 }}>
-        {/* Sidebar */}
-        <TaskSidebar 
-          show={showSidebar} 
-          onClose={() => setShowSidebar(false)}
-          stats={stats}
-        />
-
-        {/* Conteúdo Principal */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {/* Header com busca e botão */}
         <Box sx={{ 
-          flex: 1, 
           display: 'flex', 
-          flexDirection: 'column',
-          ml: isDesktop ? 0 : showSidebar ? '250px' : 0,
-          transition: 'margin-left 0.3s ease'
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          mb: 3 
         }}>
-          {/* Header com busca e botão */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            mb: 3 
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <SearchInput
-                value={searchTerm}
-                onChange={setSearchTerm}
-                placeholder="Buscar tarefas..."
-                style={{ width: 300 }}
-              />
-            </Box>
-            <GradientButton
-              startIcon={<Plus size={20} />}
-              onClick={() => {
-                console.log('Botão clicado, abrindo modal...');
-                setOpenCreateModal(true);
-              }}
-            >
-              Nova Tarefa
-            </GradientButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <SearchInput
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="Buscar tarefas..."
+              style={{ width: 300 }}
+            />
           </Box>
+          <GradientButton
+            startIcon={<Plus size={20} />}
+            onClick={() => setOpenCreateModal(true)}
+          >
+            Nova Tarefa
+          </GradientButton>
+        </Box>
+
+        {/* Container principal com sidebar e tabela */}
+        <Box sx={{ display: 'flex', gap: 3, flex: 1 }}>
+          {/* Sidebar */}
+          <TaskSidebar 
+            stats={stats}
+          />
 
           {/* Tabela */}
           <Paper sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            {console.log('Passando para BaseTable - data:', tasks, 'columns:', columns.length)}
-            
-            {/* Debug simples - mostrar dados brutos */}
-            <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
-              <Typography variant="h6">DEBUG - Dados recebidos:</Typography>
-              <Typography variant="body2">Total de tarefas: {tasks.length}</Typography>
-              {tasks.map(task => (
-                <Box key={task.id} sx={{ mt: 1, p: 1, bgcolor: '#f5f5f5' }}>
-                  <Typography><strong>ID:</strong> {task.id}</Typography>
-                  <Typography><strong>Título:</strong> {task.title}</Typography>
-                  <Typography><strong>Status:</strong> {task.status}</Typography>
-                  <Typography><strong>Responsável:</strong> {task.assignedTo?.name}</Typography>
-                </Box>
-              ))}
-            </Box>
-            
             <BaseTable
-              data={tasks}
+              records={tasks}
               columns={columns}
               loading={loading}
               pagination={{
@@ -380,10 +342,7 @@ const TasksModern = () => {
       {/* Modal de Criar Tarefa */}
       <ModernModal
         open={openCreateModal}
-        onClose={() => {
-          console.log('Modal fechando...');
-          setOpenCreateModal(false);
-        }}
+        onClose={() => setOpenCreateModal(false)}
         title="Nova Tarefa"
         maxWidth="md"
       >
