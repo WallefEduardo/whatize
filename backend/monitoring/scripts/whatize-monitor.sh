@@ -525,22 +525,23 @@ monitoring_menu() {
         echo "14. ⚙️  Configurar Git"
         echo "15. 🌿 Listar Branches"
         echo "16. 🔄 Trocar de Branch"
+        echo "17. 🚀 Instalação da Atualização"
         echo ""
         echo -e "${GREEN}💾 BACKUP DO BANCO:${NC}"
         echo ""
-        echo "17. 💾 Criar backup do banco de dados"
-        echo "18. 📋 Listar backups existentes"
-        echo "19. 🧹 Limpar backups antigos"
-        echo "20. 🔌 Testar conexão com banco"
+        echo "18. 💾 Criar backup do banco de dados"
+        echo "19. 📋 Listar backups existentes"
+        echo "20. 🧹 Limpar backups antigos"
+        echo "21. 🔌 Testar conexão com banco"
         echo ""
-        echo "21. 📚 Ver comandos úteis"
+        echo "22. 📚 Ver comandos úteis"
         echo ""
         echo -e "${GREEN}🚀 PRODUÇÃO:${NC}"
-        echo "22. 🚀 Iniciar Monitor Automático de Produção"
+        echo "23. 🚀 Iniciar Monitor Automático de Produção"
         echo "0. 🚪 Sair"
         echo ""
         
-        read -p "Escolha uma opção (0-22): " option
+        read -p "Escolha uma opção (0-23): " option
         
         case $option in
             1) show_system_status ;;
@@ -559,12 +560,13 @@ monitoring_menu() {
             14) setup_git_config ;;
             15) git_list_branches ;;
             16) git_switch_branch ;;
-            17) create_database_backup ;;
-            18) list_database_backups ;;
-            19) clean_database_backups ;;
-            20) test_database_connection ;;
-            21) show_useful_commands ;;
-            22) start_production_monitor ;;
+            17) install_updates_menu ;;
+            18) create_database_backup ;;
+            19) list_database_backups ;;
+            20) clean_database_backups ;;
+            21) test_database_connection ;;
+            22) show_useful_commands ;;
+            23) start_production_monitor ;;
             0) 
                 echo ""
                 print_info "Saindo do Whatize Monitor..."
@@ -1834,7 +1836,316 @@ git_switch_branch() {
     read -p "Pressione Enter para voltar ao menu..."
 }
 
-# Função 17: Criar backup do banco de dados
+# Função 17: Menu de Instalação de Atualizações
+install_updates_menu() {
+    clear
+    print_header
+    echo -e "${WHITE}🚀 INSTALAÇÃO DA ATUALIZAÇÃO${NC}"
+    echo -e "${WHITE}=============================${NC}"
+    echo ""
+    
+    print_warning "⚠️  ATENÇÃO: Este processo irá reinstalar as dependências!"
+    echo ""
+    
+    echo -e "${CYAN}Escolha o ambiente para atualizar:${NC}"
+    echo ""
+    echo "1. 🔧 Backend (API/Servidor)"
+    echo "2. 🎨 Frontend (Interface)"
+    echo "3. 🔙 Voltar ao menu"
+    echo ""
+    
+    read -p "Escolha uma opção (1-3): " env_option
+    
+    case $env_option in
+        1)
+            install_backend_updates
+            ;;
+        2)
+            install_frontend_updates
+            ;;
+        3)
+            return
+            ;;
+        *)
+            print_error "Opção inválida!"
+            sleep 2
+            ;;
+    esac
+}
+
+# Função para instalar atualizações do Backend
+install_backend_updates() {
+    clear
+    print_header
+    echo -e "${WHITE}🔧 INSTALAÇÃO DE ATUALIZAÇÕES - BACKEND${NC}"
+    echo -e "${WHITE}========================================${NC}"
+    echo ""
+    
+    print_warning "⚠️  Este processo irá:"
+    echo "• Parar os processos PM2 (opcional)"
+    echo "• Remover pasta dist/"
+    echo "• Remover node_modules/"
+    echo "• Remover package-lock.json"
+    echo "• Reinstalar dependências (npm install)"
+    echo "• Compilar o projeto (npm run build)"
+    echo "• Executar migrações do banco (npm run db:migrate)"
+    echo ""
+    
+    read -p "Deseja continuar? (s/n): " confirm
+    if [ "$confirm" != "s" ] && [ "$confirm" != "S" ]; then
+        print_info "Instalação cancelada."
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    fi
+    
+    echo ""
+    
+    # Perguntar sobre PM2
+    read -p "Deseja parar todos os processos PM2? (s/n): " stop_pm2
+    if [ "$stop_pm2" = "s" ] || [ "$stop_pm2" = "S" ]; then
+        print_step "Parando processos PM2..."
+        if command -v pm2 &> /dev/null; then
+            pm2 stop all 2>/dev/null || print_warning "Nenhum processo PM2 rodando ou PM2 não instalado"
+        else
+            print_warning "PM2 não está instalado"
+        fi
+    fi
+    
+    # Navegar para o diretório backend
+    print_step "Navegando para o diretório backend..."
+    cd $BACKEND_DIR || {
+        print_error "Erro ao acessar diretório backend!"
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    }
+    
+    # Remover dist
+    if [ -d "dist" ]; then
+        print_step "Removendo pasta dist..."
+        rm -rf dist
+        print_success "Pasta dist removida!"
+    fi
+    
+    # Remover node_modules
+    if [ -d "node_modules" ]; then
+        print_step "Removendo pasta node_modules..."
+        rm -rf node_modules
+        print_success "Pasta node_modules removida!"
+    fi
+    
+    # Remover package-lock.json
+    if [ -f "package-lock.json" ]; then
+        print_step "Removendo package-lock.json..."
+        rm -f package-lock.json
+        print_success "package-lock.json removido!"
+    fi
+    
+    # Instalar dependências
+    print_step "Instalando dependências..."
+    echo ""
+    if npm install; then
+        print_success "Dependências instaladas com sucesso!"
+    else
+        print_error "Erro ao instalar dependências!"
+        echo ""
+        print_info "Tentando com npm install --force..."
+        if npm install --force; then
+            print_success "Dependências instaladas com --force!"
+        else
+            print_error "Falha na instalação das dependências!"
+            cd $BACKEND_DIR/monitoring/scripts
+            echo ""
+            read -p "Pressione Enter para voltar ao menu..."
+            return
+        fi
+    fi
+    
+    # Build do projeto
+    echo ""
+    print_step "Compilando o projeto..."
+    echo ""
+    if npm run build; then
+        print_success "Projeto compilado com sucesso!"
+    else
+        print_error "Erro ao compilar o projeto!"
+        cd $BACKEND_DIR/monitoring/scripts
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    fi
+    
+    # Executar migrações
+    echo ""
+    print_step "Verificando migrações do banco de dados..."
+    echo ""
+    
+    # Verificar se o comando de migração existe no package.json
+    if grep -q "db:migrate" package.json; then
+        print_step "Executando migrações..."
+        if npm run db:migrate; then
+            print_success "Migrações executadas com sucesso!"
+        else
+            print_warning "Erro ao executar migrações ou não há migrações pendentes!"
+        fi
+    else
+        print_info "Comando de migração não encontrado no package.json"
+    fi
+    
+    # Voltar para o diretório de scripts
+    cd $BACKEND_DIR/monitoring/scripts
+    
+    echo ""
+    print_success "✅ ATUALIZAÇÃO DO BACKEND CONCLUÍDA!"
+    echo ""
+    
+    # Perguntar se quer reiniciar PM2
+    if [ "$stop_pm2" = "s" ] || [ "$stop_pm2" = "S" ]; then
+        read -p "Deseja reiniciar os processos PM2? (s/n): " restart_pm2
+        if [ "$restart_pm2" = "s" ] || [ "$restart_pm2" = "S" ]; then
+            print_step "Reiniciando processos PM2..."
+            if command -v pm2 &> /dev/null; then
+                pm2 restart all 2>/dev/null || print_warning "Erro ao reiniciar PM2"
+                print_success "Processos PM2 reiniciados!"
+            fi
+        fi
+    fi
+    
+    echo ""
+    read -p "Pressione Enter para voltar ao menu..."
+}
+
+# Função para instalar atualizações do Frontend
+install_frontend_updates() {
+    clear
+    print_header
+    echo -e "${WHITE}🎨 INSTALAÇÃO DE ATUALIZAÇÕES - FRONTEND${NC}"
+    echo -e "${WHITE}=========================================${NC}"
+    echo ""
+    
+    print_warning "⚠️  Este processo irá:"
+    echo "• Parar os processos PM2 (opcional)"
+    echo "• Remover node_modules/"
+    echo "• Remover package-lock.json"
+    echo "• Reinstalar dependências (npm install --force)"
+    echo "• Compilar o projeto (npm run build)"
+    echo ""
+    
+    read -p "Deseja continuar? (s/n): " confirm
+    if [ "$confirm" != "s" ] && [ "$confirm" != "S" ]; then
+        print_info "Instalação cancelada."
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    fi
+    
+    echo ""
+    
+    # Perguntar sobre PM2
+    read -p "Deseja parar todos os processos PM2? (s/n): " stop_pm2
+    if [ "$stop_pm2" = "s" ] || [ "$stop_pm2" = "S" ]; then
+        print_step "Parando processos PM2..."
+        if command -v pm2 &> /dev/null; then
+            pm2 stop all 2>/dev/null || print_warning "Nenhum processo PM2 rodando ou PM2 não instalado"
+        else
+            print_warning "PM2 não está instalado"
+        fi
+    fi
+    
+    # Navegar para o diretório frontend
+    # Frontend está no mesmo nível que backend (na raiz do projeto)
+    FRONTEND_DIR="/www/wwwroot/WhatizeBeta/frontend"
+    
+    print_step "Navegando para o diretório frontend..."
+    
+    if [ ! -d "$FRONTEND_DIR" ]; then
+        print_error "Diretório frontend não encontrado!"
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    fi
+    
+    cd $FRONTEND_DIR || {
+        print_error "Erro ao acessar diretório frontend!"
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    }
+    
+    # Remover node_modules
+    if [ -d "node_modules" ]; then
+        print_step "Removendo pasta node_modules..."
+        rm -rf node_modules
+        print_success "Pasta node_modules removida!"
+    fi
+    
+    # Remover package-lock.json
+    if [ -f "package-lock.json" ]; then
+        print_step "Removendo package-lock.json..."
+        rm -f package-lock.json
+        print_success "package-lock.json removido!"
+    fi
+    
+    # Instalar dependências com --force
+    print_step "Instalando dependências (--force)..."
+    echo ""
+    if npm install --force; then
+        print_success "Dependências instaladas com sucesso!"
+    else
+        print_error "Erro ao instalar dependências!"
+        cd $BACKEND_DIR/monitoring/scripts
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    fi
+    
+    # Build do projeto
+    echo ""
+    print_step "Compilando o projeto frontend..."
+    echo ""
+    if npm run build; then
+        print_success "Frontend compilado com sucesso!"
+        echo ""
+        
+        # Verificar se a pasta build foi criada
+        if [ -d "build" ]; then
+            print_info "📁 Pasta build criada com sucesso!"
+        elif [ -d "dist" ]; then
+            print_info "📁 Pasta dist criada com sucesso!"
+        fi
+    else
+        print_error "Erro ao compilar o frontend!"
+        cd $BACKEND_DIR/monitoring/scripts
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    fi
+    
+    # Voltar para o diretório de scripts
+    cd $BACKEND_DIR/monitoring/scripts
+    
+    echo ""
+    print_success "✅ ATUALIZAÇÃO DO FRONTEND CONCLUÍDA!"
+    echo ""
+    
+    # Perguntar se quer reiniciar PM2
+    if [ "$stop_pm2" = "s" ] || [ "$stop_pm2" = "S" ]; then
+        read -p "Deseja reiniciar os processos PM2? (s/n): " restart_pm2
+        if [ "$restart_pm2" = "s" ] || [ "$restart_pm2" = "S" ]; then
+            print_step "Reiniciando processos PM2..."
+            if command -v pm2 &> /dev/null; then
+                pm2 restart all 2>/dev/null || print_warning "Erro ao reiniciar PM2"
+                print_success "Processos PM2 reiniciados!"
+            fi
+        fi
+    fi
+    
+    echo ""
+    read -p "Pressione Enter para voltar ao menu..."
+}
+
+# Função 18: Criar backup do banco de dados
 create_database_backup() {
     clear
     print_header
