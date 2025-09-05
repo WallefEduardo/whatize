@@ -523,22 +523,24 @@ monitoring_menu() {
         echo "12. 📥 Pull (puxar atualizações)"
         echo "13. 📊 Status do Git"
         echo "14. ⚙️  Configurar Git"
+        echo "15. 🌿 Listar Branches"
+        echo "16. 🔄 Trocar de Branch"
         echo ""
         echo -e "${GREEN}💾 BACKUP DO BANCO:${NC}"
         echo ""
-        echo "15. 💾 Criar backup do banco de dados"
-        echo "16. 📋 Listar backups existentes"
-        echo "17. 🧹 Limpar backups antigos"
-        echo "18. 🔌 Testar conexão com banco"
+        echo "17. 💾 Criar backup do banco de dados"
+        echo "18. 📋 Listar backups existentes"
+        echo "19. 🧹 Limpar backups antigos"
+        echo "20. 🔌 Testar conexão com banco"
         echo ""
-        echo "19. 📚 Ver comandos úteis"
+        echo "21. 📚 Ver comandos úteis"
         echo ""
         echo -e "${GREEN}🚀 PRODUÇÃO:${NC}"
-        echo "20. 🚀 Iniciar Monitor Automático de Produção"
+        echo "22. 🚀 Iniciar Monitor Automático de Produção"
         echo "0. 🚪 Sair"
         echo ""
         
-        read -p "Escolha uma opção (0-20): " option
+        read -p "Escolha uma opção (0-22): " option
         
         case $option in
             1) show_system_status ;;
@@ -555,12 +557,14 @@ monitoring_menu() {
             12) git_pull_updates ;;
             13) git_status ;;
             14) setup_git_config ;;
-            15) create_database_backup ;;
-            16) list_database_backups ;;
-            17) clean_database_backups ;;
-            18) test_database_connection ;;
-            19) show_useful_commands ;;
-            20) start_production_monitor ;;
+            15) git_list_branches ;;
+            16) git_switch_branch ;;
+            17) create_database_backup ;;
+            18) list_database_backups ;;
+            19) clean_database_backups ;;
+            20) test_database_connection ;;
+            21) show_useful_commands ;;
+            22) start_production_monitor ;;
             0) 
                 echo ""
                 print_info "Saindo do Whatize Monitor..."
@@ -1474,7 +1478,363 @@ setup_git_config() {
     read -p "Pressione Enter para voltar ao menu..."
 }
 
-# Função 15: Criar backup do banco de dados
+# Função 15: Listar Branches
+git_list_branches() {
+    clear
+    print_header
+    echo -e "${WHITE}🌿 LISTAR BRANCHES${NC}"
+    echo -e "${WHITE}==================${NC}"
+    echo ""
+    
+    # Verificar se estamos em um repositório Git
+    if ! check_git_repo; then
+        print_error "Este diretório não é um repositório Git!"
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    fi
+    
+    # Branch atual
+    current_branch=$(git branch --show-current 2>/dev/null || echo "main")
+    echo -e "${GREEN}🔸 Branch atual: $current_branch${NC}"
+    echo ""
+    
+    # Listar branches locais
+    print_step "Branches locais:"
+    echo ""
+    git branch | while IFS= read -r branch; do
+        if [[ "$branch" == *"*"* ]]; then
+            echo -e "${GREEN}$branch${NC} (atual)"
+        else
+            echo "  $branch"
+        fi
+    done
+    
+    echo ""
+    
+    # Verificar se há remote configurado
+    if git remote get-url origin > /dev/null 2>&1; then
+        # Fazer fetch para atualizar informações remotas
+        print_step "Buscando informações do repositório remoto..."
+        git fetch origin --prune 2>/dev/null
+        
+        echo ""
+        print_step "Branches remotos:"
+        echo ""
+        git branch -r | grep -v "HEAD" | while IFS= read -r branch; do
+            # Remover "origin/" do nome para exibição mais limpa
+            branch_name=$(echo "$branch" | sed 's/origin\///')
+            if [ "$branch_name" = "$current_branch" ]; then
+                echo -e "${GREEN}  origin/$branch_name${NC} (tracking)"
+            else
+                echo "  origin/$branch_name"
+            fi
+        done
+    else
+        print_warning "Nenhum repositório remoto configurado."
+    fi
+    
+    echo ""
+    
+    # Mostrar informações adicionais
+    print_step "Informações do branch atual:"
+    echo ""
+    
+    # Último commit no branch atual
+    last_commit=$(git log -1 --oneline 2>/dev/null)
+    if [ -n "$last_commit" ]; then
+        echo "📝 Último commit: $last_commit"
+    fi
+    
+    # Verificar se há commits não enviados
+    if git remote get-url origin > /dev/null 2>&1; then
+        ahead_count=$(git rev-list --count origin/$current_branch..$current_branch 2>/dev/null || echo "0")
+        behind_count=$(git rev-list --count $current_branch..origin/$current_branch 2>/dev/null || echo "0")
+        
+        if [ "$ahead_count" -gt 0 ] || [ "$behind_count" -gt 0 ]; then
+            echo ""
+            if [ "$ahead_count" -gt 0 ]; then
+                print_warning "⬆️  $ahead_count commits à frente do remoto"
+            fi
+            if [ "$behind_count" -gt 0 ]; then
+                print_warning "⬇️  $behind_count commits atrás do remoto"
+            fi
+        else
+            echo ""
+            print_success "✅ Branch sincronizado com o remoto"
+        fi
+    fi
+    
+    echo ""
+    read -p "Pressione Enter para voltar ao menu..."
+}
+
+# Função 16: Trocar de Branch
+git_switch_branch() {
+    clear
+    print_header
+    echo -e "${WHITE}🔄 TROCAR DE BRANCH${NC}"
+    echo -e "${WHITE}===================${NC}"
+    echo ""
+    
+    # Verificar se estamos em um repositório Git
+    if ! check_git_repo; then
+        print_error "Este diretório não é um repositório Git!"
+        echo ""
+        read -p "Pressione Enter para voltar ao menu..."
+        return
+    fi
+    
+    # Branch atual
+    current_branch=$(git branch --show-current 2>/dev/null || echo "main")
+    echo -e "${GREEN}🔸 Branch atual: $current_branch${NC}"
+    echo ""
+    
+    # Verificar se há mudanças não commitadas
+    if [ -n "$(git status --porcelain)" ]; then
+        print_warning "⚠️  Há mudanças não commitadas!"
+        echo ""
+        echo -e "${YELLOW}Opções:${NC}"
+        echo "1. 💾 Fazer commit das mudanças primeiro"
+        echo "2. 📦 Fazer stash das mudanças (guardar temporariamente)"
+        echo "3. 🗑️  Descartar mudanças"
+        echo "4. 🔙 Voltar ao menu"
+        echo ""
+        
+        read -p "Escolha uma opção (1-4): " changes_option
+        
+        case $changes_option in
+            1)
+                print_info "Redirecionando para commit..."
+                git_commit_push
+                return
+                ;;
+            2)
+                print_step "Fazendo stash das mudanças..."
+                git stash push -m "Stash automático antes de trocar branch - $(date '+%Y-%m-%d %H:%M:%S')"
+                print_success "Mudanças guardadas no stash!"
+                ;;
+            3)
+                print_warning "Isso irá DESCARTAR todas as mudanças!"
+                read -p "Tem certeza? (s/n): " confirm_discard
+                if [ "$confirm_discard" = "s" ] || [ "$confirm_discard" = "S" ]; then
+                    git reset --hard HEAD
+                    git clean -fd
+                    print_success "Mudanças descartadas!"
+                else
+                    print_info "Operação cancelada."
+                    echo ""
+                    read -p "Pressione Enter para voltar ao menu..."
+                    return
+                fi
+                ;;
+            4)
+                return
+                ;;
+            *)
+                print_error "Opção inválida!"
+                echo ""
+                read -p "Pressione Enter para voltar ao menu..."
+                return
+                ;;
+        esac
+        echo ""
+    fi
+    
+    # Listar branches disponíveis
+    print_step "Branches disponíveis:"
+    echo ""
+    
+    # Criar array com branches
+    branches=()
+    local_branches=()
+    remote_branches=()
+    
+    # Branches locais
+    echo -e "${CYAN}Branches locais:${NC}"
+    i=1
+    while IFS= read -r branch; do
+        branch=$(echo "$branch" | sed 's/^[* ]*//')
+        if [ "$branch" != "$current_branch" ]; then
+            branches+=("$branch")
+            local_branches+=("$branch")
+            echo "  $i. $branch"
+            ((i++))
+        fi
+    done < <(git branch)
+    
+    # Verificar se há branches remotos
+    if git remote get-url origin > /dev/null 2>&1; then
+        echo ""
+        echo -e "${CYAN}Branches remotos (não locais):${NC}"
+        
+        # Fazer fetch para garantir informações atualizadas
+        git fetch origin --prune 2>/dev/null
+        
+        while IFS= read -r branch; do
+            branch=$(echo "$branch" | sed 's/^[* ]*origin\///')
+            # Verificar se não é HEAD e não existe localmente
+            if [ "$branch" != "HEAD" ] && ! git show-ref --verify --quiet refs/heads/"$branch"; then
+                branches+=("origin/$branch")
+                remote_branches+=("$branch")
+                echo "  $i. origin/$branch (remoto)"
+                ((i++))
+            fi
+        done < <(git branch -r)
+    fi
+    
+    # Opção para criar novo branch
+    echo ""
+    echo -e "${YELLOW}Outras opções:${NC}"
+    echo "  N. 🆕 Criar novo branch"
+    echo "  0. 🔙 Voltar ao menu"
+    echo ""
+    
+    read -p "Escolha uma opção: " choice
+    
+    # Processar escolha
+    if [ "$choice" = "0" ]; then
+        return
+    elif [ "$choice" = "N" ] || [ "$choice" = "n" ]; then
+        # Criar novo branch
+        echo ""
+        read -p "Nome do novo branch: " new_branch_name
+        
+        if [ -z "$new_branch_name" ]; then
+            print_error "Nome do branch não pode estar vazio!"
+            echo ""
+            read -p "Pressione Enter para voltar ao menu..."
+            return
+        fi
+        
+        # Verificar se já existe
+        if git show-ref --verify --quiet refs/heads/"$new_branch_name"; then
+            print_error "Branch '$new_branch_name' já existe!"
+            echo ""
+            read -p "Pressione Enter para voltar ao menu..."
+            return
+        fi
+        
+        # Perguntar de onde criar o branch
+        echo ""
+        echo "Criar branch a partir de:"
+        echo "1. Branch atual ($current_branch)"
+        echo "2. Branch main/master"
+        echo "3. Outro branch"
+        echo ""
+        
+        read -p "Escolha (1-3): " from_option
+        
+        case $from_option in
+            1)
+                print_step "Criando branch '$new_branch_name' a partir de '$current_branch'..."
+                if git checkout -b "$new_branch_name"; then
+                    print_success "Branch criado e alternado com sucesso!"
+                else
+                    print_error "Erro ao criar branch!"
+                fi
+                ;;
+            2)
+                # Determinar se é main ou master
+                if git show-ref --verify --quiet refs/heads/main; then
+                    base_branch="main"
+                else
+                    base_branch="master"
+                fi
+                
+                print_step "Criando branch '$new_branch_name' a partir de '$base_branch'..."
+                if git checkout -b "$new_branch_name" "$base_branch"; then
+                    print_success "Branch criado e alternado com sucesso!"
+                else
+                    print_error "Erro ao criar branch!"
+                fi
+                ;;
+            3)
+                echo ""
+                read -p "Nome do branch base: " base_branch
+                print_step "Criando branch '$new_branch_name' a partir de '$base_branch'..."
+                if git checkout -b "$new_branch_name" "$base_branch"; then
+                    print_success "Branch criado e alternado com sucesso!"
+                else
+                    print_error "Erro ao criar branch!"
+                fi
+                ;;
+            *)
+                print_error "Opção inválida!"
+                ;;
+        esac
+        
+    elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#branches[@]}" ]; then
+        # Trocar para branch existente
+        selected_branch="${branches[$((choice-1))]}"
+        
+        # Verificar se é um branch remoto
+        if [[ "$selected_branch" == origin/* ]]; then
+            # Branch remoto - criar branch local
+            local_name=$(echo "$selected_branch" | sed 's/^origin\///')
+            print_step "Criando branch local '$local_name' a partir de '$selected_branch'..."
+            
+            if git checkout -b "$local_name" "$selected_branch"; then
+                print_success "Branch criado e alternado com sucesso!"
+                print_info "Branch local '$local_name' está rastreando '$selected_branch'"
+            else
+                print_error "Erro ao criar branch local!"
+            fi
+        else
+            # Branch local - apenas trocar
+            print_step "Trocando para branch '$selected_branch'..."
+            
+            if git checkout "$selected_branch"; then
+                print_success "Branch alternado com sucesso!"
+                
+                # Verificar se há stash para aplicar
+                stash_count=$(git stash list | wc -l)
+                if [ "$stash_count" -gt 0 ]; then
+                    echo ""
+                    print_info "Há $stash_count stash(es) guardado(s)."
+                    read -p "Deseja aplicar o último stash? (s/n): " apply_stash
+                    if [ "$apply_stash" = "s" ] || [ "$apply_stash" = "S" ]; then
+                        if git stash pop; then
+                            print_success "Stash aplicado com sucesso!"
+                        else
+                            print_warning "Erro ao aplicar stash. Use 'git stash list' para ver os stashes."
+                        fi
+                    fi
+                fi
+                
+                # Verificar se precisa fazer pull
+                if git remote get-url origin > /dev/null 2>&1; then
+                    # Verificar se o branch tem tracking remoto
+                    if git rev-parse --abbrev-ref "$selected_branch@{upstream}" > /dev/null 2>&1; then
+                        behind_count=$(git rev-list --count HEAD..@{upstream} 2>/dev/null || echo "0")
+                        if [ "$behind_count" -gt 0 ]; then
+                            echo ""
+                            print_warning "Branch está $behind_count commits atrás do remoto."
+                            read -p "Deseja fazer pull? (s/n): " do_pull
+                            if [ "$do_pull" = "s" ] || [ "$do_pull" = "S" ]; then
+                                print_step "Fazendo pull..."
+                                if git pull; then
+                                    print_success "Pull realizado com sucesso!"
+                                else
+                                    print_warning "Erro ao fazer pull. Pode haver conflitos."
+                                fi
+                            fi
+                        fi
+                    fi
+                fi
+            else
+                print_error "Erro ao trocar de branch!"
+            fi
+        fi
+    else
+        print_error "Opção inválida!"
+    fi
+    
+    echo ""
+    read -p "Pressione Enter para voltar ao menu..."
+}
+
+# Função 17: Criar backup do banco de dados
 create_database_backup() {
     clear
     print_header
