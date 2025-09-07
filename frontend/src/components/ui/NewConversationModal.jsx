@@ -6,12 +6,70 @@ import { AuthContext } from '../../context/Auth/AuthContext';
 import { useHistory } from 'react-router-dom';
 import api from '../../services/api';
 import toastError from '../../errors/toastError';
-import { Select } from './Select';
+import SimpleSelect from './SimpleSelect';
 import GradientButton from '../GradientButton';
 import { getBackendUrl } from '../../config';
 
+// Componente Avatar com autenticação
+const AuthenticatedAvatar = ({ src, alt, sx, children, fallbackText }) => {
+  const [imageSrc, setImageSrc] = useState(null);
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    if (!src) {
+      setImageSrc(null);
+      setImageError(false);
+      return;
+    }
+
+    const loadImage = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(src, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          const imageUrl = URL.createObjectURL(blob);
+          setImageSrc(imageUrl);
+          setImageError(false);
+        } else {
+          setImageError(true);
+        }
+      } catch (error) {
+        console.debug('Erro ao carregar imagem:', error);
+        setImageError(true);
+      }
+    };
+
+    loadImage();
+    
+    // Cleanup
+    return () => {
+      if (imageSrc && imageSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(imageSrc);
+      }
+    };
+  }, [src, imageSrc]);
+
+  return (
+    <Avatar
+      src={!imageError ? imageSrc : undefined}
+      alt={alt}
+      sx={sx}
+    >
+      {(imageError || !imageSrc) && fallbackText}
+    </Avatar>
+  );
+};
+
 // Container principal do modal
-const ModalOverlay = styled(Box)(({ isOpen }) => ({
+const ModalOverlay = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isOpen',
+})(({ isOpen }) => ({
   position: 'fixed',
   top: 0,
   left: 0,
@@ -25,7 +83,9 @@ const ModalOverlay = styled(Box)(({ isOpen }) => ({
 }));
 
 // Modal que desliza da esquerda
-const ModalContainer = styled(Box)(({ isOpen }) => ({
+const ModalContainer = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isOpen',
+})(({ isOpen }) => ({
   position: 'absolute',
   top: '64px',
   left: 0,
@@ -127,8 +187,6 @@ const NewConversationModal = ({ isOpen, onClose, onCreateTicket }) => {
           pageNumber: 1
         }
       });
-      console.log('🔍 Contacts from API:', data.contacts);
-      console.log('🖼️ First contact urlPicture:', data.contacts?.[0]?.urlPicture);
       setContacts(data.contacts || []);
       setFilteredContacts(data.contacts || []);
     } catch (error) {
@@ -436,7 +494,7 @@ const NewConversationModal = ({ isOpen, onClose, onCreateTicket }) => {
                 <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'var(--text-primary)' }}>
                   Selecionar Fila
                 </Typography>
-                <Select
+                <SimpleSelect
                   options={queues}
                   value={selectedQueue?.id || ''}
                   onChange={(queueId, queue) => setSelectedQueue(queue)}
@@ -452,7 +510,7 @@ const NewConversationModal = ({ isOpen, onClose, onCreateTicket }) => {
                 <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'var(--text-primary)' }}>
                   Selecionar Conexão
                 </Typography>
-                <Select
+                <SimpleSelect
                   options={whatsapps}
                   value={selectedWhatsapp?.id || ''}
                   onChange={(whatsappId, whatsapp) => setSelectedWhatsapp(whatsapp)}

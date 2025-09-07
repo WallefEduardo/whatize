@@ -31,7 +31,9 @@ const SelectButton = styled(Box)(({ disabled, isOpen }) => ({
   },
 }));
 
-const DropdownMenu = styled(Box)(({ isOpen }) => ({
+const DropdownMenu = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isOpen',
+})(({ isOpen }) => ({
   position: 'absolute',
   top: '100%',
   left: 0,
@@ -117,7 +119,9 @@ const MenuItem = styled(Box)(({ selected }) => ({
   },
 }));
 
-const ChevronIcon = styled(ChevronDown)(({ isOpen }) => ({
+const ChevronIcon = styled(ChevronDown, {
+  shouldForwardProp: (prop) => prop !== 'isOpen',
+})(({ isOpen }) => ({
   transform: `rotate(${isOpen ? '180deg' : '0deg'})`,
   transition: 'transform 0.2s ease',
   color: 'var(--text-secondary)',
