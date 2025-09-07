@@ -14,6 +14,9 @@ taskRoutes.post("/tasks", TaskController.store);             // POST /tasks - Cr
 taskRoutes.get("/tasks/stats", TaskController.stats);        // GET /tasks/stats - Estatísticas
 taskRoutes.get("/tasks/my-tasks", TaskController.myTasks);   // GET /tasks/my-tasks - Minhas tarefas
 taskRoutes.get("/tasks/overdue", TaskController.overdueTasks); // GET /tasks/overdue - Tarefas vencidas
+taskRoutes.get("/tasks/completed", TaskController.listCompleted); // GET /tasks/completed - Tarefas concluídas
+taskRoutes.post("/tasks/:taskId/complete", TaskController.complete); // POST /tasks/:taskId/complete - Concluir tarefa
+taskRoutes.post("/tasks/completed/:completedTaskId/restore", TaskController.restore); // POST /tasks/completed/:completedTaskId/restore - Restaurar tarefa (Admin)
 taskRoutes.get("/tasks/:taskId", TaskController.show);       // GET /tasks/:taskId - Mostrar tarefa por ID
 taskRoutes.get("/tasks/uuid/:uuid", TaskController.show);    // GET /tasks/uuid/:uuid - Mostrar tarefa por UUID
 taskRoutes.put("/tasks/:taskId", TaskController.update);     // PUT /tasks/:taskId - Atualizar tarefa

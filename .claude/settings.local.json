@@ -21,7 +21,8 @@
       "Read(/home/eduardo_wallef/sistemas/TemplateDash/app/[lang]/(dashboard)/(forms)/autocomplete/**)",
       "Read(/home/eduardo_wallef/sistemas/TemplateDash/components/ui/**)",
       "Bash(npm run start:*)",
-      "Bash(timeout 5s npm run start)"
+      "Bash(timeout 5s npm run start)",
+      "Bash(npm start)"
     ],
     "deny": []
   }

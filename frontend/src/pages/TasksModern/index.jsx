@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
   Paper,
   Typography,
-  Box
+  Box,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material';
-import { CheckSquare, Plus, Edit3, Trash2 } from 'lucide-react';
+import { CheckSquare, Plus, Edit3, Trash2, Circle, Check, Flag, MoreVertical } from 'lucide-react';
 
 // Componentes do sistema
 import PageLayout from '../../components/PageLayout';
@@ -20,15 +24,33 @@ import CustomPagination from './components/CustomPagination';
 import { i18n } from "../../translate/i18n";
 
 // API Services
-import { ListTasks, CreateTask, UpdateTask, DeleteTask, GetTaskStats } from '../../services/tasks';
+import { 
+  ListTasks, 
+  CreateTask, 
+  UpdateTask, 
+  DeleteTask, 
+  GetTaskStats,
+  GetCompletedTasks,
+  CompleteTask,
+  RestoreTask 
+} from '../../services/tasks';
 import { toast } from 'react-toastify';
 
 const TasksModern = () => {
 
   const [tasks, setTasks] = useState([]);
+  const [completedTasks, setCompletedTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [stats, setStats] = useState({});
+  const [activeFilter, setActiveFilter] = useState('mytask');
+  const [activePriority, setActivePriority] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  
+  // Estados para os menus dropdown
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
+  const [priorityMenuAnchor, setPriorityMenuAnchor] = useState(null);
+  const [selectedTaskForMenu, setSelectedTaskForMenu] = useState(null);
   
   // Modal states
   const [openCreateModal, setOpenCreateModal] = useState(false);
@@ -41,23 +63,38 @@ const TasksModern = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [totalTasks, setTotalTasks] = useState(0);
 
-  // Carregar tarefas
+  // Carregar tarefas (ativas ou concluídas)
   const fetchTasks = async () => {
     try {
-      console.log('Buscando tarefas...', { searchTerm, pageNumber, pageSize });
+      console.log('Buscando tarefas...', { searchTerm, pageNumber, pageSize, activeFilter, activePriority });
       setLoading(true);
+      
       const params = {
         searchParam: searchTerm,
         pageNumber,
-        limit: pageSize
+        limit: pageSize,
+        priority: activePriority
       };
       
-      const response = await ListTasks(params);
+      let response;
+      
+      if (activeFilter === 'completed') {
+        // Buscar tarefas concluídas
+        response = await GetCompletedTasks(params);
+        setCompletedTasks(response.tasks || []);
+        setTasks([]); // Limpar tarefas ativas
+      } else {
+        // Buscar tarefas ativas
+        params.filter = activeFilter;
+        response = await ListTasks(params);
+        setTasks(response.tasks || []);
+        setCompletedTasks([]); // Limpar tarefas concluídas
+      }
+      
       console.log('Resposta da API:', response);
       console.log('Tasks array:', response.tasks);
       console.log('Tasks count:', response.tasks?.length);
-      console.log('Primeira tarefa completa:', JSON.stringify(response.tasks?.[0], null, 2));
-      setTasks(response.tasks || []);
+      
       setTotalPages(response.totalPages || 0);
       setTotalTasks(response.count || 0);
       
@@ -84,10 +121,13 @@ const TasksModern = () => {
 
   useEffect(() => {
     fetchTasks();
-  }, [pageNumber, pageSize]);
+  }, [pageNumber, pageSize, activeFilter, activePriority]);
 
   useEffect(() => {
     fetchStats();
+    // Carregar dados do usuário do localStorage ou contexto
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    setCurrentUser(user);
   }, []);
 
   // Debounce para busca
@@ -106,6 +146,7 @@ const TasksModern = () => {
       await CreateTask(taskData);
       toast.success('Tarefa criada com sucesso!');
       fetchTasks();
+      fetchStats(); // Atualizar estatísticas
       setOpenCreateModal(false);
     } catch (error) {
       console.error('Erro ao criar tarefa:', error);
@@ -118,6 +159,7 @@ const TasksModern = () => {
       await UpdateTask(selectedTask.id, taskData);
       toast.success('Tarefa atualizada com sucesso!');
       fetchTasks();
+      fetchStats(); // Atualizar estatísticas
       setOpenEditModal(false);
       setSelectedTask(null);
     } catch (error) {
@@ -132,6 +174,7 @@ const TasksModern = () => {
         await DeleteTask(taskId);
         toast.success('Tarefa excluída com sucesso!');
         fetchTasks();
+        fetchStats(); // Atualizar estatísticas
       } catch (error) {
         console.error('Erro ao excluir tarefa:', error);
         toast.error('Erro ao excluir tarefa');
@@ -143,6 +186,91 @@ const TasksModern = () => {
     setSelectedTask(task);
     setOpenEditModal(true);
   };
+
+  // Handlers para filtros
+  const handleFilterChange = (filterValue) => {
+    setActiveFilter(filterValue);
+    setPageNumber(1); // Reset para primeira página ao filtrar
+  };
+
+  const handlePriorityChange = (priorityValue) => {
+    setActivePriority(activePriority === priorityValue ? null : priorityValue);
+    setPageNumber(1); // Reset para primeira página ao filtrar
+  };
+
+  // Handlers para abrir menus
+  const handleOpenStatusMenu = (event, task) => {
+    setStatusMenuAnchor(event.currentTarget);
+    setSelectedTaskForMenu(task);
+  };
+
+  const handleOpenPriorityMenu = (event, task) => {
+    setPriorityMenuAnchor(event.currentTarget);
+    setSelectedTaskForMenu(task);
+  };
+
+  const handleCloseStatusMenu = () => {
+    setStatusMenuAnchor(null);
+    setSelectedTaskForMenu(null);
+  };
+
+  const handleClosePriorityMenu = () => {
+    setPriorityMenuAnchor(null);
+    setSelectedTaskForMenu(null);
+  };
+
+  // Handlers para mudança rápida de status/prioridade
+  const handleQuickStatusChange = async (taskId, newStatus) => {
+    try {
+      if (newStatus === 'completed') {
+        // Usar novo serviço para concluir tarefa
+        await CompleteTask(taskId);
+        toast.success('Tarefa concluída com sucesso!');
+      } else {
+        // Atualizar status normalmente
+        await UpdateTask(taskId, { status: newStatus });
+        toast.success('Status atualizado com sucesso!');
+      }
+      fetchTasks();
+      fetchStats(); // Atualizar estatísticas
+      handleCloseStatusMenu();
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      toast.error('Erro ao atualizar status');
+    }
+  };
+
+  const handleQuickPriorityChange = async (taskId, newPriority) => {
+    try {
+      await UpdateTask(taskId, { priority: newPriority });
+      toast.success('Prioridade atualizada com sucesso!');
+      fetchTasks();
+      fetchStats(); // Atualizar estatísticas
+      handleClosePriorityMenu();
+    } catch (error) {
+      console.error('Erro ao atualizar prioridade:', error);
+      toast.error('Erro ao atualizar prioridade');
+    }
+  };
+
+  // Handler para restaurar tarefa concluída (Admin only)
+  const handleRestoreTask = async (completedTaskId) => {
+    try {
+      await RestoreTask(completedTaskId);
+      toast.success('Tarefa restaurada com sucesso!');
+      fetchTasks();
+      fetchStats(); // Atualizar estatísticas
+    } catch (error) {
+      console.error('Erro ao restaurar tarefa:', error);
+      toast.error('Erro ao restaurar tarefa');
+    }
+  };
+
+  // Verificar se é admin
+  const isAdmin = currentUser?.profile === 'admin';
+
+  // Dados a serem exibidos (tarefas ativas ou concluídas)
+  const displayTasks = activeFilter === 'completed' ? completedTasks : tasks;
 
   // Definir colunas da tabela
   const columns = [
@@ -261,20 +389,66 @@ const TasksModern = () => {
     {
       accessor: 'actions',
       title: 'Ações',
-      render: (record) => (
-        <ActionGroup>
-          <ActionButton
-            icon={Edit3}
-            onClick={() => handleEditTask(record)}
-            color="primary"
-          />
-          <ActionButton
-            icon={Trash2}
-            onClick={() => handleDeleteTask(record.id)}
-            color="error"
-          />
-        </ActionGroup>
-      )
+      render: (record) => {
+        // Se estiver visualizando tarefas concluídas
+        if (activeFilter === 'completed') {
+          return (
+            <ActionGroup>
+              {/* Botão para restaurar (apenas admin) */}
+              {isAdmin && (
+                <ActionButton
+                  icon={Check}
+                  onClick={() => handleRestoreTask(record.id)}
+                  tooltip="Restaurar tarefa"
+                  color="#4caf50"
+                  hoverColor="#4caf50"
+                />
+              )}
+            </ActionGroup>
+          );
+        }
+        
+        // Para tarefas ativas
+        return (
+          <ActionGroup>
+            {/* Botão para alterar status */}
+            <ActionButton
+              icon={MoreVertical}
+              onClick={(event) => handleOpenStatusMenu(event, record)}
+              tooltip="Alterar status"
+              color="#2196f3"
+              hoverColor="#2196f3"
+            />
+            
+            {/* Botão para alterar prioridade */}
+            <ActionButton
+              icon={Flag}
+              onClick={(event) => handleOpenPriorityMenu(event, record)}
+              tooltip="Alterar prioridade"
+              color="#ff9800"
+              hoverColor="#ff9800"
+            />
+
+            {/* Botão para editar */}
+            <ActionButton
+              icon={Edit3}
+              onClick={() => handleEditTask(record)}
+              tooltip="Editar tarefa"
+              color="#4caf50"
+              hoverColor="#4caf50"
+            />
+            
+            {/* Botão para excluir */}
+            <ActionButton
+              icon={Trash2}
+              onClick={() => handleDeleteTask(record.id)}
+              tooltip="Excluir tarefa"
+              color="#f44336"
+              hoverColor="#f44336"
+            />
+          </ActionGroup>
+        );
+      }
     }
   ];
 
@@ -319,12 +493,16 @@ const TasksModern = () => {
           {/* Sidebar */}
           <TaskSidebar 
             stats={stats}
+            activeFilter={activeFilter}
+            activePriority={activePriority}
+            onFilterChange={handleFilterChange}
+            onPriorityChange={handlePriorityChange}
           />
 
           {/* Tabela */}
           <Paper sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <BaseTable
-              records={tasks}
+              records={displayTasks}
               columns={columns}
               loading={loading}
               pagination={{
@@ -365,6 +543,74 @@ const TasksModern = () => {
           onCancel={() => setOpenEditModal(false)}
         />
       </ModernModal>
+
+      {/* Menu de Status */}
+      <Menu
+        anchorEl={statusMenuAnchor}
+        open={Boolean(statusMenuAnchor)}
+        onClose={handleCloseStatusMenu}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        sx={{
+          '& .MuiPaper-root': {
+            minWidth: 160,
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+          }
+        }}
+      >
+        <MenuItem onClick={() => handleQuickStatusChange(selectedTaskForMenu?.id, 'todo')}>
+          <ListItemIcon>
+            <Circle size={16} style={{ color: '#ff9800' }} />
+          </ListItemIcon>
+          <ListItemText primary="A Fazer" />
+        </MenuItem>
+        <MenuItem onClick={() => handleQuickStatusChange(selectedTaskForMenu?.id, 'inprogress')}>
+          <ListItemIcon>
+            <Circle size={16} style={{ color: '#2196f3' }} />
+          </ListItemIcon>
+          <ListItemText primary="Em Progresso" />
+        </MenuItem>
+        <MenuItem onClick={() => handleQuickStatusChange(selectedTaskForMenu?.id, 'completed')}>
+          <ListItemIcon>
+            <Check size={16} style={{ color: '#4caf50' }} />
+          </ListItemIcon>
+          <ListItemText primary="Concluída" />
+        </MenuItem>
+      </Menu>
+
+      {/* Menu de Prioridade */}
+      <Menu
+        anchorEl={priorityMenuAnchor}
+        open={Boolean(priorityMenuAnchor)}
+        onClose={handleClosePriorityMenu}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        sx={{
+          '& .MuiPaper-root': {
+            minWidth: 160,
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+          }
+        }}
+      >
+        <MenuItem onClick={() => handleQuickPriorityChange(selectedTaskForMenu?.id, 'low')}>
+          <ListItemIcon>
+            <Flag size={16} style={{ color: '#4caf50' }} />
+          </ListItemIcon>
+          <ListItemText primary="Baixa" />
+        </MenuItem>
+        <MenuItem onClick={() => handleQuickPriorityChange(selectedTaskForMenu?.id, 'medium')}>
+          <ListItemIcon>
+            <Flag size={16} style={{ color: '#ff9800' }} />
+          </ListItemIcon>
+          <ListItemText primary="Média" />
+        </MenuItem>
+        <MenuItem onClick={() => handleQuickPriorityChange(selectedTaskForMenu?.id, 'high')}>
+          <ListItemIcon>
+            <Flag size={16} style={{ color: '#f44336' }} />
+          </ListItemIcon>
+          <ListItemText primary="Alta" />
+        </MenuItem>
+      </Menu>
     </PageLayout>
   );
 };

@@ -132,14 +132,14 @@ const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket })
 				} else {
 					setLoading(false);
 					setTabOpen(otherTicket.isGroup ? "group" : "open");
-					history.push(`/tickets/${otherTicket.data.uuid}`);
+					history.push(`/chat-moderno/${otherTicket.data.uuid}`);
 				}
 			} else {
 				await handleSendMessage(ticket.id);
 				setLoading(false);
 				setTabOpen(ticket.isGroup ? "group" : "open");
-				console.log('🔄 Navegando para:', `/tickets/${ticket.uuid}`);
-				history.push(`/tickets/${ticket.uuid}`);
+				console.log('🔄 Navegando para:', `/chat-moderno/${ticket.uuid}`);
+				history.push(`/chat-moderno/${ticket.uuid}`);
 				handleClose();
 			}
 		} catch (err) {

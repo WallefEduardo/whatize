@@ -6,9 +6,12 @@ import { getIO } from "../libs/socket";
 // Services
 import CreateTaskService from "../services/TaskServices/CreateTaskService";
 import ListTasksService from "../services/TaskServices/ListTasksService";
+import ListCompletedTasksService from "../services/TaskServices/ListCompletedTasksService";
 import ShowTaskService from "../services/TaskServices/ShowTaskService";
 import UpdateTaskService from "../services/TaskServices/UpdateTaskService";
 import DeleteTaskService from "../services/TaskServices/DeleteTaskService";
+import CompleteTaskService from "../services/TaskServices/CompleteTaskService";
+import RestoreTaskService from "../services/TaskServices/RestoreTaskService";
 
 // Types
 import { TaskStatus, TaskPriority } from "../models/Task";
@@ -77,6 +80,7 @@ interface IndexQuery {
   dueDateFrom?: string;
   dueDateTo?: string;
   overdue?: string;
+  filter?: 'mytask' | 'working' | 'completed' | 'trash';
   pageNumber?: string;
   sortBy?: 'createdAt' | 'updatedAt' | 'dueDate' | 'priority' | 'title';
   sortOrder?: 'ASC' | 'DESC';
@@ -135,23 +139,48 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     dueDateFrom,
     dueDateTo,
     overdue,
+    filter,
     pageNumber = "1",
     sortBy = 'createdAt',
     sortOrder = 'DESC',
     limit = "20"
   } = req.query as IndexQuery;
 
+  // Interpretar filtros customizados
+  let filteredStatus = status;
+  let filteredAssignedToId = assignedToId ? Number(assignedToId) : undefined;
+  let filteredCreatedById = createdById ? Number(createdById) : undefined;
+  let filteredOverdue = overdue === "true";
+
+  // Aplicar filtros baseados no parâmetro 'filter'
+  if (filter) {
+    switch (filter) {
+      case 'mytask':
+        // Minhas tarefas: atribuídas para mim
+        filteredAssignedToId = Number(userId);
+        break;
+      case 'working':
+        // Em andamento: status inprogress
+        filteredStatus = TaskStatus.IN_PROGRESS;
+        break;
+      case 'completed':
+        // Concluídas: status completed
+        filteredStatus = TaskStatus.COMPLETED;
+        break;
+    }
+  }
+
   const result = await ListTasksService({
     companyId: Number(companyId),
     userId: Number(userId),
     searchParam,
-    status,
+    status: filteredStatus,
     priority,
-    assignedToId: assignedToId ? Number(assignedToId) : undefined,
-    createdById: createdById ? Number(createdById) : undefined,
+    assignedToId: filteredAssignedToId,
+    createdById: filteredCreatedById,
     dueDateFrom,
     dueDateTo,
-    overdue: overdue === "true",
+    overdue: filteredOverdue,
     pageNumber: Number(pageNumber),
     sortBy,
     sortOrder,
@@ -246,11 +275,15 @@ export const destroy = async (req: Request, res: Response): Promise<Response> =>
 export const stats = async (req: Request, res: Response): Promise<Response> => {
   const { companyId, id: userId } = req.user;
   
+  console.log('📊 Endpoint /tasks/stats chamado para companyId:', companyId);
+  
   const result = await ListTasksService({
     companyId: Number(companyId),
     userId: Number(userId),
-    limit: 0 // Não queremos as tarefas, só as estatísticas
+    limit: 1 // Mínimo para calcular stats, mas não retornar muitas tarefas
   });
+
+  console.log('📊 Stats retornadas:', result.stats);
 
   return res.json({
     stats: result.stats
@@ -283,6 +316,71 @@ export const overdueTasks = async (req: Request, res: Response): Promise<Respons
     userId: Number(userId),
     overdue: true,
     pageNumber: Number(pageNumber),
+    limit: Number(limit)
+  });
+
+  return res.json(result);
+};
+
+// COMPLETE - Concluir tarefa (move para CompletedTasks)
+export const complete = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId, id: userId } = req.user;
+  const { taskId } = req.params;
+
+  const result = await CompleteTaskService({
+    taskId: Number(taskId),
+    completedById: Number(userId),
+    companyId: Number(companyId)
+  });
+
+  return res.json(result);
+};
+
+// RESTORE - Restaurar tarefa completada (Admin only)
+export const restore = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId, id: userId } = req.user;
+  const { completedTaskId } = req.params;
+
+  const result = await RestoreTaskService({
+    completedTaskId: Number(completedTaskId),
+    userId: Number(userId),
+    companyId: Number(companyId)
+  });
+
+  return res.json(result);
+};
+
+// LIST COMPLETED - Listar tarefas concluídas
+export const listCompleted = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId, id: userId } = req.user;
+  
+  const {
+    searchParam,
+    priority,
+    assignedToId,
+    createdById,
+    completedById,
+    completedDateFrom,
+    completedDateTo,
+    pageNumber = "1",
+    sortBy = 'completedAt',
+    sortOrder = 'DESC',
+    limit = "20"
+  } = req.query as any;
+
+  const result = await ListCompletedTasksService({
+    companyId: Number(companyId),
+    userId: Number(userId),
+    searchParam,
+    priority,
+    assignedToId: assignedToId ? Number(assignedToId) : undefined,
+    createdById: createdById ? Number(createdById) : undefined,
+    completedById: completedById ? Number(completedById) : undefined,
+    completedDateFrom,
+    completedDateTo,
+    pageNumber: Number(pageNumber),
+    sortBy,
+    sortOrder,
     limit: Number(limit)
   });
 

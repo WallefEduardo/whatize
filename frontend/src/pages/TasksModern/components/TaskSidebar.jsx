@@ -6,17 +6,14 @@ import {
   ListItemIcon,
   ListItemText,
   Typography,
-  Divider,
-  Badge,
-  Avatar
+  Divider
 } from '@mui/material';
 import {
   Assignment as TaskIcon,
   Star as StarIcon,
   Check as CheckIcon,
   Delete as TrashIcon,
-  Circle as CircleIcon,
-  Chat as ChatIcon
+  Circle as CircleIcon
 } from '@mui/icons-material';
 import { i18n } from "../../../translate/i18n";
 
@@ -39,12 +36,6 @@ const taskFilters = [
     label: 'Concluídas',
     value: 'completed',
   },
-  {
-    icon: TrashIcon,
-    labelKey: 'sidebar.trash',
-    label: 'Lixeira',
-    value: 'trash',
-  },
 ];
 
 const priorityFilters = [
@@ -52,23 +43,20 @@ const priorityFilters = [
     label: 'Alta',
     value: 'high',
     color: '#f44336',
-    total: '03',
   },
   {
     label: 'Média',
     value: 'medium',
     color: '#ff9800',
-    total: '04',
   },
   {
     label: 'Baixa',
     value: 'low',
     color: '#4caf50',
-    total: '03',
   },
 ];
 
-const TaskSidebar = ({ contacts, show, onClose, stats }) => {
+const TaskSidebar = ({ contacts, show, onClose, stats, activeFilter, activePriority, onFilterChange, onPriorityChange }) => {
 
   return (
     <Box
@@ -89,34 +77,42 @@ const TaskSidebar = ({ contacts, show, onClose, stats }) => {
       <Box>
       {/* Task Filters */}
       <List sx={{ p: 0 }}>
-        {taskFilters.map((item, index) => (
-          <ListItem
-            key={`filter-key-${index}`}
-            sx={{
-              cursor: 'pointer',
-              borderRadius: 1,
-              mb: 0.5,
-              '&:hover': {
-                backgroundColor: 'rgba(25, 118, 210, 0.1)',
-                '& .MuiListItemIcon-root, & .MuiListItemText-primary': {
-                  color: 'primary.main'
+        {taskFilters.map((item, index) => {
+          const isActive = activeFilter === item.value;
+          return (
+            <ListItem
+              key={`filter-key-${index}`}
+              onClick={() => onFilterChange && onFilterChange(item.value)}
+              sx={{
+                cursor: 'pointer',
+                borderRadius: 1,
+                mb: 0.5,
+                backgroundColor: isActive ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
+                '&:hover': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                  '& .MuiListItemIcon-root, & .MuiListItemText-primary': {
+                    color: 'primary.main'
+                  }
                 }
-              }
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: 36 }}>
-              <item.icon sx={{ fontSize: 20, color: 'text.secondary' }} />
-            </ListItemIcon>
-            <ListItemText
-              primary={item.label}
-              primaryTypographyProps={{
-                fontSize: '14px',
-                fontWeight: 500,
-                color: 'text.secondary'
               }}
-            />
-          </ListItem>
-        ))}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <item.icon sx={{ 
+                  fontSize: 20, 
+                  color: isActive ? 'primary.main' : 'text.secondary'
+                }} />
+              </ListItemIcon>
+              <ListItemText
+                primary={item.label}
+                primaryTypographyProps={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: isActive ? 'primary.main' : 'text.secondary'
+                }}
+              />
+            </ListItem>
+          );
+        })}
       </List>
 
       <Divider sx={{ my: 2, borderStyle: 'dashed', borderColor: 'divider' }} />
@@ -137,137 +133,59 @@ const TaskSidebar = ({ contacts, show, onClose, stats }) => {
         </Typography>
         
         <List sx={{ mt: 1.5, p: 0 }}>
-          {priorityFilters.map((item, index) => (
-            <ListItem
-              key={`priority-item-${index}`}
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                cursor: 'pointer',
-                py: 2,
-                px: 0,
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                }
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CircleIcon
-                  sx={{
-                    fontSize: 8,
-                    color: item.color
-                  }}
-                />
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    color: 'text.secondary'
-                  }}
-                >
-                  {item.label}
-                </Typography>
-              </Box>
-              <Typography
-                variant="body2"
-                sx={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: 'text.secondary'
-                }}
-              >
-                {item.total}
-              </Typography>
-            </ListItem>
-          ))}
-        </List>
-      </Box>
-
-      <Divider sx={{ my: 3, borderStyle: 'dashed', borderColor: 'divider' }} />
-
-      {/* Contacts Section */}
-      <Box sx={{ px: 2 }}>
-        <Typography
-          variant="caption"
-          sx={{
-            fontSize: '12px',
-            fontWeight: 600,
-            color: 'text.primary',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            mb: 1.5,
-            display: 'block'
-          }}
-        >
-          Conversas
-        </Typography>
-
-        {contacts && contacts.length > 0 ? (
-          <List sx={{ p: 0 }}>
-            {contacts.map((contact) => (
+          {priorityFilters.map((item, index) => {
+            const isActive = activePriority === item.value;
+            return (
               <ListItem
-                key={contact.id}
+                key={`priority-item-${index}`}
+                onClick={() => onPriorityChange && onPriorityChange(item.value)}
                 sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
                   cursor: 'pointer',
+                  py: 2,
+                  px: 1,
                   borderRadius: 1,
-                  mb: 0.5,
+                  backgroundColor: isActive ? `${item.color}20` : 'transparent',
                   '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                    backgroundColor: `${item.color}20`
                   }
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 40 }}>
-                  <Avatar
-                    src={contact.avatar}
-                    sx={{ width: 32, height: 32, fontSize: '14px' }}
-                  >
-                    {contact.name?.charAt(0)}
-                  </Avatar>
-                </ListItemIcon>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircleIcon
+                    sx={{
+                      fontSize: 8,
+                      color: item.color
+                    }}
+                  />
                   <Typography
                     variant="body2"
                     sx={{
                       fontSize: '14px',
-                      fontWeight: 500,
-                      color: 'text.primary',
-                      truncate: true
+                      fontWeight: isActive ? 600 : 500,
+                      color: isActive ? item.color : 'text.secondary'
                     }}
                   >
-                    {contact.name}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontSize: '12px',
-                      color: 'text.secondary',
-                      truncate: true
-                    }}
-                  >
-                    {contact.lastMessage}
+                    {item.label}
                   </Typography>
                 </Box>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontSize: '14px',
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? item.color : 'text.secondary'
+                  }}
+                >
+                  {stats?.[`${item.value}Priority`] || '0'}
+                </Typography>
               </ListItem>
-            ))}
-          </List>
-        ) : (
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            py: 4,
-            color: 'text.secondary'
-          }}>
-            <Box sx={{ textAlign: 'center' }}>
-              <ChatIcon sx={{ fontSize: 32, mb: 1, opacity: 0.5 }} />
-              <Typography variant="body2" sx={{ fontSize: '12px' }}>
-                Nenhuma conversa
-              </Typography>
-            </Box>
-          </Box>
-        )}
+            );
+          })}
+        </List>
       </Box>
+
     </Box>
     </Box>
   );

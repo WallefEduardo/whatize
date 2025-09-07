@@ -84,7 +84,9 @@ const useOptimizedTickets = ({
   const apiParams = useMemo(() => ({
     searchParam: debouncedSearch,
     status,
-    queueIds: selectedQueueIds?.length > 0 ? selectedQueueIds : undefined,
+    // CRÍTICO: O backend precisa de queueIds para funcionar corretamente
+    // Se não enviarmos queueIds, pode não retornar tickets
+    queueIds: selectedQueueIds?.length > 0 ? selectedQueueIds : [],
     showAll,
     tags: tags?.length > 0 ? tags : undefined,
     users: users?.length > 0 ? users : undefined,
@@ -115,7 +117,13 @@ const useOptimizedTickets = ({
         return;
       }
 
+      console.log('🔍 [API-PARAMS]', apiParams);
       const { data } = await api.get('/tickets', { params: apiParams });
+      console.log('📊 [API-RESPONSE]', { 
+        count: data.count,
+        ticketsLength: data.tickets?.length,
+        hasMore: data.hasMore
+      });
       
       // Processar e normalizar dados
       const { normalized, byStatus } = normalizeTickets(data.tickets || []);
@@ -149,22 +157,18 @@ const useOptimizedTickets = ({
 
   // Handler memoizado para eventos de socket
   const handleSocketEvent = useCallback((eventName, data) => {
-    console.log(`🔥 [SOCKET-${eventName.toUpperCase()}] Recebido:`, data);
-    
     // Invalidar cache para forçar dados frescos
     ticketsCache.clear();
     
     // Forçar re-fetch dos tickets para garantir dados atualizados
     setTimeout(() => {
       fetchTickets();
-    }, 200); // Aumentei o delay para 200ms
+    }, 200);
   }, [fetchTickets]);
 
   // Socket listeners otimizados - Eventos reais do sistema
   useEffect(() => {
     if (!socket || !socket.on || !user?.companyId) return;
-
-    console.log('🔌 Socket listeners configurados para useOptimizedTickets');
 
     // Eventos principais do sistema Whatize
     const events = [
@@ -197,8 +201,6 @@ const useOptimizedTickets = ({
       const eventData = args[1];
       
       if (eventName && typeof eventName === 'string') {
-        console.log(`🌐 [SOCKET-ALL] ${eventName}:`, eventData);
-        
         // Se for um evento relacionado a ticket/mensagem, recarregar
         if (eventName.includes('ticket') || eventName.includes('message') || eventName.includes('appMessage')) {
           handleSocketEvent(eventName, eventData);
@@ -209,7 +211,6 @@ const useOptimizedTickets = ({
     };
 
     return () => {
-      console.log('🔌 Removendo Socket listeners');
       events.forEach(event => {
         socket.off(event);
       });

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, useMediaQuery, useTheme, TextField } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { useParams, useHistory } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 
 // Context
@@ -135,7 +136,12 @@ const Overlay = styled(Box)(({ theme }) => ({
 }));
 
 const ChatModerno = () => {
+  // Parâmetros da rota
+  const { ticketId } = useParams();
+  const history = useHistory();
+  
   // Context
+  const { user } = React.useContext(AuthContext);
   const { tabOpen, setTabOpen, currentTicket, setCurrentTicket } = React.useContext(TicketsContext);
   
   // Estados
@@ -166,9 +172,10 @@ const ChatModerno = () => {
   const [savedFilters, setSavedFilters] = useState([]);
   const [filterName, setFilterName] = useState('');
   
-  // Estado para mostrar todos os tickets
+  // Estado para mostrar todos os tickets - padrão false como esperado
   const [showAllTickets, setShowAllTickets] = useState(false);
   const [pinnedConversations, setPinnedConversations] = useState(new Set());
+  const [tabCounts, setTabCounts] = useState({ open: 0, pending: 0 });
   
   // Estados do SidebarContainer
   const [showSortOptions, setShowSortOptions] = useState(false);
@@ -179,6 +186,42 @@ const ChatModerno = () => {
   
   // Estado para forçar refresh dos tickets
   const [forceRefresh, setForceRefresh] = useState(0);
+  
+  // Função para buscar counts de todos os status
+  const fetchTabCounts = useCallback(async () => {
+    try {
+      const showAllForUser = showAllTickets;
+      const userQueueIds = user?.queues?.map(q => q.id) || [];
+      
+      const [openResponse, pendingResponse] = await Promise.all([
+        api.get('/tickets', { 
+          params: { 
+            status: 'open', 
+            showAll: showAllForUser,
+            queueIds: JSON.stringify(userQueueIds), // Usar as mesmas filas
+            pageNumber: 1, 
+            pageSize: 1
+          } 
+        }),
+        api.get('/tickets', { 
+          params: { 
+            status: 'pending', 
+            showAll: showAllForUser,
+            queueIds: JSON.stringify(userQueueIds), // Usar as mesmas filas
+            pageNumber: 1, 
+            pageSize: 1 
+          } 
+        })
+      ]);
+      
+      setTabCounts({
+        open: openResponse.data.count || 0,
+        pending: pendingResponse.data.count || 0
+      });
+    } catch (error) {
+      console.error('Erro ao buscar counts:', error);
+    }
+  }, [showAllTickets, user?.queues]);
 
   // Função para fixar/desafixar conversa
   const handlePinConversation = (ticketId) => {
@@ -216,6 +259,22 @@ const ChatModerno = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('lg')); // Para controle do drawer
   
+
+  // Debug: Log do usuário atual
+  React.useEffect(() => {
+    if (user) {
+      console.log('👤 [USER-INFO]', { 
+        id: user.id, 
+        name: user.name, 
+        profile: user.profile,
+        queues: user.queues?.map(q => ({ id: q.id, name: q.name })),
+        queueIds: user.queues?.map(q => q.id),
+        showAllTickets: showAllTickets,
+        tabOpen: tabOpen || 'open'
+      });
+    }
+  }, [user, showAllTickets, tabOpen]);
+
   // Hook otimizado de tickets
   const {
     loading: ticketsLoading,
@@ -225,10 +284,11 @@ const ChatModerno = () => {
   } = useOptimizedTickets({
     status: tabOpen || 'open',
     searchParam: '',
-    selectedQueueIds: [],
+    selectedQueueIds: user?.queues?.map(q => q.id) || [], // Usar filas do usuário como o sistema antigo
     showAll: showAllTickets,
     forceRefresh: forceRefresh
   });
+  
   
   // Contexto do drawer
   const { drawerOpen, setDrawerOpen } = useDrawerControl();
@@ -236,18 +296,61 @@ const ChatModerno = () => {
   
   // Função para forçar refresh dos tickets
   const forceTicketsRefresh = useCallback(() => {
-    console.log('🔄 Forçando refresh dos tickets...');
     setForceRefresh(prev => prev + 1);
-    // Também chamar refetch como backup
     if (refetchTickets) {
       refetchTickets();
     }
   }, [refetchTickets]);
   
-  // Log quando showAllTickets muda
+
+  // Auto-selecionar ticket quando passado via URL
   useEffect(() => {
-    console.log('👁️ Mostrar todos os tickets:', showAllTickets ? 'ATIVADO' : 'DESATIVADO');
-  }, [showAllTickets]);
+    if (ticketId && tickets && tickets.length > 0) {
+      // Buscar o ticket na lista de tickets
+      const targetTicket = tickets.find(ticket => 
+        ticket.uuid === ticketId || ticket.id.toString() === ticketId
+      );
+      
+      if (targetTicket) {
+        setSelectedChatId(targetTicket.id);
+        setCurrentTicket(targetTicket);
+        
+        // Se estiver em mobile, fechar sidebar
+        if (isMobile) {
+          setShowSidebar(false);
+        }
+      }
+    }
+  }, [ticketId, tickets, setCurrentTicket, isMobile]);
+
+  // Limpar chat quando ticket selecionado não existe mais na lista
+  useEffect(() => {
+    if (selectedChatId && tickets && tickets.length > 0) {
+      const ticketExists = tickets.find(ticket => ticket.id === selectedChatId);
+      
+      if (!ticketExists) {
+        setSelectedChatId(null);
+        setCurrentTicket({ id: null, code: null });
+        
+        // Também atualizar URL para remover o ticket ID
+        if (history.location.pathname !== '/chat-moderno') {
+          history.replace('/chat-moderno');
+        }
+      }
+    }
+  }, [tickets, selectedChatId, setCurrentTicket, history]);
+  
+  // Buscar counts quando componente montar ou showAllTickets mudar
+  useEffect(() => {
+    fetchTabCounts();
+  }, [fetchTabCounts]);
+  
+  // Atualizar counts quando lista de tickets mudar
+  useEffect(() => {
+    if (tickets && tickets.length >= 0) {
+      fetchTabCounts();
+    }
+  }, [tickets, fetchTabCounts]);
   
   // Scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -316,8 +419,6 @@ const ChatModerno = () => {
           });
         }
         
-        console.log('🔄 Mensagens carregadas:', messagesData?.length, 'mensagens para ticket:', selectedChatId);
-        console.log('📊 Estrutura da resposta da API:', { responseData: response.data, messages: messagesData });
       } catch (error) {
         console.error('Error loading messages:', error);
         setMessages([]);
@@ -341,6 +442,15 @@ const ChatModerno = () => {
     setSelectedChatId(chatId);
     setReply(false);
     setReplyData({});
+    
+    // Atualizar URL com o UUID do ticket
+    if (tickets && tickets.length > 0) {
+      const ticket = tickets.find(t => t.id === chatId);
+      if (ticket && ticket.uuid) {
+        history.replace(`/chat-moderno/${ticket.uuid}`);
+      }
+    }
+    
     if (isMobile) {
       setShowSidebar(false);
     }
@@ -819,12 +929,6 @@ const ChatModerno = () => {
               <Box
                 onClick={() => {
                   // Aqui você pode implementar a lógica de aplicar filtros
-                  console.log('Filtros aplicados:', {
-                    tags: selectedTags,
-                    connections: selectedConnections,
-                    statuses: selectedStatuses,
-                    users: selectedUsers
-                  });
                   handleFilterToggle();
                 }}
                 sx={{
@@ -881,7 +985,8 @@ const ChatModerno = () => {
                 
                 {/* Actions Icons */}
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                  {/* Show All Button */}
+                  {/* Show All Button - Apenas para admins */}
+                  {user?.profile === 'admin' && (
                   <Box
                     onClick={() => setShowAllTickets(!showAllTickets)}
                     sx={{
@@ -910,6 +1015,7 @@ const ChatModerno = () => {
                       <EyeSlashIcon style={{ width: '16px', height: '16px' }} />
                     )}
                   </Box>
+                  )}
                   
                   {/* Sort Dropdown */}
                   <Box sx={{ position: 'relative' }}>
@@ -1108,8 +1214,8 @@ const ChatModerno = () => {
                 gap: '2px'
               }}>
                 {[
-                  { key: 'open', label: 'Atendendo', count: counts.open || 0 },
-                  { key: 'pending', label: 'Esperando', count: counts.pending || 0 }
+                  { key: 'open', label: 'Atendendo', count: tabCounts.open || 0 },
+                  { key: 'pending', label: 'Esperando', count: tabCounts.pending || 0 }
                 ].map((tab, index) => {
                   const isActive = tabOpen === tab.key;
                   return (

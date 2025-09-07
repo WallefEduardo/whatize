@@ -75,3 +75,28 @@ export const GetOverdueTasks = async (params = {}) => {
     params
   });
 };
+
+// Tarefas concluídas
+export const GetCompletedTasks = async (params = {}) => {
+  return request({
+    url: "/tasks/completed",
+    method: "GET",
+    params
+  });
+};
+
+// Concluir tarefa
+export const CompleteTask = async (taskId) => {
+  return request({
+    url: `/tasks/${taskId}/complete`,
+    method: "POST"
+  });
+};
+
+// Restaurar tarefa (Admin only)
+export const RestoreTask = async (completedTaskId) => {
+  return request({
+    url: `/tasks/completed/${completedTaskId}/restore`,
+    method: "POST"
+  });
+};

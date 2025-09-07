@@ -118,7 +118,7 @@ const Routes = () => {
                   isPrivate
                 />
                 <Route exact path="/chats/:id?" component={Chat} isPrivate />
-                <Route exact path="/chat-moderno" component={ChatModerno} isPrivate />
+                <Route exact path="/chat-moderno/:ticketId?" component={ChatModerno} isPrivate />
                 <Route exact path="/files" component={Files} isPrivate />
                 <Route exact path="/moments" component={ChatMoments} isPrivate />
                 <Route exact path="/Kanban" component={Kanban} isPrivate />

@@ -32,6 +32,9 @@ interface ListTasksResponse {
     inprogress: number;
     completed: number;
     overdue: number;
+    lowPriority: number;
+    mediumPriority: number;
+    highPriority: number;
   };
 }
 
@@ -69,9 +72,12 @@ const ListTasksService = async ({
 
   const offset = (pageNumber - 1) * limit;
 
-  // Construir condições WHERE
+  // Construir condições WHERE - excluir tarefas completadas por padrão
   const whereCondition: WhereOptions = {
-    companyId
+    companyId,
+    status: {
+      [Op.ne]: TaskStatus.COMPLETED
+    }
   };
 
   // Filtro por texto (título ou descrição)
@@ -90,7 +96,7 @@ const ListTasksService = async ({
     ];
   }
 
-  // Filtros específicos
+  // Filtros específicos - se status for fornecido, substitui o filtro padrão
   if (status) {
     whereCondition.status = status;
   }
@@ -167,24 +173,48 @@ const ListTasksService = async ({
       distinct: true
     });
 
-    // Calcular estatísticas se solicitado (sem filtros específicos)
+    // Calcular estatísticas usando apenas companyId (só tarefas ativas)
     let stats;
-    if (!status && !assignedToId && !createdById) {
-      const [todoCount, inProgressCount, completedCount] = await Promise.all([
+    {
+      console.log('📊 Calculando estatísticas apenas de tarefas ativas para companyId:', companyId);
+      const baseCondition = { companyId }; // Usar apenas companyId para stats globais
+      
+      const [todoCount, inProgressCount, completedCount, lowPriorityCount, mediumPriorityCount, highPriorityCount] = await Promise.all([
         Task.count({
-          where: { ...whereCondition, status: TaskStatus.TODO }
+          where: { ...baseCondition, status: TaskStatus.TODO }
         }),
         Task.count({
-          where: { ...whereCondition, status: TaskStatus.IN_PROGRESS }
+          where: { ...baseCondition, status: TaskStatus.IN_PROGRESS }
         }),
         Task.count({
-          where: { ...whereCondition, status: TaskStatus.COMPLETED }
+          where: { ...baseCondition, status: TaskStatus.COMPLETED }
+        }),
+        Task.count({
+          where: { 
+            ...baseCondition, 
+            priority: TaskPriority.LOW,
+            status: { [Op.in]: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] }
+          }
+        }),
+        Task.count({
+          where: { 
+            ...baseCondition, 
+            priority: TaskPriority.MEDIUM,
+            status: { [Op.in]: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] }
+          }
+        }),
+        Task.count({
+          where: { 
+            ...baseCondition, 
+            priority: TaskPriority.HIGH,
+            status: { [Op.in]: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] }
+          }
         })
       ]);
 
       const overdueCount = await Task.count({
         where: {
-          ...whereCondition,
+          ...baseCondition,
           dueDate: {
             [Op.and]: [
               { [Op.not]: null },
@@ -197,11 +227,22 @@ const ListTasksService = async ({
         }
       });
 
+      console.log('📊 Estatísticas de tarefas ativas:', {
+        todo: todoCount,
+        inprogress: inProgressCount,
+        lowPriority: lowPriorityCount,
+        mediumPriority: mediumPriorityCount,
+        highPriority: highPriorityCount
+      });
+
       stats = {
         todo: todoCount,
         inprogress: inProgressCount,
         completed: completedCount,
-        overdue: overdueCount
+        overdue: overdueCount,
+        lowPriority: lowPriorityCount,
+        mediumPriority: mediumPriorityCount,
+        highPriority: highPriorityCount
       };
     }
 
