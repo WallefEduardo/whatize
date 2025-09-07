@@ -108,11 +108,9 @@ const Select = ({
       }
     };
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Toggle dropdown
   const handleToggle = () => {
@@ -170,7 +168,10 @@ const Select = ({
               <DropdownOption
                 key={index}
                 selected={isSelected}
-                onClick={() => handleSelect(option)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleSelect(option);
+                }}
               >
                 {optionLabel}
               </DropdownOption>

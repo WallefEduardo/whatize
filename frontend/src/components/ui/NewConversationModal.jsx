@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { Box, TextField, Typography, Chip } from '@mui/material';
+import { Box, TextField, Typography, Chip, Avatar } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { X, Search, MessageCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Search, MessageCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { AuthContext } from '../../context/Auth/AuthContext';
 import { useHistory } from 'react-router-dom';
 import api from '../../services/api';
 import toastError from '../../errors/toastError';
-import AvatarOptimized from './AvatarOptimized';
 import { Select } from './Select';
 import GradientButton from '../GradientButton';
 import { getBackendUrl } from '../../config';
@@ -19,7 +18,7 @@ const ModalOverlay = styled(Box)(({ isOpen }) => ({
   width: '100%',
   height: '100%',
   backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  zIndex: 9999,
+  zIndex: 99999,
   opacity: isOpen ? 1 : 0,
   visibility: isOpen ? 'visible' : 'hidden',
   transition: 'all 0.3s ease',
@@ -28,10 +27,10 @@ const ModalOverlay = styled(Box)(({ isOpen }) => ({
 // Modal que desliza da esquerda
 const ModalContainer = styled(Box)(({ isOpen }) => ({
   position: 'absolute',
-  top: 0,
+  top: '64px',
   left: 0,
   width: '420px',
-  height: '100%',
+  height: 'calc(100% - 64px)',
   backgroundColor: '#fff',
   boxShadow: '4px 0 20px rgba(0, 0, 0, 0.15)',
   transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
@@ -128,6 +127,8 @@ const NewConversationModal = ({ isOpen, onClose, onCreateTicket }) => {
           pageNumber: 1
         }
       });
+      console.log('🔍 Contacts from API:', data.contacts);
+      console.log('🖼️ First contact urlPicture:', data.contacts?.[0]?.urlPicture);
       setContacts(data.contacts || []);
       setFilteredContacts(data.contacts || []);
     } catch (error) {
@@ -197,18 +198,9 @@ const NewConversationModal = ({ isOpen, onClose, onCreateTicket }) => {
     }
   }, [isOpen, fetchContacts, fetchQueues, fetchWhatsapps]);
 
-  // Função para construir URL da imagem do contato
+  // Função para construir URL da imagem do contato (mesma lógica do sidebar)
   const getContactImageUrl = (contact) => {
-    if (!contact) return null;
-    
-    const imageUrl = contact.profilePicUrl || contact.urlPicture;
-    if (!imageUrl) return null;
-    
-    // Se já é uma URL completa, retorna como está
-    if (imageUrl.startsWith('http')) return imageUrl;
-    
-    // Caso contrário, constrói URL completa com backend
-    return `${backendUrl}/public/company${user?.companyId}/${imageUrl}`;
+    return contact?.urlPicture || null;
   };
 
   // Reset ao fechar
@@ -295,37 +287,29 @@ const NewConversationModal = ({ isOpen, onClose, onCreateTicket }) => {
         <ModalHeader>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box 
-              onClick={handleClose}
+              onClick={step === 2 ? handleBack : handleClose}
               sx={{ 
                 cursor: 'pointer', 
                 display: 'flex', 
                 alignItems: 'center',
-                p: 0.5,
-                borderRadius: '6px',
-                '&:hover': { backgroundColor: 'var(--bg-secondary)' }
+                justifyContent: 'center',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                backgroundColor: 'transparent',
+                transition: 'all 0.2s ease',
+                '&:hover': { 
+                  backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                  transform: 'scale(1.05)'
+                }
               }}
             >
-              <X size={18} />
+              <ArrowLeft size={20} color="var(--text-primary)" />
             </Box>
             <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--text-primary)' }}>
               Nova Conversa
             </Typography>
           </Box>
-          {step === 2 && (
-            <Box 
-              onClick={handleBack}
-              sx={{ 
-                cursor: 'pointer', 
-                display: 'flex', 
-                alignItems: 'center',
-                p: 0.5,
-                borderRadius: '6px',
-                '&:hover': { backgroundColor: 'var(--bg-secondary)' }
-              }}
-            >
-              <ArrowLeft size={18} />
-            </Box>
-          )}
         </ModalHeader>
 
         {/* Conteúdo */}
@@ -373,12 +357,20 @@ const NewConversationModal = ({ isOpen, onClose, onCreateTicket }) => {
                       onClick={() => setSelectedContact(contact)}
                     >
                       <Box sx={{ mr: 2 }}>
-                        <AvatarOptimized
-                          src={getContactImageUrl(contact)}
-                          alt={contact.name || contact.number}
-                          size="lg"
-                          fallbackText={contact.name || contact.number}
-                        />
+                        <Avatar
+                          src={contact?.urlPicture}
+                          alt={contact?.name || contact?.number}
+                          sx={{
+                            width: 48,
+                            height: 48,
+                            backgroundColor: '#E5F3E5',
+                            color: 'var(--color-accent)',
+                            fontWeight: 600,
+                            fontSize: '16px'
+                          }}
+                        >
+                          {!contact?.urlPicture && (contact?.name || contact?.number)?.charAt(0)?.toUpperCase()}
+                        </Avatar>
                       </Box>
                       <Box sx={{ flex: 1 }}>
                         <Typography 
@@ -413,12 +405,20 @@ const NewConversationModal = ({ isOpen, onClose, onCreateTicket }) => {
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', p: 2, backgroundColor: 'var(--bg-secondary)', borderRadius: '8px' }}>
                   <Box sx={{ mr: 2 }}>
-                    <AvatarOptimized
-                      src={getContactImageUrl(selectedContact)}
+                    <Avatar
+                      src={selectedContact?.urlPicture}
                       alt={selectedContact?.name || selectedContact?.number}
-                      size="md"
-                      fallbackText={selectedContact?.name || selectedContact?.number}
-                    />
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        backgroundColor: '#E5F3E5',
+                        color: 'var(--color-accent)',
+                        fontWeight: 600,
+                        fontSize: '14px'
+                      }}
+                    >
+                      {!selectedContact?.urlPicture && (selectedContact?.name || selectedContact?.number)?.charAt(0)?.toUpperCase()}
+                    </Avatar>
                   </Box>
                   <Box>
                     <Typography variant="body2" sx={{ fontWeight: 500, color: 'var(--text-primary)' }}>

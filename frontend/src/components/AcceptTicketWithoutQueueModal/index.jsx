@@ -10,7 +10,7 @@ import { MessageSquare } from "lucide-react";
 import api from "../../services/api";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import ModernModal from "../ModernModal";
-import { Select } from "../ui/Select";
+import SimpleSelect from "../ui/SimpleSelect";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import ShowTicketOpen from "../ShowTicketOpenModal";
@@ -174,13 +174,8 @@ const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket })
 			<ModernModal
 				open={modalOpen}
 				onClose={handleClose}
-				title={i18n.t("ticketsList.acceptModal.title")}
-				size="sm"
-				actions={actions}
-			>
-				<Box sx={{ py: 1 }}>
-					{/* Cabeçalho com ícone */}
-					<Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+				title={
+					<Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
 						<Box
 							sx={{
 								width: '36px',
@@ -219,20 +214,14 @@ const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket })
 							</Typography>
 						</Box>
 					</Box>
+				}
+				size="md"
+				actions={actions}
+			>
+				<Box sx={{ py: 1 }}>
 					
 					{/* Campo de seleção de fila */}
 					<Box sx={{ mb: 2 }}>
-						<Typography 
-							variant="body2" 
-							sx={{ 
-								mb: 1, 
-								color: 'var(--text-primary)',
-								fontSize: '14px',
-								fontWeight: 600
-							}}
-						>
-							{i18n.t("ticketsList.acceptModal.queue")}
-						</Typography>
 						
 						{loadingQueues ? (
 							<Box 
@@ -247,23 +236,16 @@ const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket })
 								Carregando filas...
 							</Box>
 						) : (
-							<Select
+							<SimpleSelect
+								options={queues}
 								value={selectedQueue}
-								onChange={(e) => setSelectedQueue(e.target.value)}
+								onChange={(queueId, queue) => setSelectedQueue(queueId)}
+								placeholder="Selecione uma fila..."
+								displayKey="name"
+								valueKey="id"
 								size="md"
-								variant="bordered"
-								radius="md"
 								disabled={loadingQueues || queues.length === 0}
-							>
-								<option value="" disabled>
-									Selecione uma fila...
-								</option>
-								{queues.map((queue) => (
-									<option key={queue.id} value={queue.id.toString()}>
-										{queue.name}
-									</option>
-								))}
-							</Select>
+							/>
 						)}
 					</Box>
 					
