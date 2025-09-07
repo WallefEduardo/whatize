@@ -314,17 +314,12 @@ const NewConversationModal = ({ isOpen, onClose, onCreateTicket }) => {
       console.log('🔍 UUID retornado:', newTicket.uuid);
       console.log('🔍 ID retornado:', newTicket.id);
       
-      // Usar UUID se disponível, senão usar ID
-      const ticketIdentifier = newTicket.uuid || newTicket.id;
-      console.log('🔄 Navegando para:', `/chatmoderno/${ticketIdentifier}`);
+      console.log('✅ Conversa criada - passando para componente pai');
       
       // Fechar modal
       handleClose();
       
-      // Navegar direto para a nova conversa usando UUID ou ID
-      history.push(`/chatmoderno/${ticketIdentifier}`);
-      
-      // Callback opcional para o componente pai
+      // Callback para o componente pai (abre o chat automaticamente)
       onCreateTicket?.(newTicket);
       
     } catch (error) {

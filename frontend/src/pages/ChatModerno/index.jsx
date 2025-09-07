@@ -323,10 +323,12 @@ const ChatModerno = () => {
     // Forçar refresh dos tickets para mostrar a nova conversa
     forceTicketsRefresh();
     
-    // Navegar para a nova conversa
-    if (newTicket?.id) {
-      history.push(`/chatmoderno/${newTicket.id}`);
+    // Navegar para a nova conversa usando UUID
+    if (newTicket?.uuid) {
+      history.push(`/chat-moderno/${newTicket.uuid}`);
     }
+    
+    console.log('✅ Nova conversa criada:', newTicket.id);
   }, [forceTicketsRefresh, history]);
   
 
