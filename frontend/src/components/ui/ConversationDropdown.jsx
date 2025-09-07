@@ -4,7 +4,9 @@ import { styled } from '@mui/material/styles';
 import { ChevronDown, X, ArrowRightLeft, Mail, Users, Tag, BellOff, Pin } from 'lucide-react';
 
 // Styled Trigger Button
-const StyledTrigger = styled(Box)(({ triggerColor, triggerSize }) => ({
+const StyledTrigger = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'triggerColor' && prop !== 'triggerSize'
+})(({ triggerColor, triggerSize }) => ({
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',

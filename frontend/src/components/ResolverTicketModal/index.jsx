@@ -11,7 +11,6 @@ const ResolverTicketModal = ({
   onResolverComMensagem,
   contactName = 'contato' 
 }) => {
-  console.log('ResolverTicketModal render - isVisible:', isVisible);
   
   // Hook para detectar dimensões da janela
   const [windowSize, setWindowSize] = useState({
@@ -39,8 +38,6 @@ const ResolverTicketModal = ({
     (windowSize.width >= 1500 && windowSize.width <= 1700 && windowSize.height <= 950)    // 1600x900
   );
   
-  // Debug da resolução detectada
-  console.log(`Resolução: ${windowSize.width}x${windowSize.height}, Layout Compacto: ${isCompactLayout}`);
 
   const handleResolverSem = () => {
     onResolverSemMensagem();

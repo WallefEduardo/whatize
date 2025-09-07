@@ -188,6 +188,11 @@ const UpdateUserService = async ({
   });
 
   await user.$set("queues", queueIds);
+  
+  // CORRIGIDO: Atualizar também o campo selectedQueueIds para manter sincronização
+  await user.update({
+    selectedQueueIds: queueIds
+  });
 
   await user.reload();
 

@@ -81,19 +81,22 @@ const useOptimizedTickets = ({
   const debouncedSearch = useDebounce(searchParam, 300);
 
   // Memoizar parâmetros da API para evitar requests desnecessários  
-  const apiParams = useMemo(() => ({
-    searchParam: debouncedSearch,
-    status,
-    // CRÍTICO: O backend precisa de queueIds para funcionar corretamente
-    // Se não enviarmos queueIds, pode não retornar tickets
-    queueIds: selectedQueueIds?.length > 0 ? selectedQueueIds : [],
-    showAll,
-    tags: tags?.length > 0 ? tags : undefined,
-    users: users?.length > 0 ? users : undefined,
-    whatsapps: whatsappIds?.length > 0 ? whatsappIds : undefined,
-    pageNumber: 1,
-    sortTickets: 'DESC'
-  }), [debouncedSearch, status, JSON.stringify(selectedQueueIds), showAll, JSON.stringify(tags), JSON.stringify(users), JSON.stringify(whatsappIds)]);
+  const apiParams = useMemo(() => {
+    const params = {
+      searchParam: debouncedSearch,
+      status,
+      // CORRIGIDO: Usar mesmo formato que useTickets (JSON string)
+      queueIds: selectedQueueIds?.length > 0 ? JSON.stringify(selectedQueueIds) : undefined,
+      showAll,
+      tags: tags?.length > 0 ? JSON.stringify(tags) : undefined,
+      users: users?.length > 0 ? JSON.stringify(users) : undefined,
+      whatsapps: whatsappIds?.length > 0 ? JSON.stringify(whatsappIds) : undefined,
+      pageNumber: 1,
+      sortTickets: 'DESC'
+    };
+    
+    return params;
+  }, [debouncedSearch, status, JSON.stringify(selectedQueueIds), showAll, JSON.stringify(tags), JSON.stringify(users), JSON.stringify(whatsappIds)]);
 
   // Cache key para requests
   const cacheKey = useMemo(() => 
@@ -117,13 +120,8 @@ const useOptimizedTickets = ({
         return;
       }
 
-      console.log('🔍 [API-PARAMS]', apiParams);
       const { data } = await api.get('/tickets', { params: apiParams });
-      console.log('📊 [API-RESPONSE]', { 
-        count: data.count,
-        ticketsLength: data.tickets?.length,
-        hasMore: data.hasMore
-      });
+      
       
       // Processar e normalizar dados
       const { normalized, byStatus } = normalizeTickets(data.tickets || []);

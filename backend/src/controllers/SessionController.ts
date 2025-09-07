@@ -90,15 +90,21 @@ export const update = async (
 export const me = async (req: Request, res: Response): Promise<Response> => {
   const token: string = req.cookies.jrt;
   const user = await FindUserFromToken(token);
-  const { id, profile, super: superAdmin, companyId } = user;
 
   if (!token) {
     throw new AppError("ERR_SESSION_EXPIRED", 401);
   }
 
-  console.log('[AUTH] /me endpoint - returning user:', { id, profile, super: superAdmin, companyId });
+  // CORRIGIDO: Retornar dados completos do usuário incluindo filas
   
-  return res.json({ id, profile, super: superAdmin, companyId });
+  return res.json({
+    id: user.id,
+    name: user.name,
+    profile: user.profile,
+    super: user.super,
+    companyId: user.companyId,
+    queues: user.queues || []
+  });
 };
 
 export const remove = async (

@@ -186,9 +186,6 @@ const App = () => {
   }, [mode]);
 
   useEffect(() => {
-    console.log("|=========== handleSaveSetting ==========|")
-    console.log("APP START")
-    console.log("|========================================|")
    
     // Carregar configurações com tratamento silencioso de erros
     const loadSetting = async (key, setter, defaultValue, isValidFn = null) => {

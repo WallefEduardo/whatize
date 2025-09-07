@@ -36,7 +36,6 @@ class SocketWorker {
     });
 
     this.socket.on("connect", () => {
-      console.log(`✅ [SOCKET-WORKER] Conectado: ${socketUrl}`);
     });
 
     this.socket.on("connect_error", (error) => {

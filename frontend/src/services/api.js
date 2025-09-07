@@ -15,18 +15,6 @@ const api = axios.create({
 	}
 });
 
-// Log em desenvolvimento para debug
-if (import.meta.env.DEV) {
-	api.interceptors.request.use(
-		(config) => {
-			console.log(`[API] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, {
-				hasAuth: !!config.headers.Authorization,
-				withCredentials: config.withCredentials
-			});
-			return config;
-		}
-	);
-}
 
 export const openApi = axios.create({
 	baseURL: getBaseURL(),

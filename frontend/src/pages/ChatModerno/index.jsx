@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, useMediaQuery, useTheme, TextField } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useParams, useHistory } from 'react-router-dom';
+import { MessageCircle, Clock } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 // Context
@@ -42,6 +43,9 @@ import api from '../../services/api';
 // Hooks otimizados
 import useOptimizedTickets from '../../hooks/useOptimizedTickets';
 
+// Componentes auxiliares
+import NewConversationModal from '../../components/ui/NewConversationModal';
+
 // Icons
 import { 
   ChatBubbleLeftRightIcon,
@@ -73,7 +77,10 @@ const ChatContainer = styled(Box)(({ theme }) => ({
   },
 }));
 
-const SidebarContainer = styled(Box)(({ theme, isOpen }) => ({
+const SidebarContainer = styled(Box, {
+  // Filtrar props que não devem ser passadas para o DOM
+  shouldForwardProp: (prop) => prop !== 'isOpen',
+})(({ theme, isOpen }) => ({
   width: '360px',
   flexShrink: 0,
   transition: 'all 0.3s ease',
@@ -187,6 +194,22 @@ const ChatModerno = () => {
   // Estado para forçar refresh dos tickets
   const [forceRefresh, setForceRefresh] = useState(0);
   
+  // Estados de busca
+  const [searchParam, setSearchParam] = useState('');
+  const [debouncedSearchParam, setDebouncedSearchParam] = useState('');
+  
+  // Estado do modal de nova conversa
+  const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+
+  // Debounce para busca otimizada
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchParam(searchParam);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchParam]);
+  
   // Função para buscar counts de todos os status
   const fetchTabCounts = useCallback(async () => {
     try {
@@ -260,20 +283,6 @@ const ChatModerno = () => {
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('lg')); // Para controle do drawer
   
 
-  // Debug: Log do usuário atual
-  React.useEffect(() => {
-    if (user) {
-      console.log('👤 [USER-INFO]', { 
-        id: user.id, 
-        name: user.name, 
-        profile: user.profile,
-        queues: user.queues?.map(q => ({ id: q.id, name: q.name })),
-        queueIds: user.queues?.map(q => q.id),
-        showAllTickets: showAllTickets,
-        tabOpen: tabOpen || 'open'
-      });
-    }
-  }, [user, showAllTickets, tabOpen]);
 
   // Hook otimizado de tickets
   const {
@@ -283,11 +292,12 @@ const ChatModerno = () => {
     refetch: refetchTickets
   } = useOptimizedTickets({
     status: tabOpen || 'open',
-    searchParam: '',
-    selectedQueueIds: user?.queues?.map(q => q.id) || [], // Usar filas do usuário como o sistema antigo
+    searchParam: debouncedSearchParam,
+    selectedQueueIds: user?.queues?.map(q => q.id) || [], // Usar filas do usuário
     showAll: showAllTickets,
     forceRefresh: forceRefresh
   });
+  
   
   
   // Contexto do drawer
@@ -301,6 +311,23 @@ const ChatModerno = () => {
       refetchTickets();
     }
   }, [refetchTickets]);
+
+  // Handler para busca otimizada
+  const handleSearch = useCallback((event) => {
+    const searchTerm = event.target.value;
+    setSearchParam(searchTerm);
+  }, []);
+
+  // Handler para criar nova conversa
+  const handleCreateTicket = useCallback((newTicket) => {
+    // Forçar refresh dos tickets para mostrar a nova conversa
+    forceTicketsRefresh();
+    
+    // Navegar para a nova conversa
+    if (newTicket?.id) {
+      history.push(`/chatmoderno/${newTicket.id}`);
+    }
+  }, [forceTicketsRefresh, history]);
   
 
   // Auto-selecionar ticket quando passado via URL
@@ -1108,10 +1135,7 @@ const ChatModerno = () => {
                   
                   {/* New Conversation Button */}
                   <Box
-                    onClick={() => {
-                      // Adicionar lógica de nova conversa
-                      console.log('Iniciar nova conversa');
-                    }}
+                    onClick={() => setShowNewConversationModal(true)}
                     sx={{
                       width: '32px',
                       height: '32px',
@@ -1142,13 +1166,32 @@ const ChatModerno = () => {
               <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
                 <TextField
                   fullWidth
-                  placeholder="Buscar conversas..."
+                  placeholder="Pesquisar..."
                   size="small"
+                  value={searchParam}
+                  onChange={handleSearch}
                   InputProps={{
                     startAdornment: (
                       <Box sx={{ mr: 1, display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                           <path d="M21 21L16.514 16.506M19 10.5C19 15.194 15.194 19 10.5 19S2 15.194 2 10.5 5.806 2 10.5 2 19 5.806 19 10.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </Box>
+                    ),
+                    endAdornment: searchParam && (
+                      <Box 
+                        onClick={() => setSearchParam('')}
+                        sx={{ 
+                          ml: 1, 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          '&:hover': { color: 'var(--text-primary)' }
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       </Box>
                     ),
@@ -1205,17 +1248,25 @@ const ChatModerno = () => {
                 </Box>
               </Box>
 
-              {/* Tabs */}
+              {/* Tabs with animated line */}
               <Box sx={{ 
                 display: 'flex',
-                backgroundColor: 'var(--bg-secondary)',
-                borderRadius: '8px',
-                padding: '4px',
-                gap: '2px'
+                borderBottom: '1px solid var(--border-primary)',
+                mb: 0
               }}>
                 {[
-                  { key: 'open', label: 'Atendendo', count: tabCounts.open || 0 },
-                  { key: 'pending', label: 'Esperando', count: tabCounts.pending || 0 }
+                  { 
+                    key: 'open', 
+                    label: 'Atendendo', 
+                    count: tabCounts.open || 0,
+                    icon: MessageCircle
+                  },
+                  { 
+                    key: 'pending', 
+                    label: 'Esperando', 
+                    count: tabCounts.pending || 0,
+                    icon: Clock
+                  }
                 ].map((tab, index) => {
                   const isActive = tabOpen === tab.key;
                   return (
@@ -1223,31 +1274,61 @@ const ChatModerno = () => {
                       key={tab.key}
                       onClick={() => setTabOpen(tab.key)}
                       sx={{
-                        flex: 1,
-                        textAlign: 'center',
-                        padding: '6px 8px',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 600,
+                        flex: 1, // Ocupa toda largura disponível dividido igualmente
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '12px 8px',
+                        fontSize: '13px',
+                        fontWeight: 500,
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        backgroundColor: isActive ? 'var(--color-accent)' : 'transparent',
-                        color: isActive ? 'white' : 'var(--text-secondary)',
+                        position: 'relative',
+                        color: isActive ? 'var(--color-accent)' : 'var(--text-secondary)',
+                        transition: 'all 0.3s ease',
+                        marginBottom: '-1px',
+                        gap: 1,
                         '&:hover': {
-                          backgroundColor: isActive ? 'var(--color-accent)' : 'var(--bg-tertiary)',
-                          color: isActive ? 'white' : 'var(--text-primary)',
+                          color: 'var(--color-accent)',
+                          transform: 'translateY(-1px)',
                         },
-                        position: 'relative'
+                        '&:hover .tab-icon': {
+                          transform: 'scale(1.15)',
+                        },
+                        '&:active': {
+                          transform: 'translateY(0px)',
+                        },
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          bottom: 0,
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          width: isActive ? '100%' : '0%',
+                          height: '2px',
+                          backgroundColor: 'var(--color-accent)',
+                          transition: 'width 0.3s ease',
+                        },
+                        '&:hover::before': {
+                          width: '100%',
+                        }
                       }}
                     >
-                      {tab.label}
+                      <Box
+                        className="tab-icon"
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}
+                      >
+                        <tab.icon size={16} />
+                      </Box>
+                      <span style={{ userSelect: 'none' }}>{tab.label}</span>
                       {tab.count > 0 && (
                         <Box
                           sx={{
-                            position: 'absolute',
-                            top: '-8px',
-                            right: '-8px',
-                            backgroundColor: '#f44336',
+                            ml: 1,
+                            backgroundColor: isActive ? 'var(--color-accent)' : '#f44336',
                             color: 'white',
                             borderRadius: '50%',
                             minWidth: '18px',
@@ -1267,6 +1348,30 @@ const ChatModerno = () => {
                 })}
               </Box>
             </CardHeader>
+            
+            {/* Search Results Indicator */}
+            {searchParam && (
+              <Box sx={{ 
+                px: 2, 
+                py: 1, 
+                backgroundColor: 'var(--bg-tertiary)',
+                borderBottom: '1px solid var(--border-primary)',
+                fontSize: '12px',
+                color: 'var(--text-secondary)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M21 21L16.514 16.506M19 10.5C19 15.194 15.194 19 10.5 19S2 15.194 2 10.5 5.806 2 10.5 2 19 5.806 19 10.5Z" stroke="currentColor" strokeWidth="1.5"/>
+                </svg>
+                {tickets.length === 0 ? (
+                  <span>Nenhum resultado para "{searchParam}"</span>
+                ) : (
+                  <span>{tickets.length} resultado{tickets.length !== 1 ? 's' : ''} para "{searchParam}"</span>
+                )}
+              </Box>
+            )}
             
             <CardContent sx={{ 
               flex: 1, 
@@ -1468,6 +1573,13 @@ const ChatModerno = () => {
             showInfo={showInfo}
           />
         )}
+
+        {/* Modal de Nova Conversa */}
+        <NewConversationModal
+          isOpen={showNewConversationModal}
+          onClose={() => setShowNewConversationModal(false)}
+          onCreateTicket={handleCreateTicket}
+        />
       </Box>
     </ChatPageBase>
   );

@@ -1,5 +1,4 @@
 export function register() {
-  console.log("Registrando service worker", navigator);
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       // Detectar mudança de porta e limpar service workers antigos
@@ -7,7 +6,6 @@ export function register() {
       const lastPort = localStorage.getItem('vite-port');
       
       if (lastPort && lastPort !== currentPort) {
-        console.log(`Porta mudou de ${lastPort} para ${currentPort}, limpando service worker...`);
         unregister().then(() => {
           // Limpar cache após mudança de porta
           if ('caches' in window) {
@@ -30,14 +28,12 @@ export function register() {
 function registerServiceWorker() {
   const swUrl = `/service-worker.js`;
   const urlVersion = `/version.json`;
-  console.log("swUrl", swUrl);
   
   // Verificação periódica a cada 5 segundos
   setInterval(() => checkForUpdate(urlVersion), 5000);
   
   navigator.serviceWorker.register(swUrl)
     .then((registration) => {
-      console.log('Service worker registrado com sucesso!', registration);
     })
     .catch((error) => {
       console.error('Erro durante o registro do service worker:', error);

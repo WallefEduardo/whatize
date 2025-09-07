@@ -20,7 +20,6 @@ const useAuth = () => {
   const [user, setUser] = useState({});
   const [socket, setSocket] = useState(null)
  
-  console.log('🚀 [USEAUTH] Hook inicializado - configurando interceptors...');
 
   // INTERCEPTORS CORRIGIDOS PARA FUNCIONAR COM VITE
   api.interceptors.request.use(
@@ -33,9 +32,6 @@ const useAuth = () => {
           config.headers["Authorization"] = `Bearer ${tokenValue}`;
           setIsAuth(true);
           
-          if (import.meta.env.DEV) {
-            console.log('✅ [AUTH] Token adicionado para:', config.url);
-          }
         } catch (error) {
           console.error('❌ [AUTH] Erro ao processar token:', error);
           localStorage.removeItem("token");
@@ -119,17 +115,14 @@ const useAuth = () => {
     (async () => {
       if (token) {
         try {
-          console.log('[AUTH] Verificando autenticação inicial com interceptors globais');
           // Interceptor global vai adicionar token automaticamente
           const { data } = await api.get("/auth/me");
           
           if (data && data.id) {
             setIsAuth(true);
             setUser(data);
-            console.log('[AUTH] Usuário autenticado:', data.name);
           }
         } catch (err) {
-          console.log('[AUTH] Falha na verificação inicial');
           setIsAuth(false);
           setUser({});
           localStorage.removeItem("token");
@@ -303,9 +296,8 @@ Entre em contato com o Suporte para mais informações! `);
   const getCurrentUserInfo = async () => {
     try {
       const { data } = await api.get("/auth/me");
-      console.log(data)
       return data;
-    } catch (_) {
+    } catch (error) {
       return null;
     }
   };

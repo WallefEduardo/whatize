@@ -24,7 +24,9 @@ import {
   MapPinIcon
 } from '@heroicons/react/24/solid';
 
-const MessageContainer = styled(Box)(({ theme, isSent }) => ({
+const MessageContainer = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isSent'
+})(({ theme, isSent }) => ({
   display: 'flex',
   gap: '8px',
   alignItems: 'flex-start',
@@ -38,7 +40,9 @@ const MessageContainer = styled(Box)(({ theme, isSent }) => ({
   },
 }));
 
-const MessageContent = styled(Box)(({ theme, isSent }) => ({
+const MessageContent = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isSent'
+})(({ theme, isSent }) => ({
   display: 'flex',
   flexDirection: 'column',
   maxWidth: '70%',
@@ -46,7 +50,9 @@ const MessageContent = styled(Box)(({ theme, isSent }) => ({
   alignItems: isSent ? 'flex-end' : 'flex-start',
 }));
 
-const MessageBubble = styled(Box)(({ theme, isSent }) => ({
+const MessageBubble = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isSent'
+})(({ theme, isSent }) => ({
   padding: '8px 12px',
   borderRadius: '12px',
   wordBreak: 'break-word',
@@ -64,7 +70,9 @@ const MessageBubble = styled(Box)(({ theme, isSent }) => ({
   }),
 }));
 
-const MessageTime = styled(Typography)(({ theme, isSent }) => ({
+const MessageTime = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isSent'
+})(({ theme, isSent }) => ({
   fontSize: '11px',
   color: isSent ? 'rgba(0, 0, 0, 0.6)' : 'var(--text-secondary)', // Mudou para cor mais escura nas mensagens enviadas
   display: 'flex',
@@ -73,7 +81,9 @@ const MessageTime = styled(Typography)(({ theme, isSent }) => ({
   marginTop: '2px',
 }));
 
-const MessageActions = styled(Box)(({ theme, isSent }) => ({
+const MessageActions = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isSent'
+})(({ theme, isSent }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: '4px',
@@ -92,7 +102,9 @@ const MessageActions = styled(Box)(({ theme, isSent }) => ({
   },
 }));
 
-const ReplyMessage = styled(Box)(({ theme, isSent }) => ({
+const ReplyMessage = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isSent'
+})(({ theme, isSent }) => ({
   padding: '6px 10px',
   marginBottom: '4px',
   borderRadius: '8px',

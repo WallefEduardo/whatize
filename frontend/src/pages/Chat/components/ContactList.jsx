@@ -207,28 +207,17 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
     fetchTags();
   }, []);
 
-  // Buscar etiquetas do ticket atual
+  // Usar etiquetas do ticket se disponíveis
   useEffect(() => {
-    if (ticket?.id) {
-      const fetchTicketTags = async () => {
-        try {
-          const { data } = await api.get(`/ticket-tags/${ticket.id}`);
-          setSelectedTags(data || []);
-        } catch (err) {
-          console.error('Erro ao buscar etiquetas do ticket:', err);
-          setSelectedTags([]);
-        }
-      };
-      fetchTicketTags();
+    if (ticket?.tags) {
+      setSelectedTags(ticket.tags);
+    } else {
+      setSelectedTags([]);
     }
-  }, [ticket?.id]);
+  }, [ticket?.id, ticket?.tags]);
   
   const isSelected = id === selectedChatId;
   
-  // Debug do estado resolverModalOpen
-  useEffect(() => {
-    console.log('resolverModalOpen mudou para:', resolverModalOpen);
-  }, [resolverModalOpen]);
 
   
   const handleClick = () => {
@@ -246,7 +235,6 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
     setAcceptModalOpen(false);
     // Forçar atualização imediata da lista
     if (onRefresh) {
-      console.log('🔄 Modal fechado - forçando refresh da lista de tickets');
       // Chamar imediatamente e depois um backup após delay
       onRefresh();
       setTimeout(() => {
@@ -353,11 +341,11 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
       const isSelected = selectedTags.some(t => t.id === tag.id);
       
       if (isSelected) {
-        // Remover etiqueta
-        await api.delete(`/ticket-tags/${ticket.id}/${tag.id}`);
+        // Remover etiqueta - usando endpoint correto
+        await api.delete(`/ticket-tags/${ticket.id}`);
         setSelectedTags(prev => prev.filter(t => t.id !== tag.id));
       } else {
-        // Adicionar etiqueta
+        // Adicionar etiqueta - usando endpoint correto  
         await api.put(`/ticket-tags/${ticket.id}/${tag.id}`);
         setSelectedTags(prev => [...prev, tag]);
       }
@@ -366,7 +354,10 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
       if (onRefresh) onRefresh();
     } catch (err) {
       console.error('Erro ao atualizar etiqueta:', err);
-      toastError(err);
+      // Silenciar erro se a funcionalidade não estiver disponível
+      if (err.response?.status !== 404) {
+        toastError(err);
+      }
     }
   };
 

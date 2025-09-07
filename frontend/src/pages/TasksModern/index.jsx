@@ -266,8 +266,8 @@ const TasksModern = () => {
     }
   };
 
-  // Verificar se é admin
-  const isAdmin = currentUser?.profile === 'admin';
+  // Verificar se é admin ou superadmin
+  const isAdmin = currentUser?.profile === 'admin' || currentUser?.profile === 'superadmin';
 
   // Dados a serem exibidos (tarefas ativas ou concluídas)
   const displayTasks = activeFilter === 'completed' ? completedTasks : tasks;

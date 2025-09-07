@@ -90,7 +90,6 @@ const useWhatsApps = () => {
 
   useEffect(() => {
     if (user.companyId) {
-      console.log('🔧 useWhatsApps socket setup - companyId:', user.companyId, 'socket exists:', !!socket);
 
       const companyId = user.companyId;
 //    const socket = socketManager.GetSocket();
@@ -142,14 +141,12 @@ const useWhatsApps = () => {
       }
 
       if (socket && socket.on && typeof socket.on === 'function') {
-        console.log(`🔌 Setting up socket listener: company-${companyId}-whatsapp`);
         socket.on(`company-${companyId}-whatsapp`, onCompanyWhatsapp);
       } else {
         console.error('❌ Socket not available for company-whatsapp:', socket);
       }
       
       if (socket && socket.on && typeof socket.on === 'function') {
-        console.log(`🔌 Setting up socket listener: company-${companyId}-whatsappSession`);
         socket.on(`company-${companyId}-whatsappSession`, onCompanyWhatsappSession);
       } else {
         console.error('❌ Socket not available for company-whatsappSession:', socket);

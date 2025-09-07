@@ -125,7 +125,8 @@ const ListTicketsService = async ({
     whereCondition = {
       ...whereCondition,
       userId,
-      queueId: { [Op.in]: queueIds }
+      // CORRIGIDO: Para superadmins sem filas, não aplicar filtro de queueId
+      ...(queueIds && queueIds.length > 0 ? { queueId: { [Op.in]: queueIds } } : {})
     };
   } else
     if (status === "group" && user.allowGroup && user.whatsappId) {

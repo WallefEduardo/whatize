@@ -1,224 +1,185 @@
-import React from 'react';
-import { styled } from '@mui/material/styles';
+import React, { useState, useRef, useEffect } from 'react';
+import { Box, styled } from '@mui/material';
+import { ChevronDown } from 'lucide-react';
+import { Input } from './Input';
 
-// MUI styled component com theme integration
-const StyledSelect = styled('select')(({ theme, color = 'default', variant = 'bordered', size = 'md', radius = 'md', shadow = 'none' }) => {
-  const getColorStyles = () => {
-    const colors = {
-      default: {
-        border: 'var(--border-primary)',
-        text: 'var(--text-secondary)',
-        focus: 'var(--color-accent, #00c307)',
-        bg: 'var(--bg-primary)',
-        disabled: 'var(--bg-secondary)',
-      },
-      primary: {
-        border: theme.palette.primary.light,
-        text: theme.palette.primary.main,
-        focus: theme.palette.primary.main,
-        bg: theme.palette.primary.light + '10',
-        disabled: theme.palette.primary.light + '30',
-      },
-      info: {
-        border: theme.palette.info.light,
-        text: theme.palette.info.main,
-        focus: theme.palette.info.main,
-        bg: theme.palette.info.light + '10', 
-        disabled: theme.palette.info.light + '30',
-      },
-      warning: {
-        border: theme.palette.warning.light,
-        text: theme.palette.warning.main,
-        focus: theme.palette.warning.main,
-        bg: theme.palette.warning.light + '10',
-        disabled: theme.palette.warning.light + '30',
-      },
-      success: {
-        border: theme.palette.success.light,
-        text: theme.palette.success.main,
-        focus: theme.palette.success.main,
-        bg: theme.palette.success.light + '10',
-        disabled: theme.palette.success.light + '30',
-      },
-      destructive: {
-        border: theme.palette.error.light,
-        text: theme.palette.error.main,
-        focus: theme.palette.error.main,
-        bg: theme.palette.error.light + '10',
-        disabled: theme.palette.error.light + '30',
-      },
-    };
-    return colors[color] || colors.default;
-  };
-
-  const getSizeStyles = () => {
-    const sizes = {
-      sm: {
-        height: '32px',
-        padding: '0 8px',
-        fontSize: '12px',
-      },
-      md: {
-        height: '36px', 
-        padding: '0 12px',
-        fontSize: '13px',
-      },
-      lg: {
-        height: '40px',
-        padding: '0 16px', 
-        fontSize: '14px',
-      },
-      xl: {
-        height: '48px',
-        padding: '0 20px',
-        fontSize: '15px',
-      },
-    };
-    return sizes[size] || sizes.md;
-  };
-
-  const getVariantStyles = () => {
-    const colorStyles = getColorStyles();
-    const variants = {
-      flat: {
-        backgroundColor: colorStyles.bg,
-        border: 'none',
-      },
-      underline: {
-        backgroundColor: 'transparent',
-        borderTop: 'none',
-        borderLeft: 'none', 
-        borderRight: 'none',
-        borderBottom: `2px solid ${colorStyles.border}`,
-        borderRadius: '0',
-      },
-      bordered: {
-        backgroundColor: colorStyles.bg,
-        border: `1px solid ${colorStyles.border}`,
-      },
-      faded: {
-        backgroundColor: theme.palette.grey[50],
-        border: `1px solid ${colorStyles.border}`,
-      },
-      ghost: {
-        backgroundColor: 'transparent',
-        border: 'none',
-        '&:focus': {
-          border: `1px solid ${colorStyles.focus}`,
-        },
-      },
-    };
-    return variants[variant] || variants.bordered;
-  };
-
-  const getRadiusStyles = () => {
-    const radiusMap = {
-      none: '0',
-      sm: theme.shape.borderRadius * 0.5,
-      md: theme.shape.borderRadius,
-      lg: theme.shape.borderRadius * 2,
-      xl: theme.shape.borderRadius * 3,
-    };
-    return {
-      borderRadius: radiusMap[radius] || radiusMap.md,
-    };
-  };
-
-  const getShadowStyles = () => {
-    const shadows = {
-      none: 'none',
-      sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
-      md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-      lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
-      xl: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-      '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
-    };
-    return {
-      boxShadow: shadows[shadow] || shadows.none,
-    };
-  };
-
-  const colorStyles = getColorStyles();
-  const sizeStyles = getSizeStyles();
-  const variantStyles = getVariantStyles();
-  const radiusStyles = getRadiusStyles();
-  const shadowStyles = getShadowStyles();
-
-  return {
-    width: '100%',
-    fontFamily: theme.typography.fontFamily,
-    fontWeight: 400,
-    color: colorStyles.text,
-    transition: 'all 0.2s ease-in-out',
-    outline: 'none',
-    cursor: 'pointer',
-    ...sizeStyles,
-    ...variantStyles,
-    ...radiusStyles,
-    ...shadowStyles,
-    '&:focus': {
-      borderColor: colorStyles.focus,
-      boxShadow: `0 0 0 2px ${colorStyles.focus}20`,
-    },
-    '&:disabled': {
-      backgroundColor: colorStyles.disabled,
-      cursor: 'not-allowed',
-      opacity: 0.6,
-    },
-    // Estilo das opções
-    '& option': {
-      backgroundColor: 'var(--bg-primary)',
-      color: 'var(--text-primary)',
-      padding: '8px 12px',
-      fontSize: '13px',
-      '&:checked': {
-        backgroundColor: 'var(--color-accent, #00c307)',
-        color: 'white',
-      },
-    },
-  };
+const SelectContainer = styled(Box)({
+  position: 'relative',
+  width: '100%',
 });
 
-const Select = React.forwardRef(
-  (
-    {
-      className,
-      children,
-      size,
-      color,
-      radius,
-      variant,
-      shadow,
-      removeWrapper = false,
-      ...props
-    },
-    ref
-  ) => {
-    const selectElement = (
-      <StyledSelect
-        className={className}
-        color={color}
-        variant={variant}
-        size={size}
-        radius={radius}
-        shadow={shadow}
-        ref={ref}
-        {...props}
-      >
-        {children}
-      </StyledSelect>
-    );
+const SelectInput = styled(Input)({
+  cursor: 'pointer',
+  '&:read-only': {
+    cursor: 'pointer',
+  },
+});
 
-    return removeWrapper ? (
-      selectElement
-    ) : (
-      <div style={{ flex: 1, width: '100%' }}>
-        {selectElement}
-      </div>
-    );
-  }
-);
+const DropdownContainer = styled(Box)(({ isOpen }) => ({
+  position: 'absolute',
+  top: '100%',
+  left: 0,
+  right: 0,
+  marginTop: '4px',
+  backgroundColor: 'white',
+  border: '1px solid var(--border-primary)',
+  borderRadius: '8px',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+  zIndex: 1000,
+  maxHeight: '200px',
+  overflowY: 'auto',
+  opacity: isOpen ? 1 : 0,
+  visibility: isOpen ? 'visible' : 'hidden',
+  transform: isOpen ? 'translateY(0)' : 'translateY(-8px)',
+  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+  '&::-webkit-scrollbar': {
+    width: '6px',
+  },
+  '&::-webkit-scrollbar-track': {
+    background: 'var(--bg-secondary)',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    background: 'var(--border-primary)',
+    borderRadius: '3px',
+  },
+}));
 
-Select.displayName = "Select";
+const DropdownOption = styled(Box)(({ selected }) => ({
+  padding: '8px 12px',
+  cursor: 'pointer',
+  fontSize: '13px',
+  color: 'var(--text-primary)',
+  backgroundColor: selected ? 'rgba(0, 195, 7, 0.08)' : 'transparent',
+  borderLeft: selected ? '3px solid var(--color-accent)' : '3px solid transparent',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: selected ? 'rgba(0, 195, 7, 0.12)' : 'var(--bg-secondary)',
+  },
+  '&:first-of-type': {
+    borderTopLeftRadius: '8px',
+    borderTopRightRadius: '8px',
+  },
+  '&:last-of-type': {
+    borderBottomLeftRadius: '8px',
+    borderBottomRightRadius: '8px',
+  },
+}));
+
+const ChevronIcon = styled(ChevronDown)(({ isOpen }) => ({
+  position: 'absolute',
+  right: '12px',
+  top: '50%',
+  transform: `translateY(-50%) rotate(${isOpen ? '180deg' : '0deg'})`,
+  transition: 'transform 0.2s ease',
+  pointerEvents: 'none',
+  color: 'var(--text-secondary)',
+  zIndex: 1,
+}));
+
+const Select = ({
+  options = [],
+  value = '',
+  onChange,
+  placeholder = 'Selecione...',
+  displayKey = 'label',
+  valueKey = 'value',
+  disabled = false,
+  ...inputProps
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // Encontrar a opção selecionada
+  const selectedOption = options.find(option => 
+    (typeof option === 'object' ? option[valueKey] : option) === value
+  );
+
+  // Texto a ser exibido no input
+  const displayText = selectedOption
+    ? (typeof selectedOption === 'object' ? selectedOption[displayKey] : selectedOption)
+    : '';
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  // Toggle dropdown
+  const handleToggle = () => {
+    if (!disabled) {
+      setIsOpen(!isOpen);
+    }
+  };
+
+  // Selecionar opção
+  const handleSelect = (option) => {
+    const optionValue = typeof option === 'object' ? option[valueKey] : option;
+    onChange?.(optionValue, option);
+    setIsOpen(false);
+    inputRef.current?.blur();
+  };
+
+  // Prevenir foco no input
+  const handleFocus = (e) => {
+    e.target.blur();
+    handleToggle();
+  };
+
+  return (
+    <SelectContainer ref={containerRef}>
+      <Box sx={{ position: 'relative' }}>
+        <SelectInput
+          ref={inputRef}
+          value={displayText}
+          placeholder={placeholder}
+          readOnly
+          disabled={disabled}
+          onFocus={handleFocus}
+          onClick={handleToggle}
+          {...inputProps}
+          style={{
+            paddingRight: '36px',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+          }}
+        />
+        <ChevronIcon size={16} isOpen={isOpen} />
+      </Box>
+      
+      <DropdownContainer isOpen={isOpen && !disabled}>
+        {options.length === 0 ? (
+          <DropdownOption>
+            Nenhuma opção disponível
+          </DropdownOption>
+        ) : (
+          options.map((option, index) => {
+            const optionValue = typeof option === 'object' ? option[valueKey] : option;
+            const optionLabel = typeof option === 'object' ? option[displayKey] : option;
+            const isSelected = optionValue === value;
+
+            return (
+              <DropdownOption
+                key={index}
+                selected={isSelected}
+                onClick={() => handleSelect(option)}
+              >
+                {optionLabel}
+              </DropdownOption>
+            );
+          })
+        )}
+      </DropdownContainer>
+    </SelectContainer>
+  );
+};
 
 export { Select };

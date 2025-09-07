@@ -123,6 +123,7 @@ const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket })
 			});
 
 			console.log('✅ Ticket atualizado com sucesso:', otherTicket.data);
+			
 
 			if (otherTicket.data.id !== ticket.id) {
 				if (otherTicket.data.userId !== user?.id) {
@@ -280,15 +281,16 @@ const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket })
 							<Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
 								Fila selecionada:
 							</Typography>
-							<Typography 
-								variant="body2" 
+							<Box
 								sx={{ 
 									color: 'var(--text-primary)', 
 									fontWeight: 600,
 									mt: 0.5,
 									display: 'flex',
 									alignItems: 'center',
-									gap: 1
+									gap: 1,
+									fontSize: '0.875rem',
+									lineHeight: 1.43
 								}}
 							>
 								<Box
@@ -300,7 +302,7 @@ const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket })
 									}}
 								/>
 								{queues.find(q => q.id.toString() === selectedQueue)?.name}
-							</Typography>
+							</Box>
 						</Box>
 					)}
 

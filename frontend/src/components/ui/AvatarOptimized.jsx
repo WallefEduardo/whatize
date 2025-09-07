@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { Box } from '@mui/material';
+import { Box, styled } from '@mui/material';
+
+const PulseBox = styled(Box)({
+  '@keyframes pulse': {
+    '0%, 100%': { opacity: 0.6 },
+    '50%': { opacity: 1 }
+  },
+  animation: 'pulse 1.5s ease-in-out infinite'
+});
 
 const AvatarOptimized = ({ 
   src, 
@@ -100,13 +108,12 @@ const AvatarOptimized = ({
             zIndex: 0
           }}
         >
-          <Box
+          <PulseBox
             sx={{
               width: '60%',
               height: '60%',
               borderRadius: '50%',
-              backgroundColor: 'var(--bg-secondary)',
-              animation: 'pulse 1.5s ease-in-out infinite'
+              backgroundColor: 'var(--bg-secondary)'
             }}
           />
         </Box>
@@ -132,13 +139,6 @@ const AvatarOptimized = ({
         </Box>
       )}
 
-      {/* CSS para animação de pulse */}
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.6; }
-          50% { opacity: 1; }
-        }
-      `}</style>
     </Box>
   );
 };
