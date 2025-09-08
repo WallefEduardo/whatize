@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, forwardRef, useImperativeHandle, useRef } from "react";
 import { Formik, Form, Field } from "formik";
 import * as Yup from "yup";
 import { toast } from "../ui/ToastProvider";
@@ -56,7 +56,7 @@ const tagSchema = Yup.object().shape({
  * @param {boolean} props.loading - Estado de loading externo
  * @param {boolean} props.hideButtons - Se true, oculta os botões do formulário (para uso com modal)
  */
-const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading, hideButtons = false }) => {
+const TagForm = forwardRef(({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading, hideButtons = false }, ref) => {
   const { user } = useContext(AuthContext);
   const [colorPickerModalOpen, setColorPickerModalOpen] = useState(false);
   const [lanes, setLanes] = useState([]);
@@ -65,6 +65,7 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
   const [selectedRollbackLane, setSelectedRollbackLane] = useState(null);
   const [funnels, setFunnels] = useState([]);
   const [tempColor, setTempColor] = useState("");
+  const formikRef = useRef(null);
 
   const initialState = {
     name: "",
@@ -78,6 +79,15 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
   };
 
   const [tag, setTag] = useState(initialState);
+
+  // Exposição de métodos via ref
+  useImperativeHandle(ref, () => ({
+    submitForm: () => {
+      if (formikRef.current) {
+        formikRef.current.submitForm();
+      }
+    }
+  }));
 
   useEffect(() => {
     setLoading(true);
@@ -250,6 +260,7 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
   return (
     <>
       <Formik
+        innerRef={formikRef}
         initialValues={tag}
         enableReinitialize={true}
         validationSchema={tagSchema}
@@ -565,10 +576,20 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
         open={colorPickerModalOpen}
         onClose={handleCancelColor}
         maxWidth="xs"
+        sx={{
+          zIndex: 999999,
+          '& .MuiDialog-paper': {
+            zIndex: 999999
+          },
+          '& .MuiBackdrop-root': {
+            zIndex: 999998
+          }
+        }}
         PaperProps={{
           style: {
             padding: '20px',
-            maxWidth: 420
+            maxWidth: 420,
+            zIndex: 999999
           }
         }}
       >
@@ -629,6 +650,6 @@ const TagForm = ({ tagId, kanban = 0, onSave, onCancel, loading: externalLoading
       </Dialog>
     </>
   );
-};
+});
 
 export default TagForm;

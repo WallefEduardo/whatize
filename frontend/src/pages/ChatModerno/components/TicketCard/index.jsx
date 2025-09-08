@@ -11,6 +11,7 @@ import TransferTicketModernModal from '../../../../components/TransferTicketMode
 import ConfirmationModal from '../../../../components/ConfirmationModal';
 import ResolverTicketModal from '../../../../components/ResolverTicketModal';
 import TagSelector from '../../../../components/ui/TagSelector';
+import StatusBadge from '../../../../components/StatusBadge';
 import api from '../../../../services/api';
 import toastError from '../../../../errors/toastError';
 import { 
@@ -306,10 +307,13 @@ const TicketCard = ({
     
     // Buscar tags disponíveis (apenas tags normais, não kanban)
     try {
-      const response = await api.get('/tags');
-      // Filtrar apenas tags normais (kanban: 0)
-      const normalTags = (response.data.tags || []).filter(tag => tag.kanban === 0);
+      const response = await api.get('/tags/list', {
+        params: { kanban: 0 }
+      });
+      // A API já filtra por kanban=0, mas garantimos aqui também
+      const normalTags = (response.data || []).filter(tag => tag.kanban === 0);
       setAvailableTags(normalTags);
+      console.log('🏷️ Tags normais carregadas:', normalTags);
     } catch (error) {
       console.error('Erro ao buscar tags:', error);
       setAvailableTags([]);
@@ -354,15 +358,12 @@ const TicketCard = ({
         console.log('➕ ADICIONANDO tag:', tag.name, 'Tags atualizadas:', updatedTags);
       }
       
-      if (isSelected) {
-        // Remover tag específica
-        console.log('🌐 Fazendo requisição DELETE /tags-contacts/' + tag.id + '/' + ticket.contact.id);
-        await api.delete(`/tags-contacts/${tag.id}/${ticket.contact.id}`);
-      } else {
-        // Adicionar tag específica
-        console.log('🌐 Fazendo requisição POST /tags-contacts/' + tag.id + '/' + ticket.contact.id);
-        await api.post(`/tags-contacts/${tag.id}/${ticket.contact.id}`);
-      }
+      // Usar a mesma lógica do drawer antigo com /tags/sync
+      console.log('🌐 Fazendo requisição POST /tags/sync');
+      await api.post(`/tags/sync`, {
+        contactId: ticket.contact.id,
+        tags: updatedTags
+      });
       
       console.log('✅ Requisição concluída com sucesso!');
       
@@ -485,32 +486,152 @@ const TicketCard = ({
             {lastMessage}
           </LastMessage>
 
-          {/* Quadradinho da fila */}
-          {ticket.queue && (
-            <Box 
-              title={`Fila: ${ticket.queue.name}`}
-              sx={{ 
-                mt: '6px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '16px',
-                height: '16px',
-                borderRadius: '3px',
-                backgroundColor: ticket.queue.color ? `${ticket.queue.color}20` : '#00BCD420',
-                border: `1px solid ${ticket.queue.color || '#00BCD4'}40`,
-                cursor: 'default',
-                color: ticket.queue.color || '#00BCD4',
-                '&:hover': {
-                  transform: 'scale(1.05)',
-                  backgroundColor: ticket.queue.color ? `${ticket.queue.color}35` : '#00BCD435',
-                  transition: 'all 0.2s ease'
-                }
-              }}
-            >
-              {React.createElement(getIconComponent(ticket.queue.icon), { size: 8 })}
-            </Box>
-          )}
+          {/* Container horizontal: Fila + Tags do contato */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '4px', 
+            mt: '6px',
+            flexWrap: 'wrap'
+          }}>
+            {/* Quadradinho da fila */}
+            {ticket.queue && (
+              <Box 
+                title={`Fila: ${ticket.queue.name}`}
+                sx={{ 
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '3px',
+                  backgroundColor: ticket.queue.color ? `${ticket.queue.color}20` : '#00BCD420',
+                  border: `1px solid ${ticket.queue.color || '#00BCD4'}40`,
+                  cursor: 'default',
+                  color: ticket.queue.color || '#00BCD4',
+                  '&:hover': {
+                    transform: 'scale(1.05)',
+                    backgroundColor: ticket.queue.color ? `${ticket.queue.color}35` : '#00BCD435',
+                    transition: 'all 0.2s ease'
+                  }
+                }}
+              >
+                {React.createElement(getIconComponent(ticket.queue.icon), { size: 8 })}
+              </Box>
+            )}
+
+            {/* Tags do contato usando StatusBadge */}
+            {ticket.contact?.tags && ticket.contact.tags.length > 0 && (
+              <>
+                {/* Primeira tag */}
+                {ticket.contact.tags[0] && (
+                  <StatusBadge
+                    label={ticket.contact.tags[0].name}
+                    color={ticket.contact.tags[0].color || '#6366f1'}
+                    size="small"
+                    sx={{
+                      fontSize: '8px',
+                      height: '14px',
+                      maxWidth: '60px',
+                      '& .MuiChip-label': {
+                        px: '4px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }
+                    }}
+                  />
+                )}
+                
+                {/* Segunda tag com tooltip das demais */}
+                {ticket.contact.tags.length > 1 && (
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      '&:hover .tooltip': {
+                        visibility: 'visible',
+                        opacity: 1
+                      }
+                    }}
+                  >
+                    <StatusBadge
+                      label={
+                        ticket.contact.tags.length === 2 
+                          ? ticket.contact.tags[1].name 
+                          : `${ticket.contact.tags[1].name} +${ticket.contact.tags.length - 2}`
+                      }
+                      color={ticket.contact.tags[1].color || '#8b5cf6'}
+                      size="small"
+                      sx={{
+                        fontSize: '8px',
+                        height: '14px',
+                        maxWidth: '60px',
+                        cursor: 'pointer',
+                        '& .MuiChip-label': {
+                          px: '4px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }
+                      }}
+                    />
+                    
+                    {/* Tooltip com tags restantes */}
+                    {ticket.contact.tags.length > 2 && (
+                      <Box
+                        className="tooltip"
+                        sx={{
+                          position: 'absolute',
+                          bottom: '110%',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                          color: 'white',
+                          padding: '6px 8px',
+                          borderRadius: '6px',
+                          fontSize: '10px',
+                          whiteSpace: 'nowrap',
+                          visibility: 'hidden',
+                          opacity: 0,
+                          transition: 'all 0.2s ease',
+                          zIndex: 1000,
+                          '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            top: '100%',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            border: '4px solid transparent',
+                            borderTopColor: 'rgba(0, 0, 0, 0.9)'
+                          }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          {ticket.contact.tags.slice(1).map((tag, index) => (
+                            <Box key={tag.id} sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '4px' 
+                            }}>
+                              <Box
+                                sx={{
+                                  width: '6px',
+                                  height: '6px',
+                                  borderRadius: '50%',
+                                  backgroundColor: tag.color || '#6366f1'
+                                }}
+                              />
+                              {tag.name}
+                            </Box>
+                          ))}
+                        </Box>
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </>
+            )}
+          </Box>
 
           {/* Tags do ticket */}
           {ticket.tags && ticket.tags.length > 0 && (

@@ -92,6 +92,7 @@ const Tags = () => {
   const [tags, dispatch] = useReducer(reducer, []);
   const [tagModalOpen, setTagModalOpen] = useState(false);
   const pageNumberRef = useRef(1);
+  const tagFormRef = useRef(null);
 
   useEffect(() => {
     const fetchMoreTags = async () => {
@@ -258,14 +259,16 @@ const Tags = () => {
             type: 'save',
             label: selectedTag ? 'Salvar' : 'Adicionar',
             onClick: () => {
-              // Vamos trigger o submit do form
-              const submitButton = document.querySelector('#tag-form-submit');
-              if (submitButton) submitButton.click();
+              // Trigger submit através da referência
+              if (tagFormRef.current) {
+                tagFormRef.current.submitForm();
+              }
             }
           }
         ]}
       >
         <TagForm
+          ref={tagFormRef}
           tagId={selectedTag && selectedTag.id}
           kanban={0}
           onSave={(tag) => {
