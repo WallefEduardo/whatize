@@ -16,6 +16,7 @@ tagRoutes.post("/tags/sync", isAuth, TagController.syncTags);
 tagRoutes.put("/tags/:tagId", isAuth, TagController.update);
 
 tagRoutes.delete("/tags/:tagId", isAuth, TagController.remove);
+tagRoutes.post("/tags-contacts/:tagId/:contactId", isAuth, TagController.addContactTag);
 tagRoutes.delete("/tags-contacts/:tagId/:contactId", isAuth, TagController.removeContactTag);
 
 export default tagRoutes;

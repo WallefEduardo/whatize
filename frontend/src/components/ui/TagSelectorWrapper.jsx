@@ -24,7 +24,7 @@ const TagSelectorWrapper = ({
       const calculatePosition = () => {
         const rect = anchorEl.getBoundingClientRect();
         const dropdownWidth = 280;
-        const dropdownHeight = 400;
+        const dropdownHeight = 580;
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         const margin = 8;
@@ -74,7 +74,7 @@ const TagSelectorWrapper = ({
           position: 'fixed',
           top: position.top + 'px',
           left: position.left + 'px',
-          zIndex: 9999,
+          zIndex: 10000,
         }}
       >
         <TagSelector

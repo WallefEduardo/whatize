@@ -10,6 +10,7 @@ import AcceptTicketWithoutQueueModal from '../../../../components/AcceptTicketWi
 import TransferTicketModernModal from '../../../../components/TransferTicketModernModal';
 import ConfirmationModal from '../../../../components/ConfirmationModal';
 import ResolverTicketModal from '../../../../components/ResolverTicketModal';
+import TagSelector from '../../../../components/ui/TagSelector';
 import api from '../../../../services/api';
 import toastError from '../../../../errors/toastError';
 import { 
@@ -169,6 +170,10 @@ const TicketCard = ({
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showResolverModal, setShowResolverModal] = useState(false);
+  const [showTagSelector, setShowTagSelector] = useState(false);
+  const [tagAnchorEl, setTagAnchorEl] = useState(null);
+  const [availableTags, setAvailableTags] = useState([]);
+  const [selectedTicketTags, setSelectedTicketTags] = useState([]);
   const [confirmAction, setConfirmAction] = useState(null);
   
   const isSelected = selectedChatId === ticket.id;
@@ -293,6 +298,124 @@ const TicketCard = ({
       console.error('Erro ao remover da fila:', err);
       toastError(err);
     }
+  };
+
+  const handleAdicionarEtiqueta = async (e) => {
+    console.log('handleAdicionarEtiqueta chamado - abrindo dropdown etiqueta');
+    e.stopPropagation();
+    
+    // Buscar tags disponíveis (apenas tags normais, não kanban)
+    try {
+      const response = await api.get('/tags');
+      // Filtrar apenas tags normais (kanban: 0)
+      const normalTags = (response.data.tags || []).filter(tag => tag.kanban === 0);
+      setAvailableTags(normalTags);
+    } catch (error) {
+      console.error('Erro ao buscar tags:', error);
+      setAvailableTags([]);
+    }
+    
+    // Buscar tags atuais do CONTATO no backend
+    try {
+      const contactResponse = await api.get(`/contacts/${ticket.contact.id}`);
+      const currentContactTags = contactResponse.data.tags || [];
+      setSelectedTicketTags(currentContactTags);
+      console.log('🏷️ Tags atuais do CONTATO buscadas do backend:', currentContactTags);
+    } catch (error) {
+      console.error('Erro ao buscar tags do contato:', error);
+      setSelectedTicketTags(ticket.contact?.tags || []);
+    }
+    
+    setTagAnchorEl(e.currentTarget);
+    setShowTagSelector(true);
+  };
+
+  const handleTagToggle = async (tag, isSelected) => {
+    console.log('🏷️ handleTagToggle - INÍCIO:', {
+      tagName: tag.name,
+      tagId: tag.id,
+      isSelected,
+      contactId: ticket.contact.id,
+      currentTags: selectedTicketTags
+    });
+    
+    try {
+      // Para tags normais, vamos atualizar a lista de tags do CONTATO
+      const currentTags = selectedTicketTags || [];
+      let updatedTags;
+      
+      if (isSelected) {
+        // Remover tag da lista
+        updatedTags = currentTags.filter(t => t.id !== tag.id);
+        console.log('🗑️ REMOVENDO tag:', tag.name, 'Tags restantes:', updatedTags);
+      } else {
+        // Adicionar tag à lista
+        updatedTags = [...currentTags, tag];
+        console.log('➕ ADICIONANDO tag:', tag.name, 'Tags atualizadas:', updatedTags);
+      }
+      
+      if (isSelected) {
+        // Remover tag específica
+        console.log('🌐 Fazendo requisição DELETE /tags-contacts/' + tag.id + '/' + ticket.contact.id);
+        await api.delete(`/tags-contacts/${tag.id}/${ticket.contact.id}`);
+      } else {
+        // Adicionar tag específica
+        console.log('🌐 Fazendo requisição POST /tags-contacts/' + tag.id + '/' + ticket.contact.id);
+        await api.post(`/tags-contacts/${tag.id}/${ticket.contact.id}`);
+      }
+      
+      console.log('✅ Requisição concluída com sucesso!');
+      
+      // Atualizar o contato local e modal com as tags atualizadas
+      if (ticket.contact) {
+        ticket.contact.tags = updatedTags;
+      }
+      setSelectedTicketTags(updatedTags);
+      console.log('🔄 Contato e modal atualizados com tags:', updatedTags);
+      
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      console.error('❌ Erro ao atualizar tag do contato:', error);
+      console.error('❌ Detalhes do erro:', error.response?.data);
+      toastError(error);
+    }
+  };
+
+  const handleCreateTag = async (tagName, color) => {
+    try {
+      const response = await api.post('/tags', {
+        name: tagName,
+        color: color,
+        kanban: 0  // Criar como tag normal
+      });
+      
+      const newTag = response.data;
+      setAvailableTags(prev => [...prev, newTag]);
+      
+      // Associar automaticamente ao CONTATO usando a mesma lógica de handleTagToggle
+      const currentTags = selectedTicketTags || [];
+      const updatedTags = [...currentTags, newTag];
+      
+      await api.put(`/contacts/${ticket.contact.id}`, {
+        tags: updatedTags.map(t => t.id)
+      });
+      
+      // Atualizar estado local
+      setSelectedTicketTags(updatedTags);
+      if (ticket.contact) {
+        ticket.contact.tags = updatedTags;
+      }
+      
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      console.error('Erro ao criar tag:', error);
+      toastError(error);
+    }
+  };
+
+  const handleSilenciarNotificacoes = () => {
+    console.log('handleSilenciarNotificacoes chamado');
+    // TODO: Implementar silenciar notificações
   };
 
   const handleAceitarConversa = async (queueId) => {
@@ -498,10 +621,10 @@ const TicketCard = ({
                   onFinalizarConversa={handleFinalizarConversa}
                   onTransferirConversa={handleTransferirConversa}
                   onMarcarNaoLido={handleMarcarNaoLido}
-                  onRemoverDaFila={handleRemoverDaFila}
-                  onPinConversation={onPin}
+                  onAdicionarEtiqueta={handleAdicionarEtiqueta}
+                  onSilenciarNotificacoes={handleSilenciarNotificacoes}
+                  onFixarConversa={onPin}
                   isPinned={isPinned}
-                  ticketStatus={ticket.status}
                 />
               </Box>
             )}
@@ -589,6 +712,42 @@ const TicketCard = ({
       >
         Tem certeza que deseja remover este ticket da fila?
       </ConfirmationModal>
+      
+      {showTagSelector && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 1200,
+          }}
+        >
+          <TagSelector
+            isOpen={true}
+            onClose={() => setShowTagSelector(false)}
+            availableTags={availableTags}
+            selectedTags={selectedTicketTags}
+            onTagToggle={handleTagToggle}
+            onCreateTag={handleCreateTag}
+            entityType="Conversa"
+          />
+        </Box>
+      )}
+      
+      {showTagSelector && (
+        <Box
+          onClick={() => setShowTagSelector(false)}
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1199,
+          }}
+        />
+      )}
     </>
   );
 };

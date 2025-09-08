@@ -210,14 +210,42 @@ export const syncTags = async (
   return res.json(contact);
 };
 
-export const removeContactTag = async (
+export const addContactTag = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
   const { tagId, contactId } = req.params;
   const { companyId } = req.user;
 
+  try {
+    await ContactTag.findOrCreate({
+      where: {
+        tagId,
+        contactId
+      }
+    });
 
+    const tag = await ShowService(tagId);
+
+    const io = getIO();
+    io.of(String(companyId))
+      .emit(`company${companyId}-tag`, {
+        action: "update",
+        tag
+      });
+
+    return res.status(200).json({ message: "Tag associated" });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to associate tag" });
+  }
+};
+
+export const removeContactTag = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { tagId, contactId } = req.params;
+  const { companyId } = req.user;
 
   await ContactTag.destroy({
     where: {

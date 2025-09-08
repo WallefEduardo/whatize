@@ -13,9 +13,9 @@ const SelectorContainer = styled(Box)(({ position }) => ({
   border: '1px solid var(--border-primary)',
   borderRadius: '12px',
   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
-  zIndex: 9999,
+  zIndex: 10000,
   width: '280px',
-  maxHeight: '400px',
+  maxHeight: '580px',
   overflow: 'hidden',
   animation: 'fadeIn 0.2s ease-out',
   '@keyframes fadeIn': {
@@ -56,7 +56,7 @@ const SearchContainer = styled(Box)(() => ({
 }));
 
 const TagsList = styled(Box)(() => ({
-  maxHeight: '200px',
+  maxHeight: '400px',
   overflowY: 'auto',
   padding: '0 8px',
 }));
@@ -148,7 +148,8 @@ const TagSelector = ({
   
   const handleTagToggle = (tag) => {
     if (onTagToggle) {
-      onTagToggle(tag);
+      const isSelected = isTagSelected(tag.id);
+      onTagToggle(tag, isSelected);
     }
   };
   
