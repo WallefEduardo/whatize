@@ -21,7 +21,9 @@ const TabsList = styled(Box)(() => ({
 }));
 
 // Item individual do tab
-const TabsItem = styled(Box)(({ active }) => ({
+const TabsItem = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'active'
+})(({ active }) => ({
   position: 'relative',
   padding: '12px 20px',
   cursor: 'pointer',
@@ -42,7 +44,9 @@ const TabsItem = styled(Box)(({ active }) => ({
 }));
 
 // Texto do tab - usando span em vez de Typography para evitar nesting
-const TabText = styled('span')(({ active }) => ({
+const TabText = styled('span', {
+  shouldForwardProp: (prop) => prop !== 'active'
+})(({ active }) => ({
   fontSize: '14px',
   fontWeight: active ? 600 : 500,
   color: active ? 'var(--color-accent)' : '#64748b',

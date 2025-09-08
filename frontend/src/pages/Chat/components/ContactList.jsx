@@ -181,7 +181,7 @@ const TypingIndicator = styled(Box)(() => ({
 }));
 
 
-const ContactList = ({ contact, selectedChatId, openChat, ticket = null, currentTab = null, onRefresh = null, isPinned = false, onPinConversation = null }) => {
+const ContactList = ({ contact, selectedChatId, openChat, ticket = null, currentTab = null, onRefresh = null, isPinned = false, onPinConversation = null, onAccept = null }) => {
   const { id, name, avatar, status, lastMessage, lastSeen, unreadCount, isTyping, userAvatar, userName } = contact;
   const { user: currentUser } = useContext(AuthContext);
   const { setCurrentTicket } = useContext(TicketsContext);
@@ -659,6 +659,8 @@ const ContactList = ({ contact, selectedChatId, openChat, ticket = null, current
         onClose={handleModalClose}
         ticketId={ticket?.id}
         ticket={ticket}
+        onRefresh={onRefresh}
+        onAccept={onAccept}
       />
 
       {/* Modal de transferência */}

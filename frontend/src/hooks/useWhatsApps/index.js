@@ -86,6 +86,18 @@ const useWhatsApps = () => {
   useEffect(() => {
     setLoading(true);
     fetchSession();
+    
+    // Polling para verificar status real a cada 30 segundos
+    const statusInterval = setInterval(async () => {
+      try {
+        const { data } = await api.get("/whatsapp/?session=0");
+        dispatch({ type: "LOAD_WHATSAPPS", payload: data });
+      } catch (err) {
+        console.error('❌ Erro ao verificar status das sessões:', err);
+      }
+    }, 30000);
+
+    return () => clearInterval(statusInterval);
   }, []);
 
   useEffect(() => {
@@ -127,8 +139,17 @@ const useWhatsApps = () => {
             status: "DISCONNECTED" 
           }});
           
+          // Forçar atualização imediata do status
+          setTimeout(async () => {
+            try {
+              const { data: freshData } = await api.get("/whatsapp/?session=0");
+              dispatch({ type: "LOAD_WHATSAPPS", payload: freshData });
+            } catch (err) {
+              console.error('❌ Erro ao recarregar dados após validation_error:', err);
+            }
+          }, 1000);
+          
           // Mostrar toast de erro
-          // Toast já importado no topo
           toast.error(`❌ ERRO DE CONEXÃO:\n\n${data.error}`, {
             position: "top-center",
             autoClose: 8000,

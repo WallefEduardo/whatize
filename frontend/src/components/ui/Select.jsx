@@ -15,7 +15,9 @@ const SelectInput = styled(Input)({
   },
 });
 
-const DropdownContainer = styled(Box)(({ isOpen }) => ({
+const DropdownContainer = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isOpen'
+})(({ isOpen }) => ({
   position: 'absolute',
   top: '100%',
   left: 0,
@@ -44,7 +46,9 @@ const DropdownContainer = styled(Box)(({ isOpen }) => ({
   },
 }));
 
-const DropdownOption = styled(Box)(({ selected }) => ({
+const DropdownOption = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'selected'
+})(({ selected }) => ({
   padding: '8px 12px',
   cursor: 'pointer',
   fontSize: '13px',
@@ -65,7 +69,9 @@ const DropdownOption = styled(Box)(({ selected }) => ({
   },
 }));
 
-const ChevronIcon = styled(ChevronDown)(({ isOpen }) => ({
+const ChevronIcon = styled(ChevronDown, {
+  shouldForwardProp: (prop) => prop !== 'isOpen'
+})(({ isOpen }) => ({
   position: 'absolute',
   right: '12px',
   top: '50%',

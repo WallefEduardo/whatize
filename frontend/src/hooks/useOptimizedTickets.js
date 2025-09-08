@@ -19,10 +19,15 @@ const normalizeTickets = (tickets) => {
 
   tickets.forEach(ticket => {
     normalized.set(ticket.id, ticket);
-    if (byStatus[ticket.status]) {
+    // Incluir tanto o status atual quanto verificações adicionais
+    if (ticket.status === 'open' || ticket.status === 'pending' || ticket.status === 'group') {
       byStatus[ticket.status].add(ticket.id);
     }
+    
+    // Processamento silencioso
   });
+
+  // Debug silencioso
 
   return { normalized, byStatus };
 };
@@ -155,58 +160,41 @@ const useOptimizedTickets = ({
 
   // Handler memoizado para eventos de socket
   const handleSocketEvent = useCallback((eventName, data) => {
-    // Invalidar cache para forçar dados frescos
-    ticketsCache.clear();
+    console.log('🔥 Socket event received:', eventName, data);
     
-    // Forçar re-fetch dos tickets para garantir dados atualizados
-    setTimeout(() => {
+    // Só invalidar cache e refetch para eventos específicos relevantes
+    if (eventName.includes('ticket') && (eventName.includes('update') || eventName.includes('create'))) {
+      // Para eventos de update/create, aguardar um pouco para garantir que o backend processou
+      setTimeout(() => {
+        ticketsCache.delete(cacheKey);
+        fetchTickets();
+      }, 100);
+    }
+    
+    // Para delete, processar imediatamente
+    if (eventName.includes('ticket') && eventName.includes('delete')) {
+      ticketsCache.delete(cacheKey);
       fetchTickets();
-    }, 200);
-  }, [fetchTickets]);
+    }
+  }, [fetchTickets, cacheKey]);
 
   // Socket listeners otimizados - Eventos reais do sistema
   useEffect(() => {
     if (!socket || !socket.on || !user?.companyId) return;
 
-    // Eventos principais do sistema Whatize
+    // Eventos principais que afetam tickets
     const events = [
-      'ticket',
-      'ticketList', 
-      'appMessage',
-      'contact',
-      'ticket:update',
-      'message:create',
-      'message:update',
-      'message:ack',
+      'ticketList',
+      'ticket:update', 
       'ticket:create',
       'ticket:delete',
-      'contact:update',
       // Eventos específicos da empresa (como emitidos pelo backend)
-      `company-${user.companyId}-appMessage`,
-      `company-${user.companyId}-ticket`,
-      `company-${user.companyId}-contact`
+      `company-${user.companyId}-ticket`
     ];
 
     events.forEach(event => {
       socket.on(event, (data) => handleSocketEvent(event, data));
     });
-
-    // Listener genérico para capturar qualquer evento
-    const originalEmit = socket.onevent;
-    socket.onevent = function (packet) {
-      const args = packet.data || [];
-      const eventName = args[0];
-      const eventData = args[1];
-      
-      if (eventName && typeof eventName === 'string') {
-        // Se for um evento relacionado a ticket/mensagem, recarregar
-        if (eventName.includes('ticket') || eventName.includes('message') || eventName.includes('appMessage')) {
-          handleSocketEvent(eventName, eventData);
-        }
-      }
-      
-      originalEmit.call(this, packet);
-    };
 
     return () => {
       events.forEach(event => {

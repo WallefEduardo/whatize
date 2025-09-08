@@ -17,7 +17,7 @@ import ShowTicketOpen from "../ShowTicketOpenModal";
 import useCompanySettings from "../../hooks/useSettings/companySettings";
 import { TicketsContext } from "../../context/Tickets/TicketsContext";
 
-const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket }) => {
+const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket, onRefresh, onAccept }) => {
 	const history = useHistory();
 	const [selectedQueue, setSelectedQueue] = useState('');
 	const [loading, setLoading] = useState(false);
@@ -116,6 +116,19 @@ const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket })
 		try {
 			console.log('🎯 Atualizando status do ticket:', ticketId, 'para fila:', queueId);
 			
+			// Usar função de aceitar do hook robusto se disponível
+			if (onAccept) {
+				const acceptedTicket = await onAccept(ticketId, queueId);
+				await handleSendMessage(ticket.id);
+				setLoading(false);
+				setTabOpen(ticket.isGroup ? "group" : "open");
+				console.log('🔄 Navegando para:', `/chat-moderno/${ticket.uuid}`);
+				history.push(`/chat-moderno/${ticket.uuid}`);
+				handleClose();
+				return;
+			}
+			
+			// Fallback para método anterior
 			const otherTicket = await api.put(`/tickets/${ticketId}`, {
 				status: ticket.isGroup && ticket.channel === 'whatsapp' ? "group" : "open",
 				userId: user?.id || null,
@@ -139,6 +152,7 @@ const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket })
 				await handleSendMessage(ticket.id);
 				setLoading(false);
 				setTabOpen(ticket.isGroup ? "group" : "open");
+				
 				console.log('🔄 Navegando para:', `/chat-moderno/${ticket.uuid}`);
 				history.push(`/chat-moderno/${ticket.uuid}`);
 				handleClose();

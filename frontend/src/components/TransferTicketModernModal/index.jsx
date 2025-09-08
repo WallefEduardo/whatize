@@ -4,6 +4,7 @@ import { Box, Typography } from "@mui/material";
 
 import ModernModal from "../ModernModal";
 import { Select } from "../ui/Select";
+import SimpleSelect from "../ui/SimpleSelect";
 import { Textarea } from "../ui/Textarea";
 import { Autocomplete } from "../ui/Autocomplete";
 import { i18n } from "../../translate/i18n";
@@ -35,7 +36,9 @@ const TransferTicketModernModal = ({ modalOpen, onClose, ticketid, ticket }) => 
   useEffect(() => {
     if (isMounted.current) {
       const loadQueues = async () => {
+        console.log('TransferModal: Carregando filas...');
         const list = await findAllQueues();
+        console.log('TransferModal: Filas carregadas:', list);
         setAllQueues(list);
         setQueues(list);
       };
@@ -82,8 +85,20 @@ const TransferTicketModernModal = ({ modalOpen, onClose, ticketid, ticket }) => 
   };
 
   const handleSaveTicket = async () => {
-    if (!ticketid) return;
-    if (!selectedQueue || selectedQueue === "") return;
+    console.log('=== TRANSFERIR TICKET DEBUG ===');
+    console.log('ticketid:', ticketid);
+    console.log('selectedQueue:', selectedQueue);
+    console.log('selectedUser:', selectedUser);
+    console.log('msgTransfer:', msgTransfer);
+    
+    if (!ticketid) {
+      console.error('❌ Erro: ticketid não fornecido');
+      return;
+    }
+    if (!selectedQueue || selectedQueue === "") {
+      console.error('❌ Erro: fila não selecionada');
+      return;
+    }
     
     setLoading(true);
     try {
@@ -94,11 +109,19 @@ const TransferTicketModernModal = ({ modalOpen, onClose, ticketid, ticket }) => 
       data.msgTransfer = msgTransfer ? msgTransfer : null;
       data.isTransfered = true;
 
-      await api.put(`/tickets/${ticketid}`, data);
+      console.log('📤 Enviando dados para API:', data);
+      console.log('🔗 URL da API:', `/tickets/${ticketid}`);
+      
+      const response = await api.put(`/tickets/${ticketid}`, data);
+      console.log('✅ Resposta da API:', response);
+      
       setLoading(false);
+      console.log('🎯 Transferência concluída, redirecionando...');
       history.push(`/chat-moderno`);
       handleClose();
     } catch (err) {
+      console.error('❌ Erro na transferência:', err);
+      console.error('❌ Detalhes do erro:', err.response?.data || err.message);
       setLoading(false);
       toastError(err);
     }
@@ -189,21 +212,15 @@ const TransferTicketModernModal = ({ modalOpen, onClose, ticketid, ticket }) => 
             >
               {i18n.t("transferTicketModal.fieldQueueLabel")}
             </Typography>
-            <Select
+            <SimpleSelect
               value={selectedQueue}
-              onChange={(e) => setSelectedQueue(e.target.value)}
-              size="md"
-              variant="bordered"
-            >
-              <option value="" disabled>
-                Selecione uma fila
-              </option>
-              {queues.map((queue) => (
-                <option key={queue.id} value={queue.id}>
-                  {queue.name}
-                </option>
-              ))}
-            </Select>
+              onChange={(value) => setSelectedQueue(value)}
+              options={queues}
+              displayKey="name"
+              valueKey="id"
+              placeholder="Selecione uma fila"
+              searchPlaceholder="Pesquisar filas..."
+            />
           </Box>
         </Box>
 

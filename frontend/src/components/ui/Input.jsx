@@ -191,6 +191,7 @@ const Input = React.forwardRef(
       variant,
       shadow,
       removeWrapper = false,
+      children,
       ...props
     },
     ref

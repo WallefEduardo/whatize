@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useReducer, useContext } from 'react';
 import { Box, Typography, useMediaQuery, useTheme, TextField } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useParams, useHistory } from 'react-router-dom';
@@ -40,11 +40,14 @@ import {
 // API real para mensagens
 import api from '../../services/api';
 
-// Hooks otimizados
-import useOptimizedTickets from '../../hooks/useOptimizedTickets';
+// Hook de tickets do sistema original
+import useTickets from '../../hooks/useTickets';
 
 // Componentes auxiliares
 import NewConversationModal from '../../components/ui/NewConversationModal';
+import ChatTabs from './components/ChatTabs';
+import SearchAndFilters from './components/SearchAndFilters';
+import TicketsList from './components/TicketsList';
 
 // Icons
 import { 
@@ -148,7 +151,7 @@ const ChatModerno = () => {
   const history = useHistory();
   
   // Context
-  const { user } = React.useContext(AuthContext);
+  const { user, socket } = React.useContext(AuthContext);
   const { tabOpen, setTabOpen, currentTicket, setCurrentTicket } = React.useContext(TicketsContext);
   
   // Estados
@@ -204,47 +207,13 @@ const ChatModerno = () => {
   // Debounce para busca otimizada
   useEffect(() => {
     const timer = setTimeout(() => {
+      console.log('⏰ Debounced search:', searchParam);
       setDebouncedSearchParam(searchParam);
     }, 300);
 
     return () => clearTimeout(timer);
   }, [searchParam]);
   
-  // Função para buscar counts de todos os status
-  const fetchTabCounts = useCallback(async () => {
-    try {
-      const showAllForUser = showAllTickets;
-      const userQueueIds = user?.queues?.map(q => q.id) || [];
-      
-      const [openResponse, pendingResponse] = await Promise.all([
-        api.get('/tickets', { 
-          params: { 
-            status: 'open', 
-            showAll: showAllForUser,
-            queueIds: JSON.stringify(userQueueIds), // Usar as mesmas filas
-            pageNumber: 1, 
-            pageSize: 1
-          } 
-        }),
-        api.get('/tickets', { 
-          params: { 
-            status: 'pending', 
-            showAll: showAllForUser,
-            queueIds: JSON.stringify(userQueueIds), // Usar as mesmas filas
-            pageNumber: 1, 
-            pageSize: 1 
-          } 
-        })
-      ]);
-      
-      setTabCounts({
-        open: openResponse.data.count || 0,
-        pending: pendingResponse.data.count || 0
-      });
-    } catch (error) {
-      console.error('Erro ao buscar counts:', error);
-    }
-  }, [showAllTickets, user?.queues]);
 
   // Função para fixar/desafixar conversa
   const handlePinConversation = (ticketId) => {
@@ -284,19 +253,163 @@ const ChatModerno = () => {
   
 
 
-  // Hook otimizado de tickets
-  const {
-    loading: ticketsLoading,
-    tickets,
-    counts,
-    refetch: refetchTickets
-  } = useOptimizedTickets({
-    status: tabOpen || 'open',
+  // Reducer igual ao sistema original
+  const reducer = (state, action) => {
+    if (action.type === "LOAD_TICKETS") {
+      const newTickets = action.payload;
+      if (Array.isArray(newTickets)) {
+        newTickets.forEach(ticket => {
+          const ticketIndex = state.findIndex(t => t.id === ticket.id);
+          if (ticketIndex !== -1) {
+            state[ticketIndex] = ticket;
+          } else {
+            state.push(ticket);
+          }
+        });
+      }
+      return [...state];
+    }
+
+    if (action.type === "UPDATE_TICKET") {
+      const ticket = action.payload;
+      const ticketIndex = state.findIndex(t => t.id === ticket.id);
+      if (ticketIndex !== -1) {
+        state[ticketIndex] = ticket;
+      } else {
+        state.unshift(ticket);
+      }
+      return [...state];
+    }
+
+    if (action.type === "UPDATE_TICKET_UNREAD_MESSAGES") {
+      const ticket = action.payload;
+      const ticketIndex = state.findIndex(t => t.id === ticket.id);
+      if (ticketIndex !== -1) {
+        state[ticketIndex] = ticket;
+        state.unshift(state.splice(ticketIndex, 1)[0]);
+      } else {
+        state.unshift(ticket);
+      }
+      return [...state];
+    }
+
+    if (action.type === "DELETE_TICKET") {
+      const ticketId = action.payload;
+      const ticketIndex = state.findIndex(t => t.id === ticketId);
+      if (ticketIndex !== -1) {
+        state.splice(ticketIndex, 1);
+      }
+      return [...state];
+    }
+
+    if (action.type === "RESET") {
+      return [];
+    }
+  };
+
+  const [ticketsList, dispatch] = useReducer(reducer, []);
+  
+  // Buscar tickets usando o hook original
+  const { tickets: ticketsData, loading: ticketsLoading, hasMore } = useTickets({
     searchParam: debouncedSearchParam,
-    selectedQueueIds: user?.queues?.map(q => q.id) || [], // Usar filas do usuário
+    status: tabOpen,
     showAll: showAllTickets,
-    forceRefresh: forceRefresh
+    queueIds: JSON.stringify(user?.queues?.map(q => q.id) || [])
   });
+
+
+  // Debug: monitorar mudanças nos parâmetros de pesquisa
+  useEffect(() => {
+    console.log('📊 Search params changed:', {
+      searchParam: debouncedSearchParam,
+      status: tabOpen,
+      ticketsCount: ticketsData?.length || 0
+    });
+  }, [debouncedSearchParam, tabOpen]);
+
+  // Resetar reducer quando parâmetros de busca mudam
+  useEffect(() => {
+    dispatch({ type: "RESET" });
+  }, [debouncedSearchParam, tabOpen, showAllTickets]);
+
+  // Carregar tickets no reducer
+  useEffect(() => {
+    if (ticketsData) {
+      dispatch({ type: "LOAD_TICKETS", payload: ticketsData });
+    }
+  }, [ticketsData]);
+
+  // Socket listeners igual ao original
+  useEffect(() => {
+    if (!socket || !user?.companyId) return;
+    const companyId = user.companyId;
+
+    const onCompanyTicket = (data) => {
+      if (data.action === "update" && data.ticket && data.ticket.status === tabOpen) {
+        dispatch({ type: "UPDATE_TICKET", payload: data.ticket });
+      }
+      if (data.action === "delete") {
+        dispatch({ type: "DELETE_TICKET", payload: data.ticketId });
+      }
+    };
+
+    const onCompanyAppMessage = (data) => {
+      if (data.action === "create" && data.ticket && data.ticket.status === tabOpen) {
+        dispatch({ type: "UPDATE_TICKET_UNREAD_MESSAGES", payload: data.ticket });
+      }
+    };
+
+    const onConnect = () => {
+      socket.emit("joinTickets", tabOpen);
+    };
+
+    socket.on("connect", onConnect);
+    socket.on(`company-${companyId}-ticket`, onCompanyTicket);
+    socket.on(`company-${companyId}-appMessage`, onCompanyAppMessage);
+
+    if (socket.connected) {
+      socket.emit("joinTickets", tabOpen);
+    }
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off(`company-${companyId}-ticket`, onCompanyTicket);
+      socket.off(`company-${companyId}-appMessage`, onCompanyAppMessage);
+      socket.emit("leaveTickets", tabOpen);
+    };
+  }, [socket, tabOpen, user?.companyId]);
+
+  // Filtrar tickets por status
+  const tickets = ticketsList.filter(ticket => ticket.status === tabOpen);
+  
+  // Contar tickets
+  const counts = {
+    pending: ticketsList.filter(t => t.status === 'pending').length,
+    open: ticketsList.filter(t => t.status === 'open').length
+  };
+
+  // Função para refresh
+  const refreshTickets = () => {
+    setForceRefresh(prev => prev + 1);
+  };
+
+  // Função para aceitar ticket
+  const acceptTicket = async (ticketId, queueId) => {
+    try {
+      const res = await api.put(`/tickets/${ticketId}`, {
+        status: 'open',
+        userId: user?.id,
+        queueId: queueId
+      });
+      
+      dispatch({ type: "DELETE_TICKET", payload: ticketId });
+      
+      return res.data;
+    } catch (err) {
+      console.error('❌ Error accepting:', err);
+      throw err;
+    }
+  };
   
   
   
@@ -306,15 +419,14 @@ const ChatModerno = () => {
   
   // Função para forçar refresh dos tickets
   const forceTicketsRefresh = useCallback(() => {
-    setForceRefresh(prev => prev + 1);
-    if (refetchTickets) {
-      refetchTickets();
-    }
-  }, [refetchTickets]);
+    console.log('🔄 Forcing tickets refresh...');
+    refreshTickets();
+  }, [refreshTickets]);
 
   // Handler para busca otimizada
   const handleSearch = useCallback((event) => {
     const searchTerm = event.target.value;
+    console.log('🔍 Search input:', searchTerm);
     setSearchParam(searchTerm);
   }, []);
 
@@ -369,17 +481,6 @@ const ChatModerno = () => {
     }
   }, [tickets, selectedChatId, setCurrentTicket, history]);
   
-  // Buscar counts quando componente montar ou showAllTickets mudar
-  useEffect(() => {
-    fetchTabCounts();
-  }, [fetchTabCounts]);
-  
-  // Atualizar counts quando lista de tickets mudar
-  useEffect(() => {
-    if (tickets && tickets.length >= 0) {
-      fetchTabCounts();
-    }
-  }, [tickets, fetchTabCounts]);
   
   // Scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -1164,216 +1265,25 @@ const ChatModerno = () => {
                 </Box>
               </Box>
 
-              {/* Search Input */}
-              <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
-                <TextField
-                  fullWidth
-                  placeholder="Pesquisar..."
-                  size="small"
-                  value={searchParam}
-                  onChange={handleSearch}
-                  InputProps={{
-                    startAdornment: (
-                      <Box sx={{ mr: 1, display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                          <path d="M21 21L16.514 16.506M19 10.5C19 15.194 15.194 19 10.5 19S2 15.194 2 10.5 5.806 2 10.5 2 19 5.806 19 10.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </Box>
-                    ),
-                    endAdornment: searchParam && (
-                      <Box 
-                        onClick={() => setSearchParam('')}
-                        sx={{ 
-                          ml: 1, 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          color: 'var(--text-secondary)',
-                          cursor: 'pointer',
-                          '&:hover': { color: 'var(--text-primary)' }
-                        }}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                          <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </Box>
-                    ),
-                    sx: {
-                      borderRadius: '12px',
-                      backgroundColor: 'var(--bg-secondary)',
-                      border: '1px solid var(--border-primary)',
-                      '& fieldset': { border: 'none' },
-                      '&:hover': {
-                        backgroundColor: 'var(--bg-tertiary)',
-                      },
-                      '&.Mui-focused': {
-                        backgroundColor: 'white',
-                        borderColor: 'var(--color-accent)',
-                        boxShadow: '0 0 0 3px rgba(0, 195, 7, 0.1)',
-                      },
-                      '& input': {
-                        fontSize: '14px',
-                        padding: '8px 12px',
-                        color: 'var(--text-primary)',
-                        '&::placeholder': {
-                          color: 'var(--text-secondary)',
-                          opacity: 1,
-                        },
-                      },
-                    }
-                  }}
-                />
-                
-                {/* Filter Button */}
-                <Box
-                  onClick={handleFilterToggle}
-                  sx={{
-                    width: '40px',
-                    height: '40px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '12px',
-                    backgroundColor: showFilters ? 'var(--color-accent)' : 'var(--bg-secondary)',
-                    border: '1px solid var(--border-primary)',
-                    color: showFilters ? 'white' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      backgroundColor: showFilters ? 'var(--color-green-hover)' : 'var(--bg-tertiary)',
-                      borderColor: showFilters ? 'var(--color-green-hover)' : 'var(--color-accent)',
-                    }
-                  }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M3 4.6C3 4.03995 3 3.75992 3.10899 3.54601C3.20487 3.35785 3.35785 3.20487 3.54601 3.10899C3.75992 3 4.03995 3 4.6 3H19.4C19.9601 3 20.2401 3 20.4540 3.10899C20.6422 3.20487 20.7951 3.35785 20.8910 3.54601C21 3.75992 21 4.03995 21 4.6V6.33726C21 6.58185 21 6.70414 20.9724 6.81923C20.9479 6.92127 20.9075 7.01881 20.8526 7.10828C20.7908 7.2092 20.7043 7.29568 20.5314 7.46863L14.4686 13.5314C14.2957 13.7043 14.2092 13.7908 14.1474 13.8917C14.0925 13.9812 14.0521 14.0787 14.0276 14.1808C14 14.2959 14 14.4182 14 14.6627V17L10 21V14.6627C10 14.4182 10 14.2959 9.97237 14.1808C9.94787 14.0787 9.90747 13.9812 9.85264 13.8917C9.7908 13.7908 9.70432 13.7043 9.53137 13.5314L3.46863 7.46863C3.29568 7.29568 3.2092 7.2092 3.14736 7.10828C3.09253 7.01881 3.05213 6.92127 3.02763 6.81923C3 6.70414 3 6.58185 3 6.33726V4.6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </Box>
-              </Box>
+              {/* Search and Filters Component */}
+              <SearchAndFilters 
+                searchParam={searchParam}
+                handleSearch={handleSearch}
+                showSortOptions={showSortOptions}
+                setShowSortOptions={setShowSortOptions}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+              />
 
-              {/* Tabs with animated line */}
-              <Box sx={{ 
-                display: 'flex',
-                borderBottom: '1px solid var(--border-primary)',
-                mb: 0
-              }}>
-                {[
-                  { 
-                    key: 'open', 
-                    label: 'Atendendo', 
-                    count: tabCounts.open || 0,
-                    icon: MessageCircle
-                  },
-                  { 
-                    key: 'pending', 
-                    label: 'Esperando', 
-                    count: tabCounts.pending || 0,
-                    icon: Clock
-                  }
-                ].map((tab, index) => {
-                  const isActive = tabOpen === tab.key;
-                  return (
-                    <Box
-                      key={tab.key}
-                      onClick={() => setTabOpen(tab.key)}
-                      sx={{
-                        flex: 1, // Ocupa toda largura disponível dividido igualmente
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '12px 8px',
-                        fontSize: '13px',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        position: 'relative',
-                        color: isActive ? 'var(--color-accent)' : 'var(--text-secondary)',
-                        transition: 'all 0.3s ease',
-                        marginBottom: '-1px',
-                        gap: 1,
-                        '&:hover': {
-                          color: 'var(--color-accent)',
-                          transform: 'translateY(-1px)',
-                        },
-                        '&:hover .tab-icon': {
-                          transform: 'scale(1.15)',
-                        },
-                        '&:active': {
-                          transform: 'translateY(0px)',
-                        },
-                        '&::before': {
-                          content: '""',
-                          position: 'absolute',
-                          bottom: 0,
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          width: isActive ? '100%' : '0%',
-                          height: '2px',
-                          backgroundColor: 'var(--color-accent)',
-                          transition: 'width 0.3s ease',
-                        },
-                        '&:hover::before': {
-                          width: '100%',
-                        }
-                      }}
-                    >
-                      <Box
-                        className="tab-icon"
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        }}
-                      >
-                        <tab.icon size={16} />
-                      </Box>
-                      <span style={{ userSelect: 'none' }}>{tab.label}</span>
-                      {tab.count > 0 && (
-                        <Box
-                          sx={{
-                            ml: 1,
-                            backgroundColor: isActive ? 'var(--color-accent)' : '#f44336',
-                            color: 'white',
-                            borderRadius: '50%',
-                            minWidth: '18px',
-                            height: '18px',
-                            fontSize: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 'bold'
-                          }}
-                        >
-                          {tab.count > 99 ? '99+' : tab.count}
-                        </Box>
-                      )}
-                    </Box>
-                  );
-                })}
-              </Box>
+              {/* Tabs Component */}
+              <ChatTabs 
+                showAllTickets={showAllTickets}
+                setShowAllTickets={setShowAllTickets}
+                tabCounts={tabCounts}
+                setTabCounts={setTabCounts}
+              />
             </CardHeader>
             
-            {/* Search Results Indicator */}
-            {searchParam && (
-              <Box sx={{ 
-                px: 2, 
-                py: 1, 
-                backgroundColor: 'var(--bg-tertiary)',
-                borderBottom: '1px solid var(--border-primary)',
-                fontSize: '12px',
-                color: 'var(--text-secondary)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-              }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M21 21L16.514 16.506M19 10.5C19 15.194 15.194 19 10.5 19S2 15.194 2 10.5 5.806 2 10.5 2 19 5.806 19 10.5Z" stroke="currentColor" strokeWidth="1.5"/>
-                </svg>
-                {tickets.length === 0 ? (
-                  <span>Nenhum resultado para "{searchParam}"</span>
-                ) : (
-                  <span>{tickets.length} resultado{tickets.length !== 1 ? 's' : ''} para "{searchParam}"</span>
-                )}
-              </Box>
-            )}
             
             <CardContent sx={{ 
               flex: 1, 
@@ -1381,76 +1291,23 @@ const ChatModerno = () => {
               overflow: 'hidden',
               minHeight: 0
             }}>
-              <ScrollArea size="full">
-                <Box data-scrollable>
-                  {ticketsLoading ? (
-                    <Box sx={{ p: 2, textAlign: 'center', color: 'var(--text-secondary)' }}>
-                      Carregando conversas...
-                    </Box>
-                  ) : tickets.length === 0 ? (
-                    <Box sx={{ 
-                      p: 4, 
-                      textAlign: 'center', 
-                      color: 'var(--text-secondary)',
-                      fontSize: '14px' 
-                    }}>
-                      <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
-                        Nenhuma conversa encontrada
-                      </Typography>
-                      <Typography variant="caption">
-                        {tabOpen === 'open' ? 
-                          'Não há conversas em atendimento no momento' : 
-                          'Não há conversas esperando atendimento'
-                        }
-                      </Typography>
-                    </Box>
-                  ) : (
-                    tickets
-                      .sort((a, b) => {
-                        // Primeiro critério: conversas fixadas vêm antes
-                        const aIsPinned = pinnedConversations.has(a.id);
-                        const bIsPinned = pinnedConversations.has(b.id);
-                        
-                        if (aIsPinned && !bIsPinned) return -1;
-                        if (!aIsPinned && bIsPinned) return 1;
-                        
-                        // Se ambas são fixadas ou não fixadas, ordenar por data
-                        return new Date(b.updatedAt) - new Date(a.updatedAt);
-                      })
-                      .map((ticket) => {
-                      // Converter ticket para formato de contact para manter compatibilidade
-                      const contactFromTicket = {
-                        id: ticket.id, // Usar ticket.id em vez de uuid
-                        name: ticket.contact?.name || 'Contato sem nome',
-                        avatar: ticket.contact?.profilePicUrl || ticket.contact?.urlPicture || null,
-                        status: ticket.status === 'open' ? 'online' : 'offline',
-                        lastMessage: ticket.lastMessage || 'Nova conversa',
-                        lastSeen: ticket.updatedAt,
-                        unreadCount: ticket.unreadMessages || 0,
-                        isTyping: false,
-                        // Informações do usuário responsável  
-                        userAvatar: ticket.user?.profileImage || null,
-                        userName: ticket.user?.name || null
-                      };
-                      
-                      
-                      return (
-                        <ContactList
-                          key={ticket.id}
-                          contact={contactFromTicket}
-                          selectedChatId={selectedChatId}
-                          openChat={openChat}
-                          ticket={ticket}
-                          currentTab={tabOpen}
-                          onRefresh={forceTicketsRefresh}
-                          isPinned={pinnedConversations.has(ticket.id)}
-                          onPinConversation={() => handlePinConversation(ticket.id)}
-                        />
-                      );
-                    })
-                  )}
+              {ticketsLoading ? (
+                <Box sx={{ p: 2, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  Carregando conversas...
                 </Box>
-              </ScrollArea>
+              ) : (
+                <TicketsList 
+                  tickets={tickets}
+                  tabOpen={tabOpen}
+                  selectedChatId={selectedChatId}
+                  openChat={openChat}
+                  currentTab={tabOpen}
+                  onRefresh={refreshTickets}
+                  onAccept={acceptTicket}
+                  pinnedConversations={pinnedConversations}
+                  handlePinConversation={handlePinConversation}
+                />
+              )}
             </CardContent>
           </Card>
         </SidebarContainer>
