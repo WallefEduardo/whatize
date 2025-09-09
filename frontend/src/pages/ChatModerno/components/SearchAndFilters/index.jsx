@@ -8,7 +8,8 @@ const SearchAndFilters = ({
   showSortOptions, 
   setShowSortOptions,
   sortBy,
-  setSortBy 
+  setSortBy,
+  onFilterToggle 
 }) => {
   
   const handleClearSearch = () => {
@@ -66,7 +67,7 @@ const SearchAndFilters = ({
         
         {/* Sort/Filter Button */}
         <Box
-          onClick={() => setShowSortOptions(!showSortOptions)}
+          onClick={() => onFilterToggle ? onFilterToggle() : setShowSortOptions(!showSortOptions)}
           sx={{
             minWidth: '40px',
             height: '40px',

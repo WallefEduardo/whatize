@@ -1273,6 +1273,7 @@ const ChatModerno = () => {
                 setShowSortOptions={setShowSortOptions}
                 sortBy={sortBy}
                 setSortBy={setSortBy}
+                onFilterToggle={handleFilterToggle}
               />
 
               {/* Tabs Component */}
