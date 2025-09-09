@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { Box } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { ChevronDown, X, ArrowRightLeft, Mail, Users, Tag, BellOff, Pin } from 'lucide-react';
@@ -37,7 +38,7 @@ const StyledTrigger = styled(Box, {
 
 // Styled Dropdown Content
 const StyledDropdownContent = styled(Box)(({ align }) => ({
-  position: 'absolute',
+  position: 'fixed',
   top: '100%',
   [align === 'start' ? 'left' : align === 'center' ? 'left' : 'right']: align === 'center' ? '50%' : 0,
   transform: align === 'center' ? 'translateX(-50%)' : 'none',
@@ -47,7 +48,7 @@ const StyledDropdownContent = styled(Box)(({ align }) => ({
   border: '1px solid rgba(0,0,0,0.1)',
   borderRadius: '8px',
   boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-  zIndex: 1000,
+  zIndex: 99999,
   overflow: 'hidden',
   animation: 'dropdownFadeIn 0.2s ease-out',
   
@@ -143,7 +144,9 @@ const ConversationDropdown = ({
   disabled = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
   const dropdownRef = useRef(null);
+  const triggerRef = useRef(null);
 
   // Fecha o dropdown quando clica fora
   useEffect(() => {
@@ -162,6 +165,13 @@ const ConversationDropdown = ({
   const handleTriggerClick = (e) => {
     e.stopPropagation();
     if (!disabled) {
+      if (!isOpen) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        setDropdownPosition({
+          x: rect.right - 220, // 220px é a largura do dropdown
+          y: rect.bottom + 4
+        });
+      }
       setIsOpen(!isOpen);
     }
   };
@@ -172,31 +182,23 @@ const ConversationDropdown = ({
     setIsOpen(false);
   };
 
-  return (
-    <Box ref={dropdownRef} sx={{ position: 'relative' }}>
-      {/* Trigger Button */}
-      <StyledTrigger
-        triggerColor={triggerColor}
-        triggerSize={triggerSize}
-        onClick={handleTriggerClick}
-        sx={{
-          opacity: disabled ? 0.5 : 1,
-          cursor: disabled ? 'not-allowed' : 'pointer'
-        }}
-      >
-        {triggerText}
-        <ChevronDown 
-          size={10} 
-          style={{ 
-            transition: 'transform 0.2s ease',
-            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'
-          }} 
-        />
-      </StyledTrigger>
-
-      {/* Dropdown Content */}
-      {isOpen && (
-        <StyledDropdownContent align={align}>
+  const dropdownContent = isOpen && (
+    <Box
+      ref={dropdownRef}
+      sx={{
+        position: 'fixed',
+        left: dropdownPosition.x,
+        top: dropdownPosition.y,
+        minWidth: '220px',
+        backgroundColor: 'white',
+        border: '1px solid rgba(0,0,0,0.1)',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        zIndex: 99999,
+        overflow: 'hidden',
+        animation: 'dropdownFadeIn 0.2s ease-out'
+      }}
+    >
           {/* Header */}
           <StyledHeader>
             Ações da Conversa
@@ -274,9 +276,35 @@ const ConversationDropdown = ({
               {isPinned ? 'Desafixar Conversa' : 'Fixar Conversa'}
             </StyledTitle>
           </StyledMenuItem>
-        </StyledDropdownContent>
-      )}
-    </Box>
+        </Box>
+  );
+
+  return (
+    <>
+      {/* Trigger Button */}
+      <StyledTrigger
+        ref={triggerRef}
+        triggerColor={triggerColor}
+        triggerSize={triggerSize}
+        onClick={handleTriggerClick}
+        sx={{
+          opacity: disabled ? 0.5 : 1,
+          cursor: disabled ? 'not-allowed' : 'pointer'
+        }}
+      >
+        {triggerText}
+        <ChevronDown 
+          size={10} 
+          style={{ 
+            transition: 'transform 0.2s ease',
+            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+          }} 
+        />
+      </StyledTrigger>
+
+      {/* Renderizar dropdown usando portal */}
+      {dropdownContent && ReactDOM.createPortal(dropdownContent, document.body)}
+    </>
   );
 };
 

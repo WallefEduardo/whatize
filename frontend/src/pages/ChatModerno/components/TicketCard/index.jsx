@@ -97,6 +97,8 @@ const StyledContactItem = styled(Box, {
   
   '&:hover': {
     backgroundColor: 'var(--bg-secondary)',
+    transform: 'scale(1.02)',
+    transition: 'all 0.2s ease',
   },
   
   ...(isSelected && {
@@ -181,8 +183,8 @@ const TooltipContainer = ({ ticket, tag, remainingCount }) => {
         left: tooltipPosition.x,
         top: tooltipPosition.y,
         transform: 'translate(-50%, -100%)',
-        backgroundColor: 'rgba(0, 0, 0, 0.95)',
-        color: 'white',
+        backgroundColor: '#f8f9fa',
+        color: '#374151',
         padding: '8px',
         borderRadius: '4px',
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
@@ -198,7 +200,7 @@ const TooltipContainer = ({ ticket, tag, remainingCount }) => {
           left: '50%',
           transform: 'translateX(-50%)',
           border: '4px solid transparent',
-          borderTopColor: 'rgba(0, 0, 0, 0.95)'
+          borderTopColor: '#f8f9fa'
         }
       }}
     >
@@ -254,15 +256,19 @@ const TooltipContainer = ({ ticket, tag, remainingCount }) => {
         height: '16px',
         px: '6px',
         borderRadius: '4px',
-        maxWidth: '60px',
-        overflow: 'hidden',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        ...(tag.name.length > 30 && {
+          maxWidth: '60px',
+          overflow: 'hidden'
+        })
       }}>
         <Tags size={8} style={{ color: tag.color || '#8b5cf6', flexShrink: 0 }} />
         <Box sx={{
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
+          ...(tag.name.length > 30 && {
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          })
         }}>
           {ticket.contact.tags.length === 2 
             ? tag.name 
@@ -685,14 +691,18 @@ const TicketCard = ({
                   height: '16px',
                   px: '6px',
                   borderRadius: '4px',
-                  maxWidth: '60px',
-                  overflow: 'hidden'
+                  ...(ticket.contact.tags[0].name.length > 30 && {
+                    maxWidth: '60px',
+                    overflow: 'hidden'
+                  })
                 }}>
                   <Tags size={8} style={{ color: ticket.contact.tags[0].color || '#6366f1', flexShrink: 0 }} />
                   <Box sx={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
+                    ...(ticket.contact.tags[0].name.length > 30 && {
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    })
                   }}>
                     {ticket.contact.tags[0].name}
                   </Box>
@@ -805,19 +815,28 @@ const TicketCard = ({
                   </Box>
                 )}
                 
-                <ConversationDropdown
-                  triggerText="Geral"
-                  triggerColor="success"
-                  triggerSize="xs"
-                  align="end"
-                  onFinalizarConversa={handleFinalizarConversa}
-                  onTransferirConversa={handleTransferirConversa}
-                  onMarcarNaoLido={handleMarcarNaoLido}
-                  onAdicionarEtiqueta={handleAdicionarEtiqueta}
-                  onSilenciarNotificacoes={handleSilenciarNotificacoes}
-                  onFixarConversa={onPin}
-                  isPinned={isPinned}
-                />
+                <Box
+                  sx={{
+                    '&:hover': {
+                      transform: 'scale(1.1)',
+                      transition: 'transform 0.2s ease'
+                    }
+                  }}
+                >
+                  <ConversationDropdown
+                    triggerText="✓"
+                    triggerColor="success"
+                    triggerSize="xs"
+                    align="end"
+                    onFinalizarConversa={handleFinalizarConversa}
+                    onTransferirConversa={handleTransferirConversa}
+                    onMarcarNaoLido={handleMarcarNaoLido}
+                    onAdicionarEtiqueta={handleAdicionarEtiqueta}
+                    onSilenciarNotificacoes={handleSilenciarNotificacoes}
+                    onFixarConversa={onPin}
+                    isPinned={isPinned}
+                  />
+                </Box>
               </Box>
             )}
           </Box>
