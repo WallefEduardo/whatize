@@ -167,9 +167,17 @@ const ConversationDropdown = ({
     if (!disabled) {
       if (!isOpen) {
         const rect = triggerRef.current.getBoundingClientRect();
+        const dropdownHeight = 300; // altura estimada do dropdown
+        const viewportHeight = window.innerHeight;
+        const spaceBelow = viewportHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        
+        // Se não tem espaço embaixo, aparece para cima
+        const shouldShowAbove = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
+        
         setDropdownPosition({
-          x: rect.right - 220, // 220px é a largura do dropdown
-          y: rect.bottom + 4
+          x: rect.right - 220,
+          y: shouldShowAbove ? rect.top - dropdownHeight - 4 : rect.bottom + 4
         });
       }
       setIsOpen(!isOpen);
