@@ -4,7 +4,7 @@ import { styled } from '@mui/material/styles';
 import { cn } from '../../../utils/cn';
 
 // Nossos componentes UI
-import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/Avatar';
+import { Avatar } from '../../../components/ui/AvatarOptimized';
 import Badge from '../../../components/ui/Badge';
 import Tooltip from '../../../components/ui/Tooltip';
 
@@ -133,15 +133,6 @@ const ChatHeader = ({
     }
   };
   
-  // Get initials for avatar fallback
-  const getInitials = (name) => {
-    return name
-      ?.split(' ')
-      .map(word => word.charAt(0))
-      .join('')
-      .slice(0, 2)
-      .toUpperCase() || '??';
-  };
 
   return (
     <HeaderContainer>
@@ -153,10 +144,12 @@ const ChatHeader = ({
         
         {/* Avatar with Status */}
         <Box sx={{ position: 'relative' }}>
-          <Avatar size="lg">
-            <AvatarImage src={avatar} alt={name} />
-            <AvatarFallback>{getInitials(name)}</AvatarFallback>
-          </Avatar>
+          <Avatar 
+            src={avatar} 
+            alt={name}
+            size="lg"
+            fallbackText={name}
+          />
           
           {/* Status Badge */}
           <Box sx={{

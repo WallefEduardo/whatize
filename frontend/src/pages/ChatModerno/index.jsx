@@ -34,7 +34,8 @@ import {
   getProfile,
   sendMessage,
   deleteMessage,
-  isObjectNotEmpty
+  isObjectNotEmpty,
+  isSameDay
 } from '../Chat/data/mockData';
 
 // API real para mensagens
@@ -1538,22 +1539,32 @@ const ChatModerno = () => {
                         ) : (
                           <>
                             {Array.isArray(messages) && messages.length > 0 ? (
-                              messages.map((message, index) => (
-                              <MessageItem
-                                key={`message-${index}-${message.id}`}
-                                message={message}
-                                contact={selectedContact}
-                                profile={profile}
-                                onDelete={handleDeleteMessage}
-                                index={index}
-                                selectedChatId={selectedChatId}
-                                handleReply={handleReply}
-                                replyData={replyData}
-                                handleForward={handleForward}
-                                handlePinMessage={handlePinMessage}
-                                pinnedMessages={pinnedMessages}
-                              />
-                            ))
+                              messages.map((message, index) => {
+                                // Verificar se deve mostrar separador de data
+                                const showDateSeparator = index === 0 || 
+                                  !isSameDay(
+                                    message.createdAt || message.timestamp,
+                                    messages[index - 1]?.createdAt || messages[index - 1]?.timestamp
+                                  );
+
+                                return (
+                                  <MessageItem
+                                    key={`message-${index}-${message.id}`}
+                                    message={message}
+                                    contact={selectedContact}
+                                    profile={profile}
+                                    onDelete={handleDeleteMessage}
+                                    index={index}
+                                    selectedChatId={selectedChatId}
+                                    handleReply={handleReply}
+                                    replyData={replyData}
+                                    handleForward={handleForward}
+                                    handlePinMessage={handlePinMessage}
+                                    pinnedMessages={pinnedMessages}
+                                    showDateSeparator={showDateSeparator}
+                                  />
+                                );
+                              })
                             ) : (
                               <Box sx={{ 
                                 display: 'flex', 

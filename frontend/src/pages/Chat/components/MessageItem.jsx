@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { cn } from '../../../utils/cn';
-import { formatTime } from '../data/mockData';
+import { formatTime, formatDateSeparator, isSameDay } from '../data/mockData';
 
 // Nossos componentes UI
-import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/Avatar';
+import { Avatar } from '../../../components/ui/AvatarOptimized';
 import Dropdown, { DropdownTrigger, DropdownContent, DropdownItem } from '../../../components/ui/Dropdown';
 
 // Icons
@@ -122,6 +122,36 @@ const PinIndicator = styled(Box)(() => ({
   transform: 'rotate(45deg)',
 }));
 
+const DateSeparator = styled(Box)(() => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  margin: '16px 0',
+  position: 'relative',
+  
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    height: '1px',
+    backgroundColor: 'var(--border-primary)',
+    zIndex: 0,
+  },
+}));
+
+const DateLabel = styled(Typography)(() => ({
+  backgroundColor: 'var(--bg-primary)',
+  padding: '4px 12px',
+  borderRadius: '12px',
+  fontSize: '12px',
+  fontWeight: 500,
+  color: 'var(--text-secondary)',
+  border: '1px solid var(--border-primary)',
+  zIndex: 1,
+}));
+
 const MessageStatus = ({ status }) => {
   switch (status) {
     case 'sending':
@@ -158,7 +188,8 @@ const MessageItem = ({
   replyData,
   handleForward,
   handlePinMessage,
-  pinnedMessages
+  pinnedMessages,
+  showDateSeparator = false
 }) => {
   // Adaptar para API real - usar campos reais da mensagem
   const messageText = message.body || message.content || '';
@@ -199,25 +230,28 @@ const MessageItem = ({
     handlePinMessage(pinData);
   };
 
-  // Get initials for avatar fallback
-  const getInitials = (name) => {
-    return name
-      ?.split(' ')
-      .map(word => word.charAt(0))
-      .join('')
-      .slice(0, 2)
-      .toUpperCase() || '??';
-  };
 
   return (
-    <MessageContainer isSent={isSent}>
+    <>
+      {/* Separador de Data */}
+      {showDateSeparator && (
+        <DateSeparator>
+          <DateLabel>
+            {formatDateSeparator(messageTime)}
+          </DateLabel>
+        </DateSeparator>
+      )}
+      
+      <MessageContainer isSent={isSent}>
       {/* Avatar para mensagens recebidas (esquerda) */}
       {!isSent && (
         <Box sx={{ flexShrink: 0, alignSelf: 'flex-end', mb: '20px', order: 0 }}>
-          <Avatar size="md">
-            <AvatarImage src={sender?.avatar} alt={sender?.name} />
-            <AvatarFallback>{getInitials(sender?.name)}</AvatarFallback>
-          </Avatar>
+          <Avatar 
+            src={sender?.avatar} 
+            alt={sender?.name}
+            size="md"
+            fallbackText={sender?.name}
+          />
         </Box>
       )}
 
@@ -321,13 +355,16 @@ const MessageItem = ({
       {/* Avatar para mensagens enviadas (direita) */}
       {isSent && (
         <Box sx={{ flexShrink: 0, alignSelf: 'flex-end', mb: '20px', order: 2 }}>
-          <Avatar size="md">
-            <AvatarImage src={profile?.avatar} alt={profile?.name} />
-            <AvatarFallback>{getInitials(profile?.name)}</AvatarFallback>
-          </Avatar>
+          <Avatar 
+            src={profile?.avatar} 
+            alt={profile?.name}
+            size="md"
+            fallbackText={profile?.name}
+          />
         </Box>
       )}
     </MessageContainer>
+    </>
   );
 };
 

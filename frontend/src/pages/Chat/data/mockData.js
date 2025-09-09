@@ -419,33 +419,52 @@ export const deleteMessage = ({ selectedChatId, index }) => {
   });
 };
 
-// Função para formatar tempo
+// Função para formatar tempo - apenas horário
 export const formatTime = (timestamp) => {
   const date = new Date(timestamp);
-  const now = new Date();
-  const diffInHours = (now - date) / (1000 * 60 * 60);
-  
-  if (diffInHours < 1) {
-    const minutes = Math.floor((now - date) / (1000 * 60));
-    return `${minutes}min atrás`;
-  } else if (diffInHours < 24) {
-    return date.toLocaleTimeString('pt-BR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  } else if (diffInHours < 48) {
-    return 'Ontem';
-  } else {
-    return date.toLocaleDateString('pt-BR', { 
-      day: '2-digit', 
-      month: '2-digit' 
-    });
-  }
+  return date.toLocaleTimeString('pt-BR', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: false 
+  });
 };
 
 // Função para verificar se objeto não está vazio
 export const isObjectNotEmpty = (obj) => {
   return obj && typeof obj === 'object' && Object.keys(obj).length > 0;
+};
+
+// Função para formatar data para separadores (como no WhatsApp)
+export const formatDateSeparator = (timestamp) => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  // Comparar apenas as datas (ignorando horário)
+  const dateStr = date.toDateString();
+  const nowStr = now.toDateString();
+  const yesterdayStr = yesterday.toDateString();
+  
+  if (dateStr === nowStr) {
+    return 'Hoje';
+  } else if (dateStr === yesterdayStr) {
+    return 'Ontem';
+  } else {
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  }
+};
+
+// Função para verificar se duas mensagens são do mesmo dia
+export const isSameDay = (timestamp1, timestamp2) => {
+  const date1 = new Date(timestamp1);
+  const date2 = new Date(timestamp2);
+  
+  return date1.toDateString() === date2.toDateString();
 };
 
 export default {
