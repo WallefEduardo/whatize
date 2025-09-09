@@ -227,6 +227,9 @@ const ChatModerno = () => {
   
   // Estado do modal de nova conversa
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  
+  // Estado para paginação
+  const [pageNumber, setPageNumber] = useState(1);
 
   // Debounce para busca otimizada
   useEffect(() => {
@@ -334,23 +337,11 @@ const ChatModerno = () => {
   
   // Memoizar conversões de nomes para IDs para evitar loops infinitos
   const tagIds = useMemo(() => {
-    console.log('🏷️ ===== CONVERTENDO TAGS =====');
-    console.log('📝 Tags aplicadas (nomes):', appliedTags);
-    console.log('📋 Tags disponíveis:', tagsData);
-    
-    if (appliedTags.length === 0) {
-      console.log('❌ Nenhuma tag aplicada, retornando undefined');
-      return undefined;
-    }
-    
-    const ids = appliedTags.map(name => {
+    if (appliedTags.length === 0) return undefined;
+    return appliedTags.map(name => {
       const tag = tagsData.find(t => t.name === name);
-      console.log(`   🔍 Procurando tag "${name}":`, tag ? `✅ Encontrada ID=${tag.id}` : '❌ Não encontrada');
       return tag ? tag.id : null;
     }).filter(id => id !== null);
-    
-    console.log('🆔 IDs finais das tags:', ids);
-    return ids;
   }, [appliedTags, tagsData]);
 
   const connectionIds = useMemo(() => {
@@ -374,20 +365,10 @@ const ChatModerno = () => {
     return JSON.stringify(user?.queues?.map(q => q.id) || []);
   }, [user?.queues]);
   
-  // Log dos parâmetros que serão enviados para useTickets
-  console.log('🔧 ===== PARÂMETROS PARA useTickets =====');
-  console.log('   - searchParam:', debouncedSearchParam);
-  console.log('   - status:', tabOpen);
-  console.log('   - showAll:', showAllTickets);
-  console.log('   - queueIds:', queueIds);
-  console.log('   - tags (IDs):', tagIds);
-  console.log('   - users (IDs):', userIds);
-  console.log('   - whatsappIds (IDs):', connectionIds);
-  console.log('   - forceSearch:', refreshTickets);
-
   // Buscar tickets usando o hook original
   const { tickets: ticketsData, loading: ticketsLoading, hasMore } = useTickets({
     searchParam: debouncedSearchParam,
+    pageNumber: pageNumber,
     status: tabOpen,
     showAll: showAllTickets,
     queueIds: queueIds,
@@ -401,28 +382,31 @@ const ChatModerno = () => {
 
 
 
-  // Resetar reducer quando parâmetros de busca mudam
+  // Resetar reducer e página quando parâmetros de busca mudam
   useEffect(() => {
+    setPageNumber(1); // Reset para página 1
     dispatch({ type: "RESET" });
-  }, [debouncedSearchParam, tabOpen, showAllTickets]);
+  }, [debouncedSearchParam, tabOpen, showAllTickets, appliedTags, appliedConnections, appliedStatuses, appliedUsers]);
 
   // Carregar tickets no reducer
   useEffect(() => {
     if (ticketsData) {
-      console.log('📥 ===== TICKETS RETORNADOS DA API =====');
-      console.log('📊 Total de tickets retornados:', ticketsData.length);
-      console.log('🎫 Tickets:', ticketsData.map(t => ({ 
-        id: t.id, 
-        contact: t.contact?.name, 
-        status: t.status,
-        tags: t.tags?.map(tag => tag.name) || [] 
-      })));
+      console.log('✅ Query otimizada - Tickets retornados:', ticketsData.length);
       
-      // RESET antes de carregar novos tickets para evitar duplicação
-      dispatch({ type: "RESET" });
+      // Para página 1: RESET e carrega. Para páginas > 1: apenas adiciona
+      if (pageNumber === 1) {
+        dispatch({ type: "RESET" });
+      }
       dispatch({ type: "LOAD_TICKETS", payload: ticketsData });
     }
-  }, [ticketsData]);
+  }, [ticketsData, pageNumber]);
+  
+  // Função para carregar mais tickets (paginação)
+  const handleLoadMore = useCallback(() => {
+    if (hasMore && !ticketsLoading) {
+      setPageNumber(prev => prev + 1);
+    }
+  }, [hasMore, ticketsLoading]);
 
   // Socket listeners igual ao original
   useEffect(() => {
@@ -496,17 +480,6 @@ const ChatModerno = () => {
   });
 
   // Log dos tickets filtrados finais
-  console.log('🎯 ===== TICKETS FILTRADOS FINAIS =====');
-  console.log('📋 Tab atual:', tabOpen);
-  console.log('📊 Total de tickets no ticketsList:', ticketsList.length);
-  console.log('🔍 Tickets após filtro de tab + lógica inteligente:', tickets.length);
-  console.log('🎫 Tickets que aparecerão na tela:', tickets.map(t => ({ 
-    id: t.id, 
-    contact: t.contact?.name, 
-    status: t.status,
-    tags: t.tags?.map(tag => tag.name) || [] 
-  })));
-  console.log('🧠 shouldShowTicketsInTab para tab', tabOpen, ':', shouldShowTicketsInTab(tabOpen));
   
   // Contar tickets
   const counts = {
@@ -916,11 +889,10 @@ const ChatModerno = () => {
   // Função para aplicar filtros selecionados (sem fechar sidebar)
   const handleApplyFilters = () => {
     console.log('🎯 ===== APLICANDO FILTROS =====');
-    console.log('📝 Filtros SELECIONADOS:');
-    console.log('   - Tags selecionadas:', selectedTags);
-    console.log('   - Conexões selecionadas:', selectedConnections);
-    console.log('   - Status selecionados:', selectedStatuses);
-    console.log('   - Usuários selecionados:', selectedUsers);
+    console.log('📝 Tags selecionadas:', selectedTags);
+    console.log('📝 Connections selecionadas:', selectedConnections);
+    console.log('📝 Status selecionados:', selectedStatuses);
+    console.log('📝 Users selecionados:', selectedUsers);
     
     // Copiar seleções para estados aplicados
     setAppliedTags([...selectedTags]);
@@ -928,15 +900,10 @@ const ChatModerno = () => {
     setAppliedStatuses([...selectedStatuses]);
     setAppliedUsers([...selectedUsers]);
     
-    console.log('✅ Filtros APLICADOS (após setState):');
-    console.log('   - Tags aplicadas:', [...selectedTags]);
-    console.log('   - Conexões aplicadas:', [...selectedConnections]);
-    console.log('   - Status aplicados:', [...selectedStatuses]);
-    console.log('   - Usuários aplicados:', [...selectedUsers]);
+    console.log('✅ Filtros aplicados!');
     
     // Trigger refresh (sem fechar sidebar)
     setRefreshTickets(prev => !prev);
-    console.log('🔄 Refresh dos tickets disparado');
   };
 
   // Função para limpar todos os filtros
@@ -1517,6 +1484,9 @@ const ChatModerno = () => {
                   onAccept={acceptTicket}
                   pinnedConversations={pinnedConversations}
                   handlePinConversation={handlePinConversation}
+                  hasMore={hasMore}
+                  loading={ticketsLoading}
+                  onLoadMore={handleLoadMore}
                 />
               )}
             </CardContent>

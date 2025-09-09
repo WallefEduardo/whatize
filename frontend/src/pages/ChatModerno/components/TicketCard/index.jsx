@@ -1,4 +1,4 @@
-import React, { useState, useContext, useRef, useEffect } from 'react';
+import React, { useState, useContext, useRef, useEffect, memo, useMemo, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, IconButton } from '@mui/material';
 import { styled } from '@mui/material/styles';
@@ -360,7 +360,7 @@ const MessageWithTooltip = ({ message }) => {
   );
 };
 
-const TicketCard = ({ 
+const TicketCard = memo(({ 
   ticket, 
   selectedChatId, 
   openChat, 
@@ -386,18 +386,17 @@ const TicketCard = ({
   const [selectedTicketTags, setSelectedTicketTags] = useState([]);
   const [confirmAction, setConfirmAction] = useState(null);
   
-  const isSelected = selectedChatId === ticket.id;
-  
-  // Dados do contato e ticket
-  const contact = ticket.contact;
-  const unreadCount = ticket.unreadMessages || 0;
-  const lastSeen = ticket.updatedAt;
-  const lastMessage = ticket.lastMessage || 'Nova conversa';
-  const userAvatar = ticket.user?.profileImage || null;
-  const userName = ticket.user?.name || null;
+  // Dados do contato e ticket memoizados para performance
+  const isSelected = useMemo(() => selectedChatId === ticket.id, [selectedChatId, ticket.id]);
+  const contact = useMemo(() => ticket.contact, [ticket.contact]);
+  const unreadCount = useMemo(() => ticket.unreadMessages || 0, [ticket.unreadMessages]);
+  const lastSeen = useMemo(() => ticket.updatedAt, [ticket.updatedAt]);
+  const lastMessage = useMemo(() => ticket.lastMessage || 'Nova conversa', [ticket.lastMessage]);
+  const userAvatar = useMemo(() => ticket.user?.profileImage || null, [ticket.user?.profileImage]);
+  const userName = useMemo(() => ticket.user?.name || null, [ticket.user?.name]);
 
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     const contactFromTicket = {
       id: ticket.id,
       name: contact?.name || 'Contato sem nome',
@@ -412,14 +411,14 @@ const TicketCard = ({
     };
     
     openChat(ticket.id, contactFromTicket, ticket);
-  };
+  }, [ticket, contact, lastMessage, lastSeen, unreadCount, userAvatar, userName, openChat]);
 
   // Handlers dos modais
-  const handleFinalizarConversa = () => {
+  const handleFinalizarConversa = useCallback(() => {
     setShowResolverModal(true);
-  };
+  }, []);
 
-  const handleResolverComMensagem = async () => {
+  const handleResolverComMensagem = useCallback(async () => {
     try {
       await api.put(`/tickets/${ticket.id}`, {
         status: 'closed',
@@ -432,9 +431,9 @@ const TicketCard = ({
       console.error('Erro ao resolver com mensagem:', err);
       toastError(err);
     }
-  };
+  }, [ticket.id, onRefresh]);
 
-  const handleResolverSemMensagem = async () => {
+  const handleResolverSemMensagem = useCallback(async () => {
     try {
       await api.put(`/tickets/${ticket.id}`, {
         status: 'closed',
@@ -447,11 +446,11 @@ const TicketCard = ({
       console.error('Erro ao resolver sem mensagem:', err);
       toastError(err);
     }
-  };
+  }, [ticket.id, onRefresh]);
 
-  const handleTransferirConversa = () => {
+  const handleTransferirConversa = useCallback(() => {
     setShowTransferModal(true);
-  };
+  }, []);
 
   const handleMarcarNaoLido = async () => {
     try {
@@ -487,7 +486,7 @@ const TicketCard = ({
     }
   };
 
-  const handleAdicionarEtiqueta = async (e) => {
+  const handleAdicionarEtiqueta = useCallback(async (e) => {
     e.stopPropagation();
     
     // Buscar tags disponíveis (apenas tags normais, não kanban)
@@ -515,7 +514,7 @@ const TicketCard = ({
     
     setTagAnchorEl(e.currentTarget);
     setShowTagSelector(true);
-  };
+  }, [ticket.contact.id, ticket.contact?.tags]);
 
   const handleTagToggle = async (tag, isSelected) => {
     
@@ -1040,6 +1039,9 @@ const TicketCard = ({
       </Dialog>
     </>
   );
-};
+});
+
+// Comparação personalizada para otimização
+TicketCard.displayName = 'TicketCard';
 
 export default TicketCard;

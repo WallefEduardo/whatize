@@ -98,16 +98,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     queueIds = JSON.parse(queueIdsStringified);
   }
 
-  console.log('🔍 ===== DEBUG CONTROLLER TAGS =====');
-  console.log('📝 tagIdsStringified:', tagIdsStringified);
-  console.log('📝 typeof tagIdsStringified:', typeof tagIdsStringified);
-  
   if (tagIdsStringified) {
-    console.log('✅ Parseando tagIdsStringified...');
     tagsIds = JSON.parse(tagIdsStringified);
-    console.log('🆔 tagsIds após parse:', tagsIds);
-  } else {
-    console.log('❌ tagIdsStringified está vazio/undefined');
   }
 
   if (userIdsStringified) {
