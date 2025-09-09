@@ -102,34 +102,44 @@ const ChatTabs = ({
               cursor: 'pointer',
               position: 'relative',
               backgroundColor: isActive ? 'var(--background-paper)' : 'transparent',
-              color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
               transition: 'all 0.2s ease-in-out',
-              borderBottom: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
+              borderBottom: isActive ? '3px solid var(--color-accent)' : '3px solid transparent',
               '&:hover': {
                 backgroundColor: 'var(--background-paper)',
-                color: 'var(--text-primary)'
               }
             }}
           >
-            <tab.icon size={16} />
-            <Typography variant="body2" fontWeight={isActive ? 600 : 400}>
+            <Box sx={{ 
+              color: isActive ? 'var(--color-accent)' : 'var(--text-secondary)',
+              transition: 'color 0.2s ease-in-out'
+            }}>
+              <tab.icon size={16} />
+            </Box>
+            <Typography 
+              variant="body2" 
+              fontWeight={isActive ? 600 : 400}
+              sx={{ 
+                color: 'var(--text-secondary)',
+                transition: 'color 0.2s ease-in-out'
+              }}
+            >
               {tab.label}
             </Typography>
-            {tab.count > 0 && (
-              <Badge 
-                badgeContent={tab.count} 
-                color="primary"
-                sx={{
-                  '& .MuiBadge-badge': {
-                    fontSize: '11px',
-                    height: '18px',
-                    minWidth: '18px',
-                    backgroundColor: isActive ? 'var(--color-primary)' : 'var(--color-secondary)',
-                    color: 'white'
-                  }
-                }}
-              />
-            )}
+            <Badge 
+              badgeContent={tab.count} 
+              color="primary"
+              sx={{
+                '& .MuiBadge-badge': {
+                  fontSize: '11px',
+                  height: '18px',
+                  minWidth: '18px',
+                  backgroundColor: '#dc2626',
+                  color: 'white',
+                  top: '-8px',
+                  right: '-6px'
+                }
+              }}
+            />
           </Box>
         );
       })}

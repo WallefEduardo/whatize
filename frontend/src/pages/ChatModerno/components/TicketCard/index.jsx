@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, IconButton } from '@mui/material';
 import { styled } from '@mui/material/styles';
@@ -280,6 +280,83 @@ const TooltipContainer = ({ ticket, tag, remainingCount }) => {
       {/* Renderizar tooltip usando portal */}
       {tooltipContent && ReactDOM.createPortal(tooltipContent, document.body)}
     </Box>
+  );
+};
+
+// Componente para mensagem com tooltip
+const MessageWithTooltip = ({ message }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [isTruncated, setIsTruncated] = useState(false);
+  const messageRef = useRef(null);
+
+  useEffect(() => {
+    if (messageRef.current) {
+      const element = messageRef.current;
+      setIsTruncated(element.scrollWidth > element.clientWidth);
+    }
+  }, [message]);
+
+  const handleMouseEnter = (e) => {
+    if (isTruncated) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setTooltipPosition({
+        x: rect.left + rect.width / 2,
+        y: rect.top - 10
+      });
+      setShowTooltip(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setShowTooltip(false);
+  };
+
+  const tooltipContent = showTooltip && isTruncated && (
+    <Box
+      sx={{
+        position: 'fixed',
+        left: tooltipPosition.x,
+        top: tooltipPosition.y,
+        transform: 'translate(-50%, -100%)',
+        backgroundColor: '#f8f9fa',
+        color: '#374151',
+        padding: '8px 12px',
+        borderRadius: '6px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        border: '1px solid #e5e7eb',
+        fontSize: '12px',
+        maxWidth: '300px',
+        zIndex: 99999,
+        pointerEvents: 'none',
+        wordWrap: 'break-word',
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          top: '100%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          border: '4px solid transparent',
+          borderTopColor: '#f8f9fa'
+        }
+      }}
+    >
+      {message}
+    </Box>
+  );
+
+  return (
+    <>
+      <LastMessage
+        ref={messageRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        sx={{ cursor: isTruncated ? 'pointer' : 'default' }}
+      >
+        {message}
+      </LastMessage>
+      {tooltipContent && ReactDOM.createPortal(tooltipContent, document.body)}
+    </>
   );
 };
 
@@ -658,9 +735,7 @@ const TicketCard = ({
             {contact?.name || 'Contato sem nome'}
           </ContactName>
           
-          <LastMessage>
-            {lastMessage}
-          </LastMessage>
+          <MessageWithTooltip message={lastMessage} />
 
         </ContactInfo>
 
@@ -753,10 +828,11 @@ const TicketCard = ({
             display: 'flex', 
             flexDirection: 'column', 
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: 0.5,
+            justifyContent: ticket.status === 'pending' ? 'flex-start' : 'center',
+            gap: ticket.status === 'pending' ? 0.2 : 0.5,
             ml: 1,
-            marginRight: '5px'
+            marginRight: '5px',
+            mt: ticket.status === 'pending' ? -1.5 : 0
           }}>
             {/* Data/Horário no topo */}
             <TimeStamp 
@@ -766,7 +842,8 @@ const TicketCard = ({
                 lineHeight: 1,
                 whiteSpace: 'nowrap',
                 color: 'var(--text-secondary)',
-                textAlign: 'center'
+                textAlign: 'center',
+                marginBottom: ticket.status === 'pending' ? '11px' : '0px'
               }}
             >
               {formatCustomTime(lastSeen)}
@@ -846,11 +923,16 @@ const TicketCard = ({
             display: 'flex', 
             flexDirection: 'column', 
             alignItems: 'flex-end',
-            justifyContent: 'center',
-            gap: 0.5,
-            ml: 1
+            justifyContent: ticket.status === 'pending' ? 'flex-start' : 'center',
+            gap: ticket.status === 'pending' ? 0.2 : 0.5,
+            ml: 1,
+            mt: ticket.status === 'pending' ? -1.5 : 0
           }}>
-            <TimeStamp>
+            <TimeStamp
+              sx={{
+                marginBottom: ticket.status === 'pending' ? '11px' : '0px'
+              }}
+            >
               {formatCustomTime(lastSeen)}
             </TimeStamp>
             
@@ -865,28 +947,27 @@ const TicketCard = ({
                   }
                 }}
                 sx={{
-                  px: 1.5,
-                  py: 0.5,
-                  backgroundColor: 'var(--color-accent)',
-                  color: 'white',
-                  borderRadius: '12px',
-                  fontSize: '11px',
-                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  backgroundColor: 'transparent',
+                  color: 'var(--color-accent)',
+                  border: '1px solid var(--color-accent)',
+                  borderRadius: '50%',
                   cursor: 'pointer',
                   '&:hover': {
-                    backgroundColor: 'var(--color-green-hover)',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    transform: 'scale(1.1)',
+                    transition: 'all 0.2s ease'
                   }
                 }}
               >
-                Aceitar
+                ✓
               </Box>
             )}
             
-            {unreadCount > 0 && (
-              <UnreadBadge unreadCount={unreadCount}>
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </UnreadBadge>
-            )}
           </Box>
         )}
       </StyledContactItem>
