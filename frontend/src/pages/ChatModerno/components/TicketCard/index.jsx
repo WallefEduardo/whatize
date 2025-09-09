@@ -1,6 +1,8 @@
 import React, { useState, useContext } from 'react';
-import { Box, Typography } from '@mui/material';
+import ReactDOM from 'react-dom';
+import { Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, IconButton } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { X, Tags } from 'lucide-react';
 import thumbtacksIcon from '../../../../assets/iconeswhatize/thumbtacks.svg';
 import { Avatar, AvatarImage, AvatarFallback } from '../../../../components/ui/AvatarOptimized';
 import ConversationDropdown from '../../../../components/ui/ConversationDropdown';
@@ -12,6 +14,8 @@ import ConfirmationModal from '../../../../components/ConfirmationModal';
 import ResolverTicketModal from '../../../../components/ResolverTicketModal';
 import TagSelector from '../../../../components/ui/TagSelector';
 import StatusBadge from '../../../../components/StatusBadge';
+import ModernModal from '../../../../components/ModernModal';
+import TagForm from '../../../../components/TagForm';
 import api from '../../../../services/api';
 import toastError from '../../../../errors/toastError';
 import { 
@@ -152,6 +156,127 @@ const UnreadBadge = styled(Box, {
   opacity: unreadCount > 0 ? 1 : 0.6,
 }));
 
+// Componente para tooltip flutuante usando portal
+const TooltipContainer = ({ ticket, tag, remainingCount }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  
+  const handleMouseEnter = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltipPosition({
+      x: rect.left + rect.width / 2,
+      y: rect.top - 10
+    });
+    setShowTooltip(true);
+  };
+  
+  const handleMouseLeave = () => {
+    setShowTooltip(false);
+  };
+
+  const tooltipContent = showTooltip && ticket.contact.tags.length > 2 && (
+    <Box
+      sx={{
+        position: 'fixed',
+        left: tooltipPosition.x,
+        top: tooltipPosition.y,
+        transform: 'translate(-50%, -100%)',
+        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+        color: 'white',
+        padding: '8px',
+        borderRadius: '4px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        border: '1px solid var(--border-primary)',
+        fontSize: '10px',
+        zIndex: 10000,
+        minWidth: '120px',
+        pointerEvents: 'none',
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          top: '100%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          border: '4px solid transparent',
+          borderTopColor: 'rgba(0, 0, 0, 0.95)'
+        }
+      }}
+    >
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '4px',
+        alignItems: 'flex-start'
+      }}>
+        {ticket.contact.tags.slice(1).map((tagItem) => (
+          <Box key={tagItem.id} sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            backgroundColor: tagItem.color ? `${tagItem.color}20` : '#6366f120',
+            color: tagItem.color || '#6366f1',
+            fontSize: '8px',
+            fontWeight: 600,
+            height: '16px',
+            px: '6px',
+            borderRadius: '4px',
+            maxWidth: '120px',
+            overflow: 'hidden'
+          }}>
+            <Tags size={8} style={{ color: tagItem.color || '#6366f1', flexShrink: 0 }} />
+            <Box sx={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              {tagItem.name}
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
+
+  return (
+    <Box
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      sx={{ position: 'relative' }}
+    >
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        backgroundColor: tag.color ? `${tag.color}20` : '#8b5cf620',
+        color: tag.color || '#8b5cf6',
+        fontSize: '8px',
+        fontWeight: 600,
+        height: '16px',
+        px: '6px',
+        borderRadius: '4px',
+        maxWidth: '60px',
+        overflow: 'hidden',
+        cursor: 'pointer'
+      }}>
+        <Tags size={8} style={{ color: tag.color || '#8b5cf6', flexShrink: 0 }} />
+        <Box sx={{
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}>
+          {ticket.contact.tags.length === 2 
+            ? tag.name 
+            : `${tag.name} +${remainingCount}`
+          }
+        </Box>
+      </Box>
+      
+      {/* Renderizar tooltip usando portal */}
+      {tooltipContent && ReactDOM.createPortal(tooltipContent, document.body)}
+    </Box>
+  );
+};
+
 const TicketCard = ({ 
   ticket, 
   selectedChatId, 
@@ -172,6 +297,7 @@ const TicketCard = ({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showResolverModal, setShowResolverModal] = useState(false);
   const [showTagSelector, setShowTagSelector] = useState(false);
+  const [showCreateTagModal, setShowCreateTagModal] = useState(false);
   const [tagAnchorEl, setTagAnchorEl] = useState(null);
   const [availableTags, setAvailableTags] = useState([]);
   const [selectedTicketTags, setSelectedTicketTags] = useState([]);
@@ -414,6 +540,50 @@ const TicketCard = ({
     }
   };
 
+  const handleOpenCreateTagModal = () => {
+    console.log('🏷️ Abrindo modal de criar nova tag...');
+    // Fechar o TagSelector primeiro
+    setShowTagSelector(false);
+    setTagAnchorEl(null);
+    // Depois abrir o modal
+    setTimeout(() => {
+      setShowCreateTagModal(true);
+    }, 100);
+  };
+
+  const handleCloseCreateTagModal = () => {
+    setShowCreateTagModal(false);
+  };
+
+  const handleSaveNewTag = async (newTag) => {
+    console.log('Nova tag salva pelo TagForm:', newTag);
+    
+    try {
+      // Adicionar à lista de tags disponíveis
+      setAvailableTags(prev => [...prev, newTag]);
+      
+      // Recarregar as tags para garantir que estão atualizadas
+      const response = await api.get('/tags/list', {
+        params: { kanban: 0 }
+      });
+      const normalTags = (response.data || []).filter(tag => tag.kanban === 0);
+      setAvailableTags(normalTags);
+      
+      console.log('Tags atualizadas após criação:', normalTags);
+      
+    } catch (error) {
+      console.error('Erro ao atualizar lista de tags:', error);
+    }
+    
+    // Fechar modal
+    setShowCreateTagModal(false);
+    
+    // Atualizar RefreshContext se necessário
+    if (onRefresh) {
+      setTimeout(() => onRefresh(), 100);
+    }
+  };
+
   const handleSilenciarNotificacoes = () => {
     console.log('handleSilenciarNotificacoes chamado');
     // TODO: Implementar silenciar notificações
@@ -441,7 +611,7 @@ const TicketCard = ({
     <>
       <StyledContactItem isSelected={isSelected} onClick={handleClick}>
         {/* Avatar do contato com badge de não lidas */}
-        <Box sx={{ position: 'relative' }}>
+        <Box sx={{ position: 'relative', mb: '24px', ml: '-4px' }}>
           <Avatar 
             src={contact?.profilePicUrl || contact?.urlPicture}
             alt={contact?.name || 'Contato'} 
@@ -477,7 +647,7 @@ const TicketCard = ({
         </Box>
 
         {/* Informações do contato */}
-        <ContactInfo>
+        <ContactInfo sx={{ mb: '24px' }}>
           <ContactName>
             {contact?.name || 'Contato sem nome'}
           </ContactName>
@@ -486,185 +656,86 @@ const TicketCard = ({
             {lastMessage}
           </LastMessage>
 
-          {/* Container horizontal: Fila + Tags do contato */}
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '4px', 
-            mt: '6px',
-            flexWrap: 'wrap'
-          }}>
-            {/* Quadradinho da fila */}
-            {ticket.queue && (
-              <Box 
-                title={`Fila: ${ticket.queue.name}`}
-                sx={{ 
-                  display: 'inline-flex',
+        </ContactInfo>
+
+        {/* Container horizontal: Tags + Fila do contato - alinhado com botão Geral */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '4px',
+          flexWrap: 'wrap',
+          position: 'absolute',
+          bottom: '14px',
+          left: '4px',
+          right: '80px'
+        }}>
+          {/* Tags do contato primeiro */}
+          {ticket.contact?.tags && ticket.contact.tags.length > 0 && (
+            <>
+              {/* Primeira tag */}
+              {ticket.contact.tags[0] && (
+                <Box sx={{
+                  display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '16px',
+                  gap: '4px',
+                  backgroundColor: ticket.contact.tags[0].color ? `${ticket.contact.tags[0].color}20` : '#6366f120',
+                  color: ticket.contact.tags[0].color || '#6366f1',
+                  fontSize: '8px',
+                  fontWeight: 600,
                   height: '16px',
-                  borderRadius: '3px',
-                  backgroundColor: ticket.queue.color ? `${ticket.queue.color}20` : '#00BCD420',
-                  border: `1px solid ${ticket.queue.color || '#00BCD4'}40`,
-                  cursor: 'default',
-                  color: ticket.queue.color || '#00BCD4',
-                  '&:hover': {
-                    transform: 'scale(1.05)',
-                    backgroundColor: ticket.queue.color ? `${ticket.queue.color}35` : '#00BCD435',
-                    transition: 'all 0.2s ease'
-                  }
-                }}
-              >
-                {React.createElement(getIconComponent(ticket.queue.icon), { size: 8 })}
-              </Box>
-            )}
-
-            {/* Tags do contato usando StatusBadge */}
-            {ticket.contact?.tags && ticket.contact.tags.length > 0 && (
-              <>
-                {/* Primeira tag */}
-                {ticket.contact.tags[0] && (
-                  <StatusBadge
-                    label={ticket.contact.tags[0].name}
-                    color={ticket.contact.tags[0].color || '#6366f1'}
-                    size="small"
-                    sx={{
-                      fontSize: '8px',
-                      height: '14px',
-                      maxWidth: '60px',
-                      '& .MuiChip-label': {
-                        px: '4px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }
-                    }}
-                  />
-                )}
-                
-                {/* Segunda tag com tooltip das demais */}
-                {ticket.contact.tags.length > 1 && (
-                  <Box
-                    sx={{
-                      position: 'relative',
-                      '&:hover .tooltip': {
-                        visibility: 'visible',
-                        opacity: 1
-                      }
-                    }}
-                  >
-                    <StatusBadge
-                      label={
-                        ticket.contact.tags.length === 2 
-                          ? ticket.contact.tags[1].name 
-                          : `${ticket.contact.tags[1].name} +${ticket.contact.tags.length - 2}`
-                      }
-                      color={ticket.contact.tags[1].color || '#8b5cf6'}
-                      size="small"
-                      sx={{
-                        fontSize: '8px',
-                        height: '14px',
-                        maxWidth: '60px',
-                        cursor: 'pointer',
-                        '& .MuiChip-label': {
-                          px: '4px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }
-                      }}
-                    />
-                    
-                    {/* Tooltip com tags restantes */}
-                    {ticket.contact.tags.length > 2 && (
-                      <Box
-                        className="tooltip"
-                        sx={{
-                          position: 'absolute',
-                          bottom: '110%',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                          color: 'white',
-                          padding: '6px 8px',
-                          borderRadius: '6px',
-                          fontSize: '10px',
-                          whiteSpace: 'nowrap',
-                          visibility: 'hidden',
-                          opacity: 0,
-                          transition: 'all 0.2s ease',
-                          zIndex: 1000,
-                          '&::after': {
-                            content: '""',
-                            position: 'absolute',
-                            top: '100%',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            border: '4px solid transparent',
-                            borderTopColor: 'rgba(0, 0, 0, 0.9)'
-                          }
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          {ticket.contact.tags.slice(1).map((tag, index) => (
-                            <Box key={tag.id} sx={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '4px' 
-                            }}>
-                              <Box
-                                sx={{
-                                  width: '6px',
-                                  height: '6px',
-                                  borderRadius: '50%',
-                                  backgroundColor: tag.color || '#6366f1'
-                                }}
-                              />
-                              {tag.name}
-                            </Box>
-                          ))}
-                        </Box>
-                      </Box>
-                    )}
-                  </Box>
-                )}
-              </>
-            )}
-          </Box>
-
-          {/* Tags do ticket */}
-          {ticket.tags && ticket.tags.length > 0 && (
-            <Box sx={{ 
-              display: 'flex', 
-              gap: '4px', 
-              mt: '4px',
-              flexWrap: 'wrap'
-            }}>
-              {ticket.tags.slice(0, 2).map((tag) => (
-                <Box
-                  key={tag.id}
-                  sx={{
-                    backgroundColor: tag.color || '#00BCD4',
-                    color: 'white',
-                    fontSize: '9px',
-                    fontWeight: 600,
-                    padding: '2px 6px',
-                    borderRadius: '8px',
-                    lineHeight: 1,
-                    maxWidth: '80px',
+                  px: '6px',
+                  borderRadius: '4px',
+                  maxWidth: '60px',
+                  overflow: 'hidden'
+                }}>
+                  <Tags size={8} style={{ color: ticket.contact.tags[0].color || '#6366f1', flexShrink: 0 }} />
+                  <Box sx={{
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    textTransform: 'uppercase'
-                  }}
-                >
-                  {tag.name}
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {ticket.contact.tags[0].name}
+                  </Box>
                 </Box>
-              ))}
+              )}
+              
+              {/* Segunda tag com tooltip das demais */}
+              {ticket.contact.tags.length > 1 && (
+                <TooltipContainer 
+                  ticket={ticket}
+                  tag={ticket.contact.tags[1]}
+                  remainingCount={ticket.contact.tags.length - 2}
+                />
+              )}
+            </>
+          )}
+
+          {/* Quadradinho da fila por último */}
+          {ticket.queue && (
+            <Box 
+              title={`Fila: ${ticket.queue.name}`}
+              sx={{ 
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '16px',
+                height: '16px',
+                borderRadius: '3px',
+                backgroundColor: ticket.queue.color ? `${ticket.queue.color}20` : '#00BCD420',
+                border: `1px solid ${ticket.queue.color || '#00BCD4'}40`,
+                cursor: 'default',
+                color: ticket.queue.color || '#00BCD4',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  backgroundColor: ticket.queue.color ? `${ticket.queue.color}35` : '#00BCD435',
+                  transition: 'all 0.2s ease'
+                }
+              }}
+            >
+              {React.createElement(getIconComponent(ticket.queue.icon), { size: 8 })}
             </Box>
           )}
-        </ContactInfo>
+        </Box>
         
         {/* Coluna direita: Data/Horário, Avatar, Badge */}
         {(userAvatar || userName || ticket.status === 'open') ? (
@@ -850,7 +921,7 @@ const TicketCard = ({
             availableTags={availableTags}
             selectedTags={selectedTicketTags}
             onTagToggle={handleTagToggle}
-            onCreateTag={handleCreateTag}
+            onCreateTag={handleOpenCreateTagModal}
             entityType="Conversa"
           />
         </Box>
@@ -869,6 +940,48 @@ const TicketCard = ({
           }}
         />
       )}
+      
+      {/* Modal de criar nova tag */}
+      {console.log('🏷️ Estado showCreateTagModal:', showCreateTagModal)}
+      <Dialog
+        open={showCreateTagModal}
+        onClose={handleCloseCreateTagModal}
+        maxWidth="sm"
+        fullWidth
+        sx={{ 
+          zIndex: 15000,
+          '& .MuiDialog-paper': {
+            borderRadius: '12px',
+            padding: '8px'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          pb: 1
+        }}>
+          <Typography variant="h6" component="div">
+            Criar Nova Tag
+          </Typography>
+          <IconButton 
+            onClick={handleCloseCreateTagModal}
+            size="small"
+            sx={{ color: 'text.secondary' }}
+          >
+            <X size={20} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <TagForm
+            kanban={0}
+            onSave={handleSaveNewTag}
+            onCancel={handleCloseCreateTagModal}
+            hideButtons={false}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
