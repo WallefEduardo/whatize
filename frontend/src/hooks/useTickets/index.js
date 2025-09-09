@@ -33,19 +33,36 @@ const useTickets = ({
         if (userFilter === undefined || userFilter === null) {
           try {            
 
+            console.log('🚀 ===== ENVIANDO PARA API /tickets =====', {
+              searchParam,
+              pageNumber,
+              tags,
+              users,
+              status,
+              date,
+              updatedAt,
+              showAll,
+              queueIds,
+              withUnreadMessages,
+              whatsapps: whatsappIds,
+              statusFilter,
+              sortTickets,
+              searchOnMessages
+            });
+
             const { data } = await api.get("/tickets", {
               params: {
                 searchParam,
                 pageNumber,
-                tags,
-                users,
+                tags: tags ? JSON.stringify(tags) : undefined,
+                users: users ? JSON.stringify(users) : undefined,
                 status,
                 date,
                 updatedAt,
                 showAll,
                 queueIds,
                 withUnreadMessages,
-                whatsapps: whatsappIds,
+                whatsapps: whatsappIds ? JSON.stringify(whatsappIds) : undefined,
                 statusFilter,
                 sortTickets,
                 searchOnMessages

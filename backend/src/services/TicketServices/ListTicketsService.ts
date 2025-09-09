@@ -603,21 +603,38 @@ const ListTicketsService = async ({
     }
   }
 
+  console.log('🔍 ===== DEBUG TAGS NO BACKEND =====');
+  console.log('📝 Tags value:', tags);
+  console.log('📝 Tags type:', typeof tags);
+  console.log('📝 Tags isArray:', Array.isArray(tags));
+  console.log('📝 Tags length:', tags?.length);
+  
   if (Array.isArray(tags) && tags.length > 0) {
+    console.log('🏷️ ===== FILTRANDO POR TAGS NO BACKEND =====');
+    console.log('📝 Tags IDs recebidos:', tags);
+    
     const contactTagFilter: any[] | null = [];
     const contactTags = await ContactTag.findAll({
       where: { tagId: tags }
     });
+    
+    console.log('🔍 ContactTags encontradas:', contactTags?.length);
+    console.log('📋 ContactTags:', contactTags?.map(ct => ({ contactId: ct.contactId, tagId: ct.tagId })));
+    
     if (contactTags) {
       contactTagFilter.push(contactTags.map(t => t.contactId));
     }
 
     const contactsIntersection: number[] = intersection(...contactTagFilter);
+    
+    console.log('👥 ContactIds para filtrar:', contactsIntersection);
 
     whereCondition = {
       ...whereCondition,
       contactId: contactsIntersection
     };
+    
+    console.log('🎯 WhereCondition final:', whereCondition);
   }
 
   if (Array.isArray(users) && users.length > 0) {

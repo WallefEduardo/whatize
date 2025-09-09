@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useReducer, useContext } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useReducer, useContext, useMemo } from 'react';
 import { Box, Typography, useMediaQuery, useTheme, TextField } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useParams, useHistory } from 'react-router-dom';
@@ -48,6 +48,12 @@ import NewConversationModal from '../../components/ui/NewConversationModal';
 import ChatTabs from './components/ChatTabs';
 import SearchAndFilters from './components/SearchAndFilters';
 import TicketsList from './components/TicketsList';
+
+// Componentes de filtro (reutilizados do chat antigo)
+import { TagsFilter } from '../../components/TagsFilter';
+import { WhatsappsFilter } from '../../components/WhatsappsFilter';
+import { StatusFilter } from '../../components/StatusFilter';
+import { UsersFilter } from '../../components/UsersFilter';
 
 // Icons
 import { 
@@ -172,15 +178,33 @@ const ChatModerno = () => {
   const [isForward, setIsForward] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   
-  // Estados dos filtros
+  // Estados dos filtros - SELECIONADOS (UI apenas)
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedConnections, setSelectedConnections] = useState([]);
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   
+  // Estados dos filtros - APLICADOS (efetivos)
+  const [appliedTags, setAppliedTags] = useState([]);
+  const [appliedConnections, setAppliedConnections] = useState([]);
+  const [appliedStatuses, setAppliedStatuses] = useState([]);
+  const [appliedUsers, setAppliedUsers] = useState([]);
+  
   // Estados dos filtros salvos
   const [savedFilters, setSavedFilters] = useState([]);
   const [filterName, setFilterName] = useState('');
+  const [refreshTickets, setRefreshTickets] = useState(false);
+  
+  // Estados para as opções dos filtros (carregadas da API)
+  const [tagsOptions, setTagsOptions] = useState([]);
+  const [connectionsOptions, setConnectionsOptions] = useState([]);
+  const [usersOptions, setUsersOptions] = useState([]);
+  const statusOptions = ['Atendendo', 'Esperando', 'Finalizado', 'Grupos'];
+  
+  // Cache dos dados completos para mapeamento nome → ID
+  const [tagsData, setTagsData] = useState([]);
+  const [connectionsData, setConnectionsData] = useState([]);
+  const [usersData, setUsersData] = useState([]);
   
   // Estado para mostrar todos os tickets - padrão false como esperado
   const [showAllTickets, setShowAllTickets] = useState(false);
@@ -207,7 +231,6 @@ const ChatModerno = () => {
   // Debounce para busca otimizada
   useEffect(() => {
     const timer = setTimeout(() => {
-      console.log('⏰ Debounced search:', searchParam);
       setDebouncedSearchParam(searchParam);
     }, 300);
 
@@ -309,23 +332,74 @@ const ChatModerno = () => {
 
   const [ticketsList, dispatch] = useReducer(reducer, []);
   
+  // Memoizar conversões de nomes para IDs para evitar loops infinitos
+  const tagIds = useMemo(() => {
+    console.log('🏷️ ===== CONVERTENDO TAGS =====');
+    console.log('📝 Tags aplicadas (nomes):', appliedTags);
+    console.log('📋 Tags disponíveis:', tagsData);
+    
+    if (appliedTags.length === 0) {
+      console.log('❌ Nenhuma tag aplicada, retornando undefined');
+      return undefined;
+    }
+    
+    const ids = appliedTags.map(name => {
+      const tag = tagsData.find(t => t.name === name);
+      console.log(`   🔍 Procurando tag "${name}":`, tag ? `✅ Encontrada ID=${tag.id}` : '❌ Não encontrada');
+      return tag ? tag.id : null;
+    }).filter(id => id !== null);
+    
+    console.log('🆔 IDs finais das tags:', ids);
+    return ids;
+  }, [appliedTags, tagsData]);
+
+  const connectionIds = useMemo(() => {
+    if (appliedConnections.length === 0) return undefined;
+    return appliedConnections.map(name => {
+      const connection = connectionsData.find(c => c.name === name);
+      return connection ? connection.id : null;
+    }).filter(id => id !== null);
+  }, [appliedConnections, connectionsData]);
+
+  const userIds = useMemo(() => {
+    if (appliedUsers.length === 0) return undefined;
+    return appliedUsers.map(name => {
+      const user = usersData.find(u => u.name === name);
+      return user ? user.id : null;
+    }).filter(id => id !== null);
+  }, [appliedUsers, usersData]);
+
+  // Memoizar queueIds para evitar loop infinito
+  const queueIds = useMemo(() => {
+    return JSON.stringify(user?.queues?.map(q => q.id) || []);
+  }, [user?.queues]);
+  
+  // Log dos parâmetros que serão enviados para useTickets
+  console.log('🔧 ===== PARÂMETROS PARA useTickets =====');
+  console.log('   - searchParam:', debouncedSearchParam);
+  console.log('   - status:', tabOpen);
+  console.log('   - showAll:', showAllTickets);
+  console.log('   - queueIds:', queueIds);
+  console.log('   - tags (IDs):', tagIds);
+  console.log('   - users (IDs):', userIds);
+  console.log('   - whatsappIds (IDs):', connectionIds);
+  console.log('   - forceSearch:', refreshTickets);
+
   // Buscar tickets usando o hook original
   const { tickets: ticketsData, loading: ticketsLoading, hasMore } = useTickets({
     searchParam: debouncedSearchParam,
     status: tabOpen,
     showAll: showAllTickets,
-    queueIds: JSON.stringify(user?.queues?.map(q => q.id) || [])
+    queueIds: queueIds,
+    // Parâmetros de filtros aplicados (usando versões memoizadas)
+    tags: tagIds,
+    users: userIds,
+    whatsappIds: connectionIds,
+    // Status filter NÃO enviado para API (controlado localmente via shouldShowTicketsInTab)
+    forceSearch: refreshTickets
   });
 
 
-  // Debug: monitorar mudanças nos parâmetros de pesquisa
-  useEffect(() => {
-    console.log('📊 Search params changed:', {
-      searchParam: debouncedSearchParam,
-      status: tabOpen,
-      ticketsCount: ticketsData?.length || 0
-    });
-  }, [debouncedSearchParam, tabOpen]);
 
   // Resetar reducer quando parâmetros de busca mudam
   useEffect(() => {
@@ -335,6 +409,17 @@ const ChatModerno = () => {
   // Carregar tickets no reducer
   useEffect(() => {
     if (ticketsData) {
+      console.log('📥 ===== TICKETS RETORNADOS DA API =====');
+      console.log('📊 Total de tickets retornados:', ticketsData.length);
+      console.log('🎫 Tickets:', ticketsData.map(t => ({ 
+        id: t.id, 
+        contact: t.contact?.name, 
+        status: t.status,
+        tags: t.tags?.map(tag => tag.name) || [] 
+      })));
+      
+      // RESET antes de carregar novos tickets para evitar duplicação
+      dispatch({ type: "RESET" });
       dispatch({ type: "LOAD_TICKETS", payload: ticketsData });
     }
   }, [ticketsData]);
@@ -379,8 +464,49 @@ const ChatModerno = () => {
     };
   }, [socket, tabOpen, user?.companyId]);
 
-  // Filtrar tickets por status
-  const tickets = ticketsList.filter(ticket => ticket.status === tabOpen);
+  // Mapeamento de nomes de status para códigos da API
+  const statusMap = {
+    'Atendendo': 'open',
+    'Esperando': 'pending', 
+    'Finalizado': 'closed',
+    'Grupos': 'group'
+  };
+
+  // Função para determinar se um tab deve mostrar tickets baseado nos filtros aplicados
+  const shouldShowTicketsInTab = (currentTabStatus) => {
+    // Se não há filtro de status aplicado, mostrar em todos os tabs
+    if (appliedStatuses.length === 0) {
+      return true;
+    }
+    
+    // Se há filtro de status, só mostrar no tab correspondente
+    const targetStatuses = appliedStatuses.map(s => statusMap[s] || s);
+    return targetStatuses.includes(currentTabStatus);
+  };
+
+  // Filtrar tickets por status - com lógica inteligente de filtros
+  const tickets = ticketsList.filter(ticket => {
+    // Primeiro filtrar por status da aba
+    const matchesStatus = ticket.status === tabOpen;
+    
+    // Depois aplicar lógica inteligente de filtros
+    const shouldShowInThisTab = shouldShowTicketsInTab(tabOpen);
+    
+    return matchesStatus && shouldShowInThisTab;
+  });
+
+  // Log dos tickets filtrados finais
+  console.log('🎯 ===== TICKETS FILTRADOS FINAIS =====');
+  console.log('📋 Tab atual:', tabOpen);
+  console.log('📊 Total de tickets no ticketsList:', ticketsList.length);
+  console.log('🔍 Tickets após filtro de tab + lógica inteligente:', tickets.length);
+  console.log('🎫 Tickets que aparecerão na tela:', tickets.map(t => ({ 
+    id: t.id, 
+    contact: t.contact?.name, 
+    status: t.status,
+    tags: t.tags?.map(tag => tag.name) || [] 
+  })));
+  console.log('🧠 shouldShowTicketsInTab para tab', tabOpen, ':', shouldShowTicketsInTab(tabOpen));
   
   // Contar tickets
   const counts = {
@@ -389,7 +515,7 @@ const ChatModerno = () => {
   };
 
   // Função para refresh
-  const refreshTickets = () => {
+  const refreshTicketsList = () => {
     setForceRefresh(prev => prev + 1);
   };
 
@@ -419,14 +545,12 @@ const ChatModerno = () => {
   
   // Função para forçar refresh dos tickets
   const forceTicketsRefresh = useCallback(() => {
-    console.log('🔄 Forcing tickets refresh...');
-    refreshTickets();
-  }, [refreshTickets]);
+    refreshTicketsList();
+  }, [refreshTicketsList]);
 
   // Handler para busca otimizada
   const handleSearch = useCallback((event) => {
     const searchTerm = event.target.value;
-    console.log('🔍 Search input:', searchTerm);
     setSearchParam(searchTerm);
   }, []);
 
@@ -440,7 +564,6 @@ const ChatModerno = () => {
       history.push(`/chat-moderno/${newTicket.uuid}`);
     }
     
-    console.log('✅ Nova conversa criada:', newTicket.id);
   }, [forceTicketsRefresh, history]);
   
 
@@ -738,6 +861,99 @@ const ChatModerno = () => {
     }
   };
 
+  // Funções para carregar opções das APIs
+  const loadTagsOptions = useCallback(async () => {
+    try {
+      const { data } = await api.get('/tags/list', { params: { kanban: 0 } });
+      setTagsData(data); // Salvar dados completos
+      setTagsOptions(data.map(tag => tag.name)); // Para UI
+    } catch (err) {
+      console.error('Erro ao carregar tags:', err);
+      setTagsData([]);
+      setTagsOptions([]);
+    }
+  }, []);
+
+  const loadConnectionsOptions = useCallback(async () => {
+    try {
+      const { data } = await api.get('/whatsapp');
+      setConnectionsData(data); // Salvar dados completos
+      setConnectionsOptions(data.map(conn => conn.name)); // Para UI
+    } catch (err) {
+      console.error('Erro ao carregar conexões:', err);
+      setConnectionsData([]);
+      setConnectionsOptions([]);
+    }
+  }, []);
+
+  const loadUsersOptions = useCallback(async () => {
+    try {
+      const { data } = await api.get('/users/list');
+      setUsersData(data); // Salvar dados completos
+      setUsersOptions(data.map(user => user.name)); // Para UI
+    } catch (err) {
+      console.error('Erro ao carregar usuários:', err);
+      setUsersData([]);
+      setUsersOptions([]);
+    }
+  }, []);
+
+  // Carregar opções ao abrir os filtros
+  useEffect(() => {
+    if (showFilters) {
+      loadTagsOptions();
+      loadConnectionsOptions();
+      if (user?.profile === "admin") {
+        loadUsersOptions();
+      }
+    }
+  }, [showFilters, loadTagsOptions, loadConnectionsOptions, loadUsersOptions, user?.profile]);
+
+
+
+  // Função para determinar se um tab deve mostrar tickets baseado nos filtros aplicados
+
+  // Função para aplicar filtros selecionados (sem fechar sidebar)
+  const handleApplyFilters = () => {
+    console.log('🎯 ===== APLICANDO FILTROS =====');
+    console.log('📝 Filtros SELECIONADOS:');
+    console.log('   - Tags selecionadas:', selectedTags);
+    console.log('   - Conexões selecionadas:', selectedConnections);
+    console.log('   - Status selecionados:', selectedStatuses);
+    console.log('   - Usuários selecionados:', selectedUsers);
+    
+    // Copiar seleções para estados aplicados
+    setAppliedTags([...selectedTags]);
+    setAppliedConnections([...selectedConnections]);
+    setAppliedStatuses([...selectedStatuses]);
+    setAppliedUsers([...selectedUsers]);
+    
+    console.log('✅ Filtros APLICADOS (após setState):');
+    console.log('   - Tags aplicadas:', [...selectedTags]);
+    console.log('   - Conexões aplicadas:', [...selectedConnections]);
+    console.log('   - Status aplicados:', [...selectedStatuses]);
+    console.log('   - Usuários aplicados:', [...selectedUsers]);
+    
+    // Trigger refresh (sem fechar sidebar)
+    setRefreshTickets(prev => !prev);
+    console.log('🔄 Refresh dos tickets disparado');
+  };
+
+  // Função para limpar todos os filtros
+  const clearAllFilters = () => {
+    // Limpar tanto selecionados quanto aplicados
+    setSelectedTags([]);
+    setSelectedConnections([]);
+    setSelectedStatuses([]);
+    setSelectedUsers([]);
+    setAppliedTags([]);
+    setAppliedConnections([]);
+    setAppliedStatuses([]);
+    setAppliedUsers([]);
+    setRefreshTickets(prev => !prev);
+  };
+
+
   // Limpar estado ao desmontar componente
   useEffect(() => {
     return () => {
@@ -848,7 +1064,7 @@ const ChatModerno = () => {
                 </Typography>
                 <FilterDropdown 
                   placeholder="Selecionar etiquetas..."
-                  options={['Urgente', 'Suporte', 'Vendas', 'Bug', 'Reclamação', 'Dúvida']}
+                  options={tagsOptions}
                   value={selectedTags}
                   onChange={setSelectedTags}
                 />
@@ -861,7 +1077,7 @@ const ChatModerno = () => {
                 </Typography>
                 <FilterDropdown 
                   placeholder="Selecionar conexão..."
-                  options={['WhatsApp Business', 'WhatsApp Web', 'Telegram', 'Instagram']}
+                  options={connectionsOptions}
                   value={selectedConnections}
                   onChange={setSelectedConnections}
                 />
@@ -874,24 +1090,26 @@ const ChatModerno = () => {
                 </Typography>
                 <FilterDropdown 
                   placeholder="Selecionar status..."
-                  options={['Aberto', 'Pendente', 'Resolvido', 'Fechado']}
+                  options={statusOptions}
                   value={selectedStatuses}
                   onChange={setSelectedStatuses}
                 />
               </Box>
 
               {/* Usuário Dropdown */}
-              <Box sx={{ mb: 1.5 }}>
-                <Typography variant="subtitle2" sx={{ mb: 0.8, fontWeight: 600, fontSize: '14px' }}>
-                  Usuário
-                </Typography>
-                <FilterDropdown 
-                  placeholder="Selecionar usuário..."
-                  options={['João Silva', 'Maria Santos', 'Pedro Costa', 'Ana Oliveira']}
-                  value={selectedUsers}
-                  onChange={setSelectedUsers}
-                />
-              </Box>
+              {user?.profile === "admin" && (
+                <Box sx={{ mb: 1.5 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 0.8, fontWeight: 600, fontSize: '14px' }}>
+                    Usuário
+                  </Typography>
+                  <FilterDropdown 
+                    placeholder="Selecionar usuário..."
+                    options={usersOptions}
+                    value={selectedUsers}
+                    onChange={setSelectedUsers}
+                  />
+                </Box>
+              )}
 
               {/* Seção de Salvar Filtro */}
               <Box sx={{ 
@@ -1032,12 +1250,7 @@ const ChatModerno = () => {
               gap: 1
             }}>
               <Box
-                onClick={() => {
-                  setSelectedTags([]);
-                  setSelectedConnections([]);
-                  setSelectedStatuses([]);
-                  setSelectedUsers([]);
-                }}
+                onClick={clearAllFilters}
                 sx={{
                   flex: 1,
                   py: 1.5,
@@ -1057,10 +1270,7 @@ const ChatModerno = () => {
                 Limpar
               </Box>
               <Box
-                onClick={() => {
-                  // Aqui você pode implementar a lógica de aplicar filtros
-                  handleFilterToggle();
-                }}
+                onClick={handleApplyFilters}
                 sx={{
                   flex: 1,
                   py: 1.5,

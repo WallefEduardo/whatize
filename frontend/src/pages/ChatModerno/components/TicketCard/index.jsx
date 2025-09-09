@@ -396,21 +396,6 @@ const TicketCard = ({
   const userAvatar = ticket.user?.profileImage || null;
   const userName = ticket.user?.name || null;
 
-  // Debug - vamos ver os dados do usuário E DA FILA
-  console.log('TicketCard Debug:', {
-    ticketId: ticket.id,
-    user: ticket.user,
-    userAvatar,
-    userName,
-    hasUser: !!(userAvatar || userName),
-    // DADOS DA FILA - vamos ver se está chegando
-    queue: ticket.queue,
-    queueId: ticket.queueId,
-    queueIcon: ticket.queue?.icon,
-    queueName: ticket.queue?.name,
-    queueColor: ticket.queue?.color,
-    fullImageUrl: userAvatar ? `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000'}/public/company${currentUser?.companyId}/${userAvatar}` : null
-  });
 
   const handleClick = () => {
     const contactFromTicket = {
@@ -431,13 +416,11 @@ const TicketCard = ({
 
   // Handlers dos modais
   const handleFinalizarConversa = () => {
-    console.log('handleFinalizarConversa chamado - abrindo modal resolver');
     setShowResolverModal(true);
   };
 
   const handleResolverComMensagem = async () => {
     try {
-      console.log('Resolvendo conversa COM mensagem de despedida:', ticket.id);
       await api.put(`/tickets/${ticket.id}`, {
         status: 'closed',
         sendFarewellMessage: true
@@ -453,7 +436,6 @@ const TicketCard = ({
 
   const handleResolverSemMensagem = async () => {
     try {
-      console.log('Resolvendo conversa SEM mensagem de despedida:', ticket.id);
       await api.put(`/tickets/${ticket.id}`, {
         status: 'closed',
         sendFarewellMessage: false
@@ -468,21 +450,17 @@ const TicketCard = ({
   };
 
   const handleTransferirConversa = () => {
-    console.log('handleTransferirConversa chamado - abrindo modal transferir');
     setShowTransferModal(true);
   };
 
   const handleMarcarNaoLido = async () => {
     try {
-      console.log('Marcando ticket como não lido:', ticket.id);
-      console.log('Usuario antes:', { userAvatar, userName, userId: ticket.user?.id });
       
       // Apenas marcar como não lido, sem alterar outros campos
       await api.put(`/tickets/${ticket.id}`, {
         unreadMessages: (ticket.unreadMessages || 0) + 1
       });
       
-      console.log('Chamando onRefresh...');
       if (onRefresh) onRefresh();
     } catch (err) {
       console.error('Erro ao marcar como não lido:', err);
@@ -492,7 +470,6 @@ const TicketCard = ({
 
   const handleRemoverDaFila = async () => {
     try {
-      console.log('Removendo ticket da fila:', ticket.id);
       setConfirmAction(() => async () => {
         await api.put(`/tickets/${ticket.id}`, {
           status: 'pending',
@@ -511,7 +488,6 @@ const TicketCard = ({
   };
 
   const handleAdicionarEtiqueta = async (e) => {
-    console.log('handleAdicionarEtiqueta chamado - abrindo dropdown etiqueta');
     e.stopPropagation();
     
     // Buscar tags disponíveis (apenas tags normais, não kanban)
@@ -522,7 +498,6 @@ const TicketCard = ({
       // A API já filtra por kanban=0, mas garantimos aqui também
       const normalTags = (response.data || []).filter(tag => tag.kanban === 0);
       setAvailableTags(normalTags);
-      console.log('🏷️ Tags normais carregadas:', normalTags);
     } catch (error) {
       console.error('Erro ao buscar tags:', error);
       setAvailableTags([]);
@@ -533,7 +508,6 @@ const TicketCard = ({
       const contactResponse = await api.get(`/contacts/${ticket.contact.id}`);
       const currentContactTags = contactResponse.data.tags || [];
       setSelectedTicketTags(currentContactTags);
-      console.log('🏷️ Tags atuais do CONTATO buscadas do backend:', currentContactTags);
     } catch (error) {
       console.error('Erro ao buscar tags do contato:', error);
       setSelectedTicketTags(ticket.contact?.tags || []);
@@ -544,13 +518,6 @@ const TicketCard = ({
   };
 
   const handleTagToggle = async (tag, isSelected) => {
-    console.log('🏷️ handleTagToggle - INÍCIO:', {
-      tagName: tag.name,
-      tagId: tag.id,
-      isSelected,
-      contactId: ticket.contact.id,
-      currentTags: selectedTicketTags
-    });
     
     try {
       // Para tags normais, vamos atualizar a lista de tags do CONTATO
@@ -560,28 +527,23 @@ const TicketCard = ({
       if (isSelected) {
         // Remover tag da lista
         updatedTags = currentTags.filter(t => t.id !== tag.id);
-        console.log('🗑️ REMOVENDO tag:', tag.name, 'Tags restantes:', updatedTags);
       } else {
         // Adicionar tag à lista
         updatedTags = [...currentTags, tag];
-        console.log('➕ ADICIONANDO tag:', tag.name, 'Tags atualizadas:', updatedTags);
       }
       
       // Usar a mesma lógica do drawer antigo com /tags/sync
-      console.log('🌐 Fazendo requisição POST /tags/sync');
       await api.post(`/tags/sync`, {
         contactId: ticket.contact.id,
         tags: updatedTags
       });
       
-      console.log('✅ Requisição concluída com sucesso!');
       
       // Atualizar o contato local e modal com as tags atualizadas
       if (ticket.contact) {
         ticket.contact.tags = updatedTags;
       }
       setSelectedTicketTags(updatedTags);
-      console.log('🔄 Contato e modal atualizados com tags:', updatedTags);
       
       if (onRefresh) onRefresh();
     } catch (error) {
@@ -624,7 +586,6 @@ const TicketCard = ({
   };
 
   const handleOpenCreateTagModal = () => {
-    console.log('🏷️ Abrindo modal de criar nova tag...');
     // Fechar o TagSelector primeiro
     setShowTagSelector(false);
     setTagAnchorEl(null);
@@ -639,7 +600,6 @@ const TicketCard = ({
   };
 
   const handleSaveNewTag = async (newTag) => {
-    console.log('Nova tag salva pelo TagForm:', newTag);
     
     try {
       // Adicionar à lista de tags disponíveis
@@ -652,7 +612,6 @@ const TicketCard = ({
       const normalTags = (response.data || []).filter(tag => tag.kanban === 0);
       setAvailableTags(normalTags);
       
-      console.log('Tags atualizadas após criação:', normalTags);
       
     } catch (error) {
       console.error('Erro ao atualizar lista de tags:', error);
@@ -668,13 +627,11 @@ const TicketCard = ({
   };
 
   const handleSilenciarNotificacoes = () => {
-    console.log('handleSilenciarNotificacoes chamado');
     // TODO: Implementar silenciar notificações
   };
 
   const handleAceitarConversa = async (queueId) => {
     try {
-      console.log('Aceitando conversa:', ticket.id, 'queueId:', queueId);
       await api.put(`/tickets/${ticket.id}`, {
         status: 'open',
         userId: currentUser.id,
@@ -1042,7 +999,6 @@ const TicketCard = ({
       )}
       
       {/* Modal de criar nova tag */}
-      {console.log('🏷️ Estado showCreateTagModal:', showCreateTagModal)}
       <Dialog
         open={showCreateTagModal}
         onClose={handleCloseCreateTagModal}

@@ -36,9 +36,7 @@ const TransferTicketModernModal = ({ modalOpen, onClose, ticketid, ticket }) => 
   useEffect(() => {
     if (isMounted.current) {
       const loadQueues = async () => {
-        console.log('TransferModal: Carregando filas...');
         const list = await findAllQueues();
-        console.log('TransferModal: Filas carregadas:', list);
         setAllQueues(list);
         setQueues(list);
       };
