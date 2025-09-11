@@ -218,8 +218,14 @@ const MessageInput = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (!message.trim() || disabled) return;
+    console.log('🚀 MessageInput handleSubmit:', { message: message.trim(), disabled });
     
+    if (!message.trim() || disabled) {
+      console.log('❌ Envio bloqueado - mensagem vazia ou desabilitado');
+      return;
+    }
+    
+    console.log('✅ Enviando mensagem:', message.trim());
     onSendMessage(message.trim());
     setMessage('');
     setReply(false);

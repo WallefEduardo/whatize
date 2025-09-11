@@ -20,6 +20,7 @@ interface Request {
   body?: string;
   isPrivate?: boolean;
   isForwarded?: boolean;
+  userId?: number; // ✅ Adicionado userId opcional
 }
 const os = require("os");
 
@@ -147,7 +148,8 @@ const SendWhatsAppMedia = async ({
   ticket,
   body = "",
   isPrivate = false,
-  isForwarded = false
+  isForwarded = false,
+  userId
 }: Request): Promise<WAMessage> => {
   try {
     logger.info(`📤 [SEND-MEDIA] Iniciando envio de mídia:`, {
@@ -255,7 +257,8 @@ const SendWhatsAppMedia = async ({
         participant: null,
         dataJson: null,
         ticketTrakingId: null,
-        isPrivate
+        isPrivate,
+        userId: userId // ✅ Adicionado userId
       };
 
       await CreateMessageService({ messageData, companyId: ticket.companyId });

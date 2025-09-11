@@ -15,6 +15,7 @@ import Ticket from "./Ticket";
 import Company from "./Company";
 import Queue from "./Queue";
 import TicketTraking from "./TicketTraking";
+import User from "./User";
 
 @Table
 class Message extends Model<Message> {
@@ -126,6 +127,13 @@ class Message extends Model<Message> {
   @Default(false)
   @Column
   isForwarded: boolean;
+
+  @ForeignKey(() => User)
+  @Column
+  userId: number;
+
+  @BelongsTo(() => User)
+  user: User;
 }
 
 export default Message;

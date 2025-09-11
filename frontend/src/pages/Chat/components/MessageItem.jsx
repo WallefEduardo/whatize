@@ -199,7 +199,13 @@ const MessageItem = ({
   const ack = message.ack; // Status de entrega
   const quotedMsg = message.quotedMsg; // Mensagem citada/reply
   
-  const sender = isSent ? profile : contact;
+  // ✅ Determinar o remetente correto
+  // Para mensagens enviadas: usar dados do usuário remetente se disponível, senão fallback para profile
+  // Para mensagens recebidas: usar dados do contato
+  const messageUser = message.user; // Dados do usuário que enviou a mensagem
+  const sender = isSent 
+    ? (messageUser ? messageUser : profile) // Se tem usuário da mensagem, usar ele; senão usar profile atual
+    : contact;
   
   // Verificar se a mensagem está pinada (apenas pelo array pinnedMessages)
   const isMessagePinned = pinnedMessages?.some(
@@ -247,7 +253,7 @@ const MessageItem = ({
       {!isSent && (
         <Box sx={{ flexShrink: 0, alignSelf: 'flex-end', mb: '20px', order: 0 }}>
           <Avatar 
-            src={sender?.avatar} 
+            src={sender?.profileImage || sender?.avatar} 
             alt={sender?.name}
             size="md"
             fallbackText={sender?.name}
@@ -356,10 +362,10 @@ const MessageItem = ({
       {isSent && (
         <Box sx={{ flexShrink: 0, alignSelf: 'flex-end', mb: '20px', order: 2 }}>
           <Avatar 
-            src={profile?.avatar} 
-            alt={profile?.name}
+            src={sender?.profileImage || sender?.avatar} 
+            alt={sender?.name}
             size="md"
-            fallbackText={profile?.name}
+            fallbackText={sender?.name}
           />
         </Box>
       )}

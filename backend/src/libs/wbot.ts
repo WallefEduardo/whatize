@@ -119,6 +119,29 @@ export const getWbot = (whatsappId: number): Session => {
   return session;
 };
 
+// ✅ NOVA FUNÇÃO: Verificar status de todas as conexões
+export const checkAllConnections = (): void => {
+  console.log('\n=== 🔍 STATUS DAS CONEXÕES WHATSAPP ===');
+  console.log(`Total de sessões: ${sessions.length}`);
+  
+  sessions.forEach((session, index) => {
+    const ws = (session as any).ws;
+    const socket = (session as any).socket;
+    const readyState = ws?.readyState || socket?.readyState || (session as any).readyState;
+    const isConnected = readyState === 1;
+    
+    console.log(`\n📱 Sessão ${index + 1}:`);
+    console.log(`  ID: ${session.id}`);
+    console.log(`  ReadyState: ${readyState} ${isConnected ? '✅' : '❌'}`);
+    console.log(`  WS ReadyState: ${ws?.readyState || 'N/A'}`);
+    console.log(`  Socket ReadyState: ${socket?.readyState || 'N/A'}`);
+    console.log(`  Connection Status: ${(session as any).user ? 'Has User ✅' : 'No User ❌'}`);
+    console.log(`  Timestamp: ${new Date().toISOString()}`);
+  });
+  
+  console.log('\n=======================================\n');
+};
+
 export const restartWbot = async (
   companyId: number,
   session?: any
@@ -207,6 +230,11 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
         // const store = makeInMemoryStore({
         //   logger: loggerBaileys
         // });
+        
+        // ⚠️ BAILEYS WARNING: useMultiFileAuthState NÃO deve ser usado em produção
+        // É ineficiente e pode causar desconexões silenciosas devido ao IO intensivo
+        // TODO: Implementar auth state customizado para banco de dados
+        // Referência: https://baileys.wiki/docs/socket/connecting/
         const { state, saveCreds } = await useMultiFileAuthState(whatsapp);
 
         wsocket = makeWASocket({
@@ -227,7 +255,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
             //   // const isGroupJid = !allowGroup && isJidGroup(jid)
             return isJidBroadcast(jid) || (!allowGroup && isJidGroup(jid)) //|| jid.includes('newsletter')
           },
-          browser: ['ubuntu', 'chrome', ''],
+          browser: Browsers.appropriate("Desktop"),
           defaultQueryTimeoutMs: undefined,
           msgRetryCounterCache,
           markOnlineOnConnect: false,
@@ -237,7 +265,6 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
           fireInitQueries: true,
           transactionOpts: { maxCommitRetries: 10, delayBetweenTriesMs: 3000 },
           connectTimeoutMs: 25_000,
-          // keepAliveIntervalMs: 60_000,
           getMessage: msgDB.get,
         });
 
@@ -389,17 +416,14 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
 
 
 
-      
+
         wsocket.ev.on(
           "connection.update",
           async ({ connection, lastDisconnect, qr }) => {
-            logger.info(`🔌 [CONNECTION-UPDATE] INICIO: { connection: '${connection}', name: '${name}', hasError: ${!!lastDisconnect}, hasQr: ${!!qr} }`);
-            
-            try {
-              logger.info(
-                `Socket  ${name} Connection Update ${connection || ""} ${lastDisconnect ? lastDisconnect.error.message : ""
-                }`
-              );
+            logger.info(
+              `Socket  ${name} Connection Update ${connection || ""} ${lastDisconnect ? lastDisconnect.error.message : ""
+              }`
+            );
 
             if (connection === "close") {
               console.log("DESCONECTOU", JSON.stringify(lastDisconnect, null, 2))
@@ -449,36 +473,18 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                 ? jidNormalizedUser((wsocket as WASocket).user.id).split("@")[0]
                 : "-";
 
-              // ✅ VALIDAÇÃO: Verificar se número já está em uso por outra empresa
+              // Verificar se número já está sendo usado por outra empresa
               if (phoneNumber !== "-") {
-                const { default: ValidateWhatsappConnectionService } = await import("../services/WhatsappService/ValidateWhatsappConnectionService");
-                try {
-                  await ValidateWhatsappConnectionService({
-                    name: whatsapp.name,
-                    number: phoneNumber,
-                    companyId: whatsapp.companyId,
-                    id: whatsapp.id
-                  });
-                } catch (validationError) {
-                  // Se a validação falhar, desconecta e define status como erro
-                  logger.error(`❌ Validação falhou para WhatsApp ${whatsapp.name}: ${validationError.message}`);
-                  
-                  await whatsapp.update({
-                    status: "DISCONNECTED",
-                    qrcode: "",
-                    retries: 0,
-                    number: ""
-                  });
-
-                  // Emitir erro para o frontend
-                  io.of(`/${companyId}`)
-                    .emit(`company-${whatsapp.companyId}-whatsappSession`, {
-                      action: "validation_error",
-                      session: whatsapp,
-                      error: validationError.message
-                    });
-
-                  // Fechar conexão
+                const { Op } = require("sequelize");
+                const existingWhatsapp = await Whatsapp.findOne({
+                  where: { 
+                    number: phoneNumber, 
+                    companyId: { [Op.ne]: whatsapp.companyId } 
+                  }
+                });
+                
+                if (existingWhatsapp) {
+                  await whatsapp.update({ status: "DISCONNECTED" });
                   wsocket.logout();
                   wsocket.ws.close();
                   removeWbot(id, false);
@@ -493,36 +499,11 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                 number: phoneNumber
               });
 
-              // 🎯 CORREÇÃO: Recarregar objeto para ter status atualizado
-              await whatsapp.reload();
-              
-              console.log(`🔥 [CONNECTED] Emitindo socket para frontend - Status: ${whatsapp.status}, ID: ${whatsapp.id}`);
-              
-              console.log(`🔍 [CONNECTED-DEBUG] Tentando criar socketData...`);
-              
-              try {
-                // 🔍 DEBUG: Verificar dados do socket (serializar manualmente)
-                const socketData = {
+              io.of(`/${companyId}`)
+                .emit(`company-${whatsapp.companyId}-whatsappSession`, {
                   action: "update",
-                  session: {
-                    id: whatsapp.id,
-                    name: whatsapp.name,
-                    status: whatsapp.status,
-                    qrcode: whatsapp.qrcode || "",
-                    companyId: whatsapp.companyId
-                  }
-                };
-                
-                console.log(`🔍 [CONNECTED-DEBUG] SocketData criado com sucesso:`, socketData);
-                console.log(`🔍 [CONNECTED-DEBUG] Emitindo para namespace: /${companyId}`);
-
-                io.of(`/${companyId}`)
-                  .emit(`company-${whatsapp.companyId}-whatsappSession`, socketData);
-                  
-                console.log(`✅ [CONNECTED-DEBUG] Socket emitido com sucesso para namespace /${companyId}!`);
-              } catch (error) {
-                console.error(`❌ [CONNECTED-ERROR] Erro ao emitir socket:`, error);
-              }
+                  session: whatsapp
+                });
 
               const sessionIndex = sessions.findIndex(
                 s => s.id === whatsapp.id
@@ -555,15 +536,6 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
               } else {
                 logger.info(`Session QRCode Generate ${name}`);
                 retriesQrCodeMap.set(id, (retriesQrCode += 1));
-                
-                // Debug QR Code format
-                logger.info(`🔍 QR Code Debug - Type: ${typeof qr}, Length: ${qr?.length}`);
-                logger.info(`🔍 QR Code First 200 chars: ${qr?.substring(0, 200)}`);
-                
-                // Check if QR has any unusual format
-                if (qr && qr.includes(',')) {
-                  logger.info(`🔍 QR contains comma - might be formatted`);
-                }
 
                 await whatsapp.update({
                   qrcode: qr,
@@ -571,14 +543,6 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                   retries: 0,
                   number: ""
                 });
-                
-                // Recarregar o objeto do banco para garantir dados atualizados
-                await whatsapp.reload();
-                
-                // Forçar status correto por segurança
-                whatsapp.status = "qrcode";
-                whatsapp.qrcode = qr;
-                
                 const sessionIndex = sessions.findIndex(
                   s => s.id === whatsapp.id
                 );
@@ -588,20 +552,12 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                   sessions.push(wsocket);
                 }
 
-                logger.info(`📡 Emitting QR code to socket - Company: ${whatsapp.companyId}, WhatsApp ID: ${whatsapp.id}, QR Length: ${whatsapp.qrcode?.length}, Status: ${whatsapp.status}`);
                 io.of(`/${companyId}`)
                   .emit(`company-${whatsapp.companyId}-whatsappSession`, {
                     action: "update",
                     session: whatsapp
                   });
-                logger.info(`✅ QR code emitted via socket`);
               }
-            }
-            
-            logger.info(`🔌 [CONNECTION-UPDATE] CONCLUIDO: { connection: '${connection}', name: '${name}' }`);
-            } catch (error) {
-              logger.error(`❌ [CONNECTION-UPDATE] ERRO CRITICO: { name: '${name}', error: ${error.message}, stack: ${error.stack} }`);
-              throw error; // Re-throw para manter comportamento original
             }
           }
         );
@@ -622,16 +578,8 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
         //     process.exit(1);
         //   }
         // }
-        wsocket.ev.on("creds.update", async (creds) => {
-          logger.info(`🔑 [CREDS-UPDATE] INICIO: { name: '${name}', hasUpdate: ${!!creds} }`);
-          try {
-            await saveCreds();
-            logger.info(`🔑 [CREDS-UPDATE] CONCLUIDO: { name: '${name}' }`);
-          } catch (error) {
-            logger.error(`❌ [CREDS-UPDATE] ERRO CRITICO: { name: '${name}', error: ${error.message}, stack: ${error.stack} }`);
-            throw error;
-          }
-        });
+
+        wsocket.ev.on("creds.update", saveCreds);
         // wsocket.store = store;
         // store.bind(wsocket.ev);
       })();

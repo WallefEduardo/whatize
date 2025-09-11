@@ -7,7 +7,9 @@ const SelectContainer = styled(Box)({
   width: '100%',
 });
 
-const SelectButton = styled(Box)(({ disabled, isOpen }) => ({
+const SelectButton = styled(Box, {
+  shouldForwardProp: (prop) => !['disabled', 'isOpen'].includes(prop),
+})(({ disabled, isOpen }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',

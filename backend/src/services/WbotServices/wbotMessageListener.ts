@@ -769,7 +769,8 @@ export const verifyMediaMessage = async (
   ticketTraking?: TicketTraking,
   isForwarded: boolean = false,
   isPrivate: boolean = false,
-  wbot?: Session
+  wbot?: Session,
+  userId?: number // ✅ Adicionado userId opcional
 ): Promise<Message> => {
   const io = getIO();
   const quotedMsg = await verifyQuotedMessage(msg);
@@ -804,6 +805,7 @@ export const verifyMediaMessage = async (
         ).toISOString(),
         dataJson: JSON.stringify(msg),
         ticketImported: ticket.imported,
+        userId: msg.key.fromMe ? (userId || ticket.userId) : undefined, // ✅ Adicionado userId para mensagens enviadas
         isForwarded,
         isPrivate
       };
@@ -930,7 +932,8 @@ export const verifyMediaMessage = async (
       ).toISOString(),
       ticketImported: ticket.imported,
       isForwarded,
-      isPrivate
+      isPrivate,
+      userId: msg.key.fromMe ? (userId || ticket.userId) : undefined, // ✅ Adicionado userId para mensagens enviadas
     };
 
     // Só atualiza lastRemoteJid se NÃO for mensagem enviada por nós
@@ -1016,7 +1019,8 @@ export const verifyMessage = async (
   contact: Contact,
   ticketTraking?: TicketTraking,
   isPrivate?: boolean,
-  isForwarded: boolean = false
+  isForwarded: boolean = false,
+  userId?: number // ✅ Adicionado userId opcional
 ) => {
   const io = getIO();
   const quotedMsg = await verifyQuotedMessage(msg);
@@ -1042,7 +1046,8 @@ export const verifyMessage = async (
       Math.floor(getTimestampMessage(msg.messageTimestamp) * 1000)
     ).toISOString(),
     ticketImported: ticket.imported,
-    isForwarded
+    isForwarded,
+    userId: msg.key.fromMe ? (userId || ticket.userId) : undefined // ✅ Adicionado userId para mensagens enviadas
   };
 
   // Só atualiza lastRemoteJid se NÃO for mensagem enviada por nós
@@ -2515,6 +2520,7 @@ const flowbuilderIntegration = async (
       Math.floor(getTimestampMessage(msg.messageTimestamp) * 1000)
     ).toISOString(),
     ticketImported: ticket.imported,
+    userId: msg.key.fromMe ? (ticket.userId) : undefined, // ✅ Adicionado userId para mensagens enviadas
   };
 
 
@@ -3984,7 +3990,16 @@ setInterval(() => {
 }, 60000); // A cada minuto
 
 const wbotMessageListener = (wbot: Session, companyId: number): void => {
+  console.log(`🎧 [LISTENER-START] Iniciando listener para wbot ID: ${wbot.id}, company: ${companyId}`);
+  
   wbot.ev.on("messages.upsert", async (messageUpsert: ImessageUpsert) => {
+    const timestamp = new Date().toISOString();
+    console.log(`\n📨 [MESSAGES-UPSERT] ${timestamp} - MENSAGEM RECEBIDA:`);
+    console.log(`  Company: ${companyId}`);
+    console.log(`  Wbot ID: ${wbot.id}`);
+    console.log(`  Messages Count: ${messageUpsert.messages?.length || 0}`);
+    console.log(`  Type: ${messageUpsert.type}`);
+    
     logger.info(`📨 [MESSAGES-UPSERT] INICIO: { companyId: ${companyId}, wbotId: ${wbot.id}, messagesCount: ${messageUpsert.messages?.length || 0} }`);
     
     try {

@@ -118,19 +118,31 @@ const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket, o
 			
 			// Usar função de aceitar do hook robusto se disponível
 			if (onAccept) {
-				const acceptedTicket = await onAccept(ticketId, queueId);
-				await handleSendMessage(ticket.id);
+				const acceptedTicket = await onAccept(queueId);
+				
+				// Usar ticketId como fallback se ticket.id não estiver disponível
+				const messageTicketId = ticket?.id || ticketId;
+				if (messageTicketId) {
+					await handleSendMessage(messageTicketId);
+				}
+				
 				setLoading(false);
-				setTabOpen(ticket.isGroup ? "group" : "open");
-				console.log('🔄 Navegando para:', `/chat-moderno/${ticket.uuid}`);
-				history.push(`/chat-moderno/${ticket.uuid}`);
+				setTabOpen(ticket?.isGroup ? "group" : "open");
+				
+				// Usar uuid do ticket ou do acceptedTicket como fallback
+				const ticketUuid = ticket?.uuid || acceptedTicket?.uuid;
+				if (ticketUuid) {
+					console.log('🔄 Navegando para:', `/chat-moderno/${ticketUuid}`);
+					history.push(`/chat-moderno/${ticketUuid}`);
+				}
+				
 				handleClose();
 				return;
 			}
 			
 			// Fallback para método anterior
 			const otherTicket = await api.put(`/tickets/${ticketId}`, {
-				status: ticket.isGroup && ticket.channel === 'whatsapp' ? "group" : "open",
+				status: ticket?.isGroup && ticket?.channel === 'whatsapp' ? "group" : "open",
 				userId: user?.id || null,
 				queueId: queueId
 			});
@@ -138,23 +150,33 @@ const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket, o
 			console.log('✅ Ticket atualizado com sucesso:', otherTicket.data);
 			
 
-			if (otherTicket.data.id !== ticket.id) {
+			// Usar ticketId como referência se ticket.id não estiver disponível
+			const currentTicketId = ticket?.id || ticketId;
+			
+			if (otherTicket.data.id !== currentTicketId) {
 				if (otherTicket.data.userId !== user?.id) {
 					setOpenAlert(true)
 					setUserTicketOpen(otherTicket.data.user.name)
 					setQueueTicketOpen(otherTicket.data.queue.name)
 				} else {
 					setLoading(false);
-					setTabOpen(otherTicket.isGroup ? "group" : "open");
+					setTabOpen(otherTicket.data.isGroup ? "group" : "open");
 					history.push(`/chat-moderno/${otherTicket.data.uuid}`);
 				}
 			} else {
-				await handleSendMessage(ticket.id);
-				setLoading(false);
-				setTabOpen(ticket.isGroup ? "group" : "open");
+				// Usar fallback para messageTicketId
+				const messageTicketId = ticket?.id || ticketId;
+				if (messageTicketId) {
+					await handleSendMessage(messageTicketId);
+				}
 				
-				console.log('🔄 Navegando para:', `/chat-moderno/${ticket.uuid}`);
-				history.push(`/chat-moderno/${ticket.uuid}`);
+				setLoading(false);
+				setTabOpen(ticket?.isGroup ? "group" : "open");
+				
+				// Usar uuid do ticket ou do otherTicket como fallback  
+				const ticketUuid = ticket?.uuid || otherTicket.data.uuid;
+				console.log('🔄 Navegando para:', `/chat-moderno/${ticketUuid}`);
+				history.push(`/chat-moderno/${ticketUuid}`);
 				handleClose();
 			}
 		} catch (err) {

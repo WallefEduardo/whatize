@@ -125,6 +125,7 @@ export const saveMessage = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
+  console.log('🚀 [CHAT-CONTROLLER] POST /chats/:id/messages RECEBIDO:', req.params, req.body);
   const { companyId } = req.user;
   const { message } = req.body;
   const { id } = req.params;

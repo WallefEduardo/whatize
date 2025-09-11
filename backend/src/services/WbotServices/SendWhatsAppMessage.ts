@@ -22,6 +22,7 @@ interface Request {
   msdelay?: number;
   vCard?: Contact;
   isForwarded?: boolean;
+  userId?: number; // ✅ Adicionado userId opcional
 }
 
 const SendWhatsAppMessage = async ({
@@ -30,7 +31,8 @@ const SendWhatsAppMessage = async ({
   quotedMsg,
   msdelay,
   vCard,
-  isForwarded = false
+  isForwarded = false,
+  userId
 }: Request): Promise<WAMessage> => {
   logger.info(`📤 [SEND-MSG] Iniciando envio de mensagem: { ticketId: ${ticket.id}, contactId: ${ticket.contactId}, body: "${body?.substring(0, 50)}..." }`);
   
@@ -54,9 +56,16 @@ const SendWhatsAppMessage = async ({
   logger.info(`🔄 [SEND-MSG] Obtendo wbot para o ticket...`);
   const wbot = await GetTicketWbot(ticket) as Session;
   
+  if (!wbot) {
+    logger.error(`❌ [SEND-MSG] Wbot não encontrado para o ticket: { ticketId: ${ticket.id}, whatsappId: ${ticket.whatsappId} }`);
+    throw new AppError("ERR_WBOT_NOT_FOUND");
+  }
+  
+  logger.info(`✅ [SEND-MSG] Wbot obtido com sucesso`);
+  
   // ✅ TICKETZ COMPAT: Usar getJidOf para resolver JID corretamente
   const targetJid = getJidOf(ticket);
-  logger.info(`📤 [WHATIZE-TICKETZ] SendWhatsAppMessage - Target JID resolved: {
+  logger.info(`📤 [SEND-MSG] Target JID resolved: {
     targetJid: '${targetJid}',
     isLidFormat: ${targetJid.includes("@lid")},
     ticketContactNumber: '${ticket.contact.number}',
@@ -129,12 +138,13 @@ const SendWhatsAppMessage = async ({
     }
   };
   try {
-    logger.info(`📤 [WHATIZE-TICKETZ] SendWhatsAppMessage - Starting message send: {
+    logger.info(`📤 [SEND-MSG] Starting message send: {
       ticketId: ${ticket.id},
       contactNumber: '${ticket.contact.number}',
       contactId: ${ticket.contact.id},
       isGroup: ${ticket.isGroup},
-      hasQuotedMsg: ${!!quotedMsg}
+      hasQuotedMsg: ${!!quotedMsg},
+      whatsappConnectionStatus: '${connection.status}'
     }`);
 
     const formattedBody = formatBody(body, ticket);
@@ -145,14 +155,15 @@ const SendWhatsAppMessage = async ({
       bodyLength: ${formattedBody?.length}
     }`);
 
-    logger.info(`📤 [WHATIZE-TICKETZ] SendWhatsAppMessage - About to call wbot.sendMessage: {
-      jid: '${targetJid}',
-      messageOptions: {
-        text: "${formattedBody?.substring(0, 50)}",
-        quotedOptions: "${Object.keys(options).length > 0 ? 'has_quote' : 'none'}"
-      }
+    logger.info(`📤 [SEND-MSG] PRONTO PARA ENVIAR - Dados finais: {
+      targetJid: '${targetJid}',
+      messageText: "${formattedBody?.substring(0, 100)}",
+      hasQuoteOptions: ${Object.keys(options).length > 0},
+      ticketId: ${ticket.id}
     }`);
 
+    logger.info(`🚀 [SEND-MSG] CHAMANDO wbot.sendMessage AGORA...`);
+    
     const sentMessage = await wbot.sendMessage(
       targetJid,
       {
@@ -162,6 +173,16 @@ const SendWhatsAppMessage = async ({
         ...options
       }
     );
+    
+    logger.info(`📨 [SEND-MSG] wbot.sendMessage RETORNOU: {
+      success: true,
+      messageKeyId: '${sentMessage?.key?.id}',
+      messageFromMe: ${sentMessage?.key?.fromMe},
+      messageRemoteJid: '${sentMessage?.key?.remoteJid}',
+      messageParticipant: '${sentMessage?.key?.participant || "none"}',
+      messagePushName: '${sentMessage?.pushName || "none"}',
+      messageStatus: '${sentMessage?.status || "unknown"}'
+    }`);
 
     logger.info(`✅ [WHATIZE-TICKETZ] SendWhatsAppMessage - Message sent successfully: {
       messageId: '${sentMessage.key?.id}',
@@ -177,15 +198,17 @@ const SendWhatsAppMessage = async ({
       wbot.cacheMessage(sentMessage);
     }
 
+    logger.info(`📋 [SEND-MSG] Processando mensagem no banco de dados...`);
+    
     if (sentMessage?.message?.extendedTextMessage?.thumbnailDirectPath) {
-      logger.info("📤 [WHATIZE-TICKETZ] SendWhatsAppMessage - Processing as media message");
-      await verifyMediaMessage(sentMessage, ticket, ticket.contact);
+      logger.info("📤 [SEND-MSG] Processing as media message");
+      await verifyMediaMessage(sentMessage, ticket, ticket.contact, undefined, isForwarded, false, undefined, userId);
     } else {
-      logger.info("📤 [WHATIZE-TICKETZ] SendWhatsAppMessage - Processing as text message");
-      await verifyMessage(sentMessage, ticket, ticket.contact);
+      logger.info("📤 [SEND-MSG] Processing as text message");
+      await verifyMessage(sentMessage, ticket, ticket.contact, undefined, false, isForwarded, userId);
     }
     
-    logger.info("✅ [WHATIZE-TICKETZ] SendWhatsAppMessage - Message processing completed successfully");
+    logger.info("✅ [SEND-MSG] Message processing completed successfully - MENSAGEM SALVA NO BANCO");
     return sentMessage;
   } catch (err) {
     logger.error(`❌ [WHATIZE-TICKETZ] SendWhatsAppMessage - ERROR occurred: {

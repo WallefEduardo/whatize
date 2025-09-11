@@ -185,11 +185,21 @@ function obterNomeEExtensaoDoArquivo(url) {
 // MessageController.ts
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
+  console.log('🚀 [MSG-CONTROLLER] POST /messages/:ticketId RECEBIDO:', req.params, req.body);
   const { ticketId } = req.params;
 
   const { body, quotedMsg, vCard, isPrivate = "false" }: MessageData = req.body;
   const medias = req.files as Express.Multer.File[];
   const { companyId } = req.user;
+
+  try {
+    console.log('🔍 [MSG-DEBUG] Buscando ticket:', ticketId, 'para company:', companyId);
+    const ticket = await ShowTicketService(ticketId, companyId);
+    console.log('✅ [MSG-DEBUG] Ticket encontrado:', { id: ticket.id, status: ticket.status, whatsappId: ticket.whatsappId });
+  } catch (error) {
+    console.error('❌ [MSG-DEBUG] Erro ao buscar ticket:', error);
+    return res.status(500).json({ message: "Erro ao buscar ticket." });
+  }
 
   const ticket = await ShowTicketService(ticketId, companyId);
 
@@ -198,36 +208,45 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   }
 
   try {
+    console.log('🔍 [MSG-DEBUG] Verificando limite de tickets para company:', companyId);
     const company = await Company.findByPk(companyId, {
       include: [Plan],
     });
+    console.log('✅ [MSG-DEBUG] Company encontrada:', company ? { id: company.id, planId: company.planId } : 'null');
 
     if (!company || !company.planId) {
+      console.error('❌ [MSG-DEBUG] Plano da empresa não encontrado');
       return res.status(400).json({ message: 'Plano da empresa não encontrado.' });
     }
 
     const TICKET_LIMIT = company.plan.ticketLimit;
+    console.log('✅ [MSG-DEBUG] Limite de tickets:', TICKET_LIMIT);
 
     if (TICKET_LIMIT === undefined || TICKET_LIMIT === null) {
+      console.error('❌ [MSG-DEBUG] Limite de tickets não definido');
       return res.status(500).json({ message: 'Limite de tickets não está definido para o plano da empresa.' });
     }
 
+    console.log('🔍 [MSG-DEBUG] Contando tickets abertos...');
     const openTicketsCount = await Ticket.count({
       where: {
         companyId: companyId,
         status: "open", // Ajuste conforme os status relevantes para contar tickets ativos
       },
     });
-
+    console.log('✅ [MSG-DEBUG] Tickets abertos:', openTicketsCount, '/ Limite:', TICKET_LIMIT);
 
     if (openTicketsCount >= TICKET_LIMIT) {
+      console.error('❌ [MSG-DEBUG] Limite de tickets atingido');
       return res.status(403).json({
         message: `Limite de ${TICKET_LIMIT} chamados atingido. Você não pode receber novas mensagens no momento.`,
       });
     }
+    
+    console.log('✅ [MSG-DEBUG] Verificação de limite passou, prosseguindo...');
 
   } catch (error) {
-    console.error("Erro ao verificar o limite de tickets:", error);
+    console.error("❌ [MSG-DEBUG] Erro ao verificar o limite de tickets:", error);
     return res.status(500).json({ message: "Erro ao verificar o limite de tickets." });
   }
   // ### Fim da Verificação de Limite ###
@@ -243,6 +262,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
               body: Array.isArray(body) ? body[index] : body,
               isPrivate: isPrivate === "true",
               isForwarded: false,
+              userId: Number(req.user.id)
             });
           }
 
@@ -273,12 +293,39 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       );
     } else {
       if (ticket.channel === "whatsapp" && isPrivate === "false") {
-        logger.info(`🚀 [MSG-CONTROLLER] Chamando SendWhatsAppMessage: { ticketId: ${ticket.id}, contactId: ${ticket.contactId}, bodyLength: ${body?.length} }`);
+        logger.info(`🚀 [MSG-CONTROLLER] Iniciando envio WhatsApp: { 
+          ticketId: ${ticket.id}, 
+          contactId: ${ticket.contactId}, 
+          contactNumber: '${ticket.contact?.number}',
+          whatsappId: ${ticket.whatsappId},
+          bodyLength: ${body?.length},
+          userId: ${req.user.id},
+          companyId: ${companyId}
+        }`);
+        
         try {
-          await SendWhatsAppMessage({ body, ticket, quotedMsg, vCard });
-          logger.info(`✅ [MSG-CONTROLLER] SendWhatsAppMessage executado com sucesso`);
+          logger.info(`📤 [MSG-CONTROLLER] Chamando SendWhatsAppMessage...`);
+          const result = await SendWhatsAppMessage({ 
+            body, 
+            ticket, 
+            quotedMsg, 
+            vCard, 
+            userId: Number(req.user.id) 
+          });
+          
+          logger.info(`✅ [MSG-CONTROLLER] SendWhatsAppMessage concluído com sucesso: {
+            messageId: '${result?.key?.id}',
+            remoteJid: '${result?.key?.remoteJid}',
+            fromMe: ${result?.key?.fromMe}
+          }`);
         } catch (error) {
-          logger.error(`❌ [MSG-CONTROLLER] Erro no SendWhatsAppMessage: ${error.message}`);
+          logger.error(`❌ [MSG-CONTROLLER] ERRO CRÍTICO no SendWhatsAppMessage: {
+            error: '${error.message}',
+            errorStack: '${error.stack}',
+            ticketId: ${ticket.id},
+            contactNumber: '${ticket.contact?.number}',
+            whatsappId: ${ticket.whatsappId}
+          }`);
           throw error;
         }
       } else if (ticket.channel === "whatsapp" && isPrivate === "true") {
@@ -297,6 +344,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
           dataJson: null,
           ticketTrakingId: null,
           isPrivate: isPrivate === "true",
+          userId: Number(req.user.id) // ✅ Adicionado userId do usuário logado
         };
 
         await CreateMessageService({ messageData, companyId: ticket.companyId });

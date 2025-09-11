@@ -52,12 +52,14 @@ import flowBuilder from "./flowBuilderRoutes";
 import flowCampaignRoutes from "./flowCampaignRoutes";
 import raceConditionRoutes from "./raceConditionRoutes";
 import taskRoutes from "./taskRoutes";
+import debugRoutes from "./debugRoutes";
 
 
 const routes = Router();
 
 // Rotas de monitoramento (sem autenticação para desenvolvimento)
 routes.use("/race-conditions", raceConditionRoutes);
+routes.use(debugRoutes);
 
 routes.use(userRoutes);
 routes.use("/auth", authRoutes);

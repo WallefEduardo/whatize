@@ -624,6 +624,7 @@ const ChatModerno = () => {
       try {
         // Buscar mensagens reais da API usando o ticketId
         const response = await api.get(`/messages/${selectedChatId}`);
+        console.log('Messages API response:', response.data);
         const messagesData = response.data.messages || []; // <- Correção aqui!
         
         // Buscar dados do ticket
@@ -648,6 +649,7 @@ const ChatModerno = () => {
         
       } catch (error) {
         console.error('Error loading messages:', error);
+        console.error('Error details:', error.response?.data || error.message);
         setMessages([]);
         // setCurrentTicket(null); <- REMOVIDO para evitar redirecionamento
         setSelectedContact(null);
@@ -685,23 +687,34 @@ const ChatModerno = () => {
 
   // Handle send message
   const handleSendMessage = async (message) => {
-    if (!selectedChatId || !message.trim()) return;
+    console.log('🎯 ChatModerno handleSendMessage:', { selectedChatId, message });
+    if (!selectedChatId || !message.trim()) {
+      console.log('❌ ChatModerno - Envio bloqueado:', { selectedChatId, message: message.trim() });
+      return;
+    }
     
     const contact = contacts.find(c => c.id === selectedChatId);
     if (!contact) return;
     
     try {
-      const newMessage = {
-        message: message,
-        contact: { id: selectedChatId },
-        replayMetadata: isObjectNotEmpty(replyData) ? replyData : null,
+      // ✅ Usar EXATAMENTE o mesmo formato do Kanban que funciona
+      const messageData = {
+        read: 1,
+        fromMe: true,
+        mediaUrl: "",
+        mediaType: "chat", 
+        body: message.trim(),
+        quotedMsg: isObjectNotEmpty(replyData) ? replyData : "",
+        isPrivate: "false"
       };
       
-      await sendMessage(newMessage);
+      console.log('📤 [CHATMODERNO] Enviando messageData:', messageData);
+      await api.post(`/messages/${selectedChatId}`, messageData);
       
-      // Reload messages
-      const messagesData = await getMessages(selectedChatId);
-      setMessages(messagesData.chat?.chat || []);
+      // Recarregar mensagens para ver a nova mensagem
+      const response = await api.get(`/messages/${selectedChatId}`);
+      const messagesData = response.data.messages || [];
+      setMessages(Array.isArray(messagesData) ? messagesData : []);
       
       // Clear reply
       setReply(false);
@@ -709,6 +722,7 @@ const ChatModerno = () => {
       
     } catch (error) {
       console.error('Error sending message:', error);
+      // TODO: Mostrar toast de erro
     }
   };
 

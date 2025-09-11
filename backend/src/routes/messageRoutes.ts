@@ -10,6 +10,21 @@ const messageRoutes = Router();
 const upload = multer(uploadConfig);
 
 messageRoutes.get("/messages/:ticketId", isAuth, MessageController.index);
+// Middleware de debug para rastrear requisições
+messageRoutes.use("/messages/:ticketId", (req, res, next) => {
+  if (req.method === 'POST') {
+    console.log('🔥 [ROUTE-DEBUG] POST /messages/:ticketId INTERCEPTADO:', {
+      method: req.method,
+      url: req.originalUrl,
+      params: req.params,
+      hasBody: !!req.body,
+      bodyKeys: req.body ? Object.keys(req.body) : [],
+      contentType: req.headers['content-type']
+    });
+  }
+  next();
+});
+
 messageRoutes.post("/messages/:ticketId", isAuth, upload.array("medias"), MessageController.store);
 // messageRoutes.post("/forwardmessage",isAuth,MessageController.forwardmessage);
 messageRoutes.delete("/messages/:messageId", isAuth, MessageController.remove);

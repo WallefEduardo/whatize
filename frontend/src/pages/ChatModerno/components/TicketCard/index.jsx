@@ -633,7 +633,7 @@ const TicketCard = memo(({
     try {
       await api.put(`/tickets/${ticket.id}`, {
         status: 'open',
-        userId: currentUser.id,
+        userId: currentUser?.id,
         queueId: queueId
       });
       
@@ -642,6 +642,20 @@ const TicketCard = memo(({
       
     } catch (err) {
       console.error('Erro ao aceitar conversa:', err);
+      toastError(err);
+    }
+  };
+
+  const handleRejeitarConversa = async () => {
+    try {
+      await api.put(`/tickets/${ticket.id}`, {
+        status: 'closed'
+      });
+      
+      if (onRefresh) onRefresh();
+      
+    } catch (err) {
+      console.error('Erro ao rejeitar conversa:', err);
       toastError(err);
     }
   };
@@ -893,34 +907,64 @@ const TicketCard = memo(({
             </TimeStamp>
             
             {ticket.status === 'pending' && (
-              <Box
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (currentUser?.queues?.length === 1) {
-                    handleAceitarConversa(currentUser.queues[0].id);
-                  } else {
-                    setShowAcceptModal(true);
-                  }
-                }}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
-                  backgroundColor: 'transparent',
-                  color: 'var(--color-accent)',
-                  border: '1px solid var(--color-accent)',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                    transform: 'scale(1.1)',
-                    transition: 'all 0.2s ease'
-                  }
-                }}
-              >
-                ✓
+              <Box sx={{ display: 'flex', gap: '4px' }}>
+                {/* Ícone Aceitar */}
+                <Box
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (currentUser?.queues?.length === 1) {
+                      handleAceitarConversa(currentUser.queues[0].id);
+                    } else {
+                      setShowAcceptModal(true);
+                    }
+                  }}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '20px',
+                    height: '20px',
+                    backgroundColor: 'transparent',
+                    color: 'var(--color-accent)',
+                    border: '1px solid var(--color-accent)',
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                      transform: 'scale(1.1)',
+                      transition: 'all 0.2s ease'
+                    }
+                  }}
+                >
+                  ✓
+                </Box>
+
+                {/* Ícone Rejeitar */}
+                <Box
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRejeitarConversa();
+                  }}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '20px',
+                    height: '20px',
+                    backgroundColor: 'transparent',
+                    color: '#f44336',
+                    border: '1px solid #f44336',
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                      transform: 'scale(1.1)',
+                      transition: 'all 0.2s ease'
+                    }
+                  }}
+                >
+                  ✕
+                </Box>
               </Box>
             )}
             

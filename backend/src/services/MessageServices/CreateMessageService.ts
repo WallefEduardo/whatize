@@ -23,6 +23,7 @@ export interface MessageData {
   isPrivate?: boolean;
   ticketImported?: any;
   isForwarded?: boolean;
+  userId?: number; // ✅ Adicionado userId opcional
 }
 interface Request {
   messageData: MessageData;
@@ -61,7 +62,7 @@ const CreateMessageService = async ({
           },
           {
             model: User,
-            attributes: ["id", "name"]
+            attributes: ["id", "name", "profileImage"]
           },
           {
             model: Tag,
@@ -74,6 +75,11 @@ const CreateMessageService = async ({
         model: Message,
         as: "quotedMsg",
         include: ["contact"]
+      },
+      {
+        model: User,
+        as: "user",
+        attributes: ["id", "name", "profileImage"]
       }
     ]
   });

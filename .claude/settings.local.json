@@ -23,7 +23,11 @@
       "Bash(npm run start:*)",
       "Bash(timeout 5s npm run start)",
       "Bash(npm start)",
-      "Bash(PGPASSWORD=\"ZdG387FhYsm0olSm097541HMSdS=\" psql -h localhost -p 25432 -U whatize -d whatize -c \"SELECT id, name, color, \"\"companyId\"\" FROM \"\"Queues\"\" LIMIT 10;\")"
+      "Bash(PGPASSWORD=\"ZdG387FhYsm0olSm097541HMSdS=\" psql -h localhost -p 25432 -U whatize -d whatize -c \"SELECT id, name, color, \"\"companyId\"\" FROM \"\"Queues\"\" LIMIT 10;\")",
+      "Read(/home/eduardo_wallef/sistema-oficiais/MarcoTicket/backend/src/libs/**)",
+      "Read(/home/eduardo_wallef/sistema-oficiais/MarcoTicket/backend/src/libs/**)",
+      "Read(/home/eduardo_wallef/sistema-oficiais/MarcoTicket/backend/src/models/**)",
+      "Read(/home/eduardo_wallef/sistema-oficiais/MarcoTicket/**)"
     ],
     "deny": []
   }
