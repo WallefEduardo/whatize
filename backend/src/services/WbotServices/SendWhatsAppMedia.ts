@@ -1,4 +1,4 @@
-import { WAMessage, AnyMessageContent, delay } from "baileys";
+import { WAMessage, AnyMessageContent, delay } from "@whiskeysockets/baileys";
 import * as Sentry from "@sentry/node";
 import fs, { unlink, unlinkSync } from "fs";
 import { exec } from "child_process";

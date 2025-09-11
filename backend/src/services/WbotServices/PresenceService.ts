@@ -1,4 +1,4 @@
-import { WASocket } from "baileys";
+import { WASocket } from "@whiskeysockets/baileys";
 import { getIO } from "../../libs/socket";
 import logger from "../../utils/logger";
 

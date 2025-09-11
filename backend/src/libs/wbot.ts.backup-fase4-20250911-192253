@@ -12,7 +12,7 @@ import makeWASocket, {
   isJidGroup,
   jidNormalizedUser,
   makeCacheableSignalKeyStore
-} from "@whiskeysockets/baileys";
+} from "baileys";
 
 // Importação separada do makeInMemoryStore
 // import makeInMemoryStore from "baileys/lib/Store/make-in-memory-store";
@@ -20,7 +20,7 @@ import makeWASocket, {
 import { FindOptions } from "sequelize/types";
 import Whatsapp from "../models/Whatsapp";
 import logger from "../utils/logger";
-import MAIN_LOGGER from "@whiskeysockets/baileys/lib/Utils/logger";
+import MAIN_LOGGER from "baileys/lib/Utils/logger";
 
 const loggerBaileys = MAIN_LOGGER.child({});
 loggerBaileys.level = "error";

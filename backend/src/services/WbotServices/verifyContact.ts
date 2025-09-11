@@ -1,6 +1,6 @@
 import { Mutex } from "async-mutex";
 import { Op } from "sequelize";
-import { WASocket } from "baileys";
+import { WASocket } from "@whiskeysockets/baileys";
 import Contact from "../../models/Contact";
 import CreateOrUpdateContactService, {
   updateContact
