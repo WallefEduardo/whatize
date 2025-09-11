@@ -693,22 +693,18 @@ const ChatModerno = () => {
       return;
     }
     
-    const contact = contacts.find(c => c.id === selectedChatId);
-    if (!contact) return;
-    
     try {
       // ✅ Usar EXATAMENTE o mesmo formato do Kanban que funciona
       const messageData = {
         read: 1,
         fromMe: true,
         mediaUrl: "",
-        mediaType: "chat", 
         body: message.trim(),
-        quotedMsg: isObjectNotEmpty(replyData) ? replyData : "",
+        quotedMsg: null, // Usar null igual ao Kanban
         isPrivate: "false"
       };
       
-      console.log('📤 [CHATMODERNO] Enviando messageData:', messageData);
+      console.log('📤 [CHATMODERNO] Enviando messageData (formato Kanban):', messageData);
       await api.post(`/messages/${selectedChatId}`, messageData);
       
       // Recarregar mensagens para ver a nova mensagem
@@ -722,7 +718,8 @@ const ChatModerno = () => {
       
     } catch (error) {
       console.error('Error sending message:', error);
-      // TODO: Mostrar toast de erro
+      console.error('Error details:', error.response?.data || error.message);
+      // TODO: Mostrar toast de erro com detalhes específicos baseado no errorCode
     }
   };
 
