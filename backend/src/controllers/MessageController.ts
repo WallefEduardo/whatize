@@ -216,38 +216,52 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
     if (!company || !company.planId) {
       console.error('❌ [MSG-DEBUG] Plano da empresa não encontrado');
-      return res.status(400).json({ message: 'Plano da empresa não encontrado.' });
+      return res.status(400).json({
+        success: false,
+        errorCode: "PLAN_NOT_FOUND",
+        message: 'Plano da empresa não encontrado. Entre em contato com o suporte.',
+        canRetry: false
+      });
     }
 
     const TICKET_LIMIT = company.plan.ticketLimit;
     console.log('✅ [MSG-DEBUG] Limite de tickets:', TICKET_LIMIT);
 
     if (TICKET_LIMIT === undefined || TICKET_LIMIT === null) {
-      console.error('❌ [MSG-DEBUG] Limite de tickets não definido');
-      return res.status(500).json({ message: 'Limite de tickets não está definido para o plano da empresa.' });
-    }
-
-    console.log('🔍 [MSG-DEBUG] Contando tickets abertos...');
-    const openTicketsCount = await Ticket.count({
-      where: {
-        companyId: companyId,
-        status: "open", // Ajuste conforme os status relevantes para contar tickets ativos
-      },
-    });
-    console.log('✅ [MSG-DEBUG] Tickets abertos:', openTicketsCount, '/ Limite:', TICKET_LIMIT);
-
-    if (openTicketsCount >= TICKET_LIMIT) {
-      console.error('❌ [MSG-DEBUG] Limite de tickets atingido');
-      return res.status(403).json({
-        message: `Limite de ${TICKET_LIMIT} chamados atingido. Você não pode receber novas mensagens no momento.`,
+      console.log('✅ [MSG-DEBUG] Sem limite definido - permitindo envio ilimitado');
+      // Continua sem bloquear o envio
+    } else {
+      // Só valida limite se estiver definido um número
+      console.log('🔍 [MSG-DEBUG] Contando tickets abertos...');
+      const openTicketsCount = await Ticket.count({
+        where: {
+          companyId: companyId,
+          status: "open", // Ajuste conforme os status relevantes para contar tickets ativos
+        },
       });
+      console.log('✅ [MSG-DEBUG] Tickets abertos:', openTicketsCount, '/ Limite:', TICKET_LIMIT);
+
+      if (openTicketsCount >= TICKET_LIMIT) {
+        console.error('❌ [MSG-DEBUG] Limite de tickets atingido');
+        return res.status(403).json({
+          success: false,
+          errorCode: "TICKET_LIMIT_EXCEEDED",
+          message: `Limite de ${TICKET_LIMIT} chamados atingido. Você não pode receber novas mensagens no momento.`,
+          canRetry: true
+        });
+      }
     }
     
     console.log('✅ [MSG-DEBUG] Verificação de limite passou, prosseguindo...');
 
   } catch (error) {
     console.error("❌ [MSG-DEBUG] Erro ao verificar o limite de tickets:", error);
-    return res.status(500).json({ message: "Erro ao verificar o limite de tickets." });
+    return res.status(500).json({
+      success: false,
+      errorCode: "TICKET_VALIDATION_ERROR",
+      message: "Erro interno ao validar limites. Tente novamente.",
+      canRetry: true
+    });
   }
   // ### Fim da Verificação de Limite ###
 
@@ -359,7 +373,12 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     return res.send();
   } catch (error) {
     console.error('Erro ao processar mensagem:', error);
-    return res.status(500).json({ message: "Erro ao processar a mensagem." });
+    return res.status(500).json({
+      success: false,
+      errorCode: "MESSAGE_PROCESSING_ERROR",
+      message: "Erro ao processar a mensagem. Tente novamente.",
+      canRetry: true
+    });
   }
 };
 
