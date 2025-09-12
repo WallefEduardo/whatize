@@ -183,6 +183,11 @@ const ChatModerno = () => {
   const [optimisticMessages, setOptimisticMessages] = useState(new Map());
   const [messageQueue, setMessageQueue] = useState(new Map());
   const tempIdCounter = useRef(0);
+
+  // 🚀 Estados para setinha de scroll e contador de mensagens novas
+  const [isScrolledUp, setIsScrolledUp] = useState(false);
+  const [newMessagesCount, setNewMessagesCount] = useState(0);
+  const [lastSeenMessageId, setLastSeenMessageId] = useState(null);
   
   // Estados dos filtros - SELECIONADOS (UI apenas)
   const [selectedTags, setSelectedTags] = useState([]);
@@ -397,8 +402,6 @@ const ChatModerno = () => {
   // Carregar tickets no reducer
   useEffect(() => {
     if (ticketsData) {
-      console.log('✅ Query otimizada - Tickets retornados:', ticketsData.length);
-      
       // Para página 1: RESET e carrega. Para páginas > 1: apenas adiciona
       if (pageNumber === 1) {
         dispatch({ type: "RESET" });
@@ -431,35 +434,25 @@ const ChatModerno = () => {
     const onCompanyAppMessage = (data) => {
       // 🚀 RECONCILIAÇÃO OTIMISTA INTELIGENTE
       if (data.action === "create" && data.message) {
-        console.log('📨 [OPTIMISTIC] Nova mensagem via WebSocket:', data.message);
-        
         // Verificar se é mensagem que estava pendente (reconciliação)
         const tempMessage = findOptimisticByContent(data.message.body);
         if (tempMessage) {
-          console.log('🔄 [OPTIMISTIC] Reconciliando mensagem otimista:', { 
-            tempId: tempMessage.id, 
-            realMessageId: data.message.id 
-          });
-          
           // Substituir otimista por mensagem real
           replaceOptimisticMessage(tempMessage.id, data.message);
           
           // Atualizar lista de mensagens real (se for o chat atual)
           if (data.message.ticketId?.toString() === selectedChatId?.toString()) {
             setMessages(prev => {
-              // Verificar se mensagem já existe
               const exists = prev.find(msg => msg.id === data.message.id);
               if (exists) return prev;
               
-              // Adicionar nova mensagem
               return [...prev, data.message].sort((a, b) => 
                 new Date(a.createdAt) - new Date(b.createdAt)
               );
             });
           }
         } else if (data.message.ticketId?.toString() === selectedChatId?.toString()) {
-          // Mensagem nova de outro usuário ou sistema
-          console.log('📨 [OPTIMISTIC] Nova mensagem de outro usuário');
+          // 📨 MENSAGEM NOVA de outro usuário
           setMessages(prev => {
             const exists = prev.find(msg => msg.id === data.message.id);
             if (exists) return prev;
@@ -468,6 +461,11 @@ const ChatModerno = () => {
               new Date(a.createdAt) - new Date(b.createdAt)
             );
           });
+          
+          // 🚀 INCREMENTAR CONTADOR se usuário não está no final da conversa
+          if (isScrolledUp && !data.message.fromMe) {
+            setNewMessagesCount(prev => prev + 1);
+          }
         }
       }
       
@@ -591,15 +589,11 @@ const ChatModerno = () => {
 
   // Substituir mensagem otimista por real do servidor
   const replaceOptimisticMessage = useCallback((tempId, realMessage) => {
-    console.log('🔄 [OPTIMISTIC] Substituindo mensagem temporária por real:', { tempId, realMessageId: realMessage.id });
-    
     setOptimisticMessages(prev => {
       const updated = new Map(prev);
-      updated.delete(tempId); // Remove temporária
+      updated.delete(tempId);
       return updated;
     });
-    
-    // Adicionar mensagem real será feita pelo WebSocket ou reload
   }, []);
 
   // Encontrar mensagem otimista por conteúdo (para reconciliação)
@@ -620,16 +614,12 @@ const ChatModerno = () => {
     const maxRetries = 3;
     let attempt = 0;
     
-    console.log('📤 [OPTIMISTIC] Iniciando envio background:', { tempId, messageText });
-    
     while (attempt < maxRetries) {
       try {
         // Atualizar para "enviando" se ainda não foi  
         if (attempt === 0) {
-          updateOptimisticStatus(tempId, 0); // ack: 0 = enviando (relógio)
+          updateOptimisticStatus(tempId, 0);
         }
-        
-        console.log(`🔄 [OPTIMISTIC] Tentativa ${attempt + 1}/${maxRetries} para ${tempId}`);
         
         const messageData = {
           read: 1,
@@ -643,8 +633,7 @@ const ChatModerno = () => {
         const response = await api.post(`/messages/${selectedChatId}`, messageData);
         
         // ✅ SUCESSO: Atualizar status para enviado
-        updateOptimisticStatus(tempId, 1); // ack: 1 = enviado (check simples)
-        console.log('✅ [OPTIMISTIC] Enviado com sucesso:', { tempId, realMessageId: response.data?.id });
+        updateOptimisticStatus(tempId, 1);
         
         // Remover da queue de pendentes
         setMessageQueue(prev => {
@@ -656,7 +645,6 @@ const ChatModerno = () => {
         // Recarregar mensagens para ver a nova mensagem real
         setTimeout(() => {
           if (selectedChatId) {
-            console.log('🔄 [OPTIMISTIC] Recarregando mensagens após sucesso');
             api.get(`/messages/${selectedChatId}`)
               .then(response => {
                 const messagesData = response.data.messages || [];
@@ -666,7 +654,7 @@ const ChatModerno = () => {
                 const realMessage = messagesData.find(msg => 
                   msg.body === messageText.trim() && 
                   msg.fromMe && 
-                  new Date(msg.createdAt).getTime() > Date.now() - 10000 // Últimos 10s
+                  new Date(msg.createdAt).getTime() > Date.now() - 10000
                 );
                 
                 if (realMessage) {
@@ -677,16 +665,14 @@ const ChatModerno = () => {
           }
         }, 500);
         
-        return; // Sucesso - sair do loop
+        return;
         
       } catch (error) {
-        console.error(`❌ [OPTIMISTIC] Erro na tentativa ${attempt + 1}:`, error);
         attempt++;
         
         if (attempt >= maxRetries) {
           // ❌ FALHA FINAL: Marcar como erro
-          console.error('💥 [OPTIMISTIC] Falha final após todas as tentativas:', tempId);
-          updateOptimisticStatus(tempId, -1); // ack: -1 = erro (X vermelho)
+          updateOptimisticStatus(tempId, -1);
           
           // Manter na queue para retry manual futuro
           setMessageQueue(prev => {
@@ -700,8 +686,7 @@ const ChatModerno = () => {
           });
         } else {
           // ⏳ RETRY: Aguardar com backoff exponencial  
-          const delay = 1000 * Math.pow(2, attempt); // 2s, 4s, 8s
-          console.log(`⏳ [OPTIMISTIC] Aguardando ${delay}ms antes da próxima tentativa...`);
+          const delay = 1000 * Math.pow(2, attempt);
           await sleep(delay);
         }
       }
@@ -714,8 +699,6 @@ const ChatModerno = () => {
     const queueItem = messageQueue.get(tempId);
     
     if (message && queueItem && message.ack === -1) {
-      console.log('🔄 [OPTIMISTIC] Retry manual da mensagem:', tempId);
-      
       // Voltar status para "enviando"
       updateOptimisticStatus(tempId, 0);
       
@@ -728,7 +711,7 @@ const ChatModerno = () => {
       
       // Reenviar
       sendToBackend(tempId, message.body).catch(error => {
-        console.error('💥 [OPTIMISTIC] Erro no retry manual:', error);
+        console.error('Erro no retry manual:', error);
       });
     }
   }, [optimisticMessages, messageQueue, updateOptimisticStatus, sendToBackend]);
@@ -800,6 +783,110 @@ const ChatModerno = () => {
     }
   }, []);
 
+  // 🚀 SCROLL INTELIGENTE QUANDO EU ENVIO MENSAGEM
+  const scrollToBottomOnSend = useCallback(() => {
+    const forceScrollToBottom = () => {
+      // Método 1: Usar messagesEndRef direto
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'end',
+          inline: 'nearest'
+        });
+      }
+      
+      // Método 2: Scroll direto no container
+      if (chatHeightRef.current) {
+        const scrollElement = chatHeightRef.current.querySelector('[data-scrollable]');
+        if (scrollElement) {
+          const maxHeight = scrollElement.scrollHeight;
+          
+          // Scrolls múltiplos para garantir chegada ao final
+          scrollElement.scrollTop = maxHeight;
+          scrollElement.scrollTo({
+            top: maxHeight,
+            behavior: 'smooth'
+          });
+          
+          // Garantir scroll final com requestAnimationFrame
+          requestAnimationFrame(() => {
+            scrollElement.scrollTop = scrollElement.scrollHeight;
+          });
+          
+          return scrollElement.scrollHeight;
+        }
+      }
+      return 0;
+    };
+    
+    // Execução imediata
+    forceScrollToBottom();
+    
+    // Retry inteligente para lidar com renderização assíncrona
+    [50, 100, 200, 500].forEach((delay) => {
+      setTimeout(() => {
+        forceScrollToBottom();
+      }, delay);
+    });
+  }, []);
+
+  // 🚀 RENDERING HÍBRIDO - Mesclar mensagens reais com otimistas
+  const allMessages = useMemo(() => {
+    const realMessages = messages || [];
+    const optimisticArray = Array.from(optimisticMessages.values());
+    
+    // Combinar mensagens reais com otimistas
+    const combined = [...realMessages, ...optimisticArray]
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    
+    return combined;
+  }, [messages, optimisticMessages]);
+
+  // 🚀 DETECÇÃO DE SCROLL OTIMIZADA
+  const handleScroll = useCallback(() => {    
+    if (chatHeightRef.current) {
+      let scrollElement = null;
+      
+      // Encontrar elemento com scroll real
+      const allElements = chatHeightRef.current.querySelectorAll('*');
+      const elementsWithScroll = Array.from(allElements).filter(el => {
+        const style = getComputedStyle(el);
+        return style.overflowY === 'auto' || style.overflowY === 'scroll';
+      });
+      
+      if (elementsWithScroll.length > 0) {
+        scrollElement = elementsWithScroll[0];
+      }
+      
+      if (scrollElement) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+        
+        // Lógica de detecção de scroll
+        const hasScroll = scrollHeight > clientHeight + 10;
+        const isAtBottom = hasScroll ? 
+          (scrollTop + clientHeight) >= (scrollHeight - 50) : 
+          true;
+        
+        setIsScrolledUp(!isAtBottom);
+        
+        // Se chegou no final, zerar contador de mensagens novas
+        if (isAtBottom) {
+          setNewMessagesCount(0);
+          if (allMessages.length > 0) {
+            const lastMessage = allMessages[allMessages.length - 1];
+            setLastSeenMessageId(lastMessage.id);
+          }
+        }
+      }
+    }
+  }, [allMessages, newMessagesCount]);
+
+  // 🚀 SCROLL PARA BAIXO ao clicar na setinha
+  const scrollDownToLatest = useCallback(() => {
+    setNewMessagesCount(0);
+    scrollToBottomOnSend();
+  }, [scrollToBottomOnSend]);
+
   // Load contacts and profile
   useEffect(() => {
     const loadInitialData = async () => {
@@ -835,8 +922,7 @@ const ChatModerno = () => {
       try {
         // Buscar mensagens reais da API usando o ticketId
         const response = await api.get(`/messages/${selectedChatId}`);
-        console.log('Messages API response:', response.data);
-        const messagesData = response.data.messages || []; // <- Correção aqui!
+        const messagesData = response.data.messages || [];
         
         // Buscar dados do ticket
         const ticketResponse = await api.get(`/tickets/${selectedChatId}`);
@@ -858,11 +944,14 @@ const ChatModerno = () => {
           });
         }
         
+        // 🚀 SCROLL INICIAL ao abrir conversa (após carregar mensagens)
+        setTimeout(() => {
+          scrollToBottom();
+        }, 200);
+        
       } catch (error) {
         console.error('Error loading messages:', error);
-        console.error('Error details:', error.response?.data || error.message);
         setMessages([]);
-        // setCurrentTicket(null); <- REMOVIDO para evitar redirecionamento
         setSelectedContact(null);
       } finally {
         setMessagesLoading(false);
@@ -872,10 +961,11 @@ const ChatModerno = () => {
     loadMessages();
   }, [selectedChatId]);
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+  // 🚀 CONTROLE DE SCROLL INTELIGENTE
+  // Removido scroll automático geral - só fazemos scroll quando EU envio mensagem
+  // useEffect(() => {
+  //   scrollToBottom();
+  // }, [messages, scrollToBottom]);
 
   // Handle chat selection
   const openChat = (chatId) => {
@@ -898,13 +988,11 @@ const ChatModerno = () => {
 
   // 🚀 Handle send message - VERSÃO OTIMISTA INSTANTÂNEA
   const handleSendMessage = async (message) => {
-    console.log('🎯 [OPTIMISTIC] ChatModerno handleSendMessage:', { selectedChatId, message });
     if (!selectedChatId || !message.trim()) {
-      console.log('❌ [OPTIMISTIC] Envio bloqueado:', { selectedChatId, message: message.trim() });
       return;
     }
     
-    // 🚀 FASE 1: ADIÇÃO INSTANTÂNEA (0ms lag)
+    // 🚀 ADIÇÃO INSTANTÂNEA (0ms lag)
     const tempId = generateTempId();
     const tempMessage = {
       id: tempId,
@@ -912,15 +1000,13 @@ const ChatModerno = () => {
       fromMe: true,
       ack: 0, // Status: enviando (relógio)
       createdAt: new Date().toISOString(),
-      isOptimistic: true, // Flag para controle
+      isOptimistic: true,
       mediaUrl: "",
       mediaType: "chat",
       read: false,
       quotedMsg: null,
       isPrivate: false
     };
-    
-    console.log('⚡ [OPTIMISTIC] Adicionando mensagem instantânea:', { tempId, message: message.trim() });
     
     // Adicionar instantaneamente à lista otimista
     setOptimisticMessages(prev => new Map(prev.set(tempId, tempMessage)));
@@ -932,16 +1018,17 @@ const ChatModerno = () => {
       createdAt: Date.now()
     })));
     
-    // Clear reply imediatamente para UX fluida
+    // Clear reply para UX fluida
     setReply(false);
     setReplyData({});
     
-    // 🚀 FASE 2: ENVIO BACKGROUND ASSÍNCRONO (não bloqueia UI)
-    sendToBackend(tempId, message.trim()).catch(error => {
-      console.error('💥 [OPTIMISTIC] Erro no envio background:', error);
-    });
+    // 🚀 SCROLL AUTOMÁTICO - Desce pro final quando EU envio
+    scrollToBottomOnSend();
     
-    console.log('✅ [OPTIMISTIC] Mensagem instantânea adicionada, enviando em background...');
+    // 🚀 ENVIO BACKGROUND ASSÍNCRONO
+    sendToBackend(tempId, message.trim()).catch(error => {
+      console.error('Erro no envio background:', error);
+    });
   };
 
   // Handle delete message
@@ -1121,21 +1208,13 @@ const ChatModerno = () => {
 
   // Função para aplicar filtros selecionados (sem fechar sidebar)
   const handleApplyFilters = () => {
-    console.log('🎯 ===== APLICANDO FILTROS =====');
-    console.log('📝 Tags selecionadas:', selectedTags);
-    console.log('📝 Connections selecionadas:', selectedConnections);
-    console.log('📝 Status selecionados:', selectedStatuses);
-    console.log('📝 Users selecionados:', selectedUsers);
-    
     // Copiar seleções para estados aplicados
     setAppliedTags([...selectedTags]);
     setAppliedConnections([...selectedConnections]);
     setAppliedStatuses([...selectedStatuses]);
     setAppliedUsers([...selectedUsers]);
     
-    console.log('✅ Filtros aplicados!');
-    
-    // Trigger refresh (sem fechar sidebar)
+    // Trigger refresh
     setRefreshTickets(prev => !prev);
   };
 
@@ -1164,24 +1243,6 @@ const ChatModerno = () => {
     };
   }, [shouldCollapseDrawer, isSmallScreen, originalDrawerState, setDrawerOpen]);
 
-  // 🚀 RENDERING HÍBRIDO ULTRA-PERFORMANCE
-  // Mesclar mensagens reais com otimistas, otimizado com useMemo
-  const allMessages = useMemo(() => {
-    const realMessages = messages || [];
-    const optimisticArray = Array.from(optimisticMessages.values());
-    
-    console.log('🔀 [OPTIMISTIC] Mesclando mensagens:', { 
-      real: realMessages.length, 
-      optimistic: optimisticArray.length 
-    });
-    
-    // Combinar e ordenar por timestamp
-    const combined = [...realMessages, ...optimisticArray]
-      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    
-    return combined;
-  }, [messages, optimisticMessages]);
-
   // Update selected contact when selectedChatId or contacts change
   useEffect(() => {
     const contact = contacts.find(c => c.id === selectedChatId);
@@ -1207,9 +1268,7 @@ const ChatModerno = () => {
           }
         });
         
-        if (removedCount > 0) {
-          console.log(`🧹 [OPTIMISTIC] Limpeza automática: ${removedCount} mensagens antigas removidas`);
-        }
+        // Limpeza automática de mensagens antigas concluída
         
         return cleaned;
       });
@@ -1237,11 +1296,68 @@ const ChatModerno = () => {
   // Limpar mensagens otimistas quando mudar de chat
   useEffect(() => {
     if (selectedChatId) {
-      console.log('🧹 [OPTIMISTIC] Limpando mensagens otimistas ao trocar de chat');
+      // Limpando mensagens otimistas ao trocar de chat
       setOptimisticMessages(new Map());
       setMessageQueue(new Map());
+      
+      // 🚀 RESETAR estados da setinha
+      setIsScrolledUp(false);
+      setNewMessagesCount(0);
+      setLastSeenMessageId(null);
     }
   }, [selectedChatId]);
+
+  // 🚀 EVENT LISTENER para elemento com scroll real
+  useEffect(() => {
+    if (chatHeightRef.current) {
+      let scrollElement = null;
+      
+      // Buscar elemento com scroll real
+      const allElements = chatHeightRef.current.querySelectorAll('*');
+      const elementsWithScroll = Array.from(allElements).filter(el => {
+        const style = getComputedStyle(el);
+        return style.overflowY === 'auto' || style.overflowY === 'scroll';
+      });
+      
+      if (elementsWithScroll.length > 0) {
+        scrollElement = elementsWithScroll[0];
+      }
+      
+      if (scrollElement) {
+        // Throttle para performance
+        let scrollTimeout;
+        const throttledHandleScroll = () => {
+          clearTimeout(scrollTimeout);
+          scrollTimeout = setTimeout(handleScroll, 50);
+        };
+        
+        // Event listeners
+        const events = ['scroll', 'wheel', 'touchmove'];
+        events.forEach(eventName => {
+          scrollElement.addEventListener(eventName, throttledHandleScroll, { passive: true });
+        });
+        
+        // Check inicial após render
+        setTimeout(() => {
+          handleScroll();
+        }, 1000);
+        
+        return () => {
+          if (scrollElement) {
+            events.forEach(eventName => {
+              scrollElement.removeEventListener(eventName, throttledHandleScroll);
+            });
+          }
+          clearTimeout(scrollTimeout);
+        };
+      } else {
+        // Fallback: tentar novamente após delay
+        setTimeout(() => {
+          handleScroll();
+        }, 2000);
+      }
+    }
+  }, [handleScroll, selectedChatId]);
 
   // Loading state
   if (loading) {
@@ -1831,7 +1947,14 @@ const ChatModerno = () => {
                   flexDirection: 'column'
                 }}>
                   <MessageArea ref={chatHeightRef}>
-                    <ScrollArea size="full">
+                    <ScrollArea 
+                      size="full"
+                      sx={{ 
+                        // 🚀 Altura dinâmica baseada na tela - permite scroll natural
+                        height: '100%',
+                        maxHeight: 'calc(100vh - 280px)', // Altura da viewport - headers/footers
+                      }}
+                    >
                       <Box data-scrollable sx={{ p: 2 }}>
                         {messagesLoading ? (
                           <Box sx={{ 
@@ -1884,6 +2007,82 @@ const ChatModerno = () => {
                             )}
                             <div ref={messagesEndRef} />
                           </>
+                        )}
+
+
+                        {/* 🚀 SETINHA FLUTUANTE COM CONTADOR - Só aparece quando scrollado pra cima */}
+                        {isScrolledUp && (
+                          <Box
+                            onClick={scrollDownToLatest}
+                            sx={{
+                              position: 'absolute',
+                              bottom: '30px', // Bem mais baixo
+                              right: '15px', // Mais pra direita (5px)
+                              width: '40px', // Menor
+                              height: '40px', // Menor
+                              borderRadius: '50%',
+                              backgroundColor: '#EEF1F9', // Fundo cinza claro
+                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              zIndex: 1000,
+                              transition: 'all 0.2s ease',
+                              border: '1px solid var(--border-primary)',
+                              '&:hover': {
+                                backgroundColor: '#E0E4ED',
+                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                                transform: 'translateY(-2px)',
+                              },
+                              '&:active': {
+                                transform: 'translateY(0px)',
+                              }
+                            }}
+                          >
+                            {/* Ícone da seta para baixo */}
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              style={{ color: 'var(--text-gray-medium)' }}
+                            >
+                              <path
+                                d="M7 10L12 15L17 10"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+
+                            {/* 🚀 CONTADOR de mensagens novas */}
+                            {newMessagesCount > 0 && (
+                              <Box
+                                sx={{
+                                  position: 'absolute',
+                                  top: '-4px',
+                                  right: '-4px',
+                                  minWidth: '20px',
+                                  height: '20px',
+                                  borderRadius: '10px',
+                                  backgroundColor: '#ff4444',
+                                  color: 'white',
+                                  fontSize: '11px',
+                                  fontWeight: 'bold',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  padding: '0 6px',
+                                  border: '2px solid white',
+                                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                }}
+                              >
+                                {newMessagesCount > 99 ? '99+' : newMessagesCount}
+                              </Box>
+                            )}
+                          </Box>
                         )}
                       </Box>
                     </ScrollArea>

@@ -31,7 +31,7 @@ const MessageContainer = styled(Box, {
   gap: '8px',
   alignItems: 'flex-start',
   marginBottom: '16px',
-  padding: '0 16px',
+  padding: isSent ? '0 32px 0 16px' : '0 16px 0 32px', // Mais espaço nas bordas para ambos os lados
   flexDirection: 'row',
   justifyContent: isSent ? 'flex-end' : 'flex-start', // Justifica para direita se enviada
   
