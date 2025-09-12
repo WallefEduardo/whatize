@@ -152,7 +152,59 @@ const DateLabel = styled(Typography)(() => ({
   zIndex: 1,
 }));
 
-const MessageStatus = ({ status }) => {
+const MessageStatus = ({ status, ack, isOptimistic }) => {
+  // 🚀 Sistema otimista: usar ack numérico se disponível
+  if (typeof ack === 'number') {
+    switch (ack) {
+      case 0:
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <ClockIcon style={{ 
+              width: '12px', 
+              height: '12px', 
+              color: 'rgba(255, 255, 255, 0.7)',
+              animation: isOptimistic ? 'spin 1s linear infinite' : 'none'
+            }} />
+            <style jsx>{`
+              @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+              }
+            `}</style>
+          </Box>
+        );
+      case 1:
+        return <CheckIcon style={{ width: '12px', height: '12px', color: 'rgba(255, 255, 255, 0.7)' }} />;
+      case 2:
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+            <CheckIcon style={{ width: '12px', height: '12px', color: 'rgba(255, 255, 255, 0.7)' }} />
+            <CheckIcon style={{ width: '12px', height: '12px', color: 'rgba(255, 255, 255, 0.7)' }} />
+          </Box>
+        );
+      case 3:
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+            <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--color-accent)' }} />
+            <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--color-accent)' }} />
+          </Box>
+        );
+      case -1:
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ 
+              fontSize: '12px', 
+              color: '#ff4444', 
+              fontWeight: 'bold' 
+            }}>❌</span>
+          </Box>
+        );
+      default:
+        return null;
+    }
+  }
+  
+  // Fallback para sistema legado com strings
   switch (status) {
     case 'sending':
       return <ClockIcon style={{ width: '12px', height: '12px' }} />;
@@ -354,7 +406,11 @@ const MessageItem = ({
         {/* Message Time and Status */}
         <MessageTime isSent={isSent}>
           {formatTime(messageTime)}
-          {isSent && <MessageStatus status={ack} />}
+          {isSent && <MessageStatus 
+            status={ack} 
+            ack={message.ack} 
+            isOptimistic={message.isOptimistic}
+          />}
         </MessageTime>
       </MessageContent>
 
