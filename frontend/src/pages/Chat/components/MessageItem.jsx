@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Typography, IconButton } from '@mui/material';
+import { Box, Typography, IconButton, Tooltip } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { cn } from '../../../utils/cn';
 import { formatTime, formatDateSeparator, isSameDay } from '../data/mockData';
@@ -51,14 +51,20 @@ const MessageContent = styled(Box, {
 }));
 
 const MessageBubble = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'isSent'
-})(({ theme, isSent }) => ({
+  shouldForwardProp: (prop) => !['isSent', 'isDeleted'].includes(prop)
+})(({ theme, isSent, isDeleted }) => ({
   padding: '8px 12px',
   borderRadius: '12px',
   wordBreak: 'break-word',
   position: 'relative',
   
-  ...(isSent ? {
+  ...(isDeleted ? {
+    // Estilo para mensagens deletadas
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    color: 'rgba(0, 0, 0, 0.4)',
+    fontStyle: 'italic',
+    border: '1px dashed rgba(0, 0, 0, 0.2)',
+  } : isSent ? {
     backgroundColor: 'var(--color-accent)',
     color: 'white',
     borderBottomRightRadius: '4px',
@@ -250,6 +256,7 @@ const MessageItem = ({
   const isSent = message.fromMe || false; // Campo real da API
   const ack = message.ack; // Status de entrega
   const quotedMsg = message.quotedMsg; // Mensagem citada/reply
+  const isDeleted = message.isDeleted || false; // Status de mensagem deletada
   
   // ✅ Determinar o remetente correto
   // Para mensagens enviadas: usar dados do usuário remetente se disponível, senão fallback para profile
@@ -265,7 +272,7 @@ const MessageItem = ({
   ) || false;
 
   const handleDeleteMessage = () => {
-    onDelete(selectedChatId, index);
+    onDelete(messageId);
   };
 
   const handleReplyMessage = () => {
@@ -314,13 +321,14 @@ const MessageItem = ({
       )}
 
       {/* Message Actions */}
-      <MessageActions className="message-actions" isSent={isSent}>
-        <Dropdown>
-          <DropdownTrigger asChild>
-            <IconButton size="small">
-              <EllipsisVerticalIcon style={{ width: '16px', height: '16px' }} />
-            </IconButton>
-          </DropdownTrigger>
+      {!isDeleted && (
+        <MessageActions className="message-actions" isSent={isSent}>
+          <Dropdown>
+            <DropdownTrigger asChild>
+              <IconButton size="small">
+                <EllipsisVerticalIcon style={{ width: '16px', height: '16px' }} />
+              </IconButton>
+            </DropdownTrigger>
           
           <DropdownContent align={isSent ? "end" : "start"} side="top">
             {isSent ? (
@@ -364,7 +372,8 @@ const MessageItem = ({
             )}
           </DropdownContent>
         </Dropdown>
-      </MessageActions>
+        </MessageActions>
+      )}
 
       {/* Message Content */}
       <MessageContent isSent={isSent} sx={{ order: 1 }}>
@@ -397,11 +406,39 @@ const MessageItem = ({
         )}
 
         {/* Message Bubble */}
-        <MessageBubble isSent={isSent}>
-          <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
-            {messageText}
-          </Typography>
-        </MessageBubble>
+        {isDeleted ? (
+          <Tooltip 
+            title={
+              messageText.includes('🚫') || messageText.includes('_Mensagem Apagada_') 
+                ? "Conteúdo original não disponível"
+                : `Mensagem original: "${messageText}"`
+            } 
+            arrow 
+            placement={isSent ? "left" : "right"}
+            componentsProps={{
+              tooltip: {
+                sx: {
+                  bgcolor: 'rgba(0, 0, 0, 0.8)',
+                  color: 'white',
+                  fontSize: '12px',
+                  maxWidth: '300px',
+                }
+              }
+            }}
+          >
+            <MessageBubble isSent={isSent} isDeleted={isDeleted}>
+              <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
+                🚫 {isSent ? 'Você apagou esta mensagem' : 'Esta mensagem foi apagada'}
+              </Typography>
+            </MessageBubble>
+          </Tooltip>
+        ) : (
+          <MessageBubble isSent={isSent} isDeleted={isDeleted}>
+            <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
+              {messageText}
+            </Typography>
+          </MessageBubble>
+        )}
 
         {/* Message Time and Status */}
         <MessageTime isSent={isSent}>

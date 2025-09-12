@@ -40,6 +40,7 @@ import {
 
 // API real para mensagens
 import api from '../../services/api';
+import toastError from '../../errors/toastError';
 
 // Hook de tickets do sistema original
 import useTickets from '../../hooks/useTickets';
@@ -468,6 +469,37 @@ const ChatModerno = () => {
           }
         }
       }
+
+      // Tratamento para mensagens atualizadas (incluindo deletadas)
+      if (data.action === "update" && data.message) {
+        if (data.message.ticketId?.toString() === selectedChatId?.toString()) {
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === data.message.id ? data.message : msg
+            )
+          );
+        }
+        
+        // Remover das mensagens otimistas se existir
+        removeOptimisticMessage(data.message.id);
+      }
+
+      // Tratamento para mensagens deletadas
+      if (data.action === "delete" && data.message) {
+        if (data.message.ticketId?.toString() === selectedChatId?.toString()) {
+          setMessages(prev => 
+            prev.filter(msg => msg.id !== data.message.id)
+          );
+        }
+        
+        // Remover das mensagens otimistas se existir
+        removeOptimisticMessage(data.message.id);
+        
+        // Remover das mensagens fixadas se existir
+        setPinnedMessages(prev => 
+          prev.filter(msg => msg.id !== data.message.id)
+        );
+      }
       
       // Manter lógica original para tickets
       if (data.action === "create" && data.ticket && data.ticket.status === tabOpen) {
@@ -592,6 +624,21 @@ const ChatModerno = () => {
     setOptimisticMessages(prev => {
       const updated = new Map(prev);
       updated.delete(tempId);
+      return updated;
+    });
+  }, []);
+
+  // Remover mensagem otimista (para deleteMessage)
+  const removeOptimisticMessage = useCallback((messageId) => {
+    setOptimisticMessages(prev => {
+      const updated = new Map(prev);
+      // Verificar se existe uma mensagem otimista com esse ID real
+      for (const [tempId, message] of prev.entries()) {
+        if (message.id === messageId) {
+          updated.delete(tempId);
+          break;
+        }
+      }
       return updated;
     });
   }, []);
@@ -1031,22 +1078,24 @@ const ChatModerno = () => {
     });
   };
 
-  // Handle delete message
-  const handleDeleteMessage = async (selectedChatId, index) => {
+  // Handle delete message - implementação real baseada no chat antigo
+  const handleDeleteMessage = async (messageId) => {
     try {
-      await deleteMessage({ selectedChatId, index });
+      // Fazer a requisição DELETE para a API (mesma lógica do chat antigo)
+      await api.delete(`/messages/${messageId}`);
       
-      // Remove from pinned messages if exists
+      // Remove from pinned messages if exists (usar messageId ao invés de index)
       setPinnedMessages(prev => 
-        prev.filter(msg => !(msg.chatId === selectedChatId && msg.index === index))
+        prev.filter(msg => msg.id !== messageId)
       );
       
-      // Reload messages
-      const messagesData = await getMessages(selectedChatId);
-      setMessages(messagesData.chat?.chat || []);
+      // Não precisamos recarregar as mensagens manualmente
+      // O socket.io vai atualizar automaticamente via listener `appMessage`
+      // com action "update" ou "delete"
       
     } catch (error) {
       console.error('Error deleting message:', error);
+      toastError(error);
     }
   };
 
