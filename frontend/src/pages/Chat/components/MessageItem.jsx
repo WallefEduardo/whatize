@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Box, Typography, IconButton, Tooltip } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { cn } from '../../../utils/cn';
 import { formatTime, formatDateSeparator, isSameDay } from '../data/mockData';
+
+// Context API do chat antigo
+import { ReplyMessageContext } from '../../../context/ReplyingMessage/ReplyingMessageContext';
 
 // Nossos componentes UI
 import { Avatar } from '../../../components/ui/AvatarOptimized';
@@ -60,19 +63,19 @@ const MessageBubble = styled(Box, {
   
   ...(isDeleted ? {
     // Estilo para mensagens deletadas
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    color: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'var(--bg-tertiary)',
+    color: 'var(--text-tertiary)',
     fontStyle: 'italic',
-    border: '1px dashed rgba(0, 0, 0, 0.2)',
+    border: '1px dashed var(--border-secondary)',
   } : isSent ? {
-    backgroundColor: 'var(--color-accent)',
-    color: 'white',
+    backgroundColor: 'rgba(0, 195, 7, 0.15)', // Verde bem clarinho e transparente
+    color: 'var(--text-primary)', // Texto que se adapta ao tema
     borderBottomRightRadius: '4px',
   } : {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'var(--bg-secondary)',
     color: 'var(--text-primary)',
     borderBottomLeftRadius: '4px',
-    border: '1px solid #e0e0e0',
+    border: '1px solid var(--border-primary)',
   }),
 }));
 
@@ -80,7 +83,7 @@ const MessageTime = styled(Typography, {
   shouldForwardProp: (prop) => prop !== 'isSent'
 })(({ theme, isSent }) => ({
   fontSize: '11px',
-  color: isSent ? 'rgba(0, 0, 0, 0.6)' : 'var(--text-secondary)', // Mudou para cor mais escura nas mensagens enviadas
+  color: 'var(--text-secondary)', // Adapta automaticamente ao tema
   display: 'flex',
   alignItems: 'center',
   gap: '4px',
@@ -102,8 +105,10 @@ const MessageActions = styled(Box, {
     padding: '4px',
     borderRadius: '50%',
     backgroundColor: 'var(--bg-secondary)',
+    color: 'var(--text-secondary)',
     '&:hover': {
       backgroundColor: 'var(--bg-primary)',
+      color: 'var(--text-primary)',
     },
   },
 }));
@@ -111,13 +116,20 @@ const MessageActions = styled(Box, {
 const ReplyMessage = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isSent'
 })(({ theme, isSent }) => ({
-  padding: '6px 10px',
-  marginBottom: '4px',
-  borderRadius: '8px',
-  backgroundColor: isSent ? 'rgba(255, 255, 255, 0.1)' : 'var(--bg-primary)',
-  borderLeft: isSent ? '3px solid rgba(255, 255, 255, 0.5)' : '3px solid var(--color-accent)',
+  padding: '6px 8px',
+  marginBottom: '2px', // Muito pouco espaço para ficar colado
+  borderRadius: '6px',
+  // Cores que se adaptam ao tema
+  backgroundColor: isSent ? 'var(--hover-bg-light)' : 'var(--bg-tertiary)', 
+  borderLeft: '3px solid var(--color-accent)', 
   fontSize: '13px',
-  color: isSent ? 'rgba(255, 255, 255, 0.8)' : 'var(--text-secondary)',
+  color: 'var(--text-primary)', 
+  boxShadow: 'var(--shadow-sm)',
+  cursor: 'pointer',
+  transition: 'background-color 0.2s ease',
+  '&:hover': {
+    backgroundColor: 'var(--hover-bg-medium)',
+  },
 }));
 
 const PinIndicator = styled(Box)(() => ({
@@ -164,46 +176,41 @@ const MessageStatus = ({ status, ack, isOptimistic }) => {
     switch (ack) {
       case 0:
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <span style={{ 
+            display: 'inline-flex', 
+            alignItems: 'center'
+          }}>
             <ClockIcon style={{ 
               width: '12px', 
               height: '12px', 
-              color: 'rgba(255, 255, 255, 0.7)',
+              color: 'var(--text-secondary)',
               animation: isOptimistic ? 'spin 1s linear infinite' : 'none'
             }} />
-            <style jsx>{`
-              @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-              }
-            `}</style>
-          </Box>
+          </span>
         );
       case 1:
-        return <CheckIcon style={{ width: '12px', height: '12px', color: 'rgba(255, 255, 255, 0.7)' }} />;
+        return <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--text-secondary)' }} />;
       case 2:
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-            <CheckIcon style={{ width: '12px', height: '12px', color: 'rgba(255, 255, 255, 0.7)' }} />
-            <CheckIcon style={{ width: '12px', height: '12px', color: 'rgba(255, 255, 255, 0.7)' }} />
-          </Box>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
+            <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--text-secondary)' }} />
+            <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--text-secondary)' }} />
+          </span>
         );
       case 3:
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
             <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--color-accent)' }} />
             <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--color-accent)' }} />
-          </Box>
+          </span>
         );
       case -1:
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <span style={{ 
-              fontSize: '12px', 
-              color: '#ff4444', 
-              fontWeight: 'bold' 
-            }}>❌</span>
-          </Box>
+          <span style={{ 
+            fontSize: '12px', 
+            color: 'var(--color-red, #ff4444)', 
+            fontWeight: 'bold' 
+          }}>❌</span>
         );
       default:
         return null;
@@ -218,17 +225,17 @@ const MessageStatus = ({ status, ack, isOptimistic }) => {
       return <CheckIcon style={{ width: '12px', height: '12px' }} />;
     case 'delivered':
       return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
           <CheckIcon style={{ width: '12px', height: '12px' }} />
           <CheckIcon style={{ width: '12px', height: '12px' }} />
-        </Box>
+        </span>
       );
     case 'read':
       return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
           <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--color-accent)' }} />
           <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--color-accent)' }} />
-        </Box>
+        </span>
       );
     default:
       return null;
@@ -247,8 +254,11 @@ const MessageItem = ({
   handleForward,
   handlePinMessage,
   pinnedMessages,
-  showDateSeparator = false
+  showDateSeparator = false,
+  onScrollToMessage
 }) => {
+  // Context API para reply - igual ao chat antigo
+  const { setReplyingMessage } = useContext(ReplyMessageContext);
   // Adaptar para API real - usar campos reais da mensagem
   const messageText = message.body || message.content || '';
   const messageTime = message.createdAt || message.timestamp;
@@ -257,6 +267,19 @@ const MessageItem = ({
   const ack = message.ack; // Status de entrega
   const quotedMsg = message.quotedMsg; // Mensagem citada/reply
   const isDeleted = message.isDeleted || false; // Status de mensagem deletada
+  const deletedForAll = message.deletedForAll || false; // Flag para tooltip
+  const originalBody = message.originalBody || ''; // Mensagem original
+  
+  // Debug para tooltip
+  if (isDeleted) {
+    console.log('🐛 MessageItem Debug:', {
+      messageId,
+      isDeleted,
+      deletedForAll,
+      originalBody: originalBody || 'vazio',
+      messageText
+    });
+  }
   
   // ✅ Determinar o remetente correto
   // Para mensagens enviadas: usar dados do usuário remetente se disponível, senão fallback para profile
@@ -276,7 +299,8 @@ const MessageItem = ({
   };
 
   const handleReplyMessage = () => {
-    handleReply(messageText, contact);
+    // Usar Context API igual ao chat antigo
+    setReplyingMessage(message);
   };
 
   const handleForwardMessage = () => {
@@ -295,6 +319,12 @@ const MessageItem = ({
     handlePinMessage(pinData);
   };
 
+  const handleReplyClick = () => {
+    if (quotedMsg?.id && onScrollToMessage) {
+      onScrollToMessage(quotedMsg.id);
+    }
+  };
+
 
   return (
     <>
@@ -307,7 +337,7 @@ const MessageItem = ({
         </DateSeparator>
       )}
       
-      <MessageContainer isSent={isSent}>
+      <MessageContainer isSent={isSent} data-message-id={messageId}>
       {/* Avatar para mensagens recebidas (esquerda) */}
       {!isSent && (
         <Box sx={{ flexShrink: 0, alignSelf: 'flex-end', mb: '20px', order: 0 }}>
@@ -384,42 +414,17 @@ const MessageItem = ({
           </PinIndicator>
         )}
 
-        {/* Reply Preview */}
-        {quotedMsg && (
-          <ReplyMessage isSent={isSent}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', mb: '2px' }}>
-              <ArrowUturnLeftIcon style={{ width: '12px', height: '12px' }} />
-              <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                Respondendo {isSent ? `a ${quotedMsg?.contact?.name}` : 'você'}
-              </Typography>
-            </Box>
-            <Typography variant="caption" sx={{ 
-              display: 'block', 
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              maxWidth: '200px'
-            }}>
-              {quotedMsg?.body || 'Mensagem original'}
-            </Typography>
-          </ReplyMessage>
-        )}
-
-        {/* Message Bubble */}
+        {/* Message Bubble - Reply integrado dentro */}
         {isDeleted ? (
           <Tooltip 
-            title={
-              messageText.includes('🚫') || messageText.includes('_Mensagem Apagada_') 
-                ? "Conteúdo original não disponível"
-                : `Mensagem original: "${messageText}"`
-            } 
+            title={originalBody ? `Mensagem original: "${originalBody}"` : 'Mensagem apagada'}
             arrow 
             placement={isSent ? "left" : "right"}
             componentsProps={{
               tooltip: {
                 sx: {
-                  bgcolor: 'rgba(0, 0, 0, 0.8)',
-                  color: 'white',
+                  bgcolor: 'rgba(0, 0, 0, 0.9)',
+                  color: '#ffffff',
                   fontSize: '12px',
                   maxWidth: '300px',
                 }
@@ -434,6 +439,46 @@ const MessageItem = ({
           </Tooltip>
         ) : (
           <MessageBubble isSent={isSent} isDeleted={isDeleted}>
+            {/* Reply dentro da bubble igual WhatsApp */}
+            {quotedMsg && (
+              <Box 
+                onClick={handleReplyClick}
+                sx={{
+                  backgroundColor: isSent ? 'var(--hover-bg-light)' : 'var(--bg-tertiary)',
+                  borderLeft: '3px solid var(--color-accent)',
+                  padding: '6px 8px',
+                  marginBottom: '8px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease',
+                  '&:hover': {
+                    backgroundColor: 'var(--hover-bg-medium)'
+                  }
+                }}>
+                <Typography variant="caption" sx={{ 
+                  fontWeight: 600, 
+                  fontSize: '11px',
+                  color: 'var(--color-accent)',
+                  display: 'block',
+                  marginBottom: '2px'
+                }}>
+                  {quotedMsg?.contact?.name || 'Você'}
+                </Typography>
+                <Typography variant="caption" sx={{ 
+                  fontSize: '12px',
+                  opacity: 0.8,
+                  color: isSent ? 'var(--text-secondary)' : 'var(--text-primary)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: '250px',
+                  display: 'block'
+                }}>
+                  {quotedMsg?.body || 'Mensagem original'}
+                </Typography>
+              </Box>
+            )}
             <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
               {messageText}
             </Typography>

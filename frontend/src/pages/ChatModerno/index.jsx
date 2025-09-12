@@ -42,6 +42,10 @@ import {
 import api from '../../services/api';
 import toastError from '../../errors/toastError';
 
+// Context API do sistema original
+import { ReplyMessageProvider, ReplyMessageContext } from '../../context/ReplyingMessage/ReplyingMessageContext';
+import DeleteMessageModal from '../../components/DeleteMessageModal';
+
 // Hook de tickets do sistema original
 import useTickets from '../../hooks/useTickets';
 
@@ -153,7 +157,8 @@ const Overlay = styled(Box)(({ theme }) => ({
   },
 }));
 
-const ChatModerno = () => {
+// Componente interno que tem acesso ao ReplyMessageContext
+const ChatModernoContent = () => {
   // Parâmetros da rota
   const { ticketId } = useParams();
   const history = useHistory();
@@ -161,6 +166,7 @@ const ChatModerno = () => {
   // Context
   const { user, socket } = React.useContext(AuthContext);
   const { tabOpen, setTabOpen, currentTicket, setCurrentTicket } = React.useContext(TicketsContext);
+  const { replyingMessage, setReplyingMessage } = useContext(ReplyMessageContext);
   
   // Estados
   const [selectedChatId, setSelectedChatId] = useState(null);
@@ -174,8 +180,6 @@ const ChatModerno = () => {
   // Estados do chat
   const [showSidebar, setShowSidebar] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
-  const [reply, setReply] = useState(false);
-  const [replyData, setReplyData] = useState({});
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [isForward, setIsForward] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -189,6 +193,10 @@ const ChatModerno = () => {
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
   const [lastSeenMessageId, setLastSeenMessageId] = useState(null);
+  
+  // Estado para modal de deletar mensagem
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState(null);
   
   // Estados dos filtros - SELECIONADOS (UI apenas)
   const [selectedTags, setSelectedTags] = useState([]);
@@ -657,7 +665,7 @@ const ChatModerno = () => {
   const sleep = useCallback((ms) => new Promise(resolve => setTimeout(resolve, ms)), []);
 
   // 🚀 BACKGROUND PROCESSING COM RETRY INTELIGENTE
-  const sendToBackend = useCallback(async (tempId, messageText) => {
+  const sendToBackend = useCallback(async (tempId, messageText, quotedMessage = null) => {
     const maxRetries = 3;
     let attempt = 0;
     
@@ -673,7 +681,7 @@ const ChatModerno = () => {
           fromMe: true,
           mediaUrl: "",
           body: messageText.trim(),
-          quotedMsg: null,
+          quotedMsg: quotedMessage, // Incluir mensagem citada se existir
           isPrivate: "false"
         };
         
@@ -757,7 +765,7 @@ const ChatModerno = () => {
       })));
       
       // Reenviar
-      sendToBackend(tempId, message.body).catch(error => {
+      sendToBackend(tempId, message.body, message.quotedMsg).catch(error => {
         console.error('Erro no retry manual:', error);
       });
     }
@@ -820,13 +828,44 @@ const ChatModerno = () => {
   }, [tickets, selectedChatId, setCurrentTicket, history]);
   
   
-  // Scroll to bottom
+  // Scroll to bottom - Método mais robusto
   const scrollToBottom = useCallback(() => {
+    // Método 1: Usar messagesEndRef (mais confiável)
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'end',
+        inline: 'nearest'
+      });
+      return;
+    }
+    
+    // Método 2: Fallback usando chatHeightRef
     if (chatHeightRef.current) {
       const scrollElement = chatHeightRef.current.querySelector('[data-scrollable]');
       if (scrollElement) {
         scrollElement.scrollTop = scrollElement.scrollHeight;
       }
+    }
+  }, []);
+
+  // Scroll para mensagem específica (reply click)
+  const scrollToMessage = useCallback((messageId) => {
+    if (!messageId) return;
+    
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageElement) {
+      messageElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center',
+        inline: 'nearest'
+      });
+      
+      // Destacar mensagem temporariamente
+      messageElement.style.backgroundColor = 'var(--hover-bg-medium)';
+      setTimeout(() => {
+        messageElement.style.backgroundColor = '';
+      }, 2000);
     }
   }, []);
 
@@ -992,9 +1031,28 @@ const ChatModerno = () => {
         }
         
         // 🚀 SCROLL INICIAL ao abrir conversa (após carregar mensagens)
-        setTimeout(() => {
-          scrollToBottom();
-        }, 200);
+        // Scroll instantâneo sem animação para abertura de conversa
+        const scrollToBottomInstant = () => {
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ 
+              behavior: 'instant', 
+              block: 'end',
+              inline: 'nearest'
+            });
+          } else if (chatHeightRef.current) {
+            const scrollElement = chatHeightRef.current.querySelector('[data-scrollable]');
+            if (scrollElement) {
+              scrollElement.scrollTop = scrollElement.scrollHeight;
+            }
+          }
+        };
+        
+        // Múltiplas tentativas para garantir o scroll
+        requestAnimationFrame(() => {
+          scrollToBottomInstant();
+          setTimeout(scrollToBottomInstant, 100);
+          setTimeout(scrollToBottomInstant, 300);
+        });
         
       } catch (error) {
         console.error('Error loading messages:', error);
@@ -1009,16 +1067,35 @@ const ChatModerno = () => {
   }, [selectedChatId]);
 
   // 🚀 CONTROLE DE SCROLL INTELIGENTE
-  // Removido scroll automático geral - só fazemos scroll quando EU envio mensagem
-  // useEffect(() => {
-  //   scrollToBottom();
-  // }, [messages, scrollToBottom]);
+  // Scroll automático quando mensagens são carregadas pela primeira vez (conversa aberta)
+  useEffect(() => {
+    if (messages && messages.length > 0 && !messagesLoading && selectedChatId) {
+      // Scroll instantâneo para última mensagem ao abrir conversa
+      const scrollToEnd = () => {
+        if (messagesEndRef.current) {
+          console.log('📍 Fazendo scroll para última mensagem:', messages.length, 'mensagens');
+          messagesEndRef.current.scrollIntoView({ 
+            behavior: 'instant', 
+            block: 'end',
+            inline: 'nearest'
+          });
+        } else {
+          console.log('❌ messagesEndRef não encontrado');
+        }
+      };
+      
+      // Múltiplas tentativas com requestAnimationFrame
+      requestAnimationFrame(() => {
+        scrollToEnd();
+        setTimeout(scrollToEnd, 50);
+        setTimeout(scrollToEnd, 200);
+      });
+    }
+  }, [messages.length, messagesLoading, selectedChatId]);
 
   // Handle chat selection
   const openChat = (chatId) => {
     setSelectedChatId(chatId);
-    setReply(false);
-    setReplyData({});
     
     // Atualizar URL com o UUID do ticket
     if (tickets && tickets.length > 0) {
@@ -1051,7 +1128,7 @@ const ChatModerno = () => {
       mediaUrl: "",
       mediaType: "chat",
       read: false,
-      quotedMsg: null,
+      quotedMsg: replyingMessage, // Incluir mensagem sendo respondida
       isPrivate: false
     };
     
@@ -1065,33 +1142,50 @@ const ChatModerno = () => {
       createdAt: Date.now()
     })));
     
-    // Clear reply para UX fluida
-    setReply(false);
-    setReplyData({});
     
     // 🚀 SCROLL AUTOMÁTICO - Desce pro final quando EU envio
     scrollToBottomOnSend();
     
     // 🚀 ENVIO BACKGROUND ASSÍNCRONO
-    sendToBackend(tempId, message.trim()).catch(error => {
+    sendToBackend(tempId, message.trim(), replyingMessage).catch(error => {
       console.error('Erro no envio background:', error);
     });
   };
 
-  // Handle delete message - implementação real baseada no chat antigo
-  const handleDeleteMessage = async (messageId) => {
+  // Handle delete message - Agora abre modal ao invés de deletar diretamente
+  const handleDeleteMessage = (messageId) => {
+    const message = allMessages.find(msg => msg.id === messageId);
+    setMessageToDelete({ id: messageId, text: message?.body || '' });
+    setDeleteModalOpen(true);
+  };
+
+  // Deletar mensagem (apenas para todos)
+  const handleDeleteForAll = async () => {
+    if (!messageToDelete) return;
+    
     try {
       // Fazer a requisição DELETE para a API (mesma lógica do chat antigo)
-      await api.delete(`/messages/${messageId}`);
+      await api.delete(`/messages/${messageToDelete.id}`);
       
-      // Remove from pinned messages if exists (usar messageId ao invés de index)
+      // Remove from pinned messages if exists
       setPinnedMessages(prev => 
-        prev.filter(msg => msg.id !== messageId)
+        prev.filter(msg => msg.id !== messageToDelete.id)
       );
       
-      // Não precisamos recarregar as mensagens manualmente
+      // Atualizar estado local imediatamente para feedback visual
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageToDelete.id 
+          ? { 
+              ...msg, 
+              isDeleted: true, 
+              originalBody: messageToDelete.text, // Usar o texto original salvo
+              deletedForAll: true,               // Flag para tooltip
+              body: '🚫 Você apagou esta mensagem' 
+            }
+          : msg
+      ));
+      
       // O socket.io vai atualizar automaticamente via listener `appMessage`
-      // com action "update" ou "delete"
       
     } catch (error) {
       console.error('Error deleting message:', error);
@@ -1099,14 +1193,6 @@ const ChatModerno = () => {
     }
   };
 
-  // Handle reply
-  const handleReply = (message, contact) => {
-    setReply(true);
-    setReplyData({
-      message: message,
-      contact: contact,
-    });
-  };
 
   // Handle pin message
   const handlePinMessage = (messageData) => {
@@ -1127,6 +1213,23 @@ const ChatModerno = () => {
   const handleForward = () => {
     setIsForward(!isForward);
   };
+
+  // Handle scroll to reply message - navegar até mensagem original
+  const handleScrollToMessage = useCallback((messageId) => {
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageElement) {
+      messageElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+      
+      // Adicionar efeito de destaque temporário
+      messageElement.style.backgroundColor = 'rgba(37, 211, 102, 0.3)'; // Verde WhatsApp
+      setTimeout(() => {
+        messageElement.style.backgroundColor = '';
+      }, 2000);
+    }
+  }, []);
 
   // Handle show info
   const handleShowInfo = () => {
@@ -1432,9 +1535,9 @@ const ChatModerno = () => {
       title=""
       showBreadcrumb={false}
     >
-      <Box sx={{
-        display: 'flex',
-        height: '100%',
+        <Box sx={{
+          display: 'flex',
+          height: '100%',
         gap: '16px',
         position: 'relative',
         overflow: 'hidden',
@@ -2033,12 +2136,11 @@ const ChatModerno = () => {
                                     onDelete={handleDeleteMessage}
                                     index={index}
                                     selectedChatId={selectedChatId}
-                                    handleReply={handleReply}
-                                    replyData={replyData}
                                     handleForward={handleForward}
                                     handlePinMessage={handlePinMessage}
                                     pinnedMessages={pinnedMessages}
                                     showDateSeparator={showDateSeparator}
+                                    onScrollToMessage={scrollToMessage}
                                   />
                                 );
                               })
@@ -2145,9 +2247,6 @@ const ChatModerno = () => {
                 }}>
                   <MessageInput
                     onSendMessage={handleSendMessage}
-                    reply={reply}
-                    setReply={setReply}
-                    replyData={replyData}
                     disabled={messagesLoading}
                   />
                 </Box>
@@ -2184,8 +2283,28 @@ const ChatModerno = () => {
           onClose={() => setShowNewConversationModal(false)}
           onCreateTicket={handleCreateTicket}
         />
-      </Box>
+        
+        {/* Modal de Deletar Mensagem */}
+        <DeleteMessageModal
+          open={deleteModalOpen}
+          onClose={() => {
+            setDeleteModalOpen(false);
+            setMessageToDelete(null);
+          }}
+          onDeleteForAll={handleDeleteForAll}
+          messageText={messageToDelete?.text}
+        />
+        </Box>
     </ChatPageBase>
+  );
+};
+
+// Componente wrapper que fornece o ReplyMessageContext
+const ChatModerno = () => {
+  return (
+    <ReplyMessageProvider>
+      <ChatModernoContent />
+    </ReplyMessageProvider>
   );
 };
 

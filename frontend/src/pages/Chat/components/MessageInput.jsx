@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Box, Typography, IconButton, TextField } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { cn } from '../../../utils/cn';
@@ -27,6 +27,9 @@ import {
 
 // SVGs customizados do projeto
 import AdicionarIcon from '../../../assets/iconeswhatize/adicionar.svg';
+
+// Context API do sistema original
+import { ReplyMessageContext } from '../../../context/ReplyingMessage/ReplyingMessageContext';
 import NovoArquivoIcon from '../../../assets/iconeswhatize/novo-arquivo.svg';
 import GaleriaImagensIcon from '../../../assets/iconeswhatize/galeria-de-imagens.svg';
 import MandarIcon from '../../../assets/iconeswhatize/mandar.svg';
@@ -42,10 +45,15 @@ const ReplyContainer = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   justifyContent: 'space-between',
   padding: '12px 16px',
-  backgroundColor: 'var(--bg-secondary)',
+  backgroundColor: '#e1f5e1', // Verde claro como WhatsApp
   borderRadius: '8px 8px 0 0',
   marginBottom: '8px',
-  borderLeft: '3px solid var(--color-accent)',
+  borderLeft: '4px solid #25d366', // Verde WhatsApp
+  cursor: 'pointer', // Cursor de ponteiro para indicar clicabilidade
+  transition: 'background-color 0.2s ease',
+  '&:hover': {
+    backgroundColor: '#d4f1d4', // Escurece um pouco no hover
+  },
 }));
 
 const ReplyContent = styled(Box)(() => ({
@@ -191,9 +199,6 @@ const mockEmojis = [
 
 const MessageInput = ({ 
   onSendMessage, 
-  reply, 
-  setReply, 
-  replyData,
   disabled = false 
 }) => {
   const [message, setMessage] = useState('');
@@ -201,6 +206,9 @@ const MessageInput = ({
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // Context API - igual ao chat antigo
+  const { setReplyingMessage, replyingMessage } = useContext(ReplyMessageContext);
 
   // Auto-resize textarea
   const handleTextChange = (e) => {
@@ -228,7 +236,7 @@ const MessageInput = ({
     console.log('✅ Enviando mensagem:', message.trim());
     onSendMessage(message.trim());
     setMessage('');
-    setReply(false);
+    setReplyingMessage(null); // Limpar reply após enviar
     
     // Reset textarea height
     if (textareaRef.current) {
@@ -277,36 +285,50 @@ const MessageInput = ({
     }
   };
 
-  // Cancel reply
-  const handleCancelReply = () => {
-    setReply(false);
+
+  // Render reply preview igual ao chat antigo
+  const renderReplyingMessage = (message) => {
+    return (
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
+        padding: '8px 16px',
+        backgroundColor: '#e1f5e1',
+        borderLeft: '4px solid #25d366',
+        marginBottom: '8px'
+      }}>
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: '#25d366' }}>
+            Respondendo a {message.fromMe ? 'você' : (message.contact?.name || 'Contato')}
+          </Typography>
+          <Typography variant="body2" sx={{ 
+            color: 'var(--text-primary)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: '200px'
+          }}>
+            {message.body || 'Mensagem'}
+          </Typography>
+        </Box>
+        <IconButton 
+          size="small" 
+          onClick={() => setReplyingMessage(null)}
+          sx={{ 
+            ml: 1,
+            color: 'var(--text-secondary)'
+          }}
+        >
+          <X size={16} />
+        </IconButton>
+      </Box>
+    );
   };
 
   return (
     <InputContainer>
       {/* Reply Preview */}
-      {reply && replyData && (
-        <ReplyContainer>
-          <ReplyContent>
-            <ReplyTitle>
-              Respondendo a {replyData?.contact?.name}
-            </ReplyTitle>
-            <ReplyMessage>
-              {replyData?.message}
-            </ReplyMessage>
-          </ReplyContent>
-          
-          <Tooltip title="Cancelar resposta">
-            <IconButton 
-              size="small" 
-              onClick={handleCancelReply}
-              sx={{ ml: 1, p: 0.5 }}
-            >
-              <X size={16} />
-            </IconButton>
-          </Tooltip>
-        </ReplyContainer>
-      )}
+      {replyingMessage && renderReplyingMessage(replyingMessage)}
 
       {/* Input Row */}
       <InputRow>
