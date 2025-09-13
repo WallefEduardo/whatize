@@ -22,7 +22,8 @@ import {
 // Heroicons para ícones mais bonitos
 import {
   PhotoIcon,
-  GifIcon
+  GifIcon,
+  ArrowTopRightOnSquareIcon
 } from '@heroicons/react/24/outline';
 
 // SVGs customizados do projeto
@@ -30,6 +31,7 @@ import AdicionarIcon from '../../../assets/iconeswhatize/adicionar.svg';
 
 // Context API do sistema original
 import { ReplyMessageContext } from '../../../context/ReplyingMessage/ReplyingMessageContext';
+import { ForwardMessageContext } from '../../../context/ForwarMessage/ForwardMessageContext';
 import NovoArquivoIcon from '../../../assets/iconeswhatize/novo-arquivo.svg';
 import GaleriaImagensIcon from '../../../assets/iconeswhatize/galeria-de-imagens.svg';
 import MandarIcon from '../../../assets/iconeswhatize/mandar.svg';
@@ -209,6 +211,15 @@ const MessageInput = ({
 
   // Context API - igual ao chat antigo
   const { setReplyingMessage, replyingMessage } = useContext(ReplyMessageContext);
+  
+  // Context API para forward - modo de seleção
+  const { 
+    showSelectMessageCheckbox,
+    setShowSelectMessageCheckbox,
+    selectedMessages,
+    setSelectedMessages,
+    setForwardMessageModalOpen 
+  } = useContext(ForwardMessageContext);
 
   // Auto-resize textarea
   const handleTextChange = (e) => {
@@ -285,6 +296,16 @@ const MessageInput = ({
     }
   };
 
+  // Funções para modo de seleção de mensagens
+  const handleCancelSelection = () => {
+    setShowSelectMessageCheckbox(false);
+    setSelectedMessages([]);
+  };
+
+  const handleForwardSelected = () => {
+    setForwardMessageModalOpen(true);
+  };
+
 
   // Render reply preview igual ao chat antigo
   const renderReplyingMessage = (message) => {
@@ -330,15 +351,139 @@ const MessageInput = ({
       {/* Reply Preview */}
       {replyingMessage && renderReplyingMessage(replyingMessage)}
 
-      {/* Input Row */}
+      {/* Input Row - Modo normal ou modo de seleção */}
       <InputRow>
-        {/* Actions */}
-        <ActionsContainer>
-          {/* Attachment Dropdown */}
-          <Dropdown open={isAttachOpen} onOpenChange={setIsAttachOpen}>
-            <DropdownTrigger asChild>
-              <Tooltip title="Anexar arquivo">
+        {showSelectMessageCheckbox ? (
+          // Modo de seleção - Interface estilo WhatsApp
+          <>
+            {/* Botão X para cancelar seleção */}
+            <IconButton
+              onClick={handleCancelSelection}
+              sx={{
+                p: 1,
+                color: 'var(--text-secondary)',
+                '&:hover': { 
+                  color: 'var(--text-primary)',
+                  backgroundColor: 'var(--bg-secondary)'
+                }
+              }}
+            >
+              <X size={20} />
+            </IconButton>
+
+            {/* Contador de mensagens selecionadas */}
+            <Box sx={{ 
+              flex: 1, 
+              display: 'flex', 
+              alignItems: 'center', 
+              paddingLeft: '12px'
+            }}>
+              <Typography variant="body1" sx={{ 
+                fontWeight: 600,
+                color: 'var(--text-primary)'
+              }}>
+                {selectedMessages.length} selecionada{selectedMessages.length !== 1 ? 's' : ''}
+              </Typography>
+            </Box>
+
+            {/* Botão de encaminhar */}
+            <IconButton
+              onClick={handleForwardSelected}
+              disabled={selectedMessages.length === 0}
+              sx={{
+                p: 1.5,
+                backgroundColor: 'var(--color-accent)',
+                color: 'white',
+                '&:hover': { 
+                  backgroundColor: 'var(--color-green-hover)'
+                },
+                '&.Mui-disabled': {
+                  backgroundColor: 'var(--bg-tertiary)',
+                  color: 'var(--text-disabled)'
+                }
+              }}
+            >
+              <ArrowTopRightOnSquareIcon style={{ width: '20px', height: '20px' }} />
+            </IconButton>
+          </>
+        ) : (
+          // Modo normal - Interface de chat normal
+          <>
+            {/* Actions */}
+            <ActionsContainer>
+              {/* Attachment Dropdown */}
+              <Dropdown open={isAttachOpen} onOpenChange={setIsAttachOpen}>
+                <DropdownTrigger asChild>
+                  <Tooltip title="Anexar arquivo">
+                    <IconButton
+                      sx={{
+                        p: 1,
+                        color: 'var(--color-accent)',
+                        '&:hover': { 
+                          color: 'var(--color-green-hover)',
+                          backgroundColor: 'rgba(0, 195, 7, 0.1)'
+                        }
+                      }}
+                    >
+                      <img 
+                        src={AdicionarIcon} 
+                        alt="Adicionar" 
+                        style={{ 
+                          width: '20px', 
+                          height: '20px',
+                          filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
+                        }} 
+                      />
+                    </IconButton>
+                  </Tooltip>
+                </DropdownTrigger>
+                
+                <DropdownContent align="start" side="top">
+                  <DropdownItem 
+                    onClick={handleFileAttach}
+                    icon={<img 
+                      src={GaleriaImagensIcon} 
+                      alt="Foto" 
+                      style={{ 
+                        width: '16px', 
+                        height: '16px',
+                        filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
+                      }} 
+                    />}
+                  >
+                    Foto ou Vídeo
+                  </DropdownItem>
+                  <DropdownItem 
+                    onClick={handleFileAttach}
+                    icon={<img 
+                      src={NovoArquivoIcon} 
+                      alt="Documento" 
+                      style={{ 
+                        width: '16px', 
+                        height: '16px',
+                        filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
+                      }} 
+                    />}
+                  >
+                    Documento
+                  </DropdownItem>
+                  <DropdownItem 
+                    icon={<Mic size={16} />}
+                  >
+                    Áudio
+                  </DropdownItem>
+                  <DropdownItem 
+                    icon={<GifIcon style={{ width: '16px', height: '16px' }} />}
+                  >
+                    GIF
+                  </DropdownItem>
+                </DropdownContent>
+              </Dropdown>
+
+              {/* Photo/Gallery Icon */}
+              <Tooltip title="Enviar foto">
                 <IconButton
+                  onClick={handleFileAttach}
                   sx={{
                     p: 1,
                     color: 'var(--color-accent)',
@@ -349,8 +494,8 @@ const MessageInput = ({
                   }}
                 >
                   <img 
-                    src={AdicionarIcon} 
-                    alt="Adicionar" 
+                    src={GaleriaImagensIcon} 
+                    alt="Galeria" 
                     style={{ 
                       width: '20px', 
                       height: '20px',
@@ -359,185 +504,119 @@ const MessageInput = ({
                   />
                 </IconButton>
               </Tooltip>
-            </DropdownTrigger>
-            
-            <DropdownContent align="start" side="top">
-              <DropdownItem 
-                onClick={handleFileAttach}
-                icon={<img 
-                  src={GaleriaImagensIcon} 
-                  alt="Foto" 
-                  style={{ 
-                    width: '16px', 
-                    height: '16px',
-                    filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
-                  }} 
-                />}
-              >
-                Foto ou Vídeo
-              </DropdownItem>
-              <DropdownItem 
-                onClick={handleFileAttach}
-                icon={<img 
-                  src={NovoArquivoIcon} 
-                  alt="Documento" 
-                  style={{ 
-                    width: '16px', 
-                    height: '16px',
-                    filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
-                  }} 
-                />}
-              >
-                Documento
-              </DropdownItem>
-              <DropdownItem 
-                icon={<Mic size={16} />}
-              >
-                Áudio
-              </DropdownItem>
-              <DropdownItem 
-                icon={<GifIcon style={{ width: '16px', height: '16px' }} />}
-              >
-                GIF
-              </DropdownItem>
-            </DropdownContent>
-          </Dropdown>
 
-          {/* Photo/Gallery Icon */}
-          <Tooltip title="Enviar foto">
-            <IconButton
-              onClick={handleFileAttach}
-              sx={{
-                p: 1,
-                color: 'var(--color-accent)',
-                '&:hover': { 
-                  color: 'var(--color-green-hover)',
-                  backgroundColor: 'rgba(0, 195, 7, 0.1)'
-                }
-              }}
-            >
-              <img 
-                src={GaleriaImagensIcon} 
-                alt="Galeria" 
-                style={{ 
-                  width: '20px', 
-                  height: '20px',
-                  filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
-                }} 
+              {/* Document Icon */}
+              <Tooltip title="Enviar documento">
+                <IconButton
+                  onClick={handleFileAttach}
+                  sx={{
+                    p: 1,
+                    color: 'var(--color-accent)',
+                    '&:hover': { 
+                      color: 'var(--color-green-hover)',
+                      backgroundColor: 'rgba(0, 195, 7, 0.1)'
+                    }
+                  }}
+                >
+                  <img 
+                    src={NovoArquivoIcon} 
+                    alt="Documento" 
+                    style={{ 
+                      width: '20px', 
+                      height: '20px',
+                      filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
+                    }} 
+                  />
+                </IconButton>
+              </Tooltip>
+
+              {/* Hidden File Input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+                accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               />
-            </IconButton>
-          </Tooltip>
+            </ActionsContainer>
 
-          {/* Document Icon */}
-          <Tooltip title="Enviar documento">
-            <IconButton
-              onClick={handleFileAttach}
-              sx={{
-                p: 1,
-                color: 'var(--color-accent)',
-                '&:hover': { 
-                  color: 'var(--color-green-hover)',
-                  backgroundColor: 'rgba(0, 195, 7, 0.1)'
-                }
-              }}
-            >
-              <img 
-                src={NovoArquivoIcon} 
-                alt="Documento" 
-                style={{ 
-                  width: '20px', 
-                  height: '20px',
-                  filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
-                }} 
-              />
-            </IconButton>
-          </Tooltip>
-
-          {/* Hidden File Input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
-            accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          />
-        </ActionsContainer>
-
-        {/* Message Input */}
-        <Box sx={{ flex: 1, position: 'relative' }}>
-          <MessageTextArea
-            ref={textareaRef}
-            placeholder="Digite sua mensagem..."
-            value={message}
-            onChange={handleTextChange}
-            onKeyDown={handleKeyDown}
-            disabled={disabled}
-            variant="outlined"
-            InputProps={{
-              endAdornment: (
-                <Popover open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
-                  <PopoverTrigger asChild>
-                    <EmojiButton>
-                      <Smile size={20} />
-                    </EmojiButton>
-                  </PopoverTrigger>
-                  
-                  <PopoverContent 
-                    align="end" 
-                    side="top"
-                    size="auto"
-                  >
-                    <Box sx={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(10, 1fr)',
-                      gap: '4px',
-                      p: 1,
-                      maxWidth: '280px'
-                    }}>
-                      {mockEmojis.map((emoji, index) => (
-                        <Box
-                          key={index}
-                          onClick={() => handleEmojiSelect(emoji)}
-                          sx={{
-                            width: '24px',
-                            height: '24px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            borderRadius: '4px',
-                            fontSize: '16px',
-                            '&:hover': {
-                              backgroundColor: 'var(--bg-secondary)',
-                            },
-                          }}
-                        >
-                          {emoji}
+            {/* Message Input */}
+            <Box sx={{ flex: 1, position: 'relative' }}>
+              <MessageTextArea
+                ref={textareaRef}
+                placeholder="Digite sua mensagem..."
+                value={message}
+                onChange={handleTextChange}
+                onKeyDown={handleKeyDown}
+                disabled={disabled}
+                variant="outlined"
+                InputProps={{
+                  endAdornment: (
+                    <Popover open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
+                      <PopoverTrigger asChild>
+                        <EmojiButton>
+                          <Smile size={20} />
+                        </EmojiButton>
+                      </PopoverTrigger>
+                      
+                      <PopoverContent 
+                        align="end" 
+                        side="top"
+                        size="auto"
+                      >
+                        <Box sx={{ 
+                          display: 'grid', 
+                          gridTemplateColumns: 'repeat(10, 1fr)',
+                          gap: '4px',
+                          p: 1,
+                          maxWidth: '280px'
+                        }}>
+                          {mockEmojis.map((emoji, index) => (
+                            <Box
+                              key={index}
+                              onClick={() => handleEmojiSelect(emoji)}
+                              sx={{
+                                width: '24px',
+                                height: '24px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                borderRadius: '4px',
+                                fontSize: '16px',
+                                '&:hover': {
+                                  backgroundColor: 'var(--bg-secondary)',
+                                },
+                              }}
+                            >
+                              {emoji}
+                            </Box>
+                          ))}
                         </Box>
-                      ))}
-                    </Box>
-                  </PopoverContent>
-                </Popover>
-              )
-            }}
-          />
-        </Box>
+                      </PopoverContent>
+                    </Popover>
+                  )
+                }}
+              />
+            </Box>
 
-        {/* Send Button */}
-        <SendButton
-          onClick={handleSubmit}
-          disabled={!message.trim() || disabled}
-        >
-          <img 
-            src={MandarIcon} 
-            alt="Enviar" 
-            style={{ 
-              width: '18px', 
-              height: '18px',
-              filter: 'brightness(0) invert(1)'
-            }} 
-          />
-        </SendButton>
+            {/* Send Button */}
+            <SendButton
+              onClick={handleSubmit}
+              disabled={!message.trim() || disabled}
+            >
+              <img 
+                src={MandarIcon} 
+                alt="Enviar" 
+                style={{ 
+                  width: '18px', 
+                  height: '18px',
+                  filter: 'brightness(0) invert(1)'
+                }} 
+              />
+            </SendButton>
+          </>
+        )}
       </InputRow>
     </InputContainer>
   );

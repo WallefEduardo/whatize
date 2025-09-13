@@ -44,7 +44,9 @@ import toastError from '../../errors/toastError';
 
 // Context API do sistema original
 import { ReplyMessageProvider, ReplyMessageContext } from '../../context/ReplyingMessage/ReplyingMessageContext';
+import { ForwardMessageProvider, ForwardMessageContext } from '../../context/ForwarMessage/ForwardMessageContext';
 import DeleteMessageModal from '../../components/DeleteMessageModal';
+import ModernForwardMessageModal from '../../components/ForwardMessageModal/ModernForwardMessageModal';
 
 // Hook de tickets do sistema original
 import useTickets from '../../hooks/useTickets';
@@ -167,6 +169,14 @@ const ChatModernoContent = () => {
   const { user, socket } = React.useContext(AuthContext);
   const { tabOpen, setTabOpen, currentTicket, setCurrentTicket } = React.useContext(TicketsContext);
   const { replyingMessage, setReplyingMessage } = useContext(ReplyMessageContext);
+  const { 
+    showSelectMessageCheckbox,
+    setShowSelectMessageCheckbox,
+    selectedMessages,
+    setSelectedMessages,
+    forwardMessageModalOpen,
+    setForwardMessageModalOpen 
+  } = useContext(ForwardMessageContext);
   
   // Estados
   const [selectedChatId, setSelectedChatId] = useState(null);
@@ -197,6 +207,10 @@ const ChatModernoContent = () => {
   // Estado para modal de deletar mensagem
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState(null);
+  
+  // Estados para encaminhar mensagem
+  const [forwardModalOpen, setForwardModalOpen] = useState(false);
+  const [messageToForward, setMessageToForward] = useState(null);
   
   // Estados dos filtros - SELECIONADOS (UI apenas)
   const [selectedTags, setSelectedTags] = useState([]);
@@ -1209,9 +1223,15 @@ const ChatModernoContent = () => {
     });
   };
 
-  // Handle forward
-  const handleForward = () => {
-    setIsForward(!isForward);
+  // Handle forward - ativar modo de seleção estilo WhatsApp
+  const handleForward = (messageId) => {
+    const message = allMessages.find(msg => msg.id === messageId);
+    if (message) {
+      // Ativar modo de seleção
+      setShowSelectMessageCheckbox(true);
+      // Limpar seleções anteriores e selecionar esta mensagem
+      setSelectedMessages([message]);
+    }
   };
 
   // Handle scroll to reply message - navegar até mensagem original
@@ -2294,16 +2314,31 @@ const ChatModernoContent = () => {
           onDeleteForAll={handleDeleteForAll}
           messageText={messageToDelete?.text}
         />
+        
+        {/* Modal de Encaminhar Mensagem */}
+        <ModernForwardMessageModal
+          modalOpen={forwardMessageModalOpen}
+          messages={selectedMessages.length > 0 ? selectedMessages : (messageToForward || [])}
+          onClose={() => {
+            setForwardMessageModalOpen(false);
+            setMessageToForward(null);
+            // Resetar modo de seleção
+            setShowSelectMessageCheckbox(false);
+            setSelectedMessages([]);
+          }}
+        />
         </Box>
     </ChatPageBase>
   );
 };
 
-// Componente wrapper que fornece o ReplyMessageContext
+// Componente wrapper que fornece o ReplyMessageContext e ForwardMessageContext
 const ChatModerno = () => {
   return (
     <ReplyMessageProvider>
-      <ChatModernoContent />
+      <ForwardMessageProvider>
+        <ChatModernoContent />
+      </ForwardMessageProvider>
     </ReplyMessageProvider>
   );
 };

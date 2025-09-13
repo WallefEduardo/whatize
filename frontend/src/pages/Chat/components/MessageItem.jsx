@@ -1,11 +1,12 @@
 import React, { useState, useContext } from 'react';
-import { Box, Typography, IconButton, Tooltip } from '@mui/material';
+import { Box, Typography, IconButton, Tooltip, Checkbox } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { cn } from '../../../utils/cn';
 import { formatTime, formatDateSeparator, isSameDay } from '../data/mockData';
 
 // Context API do chat antigo
 import { ReplyMessageContext } from '../../../context/ReplyingMessage/ReplyingMessageContext';
+import { ForwardMessageContext } from '../../../context/ForwarMessage/ForwardMessageContext';
 
 // Nossos componentes UI
 import { Avatar } from '../../../components/ui/AvatarOptimized';
@@ -28,15 +29,33 @@ import {
 } from '@heroicons/react/24/solid';
 
 const MessageContainer = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'isSent'
-})(({ theme, isSent }) => ({
+  shouldForwardProp: (prop) => !['isSent', 'showCheckbox', 'isSelected'].includes(prop)
+})(({ theme, isSent, showCheckbox, isSelected }) => ({
   display: 'flex',
   gap: '8px',
   alignItems: 'flex-start',
   marginBottom: '16px',
-  padding: isSent ? '0 32px 0 16px' : '0 16px 0 32px', // Mais espaço nas bordas para ambos os lados
+  padding: showCheckbox 
+    ? '0 16px 0 50px' // Quando tem checkbox, espaço para checkbox + margem
+    : (isSent ? '0 32px 0 16px' : '0 16px 0 32px'), // Padding normal
   flexDirection: 'row',
   justifyContent: isSent ? 'flex-end' : 'flex-start', // Justifica para direita se enviada
+  position: 'relative',
+  
+  // LAYOUT SEMPRE FIXO - nunca muda
+  padding: showCheckbox 
+    ? '0 16px 0 50px' // Quando tem checkbox, padding fixo
+    : (isSent ? '0 32px 0 16px' : '0 16px 0 32px'), // Padding normal
+    
+  // Faixa verde bem transparente - quase invisível
+  backgroundColor: isSelected && showCheckbox 
+    ? 'rgba(37, 211, 102, 0.08)' // Bem sutil
+    : 'transparent',
+    
+  // Estender faixa com box-shadow (mesma transparência)
+  boxShadow: isSelected && showCheckbox 
+    ? '-16px 0 0 0 rgba(37, 211, 102, 0.08), 16px 0 0 0 rgba(37, 211, 102, 0.08)'
+    : 'none',
   
   '&:hover .message-actions': {
     opacity: 1,
@@ -44,13 +63,14 @@ const MessageContainer = styled(Box, {
 }));
 
 const MessageContent = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'isSent'
-})(({ theme, isSent }) => ({
+  shouldForwardProp: (prop) => !['isSent', 'showCheckbox'].includes(prop)
+})(({ theme, isSent, showCheckbox }) => ({
   display: 'flex',
   flexDirection: 'column',
   maxWidth: '70%',
   gap: '4px',
   alignItems: isSent ? 'flex-end' : 'flex-start',
+  marginLeft: '0', // Sem margem extra, usa o padding do container
 }));
 
 const MessageBubble = styled(Box, {
@@ -259,6 +279,13 @@ const MessageItem = ({
 }) => {
   // Context API para reply - igual ao chat antigo
   const { setReplyingMessage } = useContext(ReplyMessageContext);
+  
+  // Context API para forward - igual ao chat antigo
+  const { 
+    showSelectMessageCheckbox,
+    selectedMessages,
+    setSelectedMessages 
+  } = useContext(ForwardMessageContext);
   // Adaptar para API real - usar campos reais da mensagem
   const messageText = message.body || message.content || '';
   const messageTime = message.createdAt || message.timestamp;
@@ -270,16 +297,7 @@ const MessageItem = ({
   const deletedForAll = message.deletedForAll || false; // Flag para tooltip
   const originalBody = message.originalBody || ''; // Mensagem original
   
-  // Debug para tooltip
-  if (isDeleted) {
-    console.log('🐛 MessageItem Debug:', {
-      messageId,
-      isDeleted,
-      deletedForAll,
-      originalBody: originalBody || 'vazio',
-      messageText
-    });
-  }
+  // Debug removido para limpar console
   
   // ✅ Determinar o remetente correto
   // Para mensagens enviadas: usar dados do usuário remetente se disponível, senão fallback para profile
@@ -304,7 +322,10 @@ const MessageItem = ({
   };
 
   const handleForwardMessage = () => {
-    handleForward();
+    // Se não estamos no modo de seleção, ativar o modo e selecionar esta mensagem
+    if (!showSelectMessageCheckbox) {
+      handleForward(messageId);
+    }
   };
 
   const handlePinMessageLocal = () => {
@@ -325,6 +346,20 @@ const MessageItem = ({
     }
   };
 
+  // Verificar se a mensagem está selecionada
+  const isSelected = selectedMessages.some(msg => msg.id === messageId);
+
+  // Handler para selecionar/deselecionar mensagem
+  const handleSelectMessage = () => {
+    if (isSelected) {
+      // Remover da seleção
+      setSelectedMessages(prev => prev.filter(msg => msg.id !== messageId));
+    } else {
+      // Adicionar à seleção
+      setSelectedMessages(prev => [...prev, message]);
+    }
+  };
+
 
   return (
     <>
@@ -337,9 +372,40 @@ const MessageItem = ({
         </DateSeparator>
       )}
       
-      <MessageContainer isSent={isSent} data-message-id={messageId}>
+      <MessageContainer 
+        isSent={isSent} 
+        showCheckbox={showSelectMessageCheckbox} 
+        isSelected={isSelected}
+        data-message-id={messageId}
+      >
+      {/* Checkbox para seleção - posição absoluta SEMPRE FIXA */}
+      {showSelectMessageCheckbox && (
+        <Box sx={{ 
+          position: 'absolute',
+          left: '8px', // SEMPRE 8px - NUNCA muda
+          top: '12px', // SEMPRE 12px - NUNCA muda
+          zIndex: 2 // Acima da faixa verde
+        }}>
+          <Checkbox
+            checked={isSelected}
+            onChange={handleSelectMessage}
+            size="small"
+            sx={{
+              padding: '4px',
+              color: 'var(--text-secondary)',
+              '&.Mui-checked': {
+                color: 'var(--color-accent)',
+              },
+              '& .MuiSvgIcon-root': {
+                fontSize: '18px',
+              }
+            }}
+          />
+        </Box>
+      )}
+      
       {/* Avatar para mensagens recebidas (esquerda) */}
-      {!isSent && (
+      {!isSent && !showSelectMessageCheckbox && (
         <Box sx={{ flexShrink: 0, alignSelf: 'flex-end', mb: '20px', order: 0 }}>
           <Avatar 
             src={sender?.profileImage || sender?.avatar} 
@@ -406,7 +472,7 @@ const MessageItem = ({
       )}
 
       {/* Message Content */}
-      <MessageContent isSent={isSent} sx={{ order: 1 }}>
+      <MessageContent isSent={isSent} showCheckbox={showSelectMessageCheckbox} sx={{ order: 1, position: 'relative', zIndex: 1 }}>
         {/* Pin Indicator */}
         {isMessagePinned && (
           <PinIndicator>
