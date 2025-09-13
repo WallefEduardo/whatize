@@ -2326,6 +2326,7 @@ const ChatModernoContent = () => {
             setShowSelectMessageCheckbox(false);
             setSelectedMessages([]);
           }}
+          forceTicketsRefresh={forceTicketsRefresh}
         />
         </Box>
     </ChatPageBase>
