@@ -29,8 +29,8 @@ import {
 } from '@heroicons/react/24/solid';
 
 const MessageContainer = styled(Box, {
-  shouldForwardProp: (prop) => !['isSent', 'showCheckbox', 'isSelected'].includes(prop)
-})(({ theme, isSent, showCheckbox, isSelected }) => ({
+  shouldForwardProp: (prop) => !['isSent', 'showCheckbox', 'isSelected', 'isDeleted'].includes(prop)
+})(({ theme, isSent, showCheckbox, isSelected, isDeleted }) => ({
   display: 'flex',
   gap: '8px',
   alignItems: 'flex-start',
@@ -47,13 +47,13 @@ const MessageContainer = styled(Box, {
     ? '0 16px 0 50px' // Quando tem checkbox, padding fixo
     : (isSent ? '0 32px 0 16px' : '0 16px 0 32px'), // Padding normal
     
-  // Faixa verde bem transparente - quase invisível
-  backgroundColor: isSelected && showCheckbox 
+  // Faixa verde bem transparente - quase invisível (não para mensagens deletadas)
+  backgroundColor: isSelected && showCheckbox && !isDeleted
     ? 'rgba(37, 211, 102, 0.08)' // Bem sutil
     : 'transparent',
     
-  // Estender faixa com box-shadow (mesma transparência)
-  boxShadow: isSelected && showCheckbox 
+  // Estender faixa com box-shadow (mesma transparência, não para deletadas)
+  boxShadow: isSelected && showCheckbox && !isDeleted
     ? '-16px 0 0 0 rgba(37, 211, 102, 0.08), 16px 0 0 0 rgba(37, 211, 102, 0.08)'
     : 'none',
   
@@ -349,8 +349,10 @@ const MessageItem = ({
   // Verificar se a mensagem está selecionada
   const isSelected = selectedMessages.some(msg => msg.id === messageId);
 
-  // Handler para selecionar/deselecionar mensagem
+  // Handler para selecionar/deselecionar mensagem (não funciona para deletadas)
   const handleSelectMessage = () => {
+    if (isDeleted) return; // Não permite selecionar mensagens deletadas
+    
     if (isSelected) {
       // Remover da seleção
       setSelectedMessages(prev => prev.filter(msg => msg.id !== messageId));
@@ -376,10 +378,11 @@ const MessageItem = ({
         isSent={isSent} 
         showCheckbox={showSelectMessageCheckbox} 
         isSelected={isSelected}
+        isDeleted={isDeleted}
         data-message-id={messageId}
       >
-      {/* Checkbox para seleção - posição absoluta SEMPRE FIXA */}
-      {showSelectMessageCheckbox && (
+      {/* Checkbox para seleção - posição absoluta SEMPRE FIXA (não aparece para mensagens deletadas) */}
+      {showSelectMessageCheckbox && !isDeleted && (
         <Box sx={{ 
           position: 'absolute',
           left: '8px', // SEMPRE 8px - NUNCA muda
