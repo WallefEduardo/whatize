@@ -67,7 +67,7 @@ const ModalFooter = styled(Box)(() => ({
   backgroundColor: 'var(--bg-primary)',
 }));
 
-const QueueSelectionModal = ({ isOpen, contact, onClose, onCreateAndOpen }) => {
+const QueueSelectionModal = ({ isOpen, contacts, onClose, onCreateAndOpen }) => {
   const { user } = useContext(AuthContext);
   
   // Estados
@@ -117,13 +117,13 @@ const QueueSelectionModal = ({ isOpen, contact, onClose, onCreateAndOpen }) => {
   // Carregar dados quando abrir o modal
   useEffect(() => {
     console.log('🎯 QueueSelectionModal - isOpen mudou para:', isOpen);
-    console.log('👤 QueueSelectionModal - contact:', contact);
+    console.log('👥 QueueSelectionModal - contacts:', contacts);
     if (isOpen) {
       console.log('📤 QueueSelectionModal - Carregando filas e conexões...');
       fetchQueues();
       fetchWhatsapps();
     }
-  }, [isOpen, fetchQueues, fetchWhatsapps]);
+  }, [isOpen, fetchQueues, fetchWhatsapps, contacts]);
 
   // Reset ao fechar
   const handleClose = () => {
@@ -132,34 +132,35 @@ const QueueSelectionModal = ({ isOpen, contact, onClose, onCreateAndOpen }) => {
     onClose();
   };
 
-  // Criar conversa e abrir
+  // Criar conversas para todos os contatos e abrir a primeira
   const handleCreateConversation = async () => {
-    if (!contact || !selectedQueue || !selectedWhatsapp) return;
+    if (!contacts || contacts.length === 0 || !selectedQueue || !selectedWhatsapp) return;
 
     try {
       setLoading(true);
       
-      console.log('🎯 Criando nova conversa para contato encaminhado...');
-      console.log('📋 Dados:', {
-        contactId: contact.id,
+      console.log('🎯 Criando conversas para múltiplos contatos...');
+      console.log('👥 Contatos:', contacts.length);
+      console.log('📋 Dados base:', {
         queueId: selectedQueue.id,
         whatsappId: selectedWhatsapp.id,
         userId: user.id
       });
       
-      const ticketData = {
+      // Criar tickets para todos os contatos
+      const ticketsData = contacts.map(contact => ({
         contactId: contact.id,
         queueId: selectedQueue.id,
         whatsappId: selectedWhatsapp.id,
         userId: user.id,
         status: "open"
-      };
+      }));
 
-      // Chamar callback para criação e abertura
-      await onCreateAndOpen(ticketData);
+      // Chamar callback para criação de múltiplos tickets
+      await onCreateAndOpen(ticketsData, contacts[0]); // Passar o primeiro contato para redirecionamento
       
     } catch (error) {
-      console.error('❌ Erro ao criar conversa:', error);
+      console.error('❌ Erro ao criar conversas:', error);
       toastError(error);
     } finally {
       setLoading(false);
@@ -204,43 +205,67 @@ const QueueSelectionModal = ({ isOpen, contact, onClose, onCreateAndOpen }) => {
         {/* Conteúdo */}
         <ModalContent>
           <Box sx={{ p: '20px 24px', flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {/* Contato selecionado */}
+            {/* Contatos selecionados */}
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'var(--text-primary)' }}>
-                Novo Ticket para
+                {contacts?.length === 1 ? 'Novo Ticket para' : `Novos Tickets para ${contacts?.length || 0} contatos`}
               </Typography>
+              
+              {/* Lista de contatos */}
               <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                p: 2, 
-                backgroundColor: 'var(--bg-secondary)', 
-                borderRadius: '8px',
+                maxHeight: contacts?.length > 3 ? '200px' : 'auto',
+                overflowY: contacts?.length > 3 ? 'auto' : 'visible',
                 border: '2px solid var(--color-accent)',
+                borderRadius: '8px',
+                backgroundColor: 'var(--bg-secondary)',
+                '&::-webkit-scrollbar': {
+                  width: '6px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  backgroundColor: 'var(--bg-primary)',
+                  borderRadius: '3px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  backgroundColor: 'var(--border-primary)',
+                  borderRadius: '3px',
+                },
               }}>
-                <Box sx={{ mr: 2 }}>
-                  <Avatar
-                    src={contact?.urlPicture}
-                    alt={contact?.name || contact?.number}
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      backgroundColor: '#E5F3E5',
-                      color: 'var(--color-accent)',
-                      fontWeight: 600,
-                      fontSize: '14px'
+                {contacts?.map((contact, index) => (
+                  <Box 
+                    key={contact.id}
+                    sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      p: 2,
+                      borderBottom: index < contacts.length - 1 ? '1px solid var(--border-primary)' : 'none',
                     }}
                   >
-                    {!contact?.urlPicture && (contact?.name || contact?.number)?.charAt(0)?.toUpperCase()}
-                  </Avatar>
-                </Box>
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                    {contact?.name || contact?.number}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
-                    {contact?.number}
-                  </Typography>
-                </Box>
+                    <Box sx={{ mr: 2 }}>
+                      <Avatar
+                        src={contact?.urlPicture}
+                        alt={contact?.name || contact?.number}
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          backgroundColor: '#E5F3E5',
+                          color: 'var(--color-accent)',
+                          fontWeight: 600,
+                          fontSize: '12px'
+                        }}
+                      >
+                        {!contact?.urlPicture && (contact?.name || contact?.number)?.charAt(0)?.toUpperCase()}
+                      </Avatar>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                        {contact?.name || contact?.number}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
+                        {contact?.number}
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))}
               </Box>
               
               <Typography 
@@ -252,7 +277,10 @@ const QueueSelectionModal = ({ isOpen, contact, onClose, onCreateAndOpen }) => {
                   fontStyle: 'italic' 
                 }}
               >
-                Este contato não possui conversa ativa. Selecione uma fila para criar um novo ticket.
+                {contacts?.length === 1 
+                  ? 'Este contato não possui conversa ativa. Selecione uma fila para criar um novo ticket.'
+                  : `Estes ${contacts?.length || 0} contatos não possuem conversa ativa. Selecione uma fila para criar novos tickets.`
+                }
               </Typography>
             </Box>
 
@@ -294,15 +322,15 @@ const QueueSelectionModal = ({ isOpen, contact, onClose, onCreateAndOpen }) => {
         <ModalFooter>
           <GradientButton
             onClick={handleCreateConversation}
-            disabled={!contact || !selectedQueue || !selectedWhatsapp || loading}
+            disabled={!contacts || contacts.length === 0 || !selectedQueue || !selectedWhatsapp || loading}
             loading={loading}
-            loadingText="Criando conversa..."
+            loadingText={contacts?.length === 1 ? "Criando conversa..." : `Criando ${contacts?.length || 0} conversas...`}
             icon={<MessageCircle size={18} />}
             variant="primary"
             size="medium"
             sx={{ width: '100%' }}
           >
-            Criar Conversa e Abrir
+            {contacts?.length === 1 ? 'Criar Conversa e Abrir' : `Criar ${contacts?.length || 0} Conversas e Abrir`}
           </GradientButton>
         </ModalFooter>
       </ModalContainer>

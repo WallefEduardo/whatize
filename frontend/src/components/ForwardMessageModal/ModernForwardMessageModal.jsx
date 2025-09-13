@@ -183,7 +183,8 @@ const ModernForwardMessageModal = ({ messages, onClose, modalOpen, onCreateTicke
   const [messageSending, setMessageSending] = useState('');
   const [signMessage, setSignMessage] = useState(true);
   const [showQueueSelection, setShowQueueSelection] = useState(false);
-  const [contactForNewTicket, setContactForNewTicket] = useState(null);
+  const [contactsForNewTickets, setContactsForNewTickets] = useState([]);
+  const [messagesToForward, setMessagesToForward] = useState([]);
 
     // Carregar todos os contatos ao abrir o modal
     useEffect(() => {
@@ -252,132 +253,282 @@ const ModernForwardMessageModal = ({ messages, onClose, modalOpen, onCreateTicke
 
     // Função para enviar mensagens para todos os contatos selecionados
     const sendMessagesToContacts = async () => {
+      console.log('📤 Iniciando envio de mensagens...');
+      console.log('👥 Contatos selecionados:', selectedContacts.length);
+      console.log('📨 Mensagens para enviar:', messages.length);
+      
       setSending(true);
       const responseList = [];
       
       for (const contact of selectedContacts) {
+        console.log(`📤 Enviando para contato: ${contact.name} (ID: ${contact.id})`);
         for (const message of messages) {
           try {
             setMessageSending(`${contact.name} - ${message.id}`);
+            console.log(`📨 Enviando mensagem ${message.id} para contato ${contact.id}`);
             const response = await api.post('/message/forward', {
               messageId: message.id, 
               contactId: contact.id, 
               signMessage: signMessage
             });
             responseList.push(response);
+            console.log(`✅ Mensagem ${message.id} enviada com sucesso`);
             await sleep(500);
           } catch (error) {
+            console.error(`❌ Erro ao enviar mensagem ${message.id} para contato ${contact.id}:`, error);
             toastError(error);
           }		
         }
       }
       setSending(false);
+      console.log('📬 Envio de mensagens finalizado. Total de respostas:', responseList.length);
+      return responseList;
+    };
+
+    // Função para enviar mensagens para contatos específicos (usada após criar tickets)
+    const sendMessagesToSpecificContacts = async (contactsToSend) => {
+      console.log('📤 Iniciando envio de mensagens para contatos específicos...');
+      console.log('👥 Contatos específicos:', contactsToSend.length);
+      console.log('📨 Mensagens para enviar:', messagesToForward.length);
+      
+      if (!contactsToSend || contactsToSend.length === 0) {
+        console.log('⚠️ Nenhum contato específico para enviar mensagens');
+        return [];
+      }
+
+      if (!messagesToForward || messagesToForward.length === 0) {
+        console.log('⚠️ Nenhuma mensagem salva para enviar');
+        return [];
+      }
+      
+      setSending(true);
+      const responseList = [];
+      
+      for (const contact of contactsToSend) {
+        console.log(`📤 Enviando para contato específico: ${contact.name || contact.number} (ID: ${contact.id})`);
+        for (const message of messagesToForward) {
+          try {
+            setMessageSending(`${contact.name || contact.number} - ${message.id}`);
+            console.log(`📨 Enviando mensagem ${message.id} para contato ${contact.id}`);
+            const response = await api.post('/message/forward', {
+              messageId: message.id, 
+              contactId: contact.id, 
+              signMessage: signMessage
+            });
+            responseList.push(response);
+            console.log(`✅ Mensagem ${message.id} enviada com sucesso`);
+            await sleep(500);
+          } catch (error) {
+            console.error(`❌ Erro ao enviar mensagem ${message.id} para contato ${contact.id}:`, error);
+            toastError(error);
+          }		
+        }
+      }
+      setSending(false);
+      console.log('📬 Envio de mensagens específicas finalizado. Total de respostas:', responseList.length);
       return responseList;
     };
 
     const handleForwardMessage = async() => {
       if (selectedContacts.length === 0) return;
       
-      const firstContact = selectedContacts[0]; // Primeiro contato selecionado
+      // Salvar mensagens antes de qualquer operação que possa limpar o estado
+      setMessagesToForward([...messages]);
       
-      // 1. PRIMEIRO: Verificar se o primeiro contato já tem ticket ABERTO
-      if (firstContact && firstContact.id) {
+      console.log('🚀 Iniciando processo de encaminhamento para', selectedContacts.length, 'contatos');
+      console.log('📨 Salvando', messages.length, 'mensagens para encaminhar');
+      
+      try {
+        // 1. PRIMEIRO: Buscar todos os tickets disponíveis
+        console.log('🔍 Buscando todos os tickets...');
+        const { data } = await api.get('/tickets');
+        let allTickets = [...(data.tickets || [])];
+        
+        // Buscar mais páginas de tickets para ter certeza
         try {
-          console.log('🔍 Buscando tickets para contactId:', firstContact.id);
-          console.log('👤 Dados do primeiro contato:', firstContact);
-          
-          const { data } = await api.get('/tickets', {
-            params: {
-              contactId: firstContact.id
+          for (let page = 2; page <= 5; page++) {
+            const { data: morePage } = await api.get('/tickets', {
+              params: { pageNumber: page }
+            });
+            if (morePage.tickets && morePage.tickets.length > 0) {
+              allTickets = [...allTickets, ...morePage.tickets];
+            } else {
+              break;
             }
-          });
+          }
+        } catch (error) {
+          console.log('⚠️ Erro ao buscar páginas adicionais:', error.message);
+        }
+        
+        console.log('📊 Total de tickets encontrados:', allTickets.length);
+        
+        // 2. SEGUNDO: Verificar quais contatos já têm tickets abertos
+        const contactsWithTickets = [];
+        const contactsWithoutTickets = [];
+        
+        for (const contact of selectedContacts) {
+          console.log(`🔍 Verificando contato: ${contact.name || contact.number} (ID: ${contact.id})`);
           
-          console.log('📋 Tickets encontrados:', data.tickets);
-          console.log('📊 Total de tickets encontrados:', data.tickets?.length || 0);
+          // Buscar tickets do contato por múltiplas estratégias
+          let contactTickets = allTickets.filter(t => 
+            t.contactId === contact.id ||
+            t.contact?.number === contact.number ||
+            t.contact?.name === contact.name ||
+            t.contact?.name === contact.number
+          );
           
-          // Debug: Mostrar todos os status únicos
-          const allStatuses = [...new Set(data.tickets?.map(t => t.status) || [])];
-          console.log('🏷️ Status únicos encontrados:', allStatuses);
+          console.log(`🔍 DEBUG: Busca para contato ${contact.name || contact.number}:`);
+          console.log(`   - contact.id: ${contact.id}`);
+          console.log(`   - contact.number: ${contact.number}`);
+          console.log(`   - contact.name: ${contact.name}`);
+          console.log(`   - Tickets encontrados:`, contactTickets.map(t => ({
+            id: t.id,
+            uuid: t.uuid, 
+            status: t.status,
+            contactId: t.contactId,
+            contactName: t.contact?.name,
+            contactNumber: t.contact?.number
+          })));
           
-          // Buscar especificamente por tickets ABERTOS (status = 'pending')
-          const openTickets = data.tickets?.filter(t => t.status === 'pending') || [];
+          // Filtrar apenas tickets abertos (pending ou open)
+          const openTickets = contactTickets.filter(t => t.status === 'pending' || t.status === 'open');
           
-          console.log('🔓 Tickets ABERTOS (pending) encontrados:', openTickets.length);
-          console.log('📋 Todos os tickets do contato:', data.tickets?.map(t => ({ id: t.id, status: t.status, uuid: t.uuid })) || []);
-          console.log('🔍 Condição openTickets.length > 0:', openTickets.length > 0);
-          console.log('🎯 Primeiro ticket aberto:', openTickets[0]);
+          console.log(`📋 Contato ${contact.name}: ${contactTickets.length} tickets total, ${openTickets.length} abertos`);
           
           if (openTickets.length > 0) {
-            // Tem ticket aberto - ENVIAR MENSAGENS e depois redirecionar
-            const ticketToRedirect = openTickets[0];
-            
-            console.log('✅ Ticket ABERTO encontrado:', ticketToRedirect.uuid, 'Status:', ticketToRedirect.status);
-            console.log('📤 Enviando mensagens antes de redirecionar...');
-            
-            // Enviar mensagens para todos os contatos
-            await sendMessagesToContacts();
-            
-            // Redirecionar para o ticket aberto
-            if (forceTicketsRefresh) {
-              forceTicketsRefresh();
-            }
-            console.log('🚀 Redirecionando para ticket aberto:', `/chat-moderno/${ticketToRedirect.uuid}`);
-            history.push(`/chat-moderno/${ticketToRedirect.uuid}`);
-            handleClose();
-            
+            contactsWithTickets.push({ contact, ticket: openTickets[0] });
+            console.log(`✅ ${contact.name} TEM ticket aberto: ${openTickets[0].uuid}`);
           } else {
-            // NÃO tem ticket aberto - NÃO enviar mensagens ainda, só abrir modal de seleção
-            console.log('⚠️ ELSE executado - Nenhum ticket ABERTO encontrado');
-            console.log('🔢 openTickets.length:', openTickets.length);
-            console.log('📋 openTickets:', openTickets);
-            console.log('👤 Contato para novo ticket:', firstContact);
-            console.log('⏳ Mensagens serão enviadas APÓS criar o ticket');
-            
-            // Fechar o modal principal primeiro
-            handleClose();
-            
-            // Depois abrir o modal de seleção com um pequeno delay para evitar conflitos
-            setTimeout(() => {
-              setContactForNewTicket(firstContact);
-              setShowQueueSelection(true);
-              console.log('🎯 Modal de seleção deve aparecer agora...');
-            }, 100);
+            contactsWithoutTickets.push(contact);
+            console.log(`❌ ${contact.name} NÃO tem ticket aberto`);
+          }
+        }
+        
+        console.log('📊 Resumo:');
+        console.log('✅ Contatos COM tickets abertos:', contactsWithTickets.length);
+        console.log('❌ Contatos SEM tickets abertos:', contactsWithoutTickets.length);
+        
+        // 3. TERCEIRO: Decidir fluxo baseado na análise
+        if (contactsWithoutTickets.length === 0) {
+          // TODOS os contatos já têm tickets abertos
+          console.log('🎯 CENÁRIO 1: Todos os contatos já têm tickets abertos');
+          console.log('📤 Enviando mensagens para todos e redirecionando para o primeiro...');
+          
+          // Enviar mensagens para todos os contatos
+          await sendMessagesToContacts();
+          
+          // Redirecionar para o primeiro contato
+          const firstContactWithTicket = contactsWithTickets[0];
+          const redirectUrl = `/chat-moderno/${firstContactWithTicket.ticket.uuid}`;
+          
+          console.log('🚀 Redirecionando para:', redirectUrl);
+          
+          if (forceTicketsRefresh) {
+            forceTicketsRefresh();
           }
           
-        } catch (error) {
-          console.error('❌ Erro ao buscar tickets para redirecionamento:', error);
-          // Fallback em caso de erro - fechar modal atual e abrir modal de seleção de fila
-          console.log('🔄 Usando fallback - abrindo modal de seleção de fila');
-          console.log('⏳ Mensagens serão enviadas APÓS criar o ticket (fallback)');
-          
-          // Fechar o modal principal primeiro
+          history.push(redirectUrl);
           handleClose();
           
-          // Depois abrir o modal de seleção
+        } else if (contactsWithTickets.length === 0) {
+          // NENHUM contato tem ticket aberto
+          console.log('🎯 CENÁRIO 2: Nenhum contato tem ticket aberto');
+          console.log('📋 Abrindo modal para criar tickets para', contactsWithoutTickets.length, 'contatos');
+          
+          // Fechar modal principal e abrir modal de seleção
+          handleClose();
+          
           setTimeout(() => {
-            setContactForNewTicket(firstContact);
+            setContactsForNewTickets(contactsWithoutTickets);
             setShowQueueSelection(true);
           }, 100);
+          
+        } else {
+          // ALGUNS contatos têm tickets, OUTROS não
+          console.log('🎯 CENÁRIO 3: Mistura - alguns têm tickets, outros não');
+          console.log('📤 Enviando mensagens para contatos com tickets...');
+          console.log('📋 E abrindo modal para criar tickets para os demais...');
+          
+          // Enviar mensagens apenas para contatos que já têm tickets
+          const originalSelectedContacts = [...selectedContacts];
+          setSelectedContacts(contactsWithTickets.map(item => item.contact));
+          
+          await sendMessagesToContacts();
+          
+          // Restaurar seleção original
+          setSelectedContacts(originalSelectedContacts);
+          
+          // Fechar modal principal e abrir modal de seleção para contatos sem tickets
+          handleClose();
+          
+          setTimeout(() => {
+            setContactsForNewTickets(contactsWithoutTickets);
+            setShowQueueSelection(true);
+          }, 100);
+          
+          // Redirecionar para o primeiro contato que já tinha ticket
+          const firstContactWithTicket = contactsWithTickets[0];
+          const redirectUrl = `/chat-moderno/${firstContactWithTicket.ticket.uuid}`;
+          
+          console.log('🚀 Redirecionando para contato que já tinha ticket:', redirectUrl);
+          
+          if (forceTicketsRefresh) {
+            forceTicketsRefresh();
+          }
+          
+          // Pequeno delay para permitir o modal abrir antes do redirect
+          setTimeout(() => {
+            history.push(redirectUrl);
+          }, 200);
         }
-      } else {
-        // Fallback se não tiver primeiro contato
+        
+      } catch (error) {
+        console.error('❌ Erro no processo de encaminhamento:', error);
+        // Fallback: tratar todos como se não tivessem tickets
+        console.log('🔄 Usando fallback - tratando todos como sem tickets');
+        
         handleClose();
+        
+        setTimeout(() => {
+          setContactsForNewTickets(selectedContacts);
+          setShowQueueSelection(true);
+        }, 100);
       }
     }
 
-    // Handler para criar ticket e abrir conversa
-    const handleCreateTicketAndOpen = async (ticketData) => {
+    // Handler para criar tickets e abrir conversa do primeiro
+    const handleCreateTicketAndOpen = async (ticketsData, firstContact) => {
       try {
-        console.log('🎯 Criando ticket para contato encaminhado...');
-        console.log('📋 Dados do ticket:', ticketData);
+        console.log('🎯 Criando tickets para múltiplos contatos...');
+        console.log('📋 Quantidade de tickets a criar:', ticketsData.length);
+        console.log('👤 Primeiro contato para redirecionamento:', firstContact?.name);
         
-        const { data: newTicket } = await api.post('/tickets', ticketData);
+        const createdTickets = [];
         
-        console.log('✅ Ticket criado:', newTicket.uuid);
+        // Criar tickets para todos os contatos
+        for (const ticketData of ticketsData) {
+          console.log('📋 Criando ticket para contactId:', ticketData.contactId);
+          const { data: newTicket } = await api.post('/tickets', ticketData);
+          createdTickets.push(newTicket);
+          console.log('✅ Ticket criado:', newTicket.uuid);
+          
+          // Pequeno delay entre criações para evitar sobrecarga
+          if (ticketsData.length > 1) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
+        
+        console.log('✅ Todos os tickets criados! Total:', createdTickets.length);
         console.log('📤 Agora enviando mensagens...');
         
-        // AGORA SIM: Enviar mensagens para todos os contatos
-        await sendMessagesToContacts();
+        // AGORA SIM: Enviar mensagens para todos os contatos que criaram tickets
+        const contactsFromTickets = ticketsData.map(td => 
+          contactsForNewTickets.find(c => c.id === td.contactId)
+        ).filter(Boolean);
+        
+        console.log('📤 Enviando mensagens para contatos que criaram tickets:', contactsFromTickets.length);
+        
+        await sendMessagesToSpecificContacts(contactsFromTickets);
         
         console.log('📬 Mensagens enviadas com sucesso!');
         
@@ -386,17 +537,20 @@ const ModernForwardMessageModal = ({ messages, onClose, modalOpen, onCreateTicke
           forceTicketsRefresh();
         }
         
-        // Redirecionar para a nova conversa
-        console.log('🚀 Redirecionando para novo ticket:', `/chat-moderno/${newTicket.uuid}`);
-        history.push(`/chat-moderno/${newTicket.uuid}`);
+        // Redirecionar para a conversa do primeiro contato
+        const firstTicket = createdTickets[0];
+        const redirectUrl = `/chat-moderno/${firstTicket.uuid}`;
+        
+        console.log('🚀 Redirecionando para primeiro ticket criado:', redirectUrl);
+        history.push(redirectUrl);
         
         // Fechar ambos os modais
         setShowQueueSelection(false);
-        setContactForNewTicket(null);
+        setContactsForNewTickets([]);
         handleFullClose();
         
       } catch (error) {
-        console.error('❌ Erro ao criar ticket:', error);
+        console.error('❌ Erro ao criar tickets:', error);
         toastError(error);
       }
     };
@@ -407,7 +561,7 @@ const ModernForwardMessageModal = ({ messages, onClose, modalOpen, onCreateTicke
     setSelectedContacts([]);
     setSending(false);
     setMessageSending('');
-    // NÃO resetar o showQueueSelection e contactForNewTicket aqui 
+    // NÃO resetar o showQueueSelection e contactsForNewTickets aqui 
     // para não interferir com a transição entre modais
     onClose();
   };
@@ -419,7 +573,8 @@ const ModernForwardMessageModal = ({ messages, onClose, modalOpen, onCreateTicke
     setSending(false);
     setMessageSending('');
     setShowQueueSelection(false);
-    setContactForNewTicket(null);
+    setContactsForNewTickets([]);
+    setMessagesToForward([]);
     onClose();
   };
 
@@ -605,14 +760,14 @@ const ModernForwardMessageModal = ({ messages, onClose, modalOpen, onCreateTicke
       </StyledDialog>
       
       {/* Modal de Seleção de Fila */}
-      {console.log('🎯 Renderizando QueueSelectionModal - showQueueSelection:', showQueueSelection, 'contactForNewTicket:', contactForNewTicket)}
+      {console.log('🎯 Renderizando QueueSelectionModal - showQueueSelection:', showQueueSelection, 'contactsForNewTickets:', contactsForNewTickets.length)}
       <QueueSelectionModal
         isOpen={showQueueSelection}
-        contact={contactForNewTicket}
+        contacts={contactsForNewTickets}
         onClose={() => {
           console.log('🚪 Fechando QueueSelectionModal');
           setShowQueueSelection(false);
-          setContactForNewTicket(null);
+          setContactsForNewTickets([]);
           // Se o usuário cancelar, não abre mais nenhum modal
         }}
         onCreateAndOpen={handleCreateTicketAndOpen}
