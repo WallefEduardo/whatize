@@ -289,15 +289,18 @@ const ModernForwardMessageModal = ({ messages, onClose, modalOpen, onCreateTicke
     const sendMessagesToSpecificContacts = async (contactsToSend) => {
       console.log('📤 Iniciando envio de mensagens para contatos específicos...');
       console.log('👥 Contatos específicos:', contactsToSend.length);
-      console.log('📨 Mensagens para enviar:', messagesToForward.length);
       
       if (!contactsToSend || contactsToSend.length === 0) {
         console.log('⚠️ Nenhum contato específico para enviar mensagens');
         return [];
       }
 
-      if (!messagesToForward || messagesToForward.length === 0) {
-        console.log('⚠️ Nenhuma mensagem salva para enviar');
+      // Usar mensagens salvas se disponíveis, senão usar mensagens originais
+      const messagesToUse = messagesToForward.length > 0 ? messagesToForward : messages;
+      console.log('📨 Mensagens para enviar:', messagesToUse.length, '(fonte:', messagesToForward.length > 0 ? 'salvas' : 'originais', ')');
+
+      if (!messagesToUse || messagesToUse.length === 0) {
+        console.log('⚠️ Nenhuma mensagem disponível para enviar');
         return [];
       }
       
@@ -306,7 +309,7 @@ const ModernForwardMessageModal = ({ messages, onClose, modalOpen, onCreateTicke
       
       for (const contact of contactsToSend) {
         console.log(`📤 Enviando para contato específico: ${contact.name || contact.number} (ID: ${contact.id})`);
-        for (const message of messagesToForward) {
+        for (const message of messagesToUse) {
           try {
             setMessageSending(`${contact.name || contact.number} - ${message.id}`);
             console.log(`📨 Enviando mensagem ${message.id} para contato ${contact.id}`);
@@ -339,21 +342,54 @@ const ModernForwardMessageModal = ({ messages, onClose, modalOpen, onCreateTicke
       console.log('📨 Salvando', messages.length, 'mensagens para encaminhar');
       
       try {
-        // 1. PRIMEIRO: Buscar todos os tickets disponíveis
-        console.log('🔍 Buscando todos os tickets...');
-        const { data } = await api.get('/tickets');
-        let allTickets = [...(data.tickets || [])];
+        // 1. PRIMEIRO: Buscar todos os tickets disponíveis (pending + open)
+        console.log('🔍 Buscando tickets com status pending...');
+        const { data: pendingData } = await api.get('/tickets', {
+          params: {
+            showAll: true,
+            status: 'pending',
+            pageNumber: 1
+          }
+        });
         
-        // Buscar mais páginas de tickets para ter certeza
+        console.log('🔍 Buscando tickets com status open...');
+        const { data: openData } = await api.get('/tickets', {
+          params: {
+            showAll: true,
+            status: 'open', 
+            pageNumber: 1
+          }
+        });
+        
+        let allTickets = [...(pendingData.tickets || []), ...(openData.tickets || [])];
+        console.log('📊 Tickets pending:', pendingData.tickets?.length || 0);
+        console.log('📊 Tickets open:', openData.tickets?.length || 0);
+        
+        // Buscar mais páginas para ambos os status
         try {
           for (let page = 2; page <= 5; page++) {
-            const { data: morePage } = await api.get('/tickets', {
-              params: { pageNumber: page }
+            // Pending
+            const { data: morePending } = await api.get('/tickets', {
+              params: { 
+                showAll: true,
+                status: 'pending',
+                pageNumber: page
+              }
             });
-            if (morePage.tickets && morePage.tickets.length > 0) {
-              allTickets = [...allTickets, ...morePage.tickets];
-            } else {
-              break;
+            if (morePending.tickets && morePending.tickets.length > 0) {
+              allTickets = [...allTickets, ...morePending.tickets];
+            }
+            
+            // Open
+            const { data: moreOpen } = await api.get('/tickets', {
+              params: { 
+                showAll: true,
+                status: 'open',
+                pageNumber: page
+              }
+            });
+            if (moreOpen.tickets && moreOpen.tickets.length > 0) {
+              allTickets = [...allTickets, ...moreOpen.tickets];
             }
           }
         } catch (error) {
@@ -361,6 +397,48 @@ const ModernForwardMessageModal = ({ messages, onClose, modalOpen, onCreateTicke
         }
         
         console.log('📊 Total de tickets encontrados:', allTickets.length);
+        
+        // DEBUG: Procurar o ticket específico da URL
+        const targetUUID = '3e7e51ae-d12b-4464-b7e4-6fbc154aac2a';
+        const targetTicket = allTickets.find(t => t.uuid === targetUUID);
+        if (targetTicket) {
+          console.log('🎯 TICKET ENCONTRADO NA LISTA:', targetTicket);
+        } else {
+          console.log('❌ Ticket', targetUUID, 'NÃO encontrado na lista!');
+          
+          // Tentar buscar diretamente pela API do ticket específico
+          try {
+            console.log('🔍 Tentando buscar o ticket diretamente...');
+            const { data: directTicket } = await api.get(`/tickets/u/${targetUUID}`);
+            console.log('✅ Ticket encontrado diretamente:', {
+              id: directTicket.id,
+              uuid: directTicket.uuid,
+              status: directTicket.status,
+              contactId: directTicket.contactId,
+              contactName: directTicket.contact?.name,
+              contactNumber: directTicket.contact?.number
+            });
+            
+            // Adicionar à lista se não estiver
+            allTickets.push(directTicket);
+            console.log('➕ Ticket adicionado à lista. Novo total:', allTickets.length);
+          } catch (error) {
+            console.log('❌ Erro ao buscar ticket diretamente:', error.message);
+          }
+        }
+        
+        // DEBUG: Mostrar alguns tickets da lista
+        console.log('🔍 PRIMEIROS 5 TICKETS DA LISTA:');
+        allTickets.slice(0, 5).forEach((ticket, index) => {
+          console.log(`Ticket ${index + 1}:`, {
+            id: ticket.id,
+            uuid: ticket.uuid,
+            status: ticket.status,
+            contactId: ticket.contactId,
+            contactName: ticket.contact?.name,
+            contactNumber: ticket.contact?.number
+          });
+        });
         
         // 2. SEGUNDO: Verificar quais contatos já têm tickets abertos
         const contactsWithTickets = [];
@@ -449,19 +527,23 @@ const ModernForwardMessageModal = ({ messages, onClose, modalOpen, onCreateTicke
           console.log('📤 Enviando mensagens para contatos com tickets...');
           console.log('📋 E abrindo modal para criar tickets para os demais...');
           
+          console.log('🔍 DEBUG CENÁRIO 3:');
+          console.log('   - contactsWithTickets:', contactsWithTickets.map(c => ({ name: c.contact.name, id: c.contact.id })));
+          console.log('   - contactsWithoutTickets:', contactsWithoutTickets.map(c => ({ name: c.name, id: c.id })));
+          
           // Enviar mensagens apenas para contatos que já têm tickets
-          const originalSelectedContacts = [...selectedContacts];
-          setSelectedContacts(contactsWithTickets.map(item => item.contact));
+          const contactsOnlyWithTickets = contactsWithTickets.map(item => item.contact);
           
-          await sendMessagesToContacts();
+          console.log('📤 Enviando mensagens para:', contactsOnlyWithTickets.map(c => ({ name: c.name, id: c.id })));
           
-          // Restaurar seleção original
-          setSelectedContacts(originalSelectedContacts);
+          // Usar função específica que aceita contatos como parâmetro
+          await sendMessagesToSpecificContacts(contactsOnlyWithTickets);
           
           // Fechar modal principal e abrir modal de seleção para contatos sem tickets
           handleClose();
           
           setTimeout(() => {
+            console.log('🎯 Definindo contatos SEM tickets para o modal:', contactsWithoutTickets.map(c => ({ name: c.name, id: c.id })));
             setContactsForNewTickets(contactsWithoutTickets);
             setShowQueueSelection(true);
           }, 100);
