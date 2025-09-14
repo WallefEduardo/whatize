@@ -110,12 +110,19 @@ export const addReaction = async (req: Request, res: Response): Promise<Response
       return res.status(404).send({ message: "Mensagem não encontrada" });
     }
 
-    // Envia a reação via WhatsApp
-    const reactionResult = await SendWhatsAppReaction({
-      messageId: messageId,
-      ticket: ticket,
-      reactionType: type
-    });
+    // Envia a reação via WhatsApp (não interrompe se falhar)
+    let reactionResult = null;
+    try {
+      reactionResult = await SendWhatsAppReaction({
+        messageId: messageId,
+        ticket: ticket,
+        reactionType: type
+      });
+      console.log('✅ [WHATSAPP-REACTION] Reação enviada via WhatsApp com sucesso');
+    } catch (whatsappError) {
+      console.log('⚠️ [WHATSAPP-REACTION] Falha ao enviar via WhatsApp (continuando):', whatsappError.message);
+      // Continua a execução para salvar no banco e atualizar o ticket
+    }
 
     // 🎭 Salvar reação no banco de dados - APENAS UMA REAÇÃO POR USUÁRIO
     const currentReactions = message.reactions || [];
@@ -172,12 +179,58 @@ export const addReaction = async (req: Request, res: Response): Promise<Response
       }
     });
 
+    // 🎭 Atualizar lastMessage do ticket para mostrar reação no sidebar
+    const messageText = message.body || message.mediaType || 'Mensagem';
+    const truncatedMessage = messageText.length > 30 ? messageText.substring(0, 30) + '...' : messageText;
+    const reactionText = `Você reagiu com ${type} a: "${truncatedMessage}"`;
+    console.log('🔧 [TICKET-UPDATE-START] Iniciando update do ticket:', {
+      ticketId: ticket.id,
+      currentLastMessage: ticket.lastMessage,
+      newLastMessage: reactionText,
+      originalMessage: messageText
+    });
+
+    const updatedTicket = await ticket.update({
+      lastMessage: reactionText,
+      updatedAt: new Date()
+    });
+
+    console.log('🏷️ [TICKET-LAST-MESSAGE] Ticket atualizado no banco:', {
+      ticketId: ticket.id,
+      lastMessage: updatedTicket.lastMessage,
+      updatedAt: updatedTicket.updatedAt,
+      dataValues: updatedTicket.dataValues
+    });
+
     const io = getIO();
     // Emitir para sala da company, não do ticket específico
     io.of(String(companyId))
       .emit(`company-${companyId}-appMessage`, {
         action: "update",
         message: updatedMessage
+      });
+
+    // 🎫 Emitir update do ticket para atualizar sidebar
+    const ticketData = {
+      ...updatedTicket.dataValues,
+      lastMessage: reactionText,
+      updatedAt: new Date()
+    };
+
+    console.log('📡 [TICKET-SOCKET] Emitindo update de ticket:', {
+      companyId,
+      socketEvent: `company-${companyId}-ticket`,
+      action: "update",
+      ticketId: ticketData.id,
+      lastMessage: ticketData.lastMessage,
+      hasIo: !!io,
+      hasNamespace: !!io.of(String(companyId))
+    });
+
+    io.of(String(companyId))
+      .emit(`company-${companyId}-ticket`, {
+        action: "update",
+        ticket: ticketData
       });
 
     return res.status(200).send({

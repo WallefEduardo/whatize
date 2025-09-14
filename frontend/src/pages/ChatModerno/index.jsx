@@ -449,8 +449,27 @@ const ChatModernoContent = () => {
     const companyId = user.companyId;
 
     const onCompanyTicket = (data) => {
-      if (data.action === "update" && data.ticket && data.ticket.status === tabOpen) {
-        dispatch({ type: "UPDATE_TICKET", payload: data.ticket });
+      console.log('🎫 [TICKET-UPDATE] Recebendo update de ticket:', {
+        action: data.action,
+        ticketId: data.ticket?.id,
+        lastMessage: data.ticket?.lastMessage,
+        status: data.ticket?.status,
+        tabOpen: tabOpen
+      });
+
+      if (data.action === "update" && data.ticket) {
+        // Aceitar updates de reação (lastMessage contém "Você reagiu") ou status igual à aba
+        const isReactionUpdate = data.ticket.lastMessage?.includes("Você reagiu");
+        const isStatusMatch = data.ticket.status === tabOpen;
+
+        if (isReactionUpdate || isStatusMatch) {
+          console.log('✅ [TICKET-UPDATE] Atualizando ticket na lista:', {
+            ticketId: data.ticket.id,
+            reason: isReactionUpdate ? 'reação' : 'status match',
+            lastMessage: data.ticket.lastMessage
+          });
+          dispatch({ type: "UPDATE_TICKET", payload: data.ticket });
+        }
       }
       if (data.action === "delete") {
         dispatch({ type: "DELETE_TICKET", payload: data.ticketId });
