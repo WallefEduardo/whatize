@@ -381,7 +381,12 @@ const MessageItem = ({
     setReactionMenuOpen(false);
   };
 
+  const [isReacting, setIsReacting] = useState(false);
+
   const handleReactToMessage = async (reactionType) => {
+    if (isReacting) return; // Previne múltiplos cliques
+
+    setIsReacting(true);
     try {
       // 🎭 Enviar para o servidor - reações são salvas no banco e retornam via socket
       const response = await api.post(`/messages/${messageId}/reactions`, {
@@ -393,6 +398,8 @@ const MessageItem = ({
     } catch (err) {
       console.error('❌ Erro ao reagir à mensagem:', err);
       toastError(err);
+    } finally {
+      setIsReacting(false);
     }
   };
 
@@ -709,6 +716,7 @@ const MessageItem = ({
       onClose={handleCloseReactionMenu}
       onReact={handleReactToMessage}
       placement={isSent ? 'bottom-end' : 'bottom-start'}
+      disabled={isReacting}
     />
     </>
   );

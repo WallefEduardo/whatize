@@ -68,7 +68,8 @@ const MessageReactionsPopover = ({
   open,
   onClose,
   onReact,
-  placement = 'bottom-end'
+  placement = 'bottom-end',
+  disabled = false
 }) => {
   const [moreReactionsAnchorEl, setMoreReactionsAnchorEl] = useState(null);
 
@@ -90,6 +91,7 @@ const MessageReactionsPopover = ({
   ];
 
   const handleReactionClick = (reaction) => {
+    if (disabled) return; // Previne clique se estiver processando
     onReact(reaction);
     onClose();
     setMoreReactionsAnchorEl(null);
@@ -147,6 +149,8 @@ const MessageReactionsPopover = ({
                 <ReactionButton
                   onClick={() => handleReactionClick(reaction)}
                   size="small"
+                  disabled={disabled}
+                  style={{ opacity: disabled ? 0.5 : 1 }}
                   style={{
                     opacity: 1,
                     filter: 'none', // Remove qualquer filtro que possa estar aplicado
@@ -209,6 +213,8 @@ const MessageReactionsPopover = ({
                 <ReactionButton
                   onClick={() => handleReactionClick(reaction)}
                   size="small"
+                  disabled={disabled}
+                  style={{ opacity: disabled ? 0.5 : 1 }}
                   style={{
                     opacity: 1,
                     filter: 'none', // Remove qualquer filtro que possa estar aplicado

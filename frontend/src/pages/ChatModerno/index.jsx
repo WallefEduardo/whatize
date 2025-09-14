@@ -449,25 +449,12 @@ const ChatModernoContent = () => {
     const companyId = user.companyId;
 
     const onCompanyTicket = (data) => {
-      console.log('🎫 [DEBUG-FRONTEND] Dados recebidos via socket:', {
-        action: data.action,
-        ticketId: data.ticket?.id,
-        hasQueue: !!data.ticket?.queue,
-        queueData: data.ticket?.queue,
-        hasTags: !!data.ticket?.tags,
-        tagsData: data.ticket?.tags,
-        hasContact: !!data.ticket?.contact,
-        contactTags: data.ticket?.contact?.tags,
-        lastMessage: data.ticket?.lastMessage
-      });
-
       if (data.action === "update" && data.ticket) {
         // Aceitar updates de reação (lastMessage contém "Você reagiu") ou status igual à aba
         const isReactionUpdate = data.ticket.lastMessage?.includes("Você reagiu");
         const isStatusMatch = data.ticket.status === tabOpen;
 
         if (isReactionUpdate || isStatusMatch) {
-          console.log('✅ [DEBUG-FRONTEND] Atualizando ticket na lista:', data.ticket);
           dispatch({ type: "UPDATE_TICKET", payload: data.ticket });
         }
       }
@@ -1151,14 +1138,11 @@ const ChatModernoContent = () => {
       // Scroll instantâneo para última mensagem ao abrir conversa
       const scrollToEnd = () => {
         if (messagesEndRef.current) {
-          console.log('📍 Fazendo scroll para última mensagem:', messages.length, 'mensagens');
-          messagesEndRef.current.scrollIntoView({ 
-            behavior: 'instant', 
+          messagesEndRef.current.scrollIntoView({
+            behavior: 'instant',
             block: 'end',
             inline: 'nearest'
           });
-        } else {
-          console.log('❌ messagesEndRef não encontrado');
         }
       };
       

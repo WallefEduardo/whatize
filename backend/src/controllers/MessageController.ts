@@ -169,18 +169,6 @@ export const addReaction = async (req: Request, res: Response): Promise<Response
       });
 
     // 🎫 Emitir update do ticket para atualizar sidebar com todas as relações
-    // FORCE RELOAD TO DEBUG NOW
-    console.log('🎫 [DEBUG-TICKET-UPDATE] Dados sendo enviados via socket:', {
-      companyId,
-      ticketId: ticketWithRelations?.id,
-      hasQueue: !!ticketWithRelations?.queue,
-      queueData: ticketWithRelations?.queue,
-      hasTags: !!ticketWithRelations?.tags,
-      tagsData: ticketWithRelations?.tags,
-      hasContact: !!ticketWithRelations?.contact,
-      contactTags: ticketWithRelations?.contact?.tags,
-      lastMessage: ticketWithRelations?.lastMessage
-    });
 
     io.of(String(companyId))
       .emit(`company-${companyId}-ticket`, {
