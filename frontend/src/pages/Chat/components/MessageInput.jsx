@@ -9,6 +9,11 @@ import Popover, { PopoverTrigger, PopoverContent } from '../../../components/ui/
 import Dropdown, { DropdownTrigger, DropdownContent, DropdownItem } from '../../../components/ui/Dropdown';
 import Tooltip from '../../../components/ui/Tooltip';
 
+// API e utils
+import api from '../../../services/api';
+import { toast } from '../../../components/ui/ToastProvider';
+import toastError from '../../../errors/toastError';
+
 // Icons
 import { 
   Send,
@@ -23,7 +28,8 @@ import {
 import {
   PhotoIcon,
   GifIcon,
-  ArrowTopRightOnSquareIcon
+  ArrowTopRightOnSquareIcon,
+  CheckIcon
 } from '@heroicons/react/24/outline';
 
 // SVGs customizados do projeto
@@ -32,6 +38,7 @@ import AdicionarIcon from '../../../assets/iconeswhatize/adicionar.svg';
 // Context API do sistema original
 import { ReplyMessageContext } from '../../../context/ReplyingMessage/ReplyingMessageContext';
 import { ForwardMessageContext } from '../../../context/ForwarMessage/ForwardMessageContext';
+import { EditMessageContext } from '../../../context/EditingMessage/EditingMessageContext';
 import NovoArquivoIcon from '../../../assets/iconeswhatize/novo-arquivo.svg';
 import GaleriaImagensIcon from '../../../assets/iconeswhatize/galeria-de-imagens.svg';
 import MandarIcon from '../../../assets/iconeswhatize/mandar.svg';
@@ -211,15 +218,32 @@ const MessageInput = ({
 
   // Context API - igual ao chat antigo
   const { setReplyingMessage, replyingMessage } = useContext(ReplyMessageContext);
-  
+
   // Context API para forward - modo de seleção
-  const { 
+  const {
     showSelectMessageCheckbox,
     setShowSelectMessageCheckbox,
     selectedMessages,
     setSelectedMessages,
-    setForwardMessageModalOpen 
+    setForwardMessageModalOpen
   } = useContext(ForwardMessageContext);
+
+  // Context API para edit - igual ao chat antigo
+  const { setEditingMessage, editingMessage } = useContext(EditMessageContext);
+
+  // useEffect para preencher o input quando estiver editando
+  useEffect(() => {
+    if (editingMessage) {
+      setMessage(editingMessage.body || '');
+      // Focar no input
+      if (textareaRef.current) {
+        const textarea = textareaRef.current.querySelector('textarea');
+        if (textarea) {
+          textarea.focus();
+        }
+      }
+    }
+  }, [editingMessage]);
 
   // Auto-resize textarea
   const handleTextChange = (e) => {
@@ -233,19 +257,32 @@ const MessageInput = ({
     }
   };
 
-  // Send message
-  const handleSubmit = (e) => {
+  // Send message or edit message
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    
+
     if (!message.trim() || disabled) {
       return;
     }
-    
-    onSendMessage(message.trim());
-    setMessage('');
-    setReplyingMessage(null); // Limpar reply após enviar
-    
+
+    // Se estamos editando uma mensagem
+    if (editingMessage) {
+      try {
+        await api.post(`/messages/edit/${editingMessage.id}`, {
+          body: message.trim()
+        });
+        setEditingMessage(null);
+        setMessage('');
+      } catch (err) {
+        toastError(err);
+      }
+    } else {
+      // Enviar nova mensagem
+      onSendMessage(message.trim());
+      setMessage('');
+      setReplyingMessage(null); // Limpar reply após enviar
+    }
+
     // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -329,10 +366,52 @@ const MessageInput = ({
             {message.body || 'Mensagem'}
           </Typography>
         </Box>
-        <IconButton 
-          size="small" 
+        <IconButton
+          size="small"
           onClick={() => setReplyingMessage(null)}
-          sx={{ 
+          sx={{
+            ml: 1,
+            color: 'var(--text-secondary)'
+          }}
+        >
+          <X size={16} />
+        </IconButton>
+      </Box>
+    );
+  };
+
+  // Render edit preview - similar ao reply mas com cor diferente
+  const renderEditingMessage = (message) => {
+    return (
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
+        padding: '8px 16px',
+        backgroundColor: '#fff3cd', // Amarelo claro para edição
+        borderLeft: '4px solid #ffc107', // Amarelo para edição
+        marginBottom: '8px'
+      }}>
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: '#f57c00' }}>
+            Editando mensagem
+          </Typography>
+          <Typography variant="body2" sx={{
+            color: 'var(--text-primary)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: '200px'
+          }}>
+            {message.body || 'Mensagem'}
+          </Typography>
+        </Box>
+        <IconButton
+          size="small"
+          onClick={() => {
+            setEditingMessage(null);
+            setMessage('');
+          }}
+          sx={{
             ml: 1,
             color: 'var(--text-secondary)'
           }}
@@ -347,6 +426,9 @@ const MessageInput = ({
     <InputContainer>
       {/* Reply Preview */}
       {replyingMessage && renderReplyingMessage(replyingMessage)}
+
+      {/* Edit Preview */}
+      {editingMessage && renderEditingMessage(editingMessage)}
 
       {/* Input Row - Modo normal ou modo de seleção */}
       <InputRow>
@@ -601,16 +683,25 @@ const MessageInput = ({
             <SendButton
               onClick={handleSubmit}
               disabled={!message.trim() || disabled}
+              title={editingMessage ? "Salvar edição" : "Enviar"}
             >
-              <img 
-                src={MandarIcon} 
-                alt="Enviar" 
-                style={{ 
-                  width: '18px', 
+              {editingMessage ? (
+                <CheckIcon style={{
+                  width: '18px',
                   height: '18px',
-                  filter: 'brightness(0) invert(1)'
-                }} 
-              />
+                  color: 'white'
+                }} />
+              ) : (
+                <img
+                  src={MandarIcon}
+                  alt="Enviar"
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    filter: 'brightness(0) invert(1)'
+                  }}
+                />
+              )}
             </SendButton>
           </>
         )}

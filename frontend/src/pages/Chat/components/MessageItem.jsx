@@ -7,6 +7,7 @@ import { formatTime, formatDateSeparator, isSameDay } from '../data/mockData';
 // Context API do chat antigo
 import { ReplyMessageContext } from '../../../context/ReplyingMessage/ReplyingMessageContext';
 import { ForwardMessageContext } from '../../../context/ForwarMessage/ForwardMessageContext';
+import { EditMessageContext } from '../../../context/EditingMessage/EditingMessageContext';
 
 // Nossos componentes UI
 import { Avatar } from '../../../components/ui/AvatarOptimized';
@@ -27,7 +28,8 @@ import {
   ArrowTopRightOnSquareIcon,
   BookmarkIcon,
   CheckIcon,
-  ClockIcon
+  ClockIcon,
+  PencilIcon // Para editar
 } from '@heroicons/react/24/outline';
 import { 
   BookmarkIcon as BookmarkSolidIcon,
@@ -284,13 +286,16 @@ const MessageItem = ({
 }) => {
   // Context API para reply - igual ao chat antigo
   const { setReplyingMessage } = useContext(ReplyMessageContext);
-  
+
   // Context API para forward - igual ao chat antigo
-  const { 
+  const {
     showSelectMessageCheckbox,
     selectedMessages,
-    setSelectedMessages 
+    setSelectedMessages
   } = useContext(ForwardMessageContext);
+
+  // Context API para edit - igual ao chat antigo
+  const { setEditingMessage } = useContext(EditMessageContext);
   // Adaptar para API real - usar campos reais da mensagem
   const messageText = message.body || message.content || '';
   const messageTime = message.createdAt || message.timestamp;
@@ -353,6 +358,21 @@ const MessageItem = ({
       index: index
     };
     handlePinMessage(pinData);
+  };
+
+  const handleEditMessage = () => {
+    // Usar Context API igual ao chat antigo
+    setEditingMessage(message);
+  };
+
+  // Função para verificar se ainda está dentro dos 15 minutos para editar
+  const isWithinFifteenMinutes = () => {
+    const fifteenMinutesInMilliseconds = 15 * 60 * 1000; // 15 minutos em milissegundos
+    const currentTime = new Date();
+    const messageDateTime = new Date(messageTime);
+
+    // Verifica se a diferença entre o tempo atual e o tempo da mensagem é menor que 15 minutos
+    return currentTime - messageDateTime <= fifteenMinutesInMilliseconds;
   };
 
   const handleReplyClick = () => {
@@ -512,22 +532,32 @@ const MessageItem = ({
             {isSent ? (
               // Options for sent messages (right side)
               <>
-                <DropdownItem 
-                  onClick={handleDeleteMessage} 
-                  destructive 
+                <DropdownItem
+                  onClick={handleDeleteMessage}
+                  destructive
                   icon={<TrashIcon style={{ width: '16px', height: '16px' }} />}
                 >
                   Deletar
                 </DropdownItem>
-                
+
+                {/* Editar - apenas para mensagens enviadas e dentro de 15 minutos */}
+                {isWithinFifteenMinutes() && (
+                  <DropdownItem
+                    onClick={handleEditMessage}
+                    icon={<PencilIcon style={{ width: '16px', height: '16px' }} />}
+                  >
+                    Editar
+                  </DropdownItem>
+                )}
+
                 <DropdownItem onClick={handleReplyMessage} icon={<ArrowUturnLeftIcon style={{ width: '16px', height: '16px' }} />}>
                   Responder
                 </DropdownItem>
-                
+
                 <DropdownItem onClick={handleForwardMessage} icon={<ArrowTopRightOnSquareIcon style={{ width: '16px', height: '16px' }} />}>
                   Encaminhar
                 </DropdownItem>
-                
+
                 <DropdownItem onClick={handleOpenReactionMenu} icon={<FaceSmileIcon style={{ width: '16px', height: '16px' }} />}>
                   Reagir
                 </DropdownItem>

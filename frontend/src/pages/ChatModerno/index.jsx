@@ -45,6 +45,7 @@ import toastError from '../../errors/toastError';
 // Context API do sistema original
 import { ReplyMessageProvider, ReplyMessageContext } from '../../context/ReplyingMessage/ReplyingMessageContext';
 import { ForwardMessageProvider, ForwardMessageContext } from '../../context/ForwarMessage/ForwardMessageContext';
+import { EditMessageProvider, EditMessageContext } from '../../context/EditingMessage/EditingMessageContext';
 import DeleteMessageModal from '../../components/DeleteMessageModal';
 import ModernForwardMessageModal from '../../components/ForwardMessageModal/ModernForwardMessageModal';
 
@@ -515,24 +516,20 @@ const ChatModernoContent = () => {
         }
 
 
-        // Se tem reactions, sempre atualizar (já que está no chat certo)
-        const shouldUpdate = data.message.reactions && data.message.reactions.length > 0;
-
-        if (shouldUpdate) {
-
+        // Verificar se deve atualizar a mensagem no chat atual
+        if (data.message.ticketId?.toString() === selectedChatId?.toString()) {
           setMessages(prev => {
-
             const updatedMessages = prev.map(msg => {
               const isMatch = msg.id === data.message.id ||
                              msg.id.toString() === data.message.id.toString() ||
                              Number(msg.id) === Number(data.message.id);
 
               if (isMatch) {
-                return { ...msg, reactions: data.message.reactions };
+                // Atualizar toda a mensagem (para capturar edições de body, reações, etc.)
+                return { ...msg, ...data.message };
               }
               return msg;
             });
-
 
             return updatedMessages;
           });
@@ -2384,12 +2381,14 @@ const ChatModernoContent = () => {
   );
 };
 
-// Componente wrapper que fornece o ReplyMessageContext e ForwardMessageContext
+// Componente wrapper que fornece o ReplyMessageContext, ForwardMessageContext e EditMessageContext
 const ChatModerno = () => {
   return (
     <ReplyMessageProvider>
       <ForwardMessageProvider>
-        <ChatModernoContent />
+        <EditMessageProvider>
+          <ChatModernoContent />
+        </EditMessageProvider>
       </ForwardMessageProvider>
     </ReplyMessageProvider>
   );
