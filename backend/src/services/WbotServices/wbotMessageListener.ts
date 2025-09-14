@@ -3098,6 +3098,16 @@ const handleMessage = async (
 
     const isGroup = msg.key.remoteJid?.endsWith("@g.us");
 
+    // 🚫 FILTRO: Bloquear reações do WhatsApp para não criar mensagens normais com quotedMsgId
+    if (msgType === "reactionMessage") {
+      logger.info(`🚫 [REACTION-FILTER] Bloqueando reactionMessage para evitar reply falso: {
+        messageId: '${msg.key.id}',
+        remoteJid: '${msg.key.remoteJid}',
+        reactionText: '${msg.message?.reactionMessage?.text}'
+      }`);
+      return;
+    }
+
     // 🎯 LOG: Rastrear tipo de identificador recebido
     logger.info(`📨 [LID-JID-TRACKING] Message received: {
       remoteJid: '${msg.key.remoteJid}',

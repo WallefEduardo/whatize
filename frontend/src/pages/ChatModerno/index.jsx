@@ -227,6 +227,9 @@ const ChatModernoContent = () => {
   // Estados dos filtros salvos
   const [savedFilters, setSavedFilters] = useState([]);
   const [filterName, setFilterName] = useState('');
+
+  // 🎭 Estado para gerenciar reações de todas as mensagens
+  const [messageReactions, setMessageReactions] = useState({});
   const [refreshTickets, setRefreshTickets] = useState(false);
   
   // Estados para as opções dos filtros (carregadas da API)
@@ -494,12 +497,81 @@ const ChatModernoContent = () => {
 
       // Tratamento para mensagens atualizadas (incluindo deletadas)
       if (data.action === "update" && data.message) {
-        if (data.message.ticketId?.toString() === selectedChatId?.toString()) {
-          setMessages(prev => 
-            prev.map(msg => 
-              msg.id === data.message.id ? data.message : msg
-            )
-          );
+        console.log('📨 [CHAT-MODERNO] Recebendo update:', {
+          action: data.action,
+          messageId: data.message.id,
+          mediaType: data.message.mediaType,
+          body: data.message.body,
+          quotedMsgId: data.message.quotedMsgId,
+          reactionMessage: data.message.reactionMessage,
+          reactions: data.message.reactions, // 🎭 DEBUG: Ver reações
+          reactionsLength: data.message.reactions?.length
+        });
+
+        // ✅ FILTRO: Ignorar reações - não são updates de mensagens normais
+        if (data.message.mediaType === "reactionMessage") {
+          console.log('🚫 [CHAT-MODERNO] Ignorando reactionMessage em update:', data.message);
+          return;
+        }
+
+        // ✅ FILTRO ADICIONAL: Ignorar mensagens que são reações baseadas no conteúdo
+        if (data.message.reactionMessage || data.message.body === "reaction") {
+          console.log('🚫 [CHAT-MODERNO] Ignorando mensagem de reação por conteúdo:', data.message);
+          return;
+        }
+
+        console.log('🔍 [TICKET-ID-CHECK] Verificando condição de update:', {
+          messageTicketId: data.message.ticketId,
+          messageTicketIdType: typeof data.message.ticketId,
+          selectedChatId: selectedChatId,
+          selectedChatIdType: typeof selectedChatId,
+          currentTicketId: currentTicket?.id,
+          isEqual: data.message.ticketId?.toString() === selectedChatId?.toString(),
+          isEqualCurrentTicket: data.message.ticketId?.toString() === currentTicket?.id?.toString(),
+          reactions: data.message.reactions
+        });
+
+        // Se tem reactions, sempre atualizar (já que está no chat certo)
+        const shouldUpdate = data.message.reactions && data.message.reactions.length > 0;
+
+        if (shouldUpdate) {
+          console.log('🔄 [REACTION-UPDATE] Atualizando mensagem em tempo real:', {
+            messageId: data.message.id,
+            reactions: data.message.reactions,
+            ticketId: data.message.ticketId
+          });
+
+          setMessages(prev => {
+            console.log('🔍 [DEBUG-IDS] Buscando mensagem para atualizar:', {
+              targetMessageId: data.message.id,
+              targetType: typeof data.message.id,
+              totalMessages: prev.length,
+              messageIds: prev.map(m => ({ id: m.id, type: typeof m.id }))
+            });
+
+            const updatedMessages = prev.map(msg => {
+              const isMatch = msg.id === data.message.id ||
+                             msg.id.toString() === data.message.id.toString() ||
+                             Number(msg.id) === Number(data.message.id);
+
+              if (isMatch) {
+                console.log('✅ [REACTION-UPDATE] Mensagem encontrada e atualizada:', {
+                  msgId: msg.id,
+                  targetId: data.message.id,
+                  oldReactions: msg.reactions,
+                  newReactions: data.message.reactions
+                });
+                return { ...msg, reactions: data.message.reactions };
+              }
+              return msg;
+            });
+
+            console.log('🎯 [REACTION-UPDATE] Resultado final:', {
+              messagesUpdated: updatedMessages.filter(m => m.reactions?.length > 0).length
+            });
+
+            return updatedMessages;
+          });
         }
         
         // Remover das mensagens otimistas se existir
@@ -530,6 +602,7 @@ const ChatModernoContent = () => {
     };
 
     const onConnect = () => {
+      console.log('🔌 [SOCKET] Conectando e entrando na sala:', tabOpen);
       socket.emit("joinTickets", tabOpen);
     };
 
@@ -677,6 +750,21 @@ const ChatModernoContent = () => {
 
   // Função de sleep para retry backoff
   const sleep = useCallback((ms) => new Promise(resolve => setTimeout(resolve, ms)), []);
+
+  // 🎭 FUNÇÕES PARA GERENCIAR REAÇÕES
+  const addReactionToMessage = useCallback((messageId, reaction) => {
+    setMessageReactions(prev => {
+      const currentReactions = prev[messageId] || [];
+      return {
+        ...prev,
+        [messageId]: [...currentReactions, reaction]
+      };
+    });
+  }, []);
+
+  const getMessageReactions = useCallback((messageId) => {
+    return messageReactions[messageId] || [];
+  }, [messageReactions]);
 
   // 🚀 BACKGROUND PROCESSING COM RETRY INTELIGENTE
   const sendToBackend = useCallback(async (tempId, messageText, quotedMessage = null) => {
@@ -2161,6 +2249,9 @@ const ChatModernoContent = () => {
                                     pinnedMessages={pinnedMessages}
                                     showDateSeparator={showDateSeparator}
                                     onScrollToMessage={scrollToMessage}
+                                    // 🎭 Props para reações persistentes
+                                    addReactionToMessage={addReactionToMessage}
+                                    getMessageReactions={getMessageReactions}
                                   />
                                 );
                               })

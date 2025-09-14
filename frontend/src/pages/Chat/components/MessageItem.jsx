@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import { Box, Typography, IconButton, Tooltip, Checkbox } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { cn } from '../../../utils/cn';
@@ -11,17 +11,23 @@ import { ForwardMessageContext } from '../../../context/ForwarMessage/ForwardMes
 // Nossos componentes UI
 import { Avatar } from '../../../components/ui/AvatarOptimized';
 import Dropdown, { DropdownTrigger, DropdownContent, DropdownItem } from '../../../components/ui/Dropdown';
+import MessageReactionsPopover from './MessageReactionsPopover';
+
+// API e utils
+import api from '../../../services/api';
+import toastError from '../../../errors/toastError';
+import { toast } from '../../../components/ui/ToastProvider';
 
 // Icons
-import { 
-  EllipsisVerticalIcon, 
+import {
+  EllipsisVerticalIcon,
   ArrowUturnLeftIcon,
   TrashIcon,
+  FaceSmileIcon, // Para reações
   ArrowTopRightOnSquareIcon,
   BookmarkIcon,
   CheckIcon,
-  ClockIcon,
-  FaceSmileIcon
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import { 
   BookmarkIcon as BookmarkSolidIcon,
@@ -35,17 +41,12 @@ const MessageContainer = styled(Box, {
   gap: '8px',
   alignItems: 'flex-start',
   marginBottom: '16px',
-  padding: showCheckbox 
+  padding: showCheckbox
     ? '0 16px 0 50px' // Quando tem checkbox, espaço para checkbox + margem
     : (isSent ? '0 32px 0 16px' : '0 16px 0 32px'), // Padding normal
   flexDirection: 'row',
   justifyContent: isSent ? 'flex-end' : 'flex-start', // Justifica para direita se enviada
   position: 'relative',
-  
-  // LAYOUT SEMPRE FIXO - nunca muda
-  padding: showCheckbox 
-    ? '0 16px 0 50px' // Quando tem checkbox, padding fixo
-    : (isSent ? '0 32px 0 16px' : '0 16px 0 32px'), // Padding normal
     
   // Faixa verde bem transparente - quase invisível (não para mensagens deletadas)
   backgroundColor: isSelected && showCheckbox && !isDeleted
@@ -71,6 +72,7 @@ const MessageContent = styled(Box, {
   gap: '4px',
   alignItems: isSent ? 'flex-end' : 'flex-start',
   marginLeft: '0', // Sem margem extra, usa o padding do container
+  position: 'relative', // Para permitir posicionamento absoluto das reações
 }));
 
 const MessageBubble = styled(Box, {
@@ -262,20 +264,23 @@ const MessageStatus = ({ status, ack, isOptimistic }) => {
   }
 };
 
-const MessageItem = ({ 
-  message, 
-  contact, 
-  profile, 
-  onDelete, 
-  index, 
-  selectedChatId, 
-  handleReply, 
+const MessageItem = ({
+  message,
+  contact,
+  profile,
+  onDelete,
+  index,
+  selectedChatId,
+  handleReply,
   replyData,
   handleForward,
   handlePinMessage,
   pinnedMessages,
   showDateSeparator = false,
-  onScrollToMessage
+  onScrollToMessage,
+  // 🎭 Props para reações persistentes
+  addReactionToMessage,
+  getMessageReactions
 }) => {
   // Context API para reply - igual ao chat antigo
   const { setReplyingMessage } = useContext(ReplyMessageContext);
@@ -312,6 +317,16 @@ const MessageItem = ({
     pinnedMessage => pinnedMessage.id === message.id
   ) || false;
 
+  // Estados para controle do popover de reações
+  const [reactionAnchorEl, setReactionAnchorEl] = useState(null);
+  const [reactionMenuOpen, setReactionMenuOpen] = useState(false);
+  const messageBubbleRef = useRef(null);
+
+  // 🎭 Obter reações da mensagem - primeiro do backend, fallback para estado local
+  const messageReactions = message.reactions ||
+                           (getMessageReactions ? getMessageReactions(messageId) : []);
+
+
   const handleDeleteMessage = () => {
     onDelete(messageId);
   };
@@ -343,6 +358,50 @@ const MessageItem = ({
   const handleReplyClick = () => {
     if (quotedMsg?.id && onScrollToMessage) {
       onScrollToMessage(quotedMsg.id);
+    }
+  };
+
+  // Handlers para reações
+  const handleOpenReactionMenu = (event) => {
+    // Usar a referência da mensagem como âncora para posicionamento próximo à mensagem
+    const anchorElement = messageBubbleRef.current;
+
+    if (!anchorElement) {
+      console.error('MessageBubble ref é null!');
+      return;
+    }
+
+    // Popover será posicionado próximo à mensagem
+    setReactionAnchorEl(anchorElement);
+    setReactionMenuOpen(true);
+  };
+
+  const handleCloseReactionMenu = () => {
+    setReactionAnchorEl(null);
+    setReactionMenuOpen(false);
+  };
+
+  const handleReactToMessage = async (reactionType) => {
+    try {
+      console.log('🎭 [REACTION] Enviando reação:', {
+        messageId,
+        reactionType,
+        ticketId: message.ticketId,
+        selectedChatId
+      });
+
+      // 🎭 Enviar para o servidor - reações são salvas no banco e retornam via socket
+      const response = await api.post(`/messages/${messageId}/reactions`, {
+        type: reactionType
+      });
+
+      console.log('✅ Reação enviada com sucesso:', response.data);
+
+      // As reações chegam via socket e atualizam automaticamente a mensagem
+
+    } catch (err) {
+      console.error('❌ Erro ao reagir à mensagem:', err);
+      toastError(err);
     }
   };
 
@@ -422,13 +481,35 @@ const MessageItem = ({
       {/* Message Actions */}
       {!isDeleted && (
         <MessageActions className="message-actions" isSent={isSent}>
+          {/* Botão de Reação - primeiro para mensagens enviadas, segundo para recebidas */}
+          {isSent && (
+            <IconButton
+              size="small"
+              onClick={handleOpenReactionMenu}
+              sx={{
+                marginRight: '4px', // Pequeno espaço entre reação e três pontos
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.08)'
+                }
+              }}
+            >
+              <FaceSmileIcon style={{ width: '16px', height: '16px' }} />
+            </IconButton>
+          )}
+
+          {/* Menu de três pontos */}
           <Dropdown>
             <DropdownTrigger asChild>
-              <IconButton size="small">
+              <IconButton
+                size="small"
+                sx={{
+                  marginRight: isSent ? '0px' : '4px', // Espaço apenas se for recebida
+                }}
+              >
                 <EllipsisVerticalIcon style={{ width: '16px', height: '16px' }} />
               </IconButton>
             </DropdownTrigger>
-          
+
           <DropdownContent align={isSent ? "end" : "start"} side="top">
             {isSent ? (
               // Options for sent messages (right side)
@@ -449,7 +530,7 @@ const MessageItem = ({
                   Encaminhar
                 </DropdownItem>
                 
-                <DropdownItem onClick={() => {}} icon={<FaceSmileIcon style={{ width: '16px', height: '16px' }} />}>
+                <DropdownItem onClick={handleOpenReactionMenu} icon={<FaceSmileIcon style={{ width: '16px', height: '16px' }} />}>
                   Reagir
                 </DropdownItem>
               </>
@@ -464,13 +545,29 @@ const MessageItem = ({
                   Encaminhar
                 </DropdownItem>
                 
-                <DropdownItem onClick={() => {}} icon={<FaceSmileIcon style={{ width: '16px', height: '16px' }} />}>
+                <DropdownItem onClick={handleOpenReactionMenu} icon={<FaceSmileIcon style={{ width: '16px', height: '16px' }} />}>
                   Reagir
                 </DropdownItem>
               </>
             )}
           </DropdownContent>
         </Dropdown>
+
+        {/* Botão de Reação - segundo para mensagens recebidas */}
+        {!isSent && (
+          <IconButton
+            size="small"
+            onClick={handleOpenReactionMenu}
+            sx={{
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.08)'
+              }
+            }}
+          >
+            <FaceSmileIcon style={{ width: '16px', height: '16px' }} />
+          </IconButton>
+        )}
+
         </MessageActions>
       )}
 
@@ -507,7 +604,7 @@ const MessageItem = ({
             </MessageBubble>
           </Tooltip>
         ) : (
-          <MessageBubble isSent={isSent} isDeleted={isDeleted}>
+          <MessageBubble ref={messageBubbleRef} isSent={isSent} isDeleted={isDeleted}>
             {/* Reply dentro da bubble igual WhatsApp */}
             {quotedMsg && (
               <Box 
@@ -563,6 +660,42 @@ const MessageItem = ({
             isOptimistic={message.isOptimistic}
           />}
         </MessageTime>
+
+        {/* Reações da mensagem - embaixo no canto da caixinha */}
+        {messageReactions.length > 0 && (
+          <Box sx={{
+            position: 'absolute',
+            bottom: '50px', // Mesmo para ambas
+            // Para mensagens ENVIADAS (verde): posicionar na ESQUERDA
+            // Para mensagens RECEBIDAS (branca): posicionar na DIREITA
+            [isSent ? 'left' : 'right']: '2px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '4px',
+            zIndex: 2,
+          }}>
+            {messageReactions.map((reaction) => (
+              <Box
+                key={reaction.id}
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  backgroundColor: '#ffffff', // Branco sólido
+                  borderRadius: '6px', // Diminuído de 10px para 6px
+                  padding: '2px 4px', // Diminuído de 3px 5px para 2px 4px
+                  fontSize: '10px', // Diminuído de 12px para 10px
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.2)',
+                  opacity: reaction.isOptimistic ? 0.8 : 1,
+                  transition: 'opacity 0.2s ease',
+                  minWidth: '20px', // Diminuído de 24px para 20px
+                  justifyContent: 'center',
+                }}
+              >
+                <span>{reaction.type}</span>
+              </Box>
+            ))}
+          </Box>
+        )}
       </MessageContent>
 
       {/* Avatar para mensagens enviadas (direita) */}
@@ -577,6 +710,15 @@ const MessageItem = ({
         </Box>
       )}
     </MessageContainer>
+
+    {/* Popover de Reações - fora do container para melhor posicionamento */}
+    <MessageReactionsPopover
+      anchorEl={reactionAnchorEl}
+      open={reactionMenuOpen}
+      onClose={handleCloseReactionMenu}
+      onReact={handleReactToMessage}
+      placement={isSent ? 'bottom-end' : 'bottom-start'}
+    />
     </>
   );
 };

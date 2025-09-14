@@ -116,10 +116,7 @@ const QueueSelectionModal = ({ isOpen, contacts, onClose, onCreateAndOpen }) => 
 
   // Carregar dados quando abrir o modal
   useEffect(() => {
-    console.log('🎯 QueueSelectionModal - isOpen mudou para:', isOpen);
-    console.log('👥 QueueSelectionModal - contacts:', contacts);
     if (isOpen) {
-      console.log('📤 QueueSelectionModal - Carregando filas e conexões...');
       fetchQueues();
       fetchWhatsapps();
     }

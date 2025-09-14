@@ -117,16 +117,73 @@ export const addReaction = async (req: Request, res: Response): Promise<Response
       reactionType: type
     });
 
-    const io = getIO();
-    io.to(message.ticketId.toString()).emit(`company-${companyId}-appMessage`, {
-      action: "update",
-      message
+    // 🎭 Salvar reação no banco de dados - APENAS UMA REAÇÃO POR USUÁRIO
+    const currentReactions = message.reactions || [];
+    const newReaction = {
+      id: `${messageId}-${type}-${id}-${Date.now()}`,
+      type: type,
+      userId: id,
+      createdAt: new Date()
+    };
+
+    // 🔥 REMOVER qualquer reação anterior deste usuário (só pode uma)
+    const reactionsWithoutUser = currentReactions.filter(r => r.userId !== id);
+
+    // Adicionar a nova reação (substituindo qualquer anterior)
+    reactionsWithoutUser.push(newReaction);
+
+    // Atualizar mensagem com as novas reações
+    await message.update({ reactions: reactionsWithoutUser });
+
+    // 🔍 Recarregar mensagem do banco para ter dados completos incluindo reações
+    const updatedMessage = await Message.findByPk(messageId, {
+      attributes: ['id', 'body', 'mediaType', 'mediaUrl', 'ticketId', 'contactId', 'fromMe', 'ack', 'read', 'createdAt', 'updatedAt', 'reactions']
     });
 
-    return res.status(200).send({
-      message: 'Reação adicionada com sucesso!',
-      reactionResult
+    console.log('🔧 [REACTIONS-DEBUG] Estado completo após update:', {
+      messageId,
+      userId: id,
+      newReactionType: type,
+      reactionsInMemory: reactionsWithoutUser,
+      reactionsCount: reactionsWithoutUser.length,
+      updatedMessageReactions: updatedMessage.reactions,
+      updatedMessageReactionsCount: updatedMessage?.reactions?.length,
+      areEqual: JSON.stringify(reactionsWithoutUser) === JSON.stringify(updatedMessage.reactions)
+    });
 
+    console.log('🎭 [BACKEND] Enviando reação via socket:', {
+      ticketId: message.ticketId,
+      messageId,
+      userId: id,
+      reactionsCount: reactionsWithoutUser.length,
+      messageReactions: updatedMessage.reactions
+    });
+
+    console.log('📡 [SOCKET-EMIT] Dados completos sendo enviados:', {
+      companyId,
+      socketEvent: `company-${companyId}-appMessage`,
+      action: "update",
+      message: {
+        id: updatedMessage.id,
+        idType: typeof updatedMessage.id,
+        ticketId: updatedMessage.ticketId,
+        reactions: updatedMessage.reactions,
+        reactionsCount: updatedMessage.reactions?.length
+      }
+    });
+
+    const io = getIO();
+    // Emitir para sala da company, não do ticket específico
+    io.of(String(companyId))
+      .emit(`company-${companyId}-appMessage`, {
+        action: "update",
+        message: updatedMessage
+      });
+
+    return res.status(200).send({
+      message: 'Reação atualizada com sucesso!',
+      reactionResult,
+      reactions: reactionsWithoutUser
     });
   } catch (error) {
     console.error('Erro ao adicionar reação:', error);

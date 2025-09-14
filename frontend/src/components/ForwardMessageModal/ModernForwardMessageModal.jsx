@@ -901,7 +901,6 @@ const ModernForwardMessageModal = ({ messages, onClose, modalOpen, onCreateTicke
       </StyledDialog>
       
       {/* Modal de Seleção de Fila */}
-      {console.log('🎯 Renderizando QueueSelectionModal - showQueueSelection:', showQueueSelection, 'contactsForNewTickets:', contactsForNewTickets.length)}
       <QueueSelectionModal
         isOpen={showQueueSelection}
         contacts={contactsForNewTickets}

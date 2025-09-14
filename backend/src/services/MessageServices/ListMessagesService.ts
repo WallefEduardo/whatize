@@ -104,7 +104,7 @@ const ListMessagesService = async ({
 
   const { count, rows: messages } = await Message.findAndCountAll({
     where: { ticketId: tickets, companyId },
-    attributes: ["id", "fromMe", "mediaUrl", "body", "mediaType", "ack", "createdAt", "ticketId", "isDeleted", "queueId", "isForwarded", "isEdited", "isPrivate", "companyId", "userId"],
+    attributes: ["id", "fromMe", "mediaUrl", "body", "mediaType", "ack", "createdAt", "ticketId", "isDeleted", "queueId", "isForwarded", "isEdited", "isPrivate", "companyId", "userId", "reactions"],
     limit,
     include: [
       {
@@ -114,7 +114,7 @@ const ListMessagesService = async ({
       },
       {
         model: Message,
-        attributes: ["id", "fromMe", "mediaUrl", "body", "mediaType", "companyId"],
+        attributes: ["id", "fromMe", "mediaUrl", "body", "mediaType", "companyId", "reactions"],
         as: "quotedMsg",
         include: [
           {

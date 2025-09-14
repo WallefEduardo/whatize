@@ -134,6 +134,9 @@ class Message extends Model<Message> {
 
   @BelongsTo(() => User)
   user: User;
+
+  @Column(DataType.JSON)
+  reactions: any;
 }
 
 export default Message;
