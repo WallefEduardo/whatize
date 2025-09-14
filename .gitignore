@@ -133,3 +133,4 @@ start-monitor.sh.log
 backend/logs/*
 backend/logs/**/*
 backend/logs/race_conditions.log
+backend/logs/race_conditions.log

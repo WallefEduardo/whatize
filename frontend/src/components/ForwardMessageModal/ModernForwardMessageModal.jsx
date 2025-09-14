@@ -440,42 +440,54 @@ const ModernForwardMessageModal = ({ messages, onClose, modalOpen, onCreateTicke
           });
         });
         
-        // 2. SEGUNDO: Verificar quais contatos já têm tickets abertos
-        const contactsWithTickets = [];
-        const contactsWithoutTickets = [];
-        
+        // 2. SEGUNDO: Verificar tickets e atribuições de usuário
+        const contactsWithMyTickets = [];      // Tickets do usuário atual
+        const contactsWithOtherTickets = [];   // Tickets de outros usuários
+        const contactsWithoutTickets = [];     // Sem tickets abertos
+
         for (const contact of selectedContacts) {
           console.log(`🔍 Verificando contato: ${contact.name || contact.number} (ID: ${contact.id})`);
-          
+
           // Buscar tickets do contato por múltiplas estratégias
-          let contactTickets = allTickets.filter(t => 
+          let contactTickets = allTickets.filter(t =>
             t.contactId === contact.id ||
             t.contact?.number === contact.number ||
             t.contact?.name === contact.name ||
             t.contact?.name === contact.number
           );
-          
+
           console.log(`🔍 DEBUG: Busca para contato ${contact.name || contact.number}:`);
           console.log(`   - contact.id: ${contact.id}`);
           console.log(`   - contact.number: ${contact.number}`);
           console.log(`   - contact.name: ${contact.name}`);
           console.log(`   - Tickets encontrados:`, contactTickets.map(t => ({
             id: t.id,
-            uuid: t.uuid, 
+            uuid: t.uuid,
             status: t.status,
             contactId: t.contactId,
+            userId: t.userId,
             contactName: t.contact?.name,
             contactNumber: t.contact?.number
           })));
-          
+
           // Filtrar apenas tickets abertos (pending ou open)
           const openTickets = contactTickets.filter(t => t.status === 'pending' || t.status === 'open');
-          
+
           console.log(`📋 Contato ${contact.name}: ${contactTickets.length} tickets total, ${openTickets.length} abertos`);
-          
+
           if (openTickets.length > 0) {
-            contactsWithTickets.push({ contact, ticket: openTickets[0] });
-            console.log(`✅ ${contact.name} TEM ticket aberto: ${openTickets[0].uuid}`);
+            const ticket = openTickets[0];
+
+            // VERIFICAR ATRIBUIÇÃO DO USUÁRIO
+            if (ticket.userId && ticket.userId !== user.id) {
+              // Ticket de outro usuário
+              contactsWithOtherTickets.push({ contact, ticket });
+              console.log(`⚠️ ${contact.name} tem ticket de OUTRO usuário (userId: ${ticket.userId})`);
+            } else {
+              // Ticket do usuário atual ou sem atribuição
+              contactsWithMyTickets.push({ contact, ticket });
+              console.log(`✅ ${contact.name} TEM ticket do usuário atual: ${ticket.uuid}`);
+            }
           } else {
             contactsWithoutTickets.push(contact);
             console.log(`❌ ${contact.name} NÃO tem ticket aberto`);
@@ -483,85 +495,132 @@ const ModernForwardMessageModal = ({ messages, onClose, modalOpen, onCreateTicke
         }
         
         console.log('📊 Resumo:');
-        console.log('✅ Contatos COM tickets abertos:', contactsWithTickets.length);
+        console.log('✅ Contatos com MEUs tickets:', contactsWithMyTickets.length);
+        console.log('⚠️ Contatos com tickets de OUTROS usuários:', contactsWithOtherTickets.length);
         console.log('❌ Contatos SEM tickets abertos:', contactsWithoutTickets.length);
-        
-        // 3. TERCEIRO: Decidir fluxo baseado na análise
-        if (contactsWithoutTickets.length === 0) {
-          // TODOS os contatos já têm tickets abertos
-          console.log('🎯 CENÁRIO 1: Todos os contatos já têm tickets abertos');
+
+        // Mostrar toast se há tickets de outros usuários
+        if (contactsWithOtherTickets.length > 0) {
+          const otherUsersContacts = contactsWithOtherTickets.map(item => item.contact.name || item.contact.number);
+          toastError(`Estes contatos estão atribuídos a outros usuários: ${otherUsersContacts.join(', ')}`);
+        }
+
+        // 3. TERCEIRO: Decidir fluxo baseado APENAS nos tickets do usuário atual
+        if (contactsWithMyTickets.length > 0 && contactsWithoutTickets.length === 0 && contactsWithOtherTickets.length === 0) {
+          // CENÁRIO 1: TODOS os contatos selecionados têm tickets do usuário atual
+          console.log('🎯 CENÁRIO 1: Todos os contatos selecionados têm meus tickets');
           console.log('📤 Enviando mensagens para todos e redirecionando para o primeiro...');
-          
-          // Enviar mensagens para todos os contatos
+
+          // Enviar mensagens para contatos com meus tickets
+          const myContactsOnly = contactsWithMyTickets.map(item => item.contact);
+          setSelectedContacts(myContactsOnly);
           await sendMessagesToContacts();
-          
+
           // Redirecionar para o primeiro contato
-          const firstContactWithTicket = contactsWithTickets[0];
+          const firstContactWithTicket = contactsWithMyTickets[0];
           const redirectUrl = `/chat-moderno/${firstContactWithTicket.ticket.uuid}`;
-          
+
           console.log('🚀 Redirecionando para:', redirectUrl);
-          
+
           if (forceTicketsRefresh) {
             forceTicketsRefresh();
           }
-          
+
           history.push(redirectUrl);
           handleClose();
-          
-        } else if (contactsWithTickets.length === 0) {
-          // NENHUM contato tem ticket aberto
-          console.log('🎯 CENÁRIO 2: Nenhum contato tem ticket aberto');
+
+        } else if (contactsWithMyTickets.length === 0 && contactsWithoutTickets.length > 0 && contactsWithOtherTickets.length === 0) {
+          // CENÁRIO 2: TODOS os contatos selecionados não têm tickets
+          console.log('🎯 CENÁRIO 2: Todos os contatos selecionados não têm tickets');
           console.log('📋 Abrindo modal para criar tickets para', contactsWithoutTickets.length, 'contatos');
-          
+
           // Fechar modal principal e abrir modal de seleção
           handleClose();
-          
+
           setTimeout(() => {
             setContactsForNewTickets(contactsWithoutTickets);
             setShowQueueSelection(true);
           }, 100);
-          
-        } else {
-          // ALGUNS contatos têm tickets, OUTROS não
-          console.log('🎯 CENÁRIO 3: Mistura - alguns têm tickets, outros não');
-          console.log('📤 Enviando mensagens para contatos com tickets...');
-          console.log('📋 E abrindo modal para criar tickets para os demais...');
-          
-          console.log('🔍 DEBUG CENÁRIO 3:');
-          console.log('   - contactsWithTickets:', contactsWithTickets.map(c => ({ name: c.contact.name, id: c.contact.id })));
-          console.log('   - contactsWithoutTickets:', contactsWithoutTickets.map(c => ({ name: c.name, id: c.id })));
-          
-          // Enviar mensagens apenas para contatos que já têm tickets
-          const contactsOnlyWithTickets = contactsWithTickets.map(item => item.contact);
-          
-          console.log('📤 Enviando mensagens para:', contactsOnlyWithTickets.map(c => ({ name: c.name, id: c.id })));
-          
-          // Usar função específica que aceita contatos como parâmetro
-          await sendMessagesToSpecificContacts(contactsOnlyWithTickets);
-          
-          // Fechar modal principal e abrir modal de seleção para contatos sem tickets
+
+        } else if (contactsWithOtherTickets.length > 0 && contactsWithMyTickets.length === 0 && contactsWithoutTickets.length === 0) {
+          // CENÁRIO 3: TODOS os contatos selecionados têm tickets de outros usuários
+          console.log('🎯 CENÁRIO 3: Todos os contatos selecionados têm tickets de outros usuários');
+          console.log('⚠️ Não é possível encaminhar mensagens - todos estão com outros usuários');
+
+          // Só fechar o modal, toast já foi mostrado
           handleClose();
-          
-          setTimeout(() => {
-            console.log('🎯 Definindo contatos SEM tickets para o modal:', contactsWithoutTickets.map(c => ({ name: c.name, id: c.id })));
-            setContactsForNewTickets(contactsWithoutTickets);
-            setShowQueueSelection(true);
-          }, 100);
-          
-          // Redirecionar para o primeiro contato que já tinha ticket
-          const firstContactWithTicket = contactsWithTickets[0];
-          const redirectUrl = `/chat-moderno/${firstContactWithTicket.ticket.uuid}`;
-          
-          console.log('🚀 Redirecionando para contato que já tinha ticket:', redirectUrl);
-          
-          if (forceTicketsRefresh) {
-            forceTicketsRefresh();
+
+        } else if (contactsWithMyTickets.length > 0 && (contactsWithoutTickets.length > 0 || contactsWithOtherTickets.length > 0)) {
+          // CENÁRIO 4: MISTURA - alguns têm meus tickets, outros não têm ou têm de outros usuários
+          console.log('🎯 CENÁRIO 4: Mistura - alguns têm meus tickets, outros não');
+          console.log('📤 Enviando mensagens APENAS para contatos com meus tickets...');
+
+          if (contactsWithoutTickets.length > 0) {
+            console.log('📋 E abrindo modal para criar tickets para os demais...');
           }
-          
-          // Pequeno delay para permitir o modal abrir antes do redirect
-          setTimeout(() => {
-            history.push(redirectUrl);
-          }, 200);
+
+          console.log('🔍 DEBUG CENÁRIO 4:');
+          console.log('   - contactsWithMyTickets:', contactsWithMyTickets.map(c => ({ name: c.contact.name, id: c.contact.id })));
+          console.log('   - contactsWithOtherTickets:', contactsWithOtherTickets.map(c => ({ name: c.contact.name, id: c.contact.id })));
+          console.log('   - contactsWithoutTickets:', contactsWithoutTickets.map(c => ({ name: c.name, id: c.id })));
+
+          // Enviar mensagens APENAS para contatos que têm meus tickets
+          const myContactsOnly = contactsWithMyTickets.map(item => item.contact);
+
+          console.log('📤 Enviando mensagens SOMENTE para:', myContactsOnly.map(c => ({ name: c.name, id: c.id })));
+
+          // Usar função específica que aceita contatos como parâmetro
+          await sendMessagesToSpecificContacts(myContactsOnly);
+
+          // Se há contatos sem tickets, abrir modal para eles
+          if (contactsWithoutTickets.length > 0) {
+            // Fechar modal principal e abrir modal de seleção para contatos sem tickets
+            handleClose();
+
+            setTimeout(() => {
+              console.log('🎯 Definindo contatos SEM tickets para o modal:', contactsWithoutTickets.map(c => ({ name: c.name, id: c.id })));
+              setContactsForNewTickets(contactsWithoutTickets);
+              setShowQueueSelection(true);
+            }, 100);
+          } else {
+            // Se não há contatos sem tickets, só fechar
+            handleClose();
+          }
+
+          // Redirecionar para o primeiro contato que já tinha meu ticket
+          if (contactsWithMyTickets.length > 0) {
+            const firstContactWithTicket = contactsWithMyTickets[0];
+            const redirectUrl = `/chat-moderno/${firstContactWithTicket.ticket.uuid}`;
+
+            console.log('🚀 Redirecionando para contato que já tinha meu ticket:', redirectUrl);
+
+            if (forceTicketsRefresh) {
+              forceTicketsRefresh();
+            }
+
+            // Pequeno delay para permitir o modal abrir antes do redirect
+            setTimeout(() => {
+              history.push(redirectUrl);
+            }, contactsWithoutTickets.length > 0 ? 200 : 0);
+          }
+
+        } else {
+          // CENÁRIO 5: Só contatos sem tickets + contatos de outros usuários (sem meus tickets)
+          console.log('🎯 CENÁRIO 5: Só contatos sem tickets + contatos de outros usuários');
+          console.log('📋 Abrindo modal apenas para contatos sem tickets');
+
+          if (contactsWithoutTickets.length > 0) {
+            // Fechar modal principal e abrir modal de seleção
+            handleClose();
+
+            setTimeout(() => {
+              setContactsForNewTickets(contactsWithoutTickets);
+              setShowQueueSelection(true);
+            }, 100);
+          } else {
+            // Se não há contatos sem tickets, só fechar (todos são de outros usuários)
+            handleClose();
+          }
         }
         
       } catch (error) {
