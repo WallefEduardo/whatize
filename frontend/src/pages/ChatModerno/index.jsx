@@ -489,12 +489,12 @@ const ChatModernoContent = () => {
           setMessages(prev => {
             const exists = prev.find(msg => msg.id === data.message.id);
             if (exists) return prev;
-            
-            return [...prev, data.message].sort((a, b) => 
+
+            return [...prev, data.message].sort((a, b) =>
               new Date(a.createdAt) - new Date(b.createdAt)
             );
           });
-          
+
           // 🚀 INCREMENTAR CONTADOR se usuário não está no final da conversa
           if (isScrolledUp && !data.message.fromMe) {
             setNewMessagesCount(prev => prev + 1);
@@ -581,6 +581,17 @@ const ChatModernoContent = () => {
       socket.emit("leaveTickets", tabOpen);
     };
   }, [socket, tabOpen, user?.companyId]);
+
+  // useEffect para joinChatBox quando seleciona conversa específica
+  useEffect(() => {
+    if (!socket || !selectedChatId) return;
+
+    socket.emit("joinChatBox", selectedChatId.toString());
+
+    return () => {
+      socket.emit("joinChatBoxLeave", selectedChatId.toString());
+    };
+  }, [socket, selectedChatId]);
 
   // Mapeamento de nomes de status para códigos da API
   const statusMap = {
