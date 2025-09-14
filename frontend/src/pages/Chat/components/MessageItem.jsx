@@ -383,19 +383,10 @@ const MessageItem = ({
 
   const handleReactToMessage = async (reactionType) => {
     try {
-      console.log('🎭 [REACTION] Enviando reação:', {
-        messageId,
-        reactionType,
-        ticketId: message.ticketId,
-        selectedChatId
-      });
-
       // 🎭 Enviar para o servidor - reações são salvas no banco e retornam via socket
       const response = await api.post(`/messages/${messageId}/reactions`, {
         type: reactionType
       });
-
-      console.log('✅ Reação enviada com sucesso:', response.data);
 
       // As reações chegam via socket e atualizam automaticamente a mensagem
 

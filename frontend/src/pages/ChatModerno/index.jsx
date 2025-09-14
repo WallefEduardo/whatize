@@ -449,12 +449,16 @@ const ChatModernoContent = () => {
     const companyId = user.companyId;
 
     const onCompanyTicket = (data) => {
-      console.log('🎫 [TICKET-UPDATE] Recebendo update de ticket:', {
+      console.log('🎫 [DEBUG-FRONTEND] Dados recebidos via socket:', {
         action: data.action,
         ticketId: data.ticket?.id,
-        lastMessage: data.ticket?.lastMessage,
-        status: data.ticket?.status,
-        tabOpen: tabOpen
+        hasQueue: !!data.ticket?.queue,
+        queueData: data.ticket?.queue,
+        hasTags: !!data.ticket?.tags,
+        tagsData: data.ticket?.tags,
+        hasContact: !!data.ticket?.contact,
+        contactTags: data.ticket?.contact?.tags,
+        lastMessage: data.ticket?.lastMessage
       });
 
       if (data.action === "update" && data.ticket) {
@@ -463,11 +467,7 @@ const ChatModernoContent = () => {
         const isStatusMatch = data.ticket.status === tabOpen;
 
         if (isReactionUpdate || isStatusMatch) {
-          console.log('✅ [TICKET-UPDATE] Atualizando ticket na lista:', {
-            ticketId: data.ticket.id,
-            reason: isReactionUpdate ? 'reação' : 'status match',
-            lastMessage: data.ticket.lastMessage
-          });
+          console.log('✅ [DEBUG-FRONTEND] Atualizando ticket na lista:', data.ticket);
           dispatch({ type: "UPDATE_TICKET", payload: data.ticket });
         }
       }
@@ -516,57 +516,24 @@ const ChatModernoContent = () => {
 
       // Tratamento para mensagens atualizadas (incluindo deletadas)
       if (data.action === "update" && data.message) {
-        console.log('📨 [CHAT-MODERNO] Recebendo update:', {
-          action: data.action,
-          messageId: data.message.id,
-          mediaType: data.message.mediaType,
-          body: data.message.body,
-          quotedMsgId: data.message.quotedMsgId,
-          reactionMessage: data.message.reactionMessage,
-          reactions: data.message.reactions, // 🎭 DEBUG: Ver reações
-          reactionsLength: data.message.reactions?.length
-        });
 
         // ✅ FILTRO: Ignorar reações - não são updates de mensagens normais
         if (data.message.mediaType === "reactionMessage") {
-          console.log('🚫 [CHAT-MODERNO] Ignorando reactionMessage em update:', data.message);
           return;
         }
 
         // ✅ FILTRO ADICIONAL: Ignorar mensagens que são reações baseadas no conteúdo
         if (data.message.reactionMessage || data.message.body === "reaction") {
-          console.log('🚫 [CHAT-MODERNO] Ignorando mensagem de reação por conteúdo:', data.message);
           return;
         }
 
-        console.log('🔍 [TICKET-ID-CHECK] Verificando condição de update:', {
-          messageTicketId: data.message.ticketId,
-          messageTicketIdType: typeof data.message.ticketId,
-          selectedChatId: selectedChatId,
-          selectedChatIdType: typeof selectedChatId,
-          currentTicketId: currentTicket?.id,
-          isEqual: data.message.ticketId?.toString() === selectedChatId?.toString(),
-          isEqualCurrentTicket: data.message.ticketId?.toString() === currentTicket?.id?.toString(),
-          reactions: data.message.reactions
-        });
 
         // Se tem reactions, sempre atualizar (já que está no chat certo)
         const shouldUpdate = data.message.reactions && data.message.reactions.length > 0;
 
         if (shouldUpdate) {
-          console.log('🔄 [REACTION-UPDATE] Atualizando mensagem em tempo real:', {
-            messageId: data.message.id,
-            reactions: data.message.reactions,
-            ticketId: data.message.ticketId
-          });
 
           setMessages(prev => {
-            console.log('🔍 [DEBUG-IDS] Buscando mensagem para atualizar:', {
-              targetMessageId: data.message.id,
-              targetType: typeof data.message.id,
-              totalMessages: prev.length,
-              messageIds: prev.map(m => ({ id: m.id, type: typeof m.id }))
-            });
 
             const updatedMessages = prev.map(msg => {
               const isMatch = msg.id === data.message.id ||
@@ -574,20 +541,11 @@ const ChatModernoContent = () => {
                              Number(msg.id) === Number(data.message.id);
 
               if (isMatch) {
-                console.log('✅ [REACTION-UPDATE] Mensagem encontrada e atualizada:', {
-                  msgId: msg.id,
-                  targetId: data.message.id,
-                  oldReactions: msg.reactions,
-                  newReactions: data.message.reactions
-                });
                 return { ...msg, reactions: data.message.reactions };
               }
               return msg;
             });
 
-            console.log('🎯 [REACTION-UPDATE] Resultado final:', {
-              messagesUpdated: updatedMessages.filter(m => m.reactions?.length > 0).length
-            });
 
             return updatedMessages;
           });
@@ -621,7 +579,6 @@ const ChatModernoContent = () => {
     };
 
     const onConnect = () => {
-      console.log('🔌 [SOCKET] Conectando e entrando na sala:', tabOpen);
       socket.emit("joinTickets", tabOpen);
     };
 

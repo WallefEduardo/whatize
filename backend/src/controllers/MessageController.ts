@@ -34,6 +34,7 @@ import ShowContactService from "../services/ContactServices/ShowContactService";
 import FindOrCreateTicketService from "../services/TicketServices/FindOrCreateTicketService";
 
 import Contact from "../models/Contact";
+import Tag from "../models/Tag";
 
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
 import ListSettingsService from "../services/SettingServices/ListSettingsService";
@@ -118,9 +119,7 @@ export const addReaction = async (req: Request, res: Response): Promise<Response
         ticket: ticket,
         reactionType: type
       });
-      console.log('✅ [WHATSAPP-REACTION] Reação enviada via WhatsApp com sucesso');
     } catch (whatsappError) {
-      console.log('⚠️ [WHATSAPP-REACTION] Falha ao enviar via WhatsApp (continuando):', whatsappError.message);
       // Continua a execução para salvar no banco e atualizar o ticket
     }
 
@@ -147,60 +146,19 @@ export const addReaction = async (req: Request, res: Response): Promise<Response
       attributes: ['id', 'body', 'mediaType', 'mediaUrl', 'ticketId', 'contactId', 'fromMe', 'ack', 'read', 'createdAt', 'updatedAt', 'reactions']
     });
 
-    console.log('🔧 [REACTIONS-DEBUG] Estado completo após update:', {
-      messageId,
-      userId: id,
-      newReactionType: type,
-      reactionsInMemory: reactionsWithoutUser,
-      reactionsCount: reactionsWithoutUser.length,
-      updatedMessageReactions: updatedMessage.reactions,
-      updatedMessageReactionsCount: updatedMessage?.reactions?.length,
-      areEqual: JSON.stringify(reactionsWithoutUser) === JSON.stringify(updatedMessage.reactions)
-    });
-
-    console.log('🎭 [BACKEND] Enviando reação via socket:', {
-      ticketId: message.ticketId,
-      messageId,
-      userId: id,
-      reactionsCount: reactionsWithoutUser.length,
-      messageReactions: updatedMessage.reactions
-    });
-
-    console.log('📡 [SOCKET-EMIT] Dados completos sendo enviados:', {
-      companyId,
-      socketEvent: `company-${companyId}-appMessage`,
-      action: "update",
-      message: {
-        id: updatedMessage.id,
-        idType: typeof updatedMessage.id,
-        ticketId: updatedMessage.ticketId,
-        reactions: updatedMessage.reactions,
-        reactionsCount: updatedMessage.reactions?.length
-      }
-    });
 
     // 🎭 Atualizar lastMessage do ticket para mostrar reação no sidebar
     const messageText = message.body || message.mediaType || 'Mensagem';
     const truncatedMessage = messageText.length > 30 ? messageText.substring(0, 30) + '...' : messageText;
     const reactionText = `Você reagiu com ${type} a: "${truncatedMessage}"`;
-    console.log('🔧 [TICKET-UPDATE-START] Iniciando update do ticket:', {
-      ticketId: ticket.id,
-      currentLastMessage: ticket.lastMessage,
-      newLastMessage: reactionText,
-      originalMessage: messageText
-    });
 
-    const updatedTicket = await ticket.update({
+    await ticket.update({
       lastMessage: reactionText,
       updatedAt: new Date()
     });
 
-    console.log('🏷️ [TICKET-LAST-MESSAGE] Ticket atualizado no banco:', {
-      ticketId: ticket.id,
-      lastMessage: updatedTicket.lastMessage,
-      updatedAt: updatedTicket.updatedAt,
-      dataValues: updatedTicket.dataValues
-    });
+    // Buscar o ticket com todas as relações usando ShowTicketService
+    const ticketWithRelations = await ShowTicketService(ticket.id, companyId);
 
     const io = getIO();
     // Emitir para sala da company, não do ticket específico
@@ -210,27 +168,24 @@ export const addReaction = async (req: Request, res: Response): Promise<Response
         message: updatedMessage
       });
 
-    // 🎫 Emitir update do ticket para atualizar sidebar
-    const ticketData = {
-      ...updatedTicket.dataValues,
-      lastMessage: reactionText,
-      updatedAt: new Date()
-    };
-
-    console.log('📡 [TICKET-SOCKET] Emitindo update de ticket:', {
+    // 🎫 Emitir update do ticket para atualizar sidebar com todas as relações
+    // FORCE RELOAD TO DEBUG NOW
+    console.log('🎫 [DEBUG-TICKET-UPDATE] Dados sendo enviados via socket:', {
       companyId,
-      socketEvent: `company-${companyId}-ticket`,
-      action: "update",
-      ticketId: ticketData.id,
-      lastMessage: ticketData.lastMessage,
-      hasIo: !!io,
-      hasNamespace: !!io.of(String(companyId))
+      ticketId: ticketWithRelations?.id,
+      hasQueue: !!ticketWithRelations?.queue,
+      queueData: ticketWithRelations?.queue,
+      hasTags: !!ticketWithRelations?.tags,
+      tagsData: ticketWithRelations?.tags,
+      hasContact: !!ticketWithRelations?.contact,
+      contactTags: ticketWithRelations?.contact?.tags,
+      lastMessage: ticketWithRelations?.lastMessage
     });
 
     io.of(String(companyId))
       .emit(`company-${companyId}-ticket`, {
         action: "update",
-        ticket: ticketData
+        ticket: ticketWithRelations
       });
 
     return res.status(200).send({
