@@ -752,4 +752,20 @@ const MessageItem = ({
   );
 };
 
-export default MessageItem;
+// 🚀 OTIMIZAÇÃO: React.memo para evitar re-renders desnecessários
+export default React.memo(MessageItem, (prevProps, nextProps) => {
+  // Só re-renderizar se props essenciais mudaram
+  const message = prevProps.message;
+  const nextMessage = nextProps.message;
+
+  // Comparar propriedades que realmente importam para o render
+  return (
+    message.id === nextMessage.id &&
+    message.body === nextMessage.body &&
+    message.ack === nextMessage.ack &&
+    message.isDeleted === nextMessage.isDeleted &&
+    JSON.stringify(message.reactions) === JSON.stringify(nextMessage.reactions) &&
+    prevProps.index === nextProps.index &&
+    prevProps.selectedChatId === nextProps.selectedChatId
+  );
+});
