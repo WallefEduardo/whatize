@@ -200,6 +200,9 @@ const ChatModernoContent = () => {
   const [messageQueue, setMessageQueue] = useState(new Map());
   const tempIdCounter = useRef(0);
 
+  // 🚀 OTIMIZAÇÃO: Set para verificação rápida de duplicatas (O(1))
+  const [messageIds, setMessageIds] = useState(new Set());
+
   // 🚀 Estados para setinha de scroll e contador de mensagens novas
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
@@ -475,29 +478,27 @@ const ChatModernoContent = () => {
           
           // Atualizar lista de mensagens real (se for o chat atual)
           if (data.message.ticketId?.toString() === selectedChatId?.toString()) {
-            setMessages(prev => {
-              const exists = prev.find(msg => msg.id === data.message.id);
-              if (exists) return prev;
-              
-              return [...prev, data.message].sort((a, b) => 
+            // 🚀 OTIMIZAÇÃO: Verificação rápida de duplicatas com Set (O(1))
+            if (!messageIds.has(data.message.id)) {
+              setMessages(prev => [...prev, data.message].sort((a, b) =>
                 new Date(a.createdAt) - new Date(b.createdAt)
-              );
-            });
+              ));
+              setMessageIds(prev => new Set([...prev, data.message.id]));
+            }
           }
         } else if (data.message.ticketId?.toString() === selectedChatId?.toString()) {
           // 📨 MENSAGEM NOVA de outro usuário
-          setMessages(prev => {
-            const exists = prev.find(msg => msg.id === data.message.id);
-            if (exists) return prev;
-
-            return [...prev, data.message].sort((a, b) =>
+          // 🚀 OTIMIZAÇÃO: Verificação rápida de duplicatas com Set (O(1))
+          if (!messageIds.has(data.message.id)) {
+            setMessages(prev => [...prev, data.message].sort((a, b) =>
               new Date(a.createdAt) - new Date(b.createdAt)
-            );
-          });
+            ));
+            setMessageIds(prev => new Set([...prev, data.message.id]));
 
-          // 🚀 INCREMENTAR CONTADOR se usuário não está no final da conversa
-          if (isScrolledUp && !data.message.fromMe) {
-            setNewMessagesCount(prev => prev + 1);
+            // 🚀 INCREMENTAR CONTADOR se usuário não está no final da conversa
+            if (isScrolledUp && !data.message.fromMe) {
+              setNewMessagesCount(prev => prev + 1);
+            }
           }
         }
       }
@@ -1073,6 +1074,8 @@ const ChatModernoContent = () => {
     if (!selectedChatId) {
       setMessages([]);
       setSelectedContact(null);
+      // 🚀 OTIMIZAÇÃO: Limpar Set de IDs quando não há chat selecionado
+      setMessageIds(new Set());
       return;
     }
     
@@ -1091,8 +1094,12 @@ const ChatModernoContent = () => {
         // setCurrentTicket(ticketData); <- REMOVIDO para evitar redirecionamento
         
         // Garantir que messages é sempre um array
-        setMessages(Array.isArray(messagesData) ? messagesData : []);
-        
+        const validMessages = Array.isArray(messagesData) ? messagesData : [];
+        setMessages(validMessages);
+
+        // 🚀 OTIMIZAÇÃO: Atualizar Set de IDs para verificação rápida de duplicatas
+        setMessageIds(new Set(validMessages.map(msg => msg.id)));
+
         // Definir contato selecionado baseado no ticket
         if (ticketData?.contact) {
           setSelectedContact({
