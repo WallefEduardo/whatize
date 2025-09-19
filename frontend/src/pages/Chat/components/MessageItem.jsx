@@ -18,6 +18,8 @@ import MessageReactionsPopover from './MessageReactionsPopover';
 import api from '../../../services/api';
 import toastError from '../../../errors/toastError';
 import { toast } from '../../../components/ui/ToastProvider';
+import { getBackendUrl } from '../../../config';
+import whatsappIcon from '../../../assets/nopicture.png';
 
 // Icons
 import {
@@ -29,7 +31,8 @@ import {
   BookmarkIcon,
   CheckIcon,
   ClockIcon,
-  PencilIcon // Para editar
+  PencilIcon, // Para editar
+  DocumentDuplicateIcon // Para copiar
 } from '@heroicons/react/24/outline';
 import { 
   BookmarkIcon as BookmarkSolidIcon,
@@ -284,6 +287,21 @@ const MessageItem = ({
   addReactionToMessage,
   getMessageReactions
 }) => {
+  const backendUrl = getBackendUrl();
+
+  // 🎯 Função para construir URL do avatar (usando lógica absorvida)
+  const getAvatarUrl = (user) => {
+    if (!user) return whatsappIcon;
+
+    // Se tem profileImage, construir URL completa
+    if (user.profileImage && user.companyId) {
+      return `${backendUrl}/public/company${user.companyId}/${user.profileImage}`;
+    }
+
+    // Fallback para avatar antigo ou nopicture
+    return user.avatar || user.profilePicUrl || whatsappIcon;
+  };
+
   // Context API para reply - igual ao chat antigo
   const { setReplyingMessage } = useContext(ReplyMessageContext);
 
@@ -345,6 +363,27 @@ const MessageItem = ({
     // Se não estamos no modo de seleção, ativar o modo e selecionar esta mensagem
     if (!showSelectMessageCheckbox) {
       handleForward(messageId);
+    }
+  };
+
+  const handleCopyMessage = async () => {
+    try {
+      await navigator.clipboard.writeText(messageText);
+      toast.success('Mensagem copiada!');
+    } catch (err) {
+      // Fallback para navegadores mais antigos
+      const textArea = document.createElement('textarea');
+      textArea.value = messageText;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast.success('Mensagem copiada!');
+      } catch (fallbackErr) {
+        toast.error('Erro ao copiar mensagem');
+      }
+      document.body.removeChild(textArea);
     }
   };
 
@@ -487,8 +526,8 @@ const MessageItem = ({
       {/* Avatar para mensagens recebidas (esquerda) */}
       {!isSent && !showSelectMessageCheckbox && (
         <Box sx={{ flexShrink: 0, alignSelf: 'flex-end', mb: '20px', order: 0 }}>
-          <Avatar 
-            src={sender?.profileImage || sender?.avatar} 
+          <Avatar
+            src={getAvatarUrl(sender)}
             alt={sender?.name}
             size="md"
             fallbackText={sender?.name}
@@ -554,6 +593,10 @@ const MessageItem = ({
                   Responder
                 </DropdownItem>
 
+                <DropdownItem onClick={handleCopyMessage} icon={<DocumentDuplicateIcon style={{ width: '16px', height: '16px' }} />}>
+                  Copiar
+                </DropdownItem>
+
                 <DropdownItem onClick={handleForwardMessage} icon={<ArrowTopRightOnSquareIcon style={{ width: '16px', height: '16px' }} />}>
                   Encaminhar
                 </DropdownItem>
@@ -568,7 +611,11 @@ const MessageItem = ({
                 <DropdownItem onClick={handleReplyMessage} icon={<ArrowUturnLeftIcon style={{ width: '16px', height: '16px' }} />}>
                   Responder
                 </DropdownItem>
-                
+
+                <DropdownItem onClick={handleCopyMessage} icon={<DocumentDuplicateIcon style={{ width: '16px', height: '16px' }} />}>
+                  Copiar
+                </DropdownItem>
+
                 <DropdownItem onClick={handleForwardMessage} icon={<ArrowTopRightOnSquareIcon style={{ width: '16px', height: '16px' }} />}>
                   Encaminhar
                 </DropdownItem>
@@ -729,8 +776,8 @@ const MessageItem = ({
       {/* Avatar para mensagens enviadas (direita) */}
       {isSent && (
         <Box sx={{ flexShrink: 0, alignSelf: 'flex-end', mb: '20px', order: 2 }}>
-          <Avatar 
-            src={sender?.profileImage || sender?.avatar} 
+          <Avatar
+            src={getAvatarUrl(sender)}
             alt={sender?.name}
             size="md"
             fallbackText={sender?.name}

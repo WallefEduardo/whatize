@@ -268,12 +268,24 @@ const MessageInput = ({
     // Se estamos editando uma mensagem
     if (editingMessage) {
       try {
+        // 🎯 FEEDBACK OTIMISTA: Atualizar UI imediatamente
+        const optimisticUpdate = { ...editingMessage, body: message.trim() };
+
+        // Limpar estado de edição imediatamente para feedback visual
+        setEditingMessage(null);
+        setMessage('');
+
+        // Enviar para o servidor em background
         await api.post(`/messages/edit/${editingMessage.id}`, {
           body: message.trim()
         });
-        setEditingMessage(null);
-        setMessage('');
+
+        // Sucesso - a atualização via Socket.IO vai sincronizar com o servidor
+
       } catch (err) {
+        // 🎯 ROLLBACK: Se falhar, restaurar estado de edição
+        setEditingMessage(editingMessage);
+        setMessage(message.trim());
         toastError(err);
       }
     } else {

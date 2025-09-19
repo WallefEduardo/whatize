@@ -526,16 +526,25 @@ const ChatModernoContent = () => {
                              Number(msg.id) === Number(data.message.id);
 
               if (isMatch) {
-                // Atualizar toda a mensagem (para capturar edições de body, reações, etc.)
-                return { ...msg, ...data.message };
+                // 🎯 OTIMIZAÇÃO: Atualizar toda a mensagem e garantir re-render para edições
+                const updatedMessage = { ...msg, ...data.message };
+                // Forçar re-render atualizando também um timestamp para garantir detecção de mudança
+                updatedMessage._lastUpdated = Date.now();
+                return updatedMessage;
               }
               return msg;
             });
 
-            return updatedMessages;
+            // 🎯 IMPORTANTE: Verificar se houve mudança real para forçar re-render
+            const hasChanges = updatedMessages.some((msg, index) => {
+              const original = prev[index];
+              return !original || msg._lastUpdated !== original._lastUpdated;
+            });
+
+            return hasChanges ? [...updatedMessages] : prev;
           });
         }
-        
+
         // Remover das mensagens otimistas se existir
         removeOptimisticMessage(data.message.id);
       }
@@ -720,8 +729,8 @@ const ChatModernoContent = () => {
     return null;
   }, [optimisticMessages]);
 
-  // Função de sleep para retry backoff
-  const sleep = useCallback((ms) => new Promise(resolve => setTimeout(resolve, ms)), []);
+  // 🚀 OTIMIZAÇÃO: Função pura não precisa de useCallback (Risco Zero)
+  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
   // 🎭 FUNÇÕES PARA GERENCIAR REAÇÕES
   const addReactionToMessage = useCallback((messageId, reaction) => {
@@ -1528,13 +1537,13 @@ const ChatModernoContent = () => {
     return () => clearInterval(cleanup);
   }, []);
 
-  // Limpar mensagens otimistas quando mudar de chat
+  // 🚀 OTIMIZAÇÃO: Consolidar limpeza quando muda de chat (Risco Zero)
   useEffect(() => {
     if (selectedChatId) {
       // Limpando mensagens otimistas ao trocar de chat
       setOptimisticMessages(new Map());
       setMessageQueue(new Map());
-      
+
       // 🚀 RESETAR estados da setinha
       setIsScrolledUp(false);
       setNewMessagesCount(0);
