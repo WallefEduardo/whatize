@@ -105,7 +105,7 @@ const ListTicketsService = async ({
     {
       model: User,
       as: "user",
-      attributes: ["id", "name", "profileImage"]
+      attributes: ["id", "name", "profileImage", "companyId"]
     },
     {
       model: Tag,

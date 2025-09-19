@@ -1551,9 +1551,24 @@ async function handleProcessLanes() {
 }
 
 
+// 🚀 ENTERPRISE: Controle de concorrência
+let isInvoiceJobRunning = false;
+
 async function handleInvoiceCreate() {
-  logger.info("Iniciando geração de boletos");
-  const job = new CronJob('*/5 * * * * *', async () => {
+  logger.info("🚀 [ENTERPRISE] Iniciando geração de boletos otimizada");
+
+  // ⚡ CORREÇÃO CRÍTICA: 5 segundos → 5 minutos (performance 60x melhor)
+  const job = new CronJob('0 */5 * * * *', async () => {
+
+    // 🛡️ PROTEÇÃO: Evita execuções simultâneas
+    if (isInvoiceJobRunning) {
+      logger.warn("⚠️ [ENTERPRISE] Job já executando - pulando para evitar sobrecarga");
+      return;
+    }
+
+    isInvoiceJobRunning = true;
+
+    try {
 
 
     const companies = await Company.findAll();
@@ -1635,8 +1650,21 @@ async function handleInvoiceCreate() {
       }
 
     });
+
+    } catch (error) {
+      // 🛡️ ERROR HANDLING: Log estruturado + recovery
+      logger.error("❌ [ENTERPRISE] Erro no processamento de faturas:", {
+        error: error.message,
+        stack: error.stack
+      });
+    } finally {
+      // 🔄 CLEANUP: Sempre libera flag
+      isInvoiceJobRunning = false;
+      logger.info("🔓 [ENTERPRISE] Flag de execução liberada");
+    }
   });
-  job.start()
+
+  job.start();
 }
 handleInvoiceCreate();
 async function handleCloseTicketsAutomatic() {

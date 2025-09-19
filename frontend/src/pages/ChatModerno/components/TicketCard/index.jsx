@@ -18,6 +18,8 @@ import ModernModal from '../../../../components/ModernModal';
 import TagForm from '../../../../components/TagForm';
 import api from '../../../../services/api';
 import toastError from '../../../../errors/toastError';
+import { getBackendUrl } from '../../../../config';
+import whatsappIcon from '../../../../assets/nopicture.png';
 import { 
   Users, Headphones, MessageCircle, Phone, Mail, Clock, Settings,
   Star, Heart, Shield, Zap, Target, Award, CheckCircle, 
@@ -360,19 +362,33 @@ const MessageWithTooltip = ({ message }) => {
   );
 };
 
-const TicketCard = memo(({ 
-  ticket, 
-  selectedChatId, 
-  openChat, 
-  currentTab, 
-  onRefresh, 
+const TicketCard = memo(({
+  ticket,
+  selectedChatId,
+  openChat,
+  currentTab,
+  onRefresh,
   onAccept,
   isPinned,
-  onPin 
+  onPin
 }) => {
-  
+
   const { user: currentUser } = useContext(AuthContext);
   const { setCurrentTicket } = useContext(TicketsContext);
+  const backendUrl = getBackendUrl();
+
+  // 🎯 Função para construir URL do avatar (mesma lógica do MessageItem)
+  const getAvatarUrl = (user) => {
+    if (!user) return whatsappIcon;
+
+    // Se tem profileImage e companyId, construir URL completa
+    if (user.profileImage && user.companyId) {
+      return `${backendUrl}/public/company${user.companyId}/${user.profileImage}`;
+    }
+
+    // Fallback para avatar antigo ou nopicture
+    return user.avatar || user.profilePicUrl || whatsappIcon;
+  };
   
   // Estados dos modais
   const [showAcceptModal, setShowAcceptModal] = useState(false);
@@ -830,10 +846,10 @@ const TicketCard = memo(({
                 }
               }}
             >
-              <Avatar 
-                src={userAvatar ? `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000'}/public/company${currentUser?.companyId}/${userAvatar}` : ticket.user?.profileImage ? `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000'}/public/company${currentUser?.companyId}/${ticket.user.profileImage}` : null}
-                alt={userName || ticket.user?.name || 'Usuário'} 
-                size="sm" 
+              <Avatar
+                src={getAvatarUrl(ticket.user)}
+                alt={userName || ticket.user?.name || 'Usuário'}
+                size="sm"
                 fallbackText={(userName || ticket.user?.name) ? (userName || ticket.user?.name).charAt(0).toUpperCase() : 'U'}
               />
             </Box>

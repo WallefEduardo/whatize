@@ -354,7 +354,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       const ImageUrl = user.profileImage;
       if (ImageUrl !== undefined && ImageUrl !== null)
         setProfileUrl(
-          `${backendUrl}/public/company${companyId}/user/${ImageUrl}`
+          `${backendUrl}/public/company${companyId}/${ImageUrl}`
         );
       else setProfileUrl(`/nopicture.png`);
 

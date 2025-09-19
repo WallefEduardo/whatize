@@ -4069,12 +4069,22 @@ const wbotMessageListener = (wbot: Session, companyId: number): void => {
     }
   });
 
+  // 🚀 Throttling para logs de messages.update (evitar spam)
+  let messageUpdateCount = 0;
+  let lastLogTime = Date.now();
+
   wbot.ev.on("messages.update", (messageUpdate: WAMessageUpdate[]) => {
-    logger.info(`🔄 [MESSAGES-UPDATE] INICIO: { companyId: ${companyId}, wbotId: ${wbot.id}, updatesCount: ${messageUpdate.length} }`);
-    
+    messageUpdateCount += messageUpdate.length;
+    const now = Date.now();
+
+    // Log apenas a cada 10 segundos ou se for um batch muito grande
+    if (now - lastLogTime > 10000 || messageUpdate.length > 50) {
+      logger.info(`🔄 [MESSAGES-UPDATE] BATCH: { companyId: ${companyId}, wbotId: ${wbot.id}, updatesCount: ${messageUpdate.length}, totalProcessed: ${messageUpdateCount} }`);
+      lastLogTime = now;
+    }
+
     try {
       if (messageUpdate.length === 0) {
-        logger.info(`🔄 [MESSAGES-UPDATE] SEM UPDATES: Array vazio`);
         return;
       }
       
@@ -4105,8 +4115,8 @@ const wbotMessageListener = (wbot: Session, companyId: number): void => {
         handleMsgAck(message, ack);
       }
     });
-    
-    logger.info(`🔄 [MESSAGES-UPDATE] CONCLUIDO: { companyId: ${companyId}, wbotId: ${wbot.id} }`);
+
+    // Log de conclusão removido para reduzir spam
     } catch (error) {
       logger.error(`❌ [MESSAGES-UPDATE] ERRO CRITICO: { companyId: ${companyId}, wbotId: ${wbot.id}, error: ${error.message}, stack: ${error.stack} }`);
       throw error;

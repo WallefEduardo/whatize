@@ -526,8 +526,13 @@ const ChatModernoContent = () => {
                              Number(msg.id) === Number(data.message.id);
 
               if (isMatch) {
-                // 🎯 OTIMIZAÇÃO: Atualizar toda a mensagem e garantir re-render para edições
-                const updatedMessage = { ...msg, ...data.message };
+                // 🎯 MERGE INTELIGENTE: Preservar dados do usuário da mensagem local
+                const updatedMessage = {
+                  ...msg,
+                  ...data.message,
+                  // Preservar user se a mensagem local tiver dados completos
+                  user: msg.user && msg.user.profileImage ? msg.user : data.message.user
+                };
                 // Forçar re-render atualizando também um timestamp para garantir detecção de mudança
                 updatedMessage._lastUpdated = Date.now();
                 return updatedMessage;
@@ -699,6 +704,33 @@ const ChatModernoContent = () => {
   const replaceOptimisticMessage = useCallback((tempId, realMessage) => {
     setOptimisticMessages(prev => {
       const updated = new Map(prev);
+      const optimisticMessage = prev.get(tempId);
+
+      // 🎯 PRESERVAR dados do usuário da mensagem otimista
+      if (optimisticMessage && optimisticMessage.user) {
+        // Merge inteligente: usar dados do servidor + preservar user da otimista
+        const mergedMessage = {
+          ...realMessage,
+          user: optimisticMessage.user // Preservar dados completos do usuário
+        };
+
+        // Se a mensagem real também tem user mas sem dados completos, fazer merge
+        if (realMessage.user) {
+          mergedMessage.user = {
+            ...optimisticMessage.user,
+            ...realMessage.user,
+            // Garantir que campos essenciais são preservados
+            profileImage: optimisticMessage.user.profileImage || realMessage.user.profileImage,
+            companyId: optimisticMessage.user.companyId || realMessage.user.companyId
+          };
+        }
+
+        // Atualizar a mensagem real no array principal
+        setMessages(prev => prev.map(msg =>
+          msg.id === realMessage.id ? mergedMessage : msg
+        ));
+      }
+
       updated.delete(tempId);
       return updated;
     });
@@ -1215,7 +1247,13 @@ const ChatModernoContent = () => {
       mediaType: "chat",
       read: false,
       quotedMsg: replyingMessage, // Incluir mensagem sendo respondida
-      isPrivate: false
+      isPrivate: false,
+      user: {
+        id: user.id,
+        name: user.name,
+        profileImage: user.profileImage,
+        companyId: user.companyId
+      }
     };
     
     // Adicionar instantaneamente à lista otimista
@@ -2225,6 +2263,7 @@ const ChatModernoContent = () => {
                                     message={message}
                                     contact={selectedContact}
                                     profile={profile}
+                                    currentUser={user}
                                     onDelete={handleDeleteMessage}
                                     index={index}
                                     selectedChatId={selectedChatId}

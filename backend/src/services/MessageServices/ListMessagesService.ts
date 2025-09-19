@@ -140,7 +140,7 @@ const ListMessagesService = async ({
       {
         model: User,
         as: "user",
-        attributes: ["id", "name", "profileImage"],
+        attributes: ["id", "name", "profileImage", "companyId"],
         required: false, // ✅ Não obrigatório para mensagens antigas sem userId
         where: null // Permite registros com userId null
       }

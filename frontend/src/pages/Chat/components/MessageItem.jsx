@@ -273,6 +273,7 @@ const MessageItem = ({
   message,
   contact,
   profile,
+  currentUser,
   onDelete,
   index,
   selectedChatId,
@@ -328,11 +329,14 @@ const MessageItem = ({
   // Debug removido para limpar console
   
   // ✅ Determinar o remetente correto
-  // Para mensagens enviadas: usar dados do usuário remetente se disponível, senão fallback para profile
+  // Para mensagens enviadas: SEMPRE usar currentUser se disponível (dados do usuário logado)
   // Para mensagens recebidas: usar dados do contato
   const messageUser = message.user; // Dados do usuário que enviou a mensagem
-  const sender = isSent 
-    ? (messageUser ? messageUser : profile) // Se tem usuário da mensagem, usar ele; senão usar profile atual
+
+  // Debug removido
+
+  const sender = isSent
+    ? (messageUser || currentUser || profile) // Prioridade: messageUser > currentUser > profile
     : contact;
   
   // Verificar se a mensagem está pinada (apenas pelo array pinnedMessages)

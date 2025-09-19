@@ -338,11 +338,9 @@ const Users = () => {
       render: (user) => (
         <Avatar
           src={
-            user.id === loggedInUser.id
-              ? (profileImage ? `${backendUrl}/public/company${user.companyId}/${profileImage}` : whatsappIcon)
-              : user.profileImage
-                ? `${backendUrl}/public/company${user.companyId}/${user.profileImage}`
-                : whatsappIcon
+            user.profileImage
+              ? `${backendUrl}/public/company${user.companyId}/${user.profileImage}`
+              : whatsappIcon
           }
           alt={user.name}
           sx={{
@@ -569,11 +567,9 @@ const Users = () => {
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
             <Avatar
               src={
-                user.id === loggedInUser.id
-                  ? (profileImage ? `${backendUrl}/public/company${user.companyId}/${profileImage}` : whatsappIcon)
-                  : user.profileImage
-                    ? `${backendUrl}/public/company${user.companyId}/${user.profileImage}`
-                    : whatsappIcon
+                user.profileImage
+                  ? `${backendUrl}/public/company${user.companyId}/${user.profileImage}`
+                  : whatsappIcon
               }
               alt={user.name}
               sx={{
