@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, TextField, Switch, Tooltip } from '@mui/material';
+import { Box, TextField, Switch, Tooltip, CircularProgress } from '@mui/material';
 import { Search, X, Filter } from 'lucide-react';
 
 const SearchAndFilters = ({
@@ -11,7 +11,8 @@ const SearchAndFilters = ({
   setSortBy,
   onFilterToggle,
   searchOnMessages,
-  setSearchOnMessages
+  setSearchOnMessages,
+  isSearchingMessages
 }) => {
   
   const handleClearSearch = () => {
@@ -41,6 +42,19 @@ const SearchAndFilters = ({
             ),
             endAdornment: (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {/* Indicador de loading para busca em mensagens */}
+                {isSearchingMessages && (
+                  <Tooltip title="Buscando em mensagens...">
+                    <CircularProgress
+                      size={16}
+                      sx={{
+                        color: 'var(--color-primary)',
+                        animation: 'spin 1s linear infinite',
+                      }}
+                    />
+                  </Tooltip>
+                )}
+
                 {/* Switch para buscar em mensagens */}
                 <Tooltip placement="top" title="Marque para pesquisar também nos conteúdos das mensagens (mais lento)">
                   <Switch
@@ -186,4 +200,5 @@ const SearchAndFilters = ({
   );
 };
 
-export default SearchAndFilters;
+// Otimização: Memoização para evitar re-renders desnecessários
+export default React.memo(SearchAndFilters);

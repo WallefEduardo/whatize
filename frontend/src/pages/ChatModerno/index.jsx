@@ -319,6 +319,7 @@ const ChatModernoContent = () => {
   const [searchParam, setSearchParam] = useState('');
   const [debouncedSearchParam, setDebouncedSearchParam] = useState('');
   const [searchOnMessages, setSearchOnMessages] = useState(false);
+  const [isSearchingMessages, setIsSearchingMessages] = useState(false);
   
   // Estado do modal de nova conversa
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
@@ -387,14 +388,35 @@ const ChatModernoContent = () => {
   // Estado para paginação
   const [pageNumber, setPageNumber] = useState(1);
 
-  // Debounce para busca otimizada
+  // Debounce otimizado: mais rápido para busca normal, mais lento para busca em mensagens
   useEffect(() => {
+    // Timing inteligente baseado no tipo de busca
+    const debounceTime = searchOnMessages ? 500 : 200;
+
     const timer = setTimeout(() => {
       setDebouncedSearchParam(searchParam);
-    }, 300);
+    }, debounceTime);
 
     return () => clearTimeout(timer);
-  }, [searchParam]);
+  }, [searchParam, searchOnMessages]);
+
+  // Cancelamento de requests anteriores quando parâmetros de busca mudam
+  useEffect(() => {
+    // Cancelar request anterior se existir
+    if (searchControllerRef.current) {
+      searchControllerRef.current.abort();
+    }
+
+    // Criar novo controller para próximos requests
+    searchControllerRef.current = new AbortController();
+
+    return () => {
+      // Cleanup: cancelar request quando componente desmonta ou deps mudam
+      if (searchControllerRef.current) {
+        searchControllerRef.current.abort();
+      }
+    };
+  }, [debouncedSearchParam, searchOnMessages, selectedQueueIds]);
   
 
   // Função para fixar/desafixar conversa
@@ -442,6 +464,7 @@ const ChatModernoContent = () => {
   // Refs
   const messagesEndRef = useRef(null);
   const chatHeightRef = useRef(null);
+  const searchControllerRef = useRef(null);
   
   // Hooks
   const theme = useTheme();
@@ -554,7 +577,14 @@ const ChatModernoContent = () => {
     searchOnMessages: searchOnMessages
   });
 
-
+  // Loading state específico para busca em mensagens
+  useEffect(() => {
+    if (searchOnMessages && debouncedSearchParam && ticketsLoading) {
+      setIsSearchingMessages(true);
+    } else {
+      setIsSearchingMessages(false);
+    }
+  }, [searchOnMessages, debouncedSearchParam, ticketsLoading]);
 
   // Resetar reducer e página quando parâmetros de busca mudam
   useEffect(() => {
@@ -2461,6 +2491,7 @@ const ChatModernoContent = () => {
                 onFilterToggle={handleFilterToggle}
                 searchOnMessages={searchOnMessages}
                 setSearchOnMessages={setSearchOnMessages}
+                isSearchingMessages={isSearchingMessages}
               />
 
               {/* Tabs Component */}
