@@ -318,6 +318,7 @@ const ChatModernoContent = () => {
   // Estados de busca
   const [searchParam, setSearchParam] = useState('');
   const [debouncedSearchParam, setDebouncedSearchParam] = useState('');
+  const [searchOnMessages, setSearchOnMessages] = useState(false);
   
   // Estado do modal de nova conversa
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
@@ -549,7 +550,8 @@ const ChatModernoContent = () => {
     users: userIds,
     whatsappIds: connectionIds,
     // Status filter NÃO enviado para API (controlado localmente via shouldShowTicketsInTab)
-    forceSearch: refreshTickets
+    forceSearch: refreshTickets,
+    searchOnMessages: searchOnMessages
   });
 
 
@@ -558,7 +560,7 @@ const ChatModernoContent = () => {
   useEffect(() => {
     setPageNumber(1); // Reset para página 1
     dispatch({ type: "RESET" });
-  }, [debouncedSearchParam, tabOpen, showAllTickets, appliedTags, appliedConnections, appliedStatuses, appliedUsers, selectedQueueIds]);
+  }, [debouncedSearchParam, tabOpen, showAllTickets, appliedTags, appliedConnections, appliedStatuses, appliedUsers, selectedQueueIds, searchOnMessages]);
 
   // Carregar tickets no reducer
   useEffect(() => {
@@ -2449,7 +2451,7 @@ const ChatModernoContent = () => {
               </Box>
 
               {/* Search and Filters Component */}
-              <SearchAndFilters 
+              <SearchAndFilters
                 searchParam={searchParam}
                 handleSearch={handleSearch}
                 showSortOptions={showSortOptions}
@@ -2457,6 +2459,8 @@ const ChatModernoContent = () => {
                 sortBy={sortBy}
                 setSortBy={setSortBy}
                 onFilterToggle={handleFilterToggle}
+                searchOnMessages={searchOnMessages}
+                setSearchOnMessages={setSearchOnMessages}
               />
 
               {/* Tabs Component */}

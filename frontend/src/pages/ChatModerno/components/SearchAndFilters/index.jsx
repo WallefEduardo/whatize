@@ -1,15 +1,17 @@
 import React from 'react';
-import { Box, TextField } from '@mui/material';
+import { Box, TextField, Switch, Tooltip } from '@mui/material';
 import { Search, X, Filter } from 'lucide-react';
 
-const SearchAndFilters = ({ 
-  searchParam, 
-  handleSearch, 
-  showSortOptions, 
+const SearchAndFilters = ({
+  searchParam,
+  handleSearch,
+  showSortOptions,
   setShowSortOptions,
   sortBy,
   setSortBy,
-  onFilterToggle 
+  onFilterToggle,
+  searchOnMessages,
+  setSearchOnMessages
 }) => {
   
   const handleClearSearch = () => {
@@ -37,18 +39,41 @@ const SearchAndFilters = ({
                 <Search size={18} />
               </Box>
             ),
-            endAdornment: searchParam && (
-              <Box 
-                onClick={handleClearSearch}
-                sx={{ 
-                  cursor: 'pointer', 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  color: 'var(--text-secondary)',
-                  '&:hover': { color: 'var(--text-primary)' }
-                }}
-              >
-                <X size={18} />
+            endAdornment: (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {/* Switch para buscar em mensagens */}
+                <Tooltip placement="top" title="Marque para pesquisar também nos conteúdos das mensagens (mais lento)">
+                  <Switch
+                    size="small"
+                    checked={searchOnMessages}
+                    onChange={(e) => setSearchOnMessages(e.target.checked)}
+                    sx={{
+                      '& .MuiSwitch-thumb': {
+                        width: 16,
+                        height: 16,
+                      },
+                      '& .MuiSwitch-track': {
+                        borderRadius: 10,
+                      },
+                    }}
+                  />
+                </Tooltip>
+
+                {/* Botão limpar busca */}
+                {searchParam && (
+                  <Box
+                    onClick={handleClearSearch}
+                    sx={{
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: 'var(--text-secondary)',
+                      '&:hover': { color: 'var(--text-primary)' }
+                    }}
+                  >
+                    <X size={18} />
+                  </Box>
+                )}
               </Box>
             )
           }}
@@ -137,9 +162,9 @@ const SearchAndFilters = ({
 
       {/* Search Results Indicator */}
       {searchParam && (
-        <Box sx={{ 
-          px: 2, 
-          py: 1, 
+        <Box sx={{
+          px: 2,
+          py: 1,
           mb: 2,
           backgroundColor: 'var(--bg-tertiary)',
           borderRadius: '6px',
@@ -151,7 +176,10 @@ const SearchAndFilters = ({
           gap: 1
         }}>
           <Search size={14} />
-          <span>Pesquisando por "{searchParam}"</span>
+          <span>
+            Pesquisando por "{searchParam}"
+            {searchOnMessages && " (incluindo mensagens)"}
+          </span>
         </Box>
       )}
     </Box>
