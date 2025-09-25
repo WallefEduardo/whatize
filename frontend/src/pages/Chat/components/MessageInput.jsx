@@ -206,9 +206,10 @@ const mockEmojis = [
   '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔',
 ];
 
-const MessageInput = ({ 
-  onSendMessage, 
-  disabled = false 
+const MessageInput = ({
+  onSendMessage,
+  disabled = false,
+  placeholder = "Digite sua mensagem..."
 }) => {
   const [message, setMessage] = useState('');
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
@@ -635,7 +636,7 @@ const MessageInput = ({
             <Box sx={{ flex: 1, position: 'relative' }}>
               <MessageTextArea
                 ref={textareaRef}
-                placeholder="Digite sua mensagem..."
+                placeholder={placeholder}
                 value={message}
                 onChange={handleTextChange}
                 onKeyDown={handleKeyDown}

@@ -16,7 +16,7 @@ import ChatPageBase from '../../components/ChatPageBase';
 
 // Componentes do Chat
 import ContactList from '../Chat/components/ContactList';
-import ChatHeader from '../Chat/components/ChatHeader';
+import ChatHeader from './components/ChatHeader';
 import MessageItem from '../Chat/components/MessageItem';
 import MessageInput from '../Chat/components/MessageInput';
 import ConversationInfo from '../Chat/components/ConversationInfo';
@@ -2665,11 +2665,13 @@ const ChatModernoContent = () => {
             <CardHeader sx={{ p: 0, mb: 0, flexShrink: 0 }}>
               <ChatHeader
                 contact={selectedContact}
+                ticket={currentTicket}
                 showInfo={showInfo}
                 handleShowInfo={handleShowInfo}
                 profile={profile}
                 mobileMenuHandler={handleShowSidebar}
                 onSearch={() => {/* TODO: Implement search */}}
+                onRefresh={forceTicketsRefresh}
               />
             </CardHeader>
 
@@ -2837,7 +2839,12 @@ const ChatModernoContent = () => {
                 }}>
                   <MessageInput
                     onSendMessage={handleSendMessage}
-                    disabled={messagesLoading}
+                    disabled={messagesLoading || currentTicket?.status === 'pending'}
+                    placeholder={
+                      currentTicket?.status === 'pending'
+                        ? "Aceite este ticket para enviar mensagens..."
+                        : "Digite sua mensagem..."
+                    }
                   />
                 </Box>
               </>
