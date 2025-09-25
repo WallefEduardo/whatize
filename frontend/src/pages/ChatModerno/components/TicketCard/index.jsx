@@ -1,8 +1,11 @@
 import React, { useState, useContext, useRef, useEffect, memo, useMemo, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import { Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, IconButton } from '@mui/material';
+import { Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Tooltip } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { X, Tags } from 'lucide-react';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import InstagramIcon from '@mui/icons-material/Instagram';
+import FacebookIcon from '@mui/icons-material/Facebook';
 import thumbtacksIcon from '../../../../assets/iconeswhatize/thumbtacks.svg';
 import { Avatar, AvatarImage, AvatarFallback } from '../../../../components/ui/AvatarOptimized';
 import ConversationDropdown from '../../../../components/ui/ConversationDropdown';
@@ -30,10 +33,46 @@ import {
 const getIconComponent = (iconName) => {
   const iconMap = {
     Users, Headphones, MessageCircle, Phone, Mail, Clock, Settings,
-    Star, Heart, Shield, Zap, Target, Award, CheckCircle, 
+    Star, Heart, Shield, Zap, Target, Award, CheckCircle,
     AlertCircle, Info, HelpCircle, UserCheck, UserPlus
   };
   return iconMap[iconName] || Users;
+};
+
+// Componente para ícone da conexão
+const ConnectionIcon = ({ channel, connectionName }) => {
+  const getConnectionIcon = () => {
+    switch (channel) {
+      case 'whatsapp':
+        return <WhatsAppIcon sx={{ fontSize: '16px', color: '#25D366' }} />;
+      case 'instagram':
+        return <InstagramIcon sx={{ fontSize: '16px', color: '#E4405F' }} />;
+      case 'facebook':
+        return <FacebookIcon sx={{ fontSize: '16px', color: '#1877F2' }} />;
+      default:
+        return <WhatsAppIcon sx={{ fontSize: '16px', color: '#25D366' }} />;
+    }
+  };
+
+  if (!connectionName) return null;
+
+  return (
+    <Tooltip title={connectionName.toUpperCase()} arrow placement="top">
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        marginLeft: '8px',
+        cursor: 'pointer',
+        opacity: 1,
+        transition: 'opacity 0.2s'
+      }}
+      onMouseEnter={(e) => e.target.style.opacity = '0.7'}
+      onMouseLeave={(e) => e.target.style.opacity = '1'}
+      >
+        {getConnectionIcon()}
+      </span>
+    </Tooltip>
+  );
 };
 
 // Função de formatação personalizada de tempo (igual ao ContactList)
@@ -717,8 +756,14 @@ const TicketCard = memo(({
 
         {/* Informações do contato */}
         <ContactInfo sx={{ mb: '24px' }}>
-          <ContactName>
+          <ContactName sx={{ display: 'flex', alignItems: 'center' }}>
             {contact?.name || 'Contato sem nome'}
+            {ticket.whatsapp?.name && (
+              <ConnectionIcon
+                channel={ticket.channel}
+                connectionName={ticket.whatsapp?.name}
+              />
+            )}
           </ContactName>
           
           <MessageWithTooltip message={lastMessage} />
