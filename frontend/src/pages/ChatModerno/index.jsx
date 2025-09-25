@@ -400,23 +400,25 @@ const ChatModernoContent = () => {
     return () => clearTimeout(timer);
   }, [searchParam, searchOnMessages]);
 
-  // Cancelamento de requests anteriores quando parâmetros de busca mudam
+  // Cancelamento refinado - só cancela quando mudança real na busca
   useEffect(() => {
-    // Cancelar request anterior se existir
-    if (searchControllerRef.current) {
+    // Só cancelar se houver busca ativa com parâmetros
+    if (debouncedSearchParam && searchControllerRef.current) {
       searchControllerRef.current.abort();
     }
 
-    // Criar novo controller para próximos requests
-    searchControllerRef.current = new AbortController();
+    // Criar controller só para buscas com parâmetros
+    if (debouncedSearchParam) {
+      searchControllerRef.current = new AbortController();
+    }
 
     return () => {
-      // Cleanup: cancelar request quando componente desmonta ou deps mudam
-      if (searchControllerRef.current) {
+      // Cleanup apenas se houver busca
+      if (debouncedSearchParam && searchControllerRef.current) {
         searchControllerRef.current.abort();
       }
     };
-  }, [debouncedSearchParam, searchOnMessages, selectedQueueIds]);
+  }, [debouncedSearchParam, searchOnMessages]); // Removido selectedQueueIds
   
 
   // Função para fixar/desafixar conversa
