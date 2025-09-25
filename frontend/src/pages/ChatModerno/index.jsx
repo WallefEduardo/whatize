@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useReducer, useContext, useMemo } from 'react';
-import { Box, Typography, useMediaQuery, useTheme, TextField } from '@mui/material';
+import { Box, Typography, useMediaQuery, useTheme, TextField, Tooltip } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useParams, useHistory } from 'react-router-dom';
 import { MessageCircle, Clock } from 'lucide-react';
@@ -167,7 +167,7 @@ const ChatModernoContent = () => {
   const history = useHistory();
   
   // Context
-  const { user, socket } = React.useContext(AuthContext);
+  const { user, socket, updateUser } = React.useContext(AuthContext);
   const { tabOpen, setTabOpen, currentTicket, setCurrentTicket } = React.useContext(TicketsContext);
   const { replyingMessage, setReplyingMessage } = useContext(ReplyMessageContext);
   const { 
@@ -227,6 +227,10 @@ const ChatModernoContent = () => {
   const [appliedConnections, setAppliedConnections] = useState([]);
   const [appliedStatuses, setAppliedStatuses] = useState([]);
   const [appliedUsers, setAppliedUsers] = useState([]);
+
+  // Estados do filtro de filas
+  const [selectedQueueIds, setSelectedQueueIds] = useState([]);
+  const [showQueueFilter, setShowQueueFilter] = useState(false);
   
   // Estados dos filtros salvos
   const [savedFilters, setSavedFilters] = useState([]);
@@ -268,7 +272,64 @@ const ChatModernoContent = () => {
   
   // Estado do modal de nova conversa
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
-  
+
+  // Função para salvar as preferências de fila no banco
+  const saveQueuePreferences = async (queueIds) => {
+    if (!user?.id) return;
+
+    try {
+      console.log('💾 Salvando preferências no banco:', queueIds);
+      const { data } = await api.put(`/users/${user.id}/selected-queues`, {
+        selectedQueueIds: queueIds
+      });
+
+      console.log('💾 Resposta da API:', data);
+
+      // Atualizar o contexto do usuário com os dados atualizados
+      if (data && typeof updateUser === 'function') {
+        console.log('🔄 Atualizando contexto do usuário com:', data.selectedQueueIds);
+        updateUser(data);
+      } else {
+        console.warn('⚠️ Não foi possível atualizar contexto:', { data, updateUser: typeof updateUser });
+      }
+
+      console.log('✅ Preferências de filas salvas com sucesso:', queueIds);
+    } catch (err) {
+      console.error('❌ Erro ao salvar preferências de filas:', err);
+      toastError(err);
+    }
+  };
+
+  // Funções de manipulação do filtro de filas
+  const handleQueueToggle = async (queueId) => {
+    let newSelectedQueueIds;
+    if (selectedQueueIds.includes(queueId)) {
+      newSelectedQueueIds = selectedQueueIds.filter(id => id !== queueId);
+    } else {
+      newSelectedQueueIds = [...selectedQueueIds, queueId];
+    }
+
+    setSelectedQueueIds(newSelectedQueueIds);
+    await saveQueuePreferences(newSelectedQueueIds);
+    setRefreshTickets(prev => !prev);
+  };
+
+  const handleSelectAllQueues = async () => {
+    const allQueueIds = user?.queues?.map(queue => queue.id) || [];
+    setSelectedQueueIds(allQueueIds);
+    await saveQueuePreferences(allQueueIds);
+    setRefreshTickets(prev => !prev);
+  };
+
+  const handleClearAllQueues = async () => {
+    console.log('🗑️ Desmarcando todas as filas - antes:', selectedQueueIds);
+    setSelectedQueueIds([]);
+    console.log('🗑️ Estado local limpo, salvando no banco...');
+    await saveQueuePreferences([]);
+    console.log('🗑️ Preferências salvas, forçando refresh dos tickets');
+    setRefreshTickets(prev => !prev);
+  };
+
   // Estado para paginação
   const [pageNumber, setPageNumber] = useState(1);
 
@@ -308,6 +369,29 @@ const ChatModernoContent = () => {
       }
     }
   }, []);
+
+  // Carregar preferências de filas do usuário
+  useEffect(() => {
+    if (user && user.queues) {
+      const userQueueIds = user.queues.map(q => q.id);
+
+      console.log('👤 Carregando preferências de filas do usuário:', {
+        userId: user.id,
+        userQueues: user.queues,
+        savedSelectedQueueIds: user.selectedQueueIds
+      });
+
+      if (user.selectedQueueIds !== undefined && user.selectedQueueIds !== null) {
+        // Se o usuário tem preferências salvas (mesmo que seja array vazio), usar elas
+        console.log('✅ Usando preferências salvas:', user.selectedQueueIds);
+        setSelectedQueueIds(user.selectedQueueIds);
+      } else {
+        // Se nunca foi salvo (undefined/null), usar todas as filas do usuário
+        console.log('🎯 Usando todas as filas (padrão - nunca foi salvo):', userQueueIds);
+        setSelectedQueueIds(userQueueIds);
+      }
+    }
+  }, [user?.id, user?.queues]);
   
   // Refs
   const messagesEndRef = useRef(null);
@@ -401,10 +485,12 @@ const ChatModernoContent = () => {
     }).filter(id => id !== null);
   }, [appliedUsers, usersData]);
 
-  // Memoizar queueIds para evitar loop infinito
+  // Memoizar queueIds para evitar loop infinito - usar filas selecionadas ou todas
   const queueIds = useMemo(() => {
-    return JSON.stringify(user?.queues?.map(q => q.id) || []);
-  }, [user?.queues]);
+    // Se temos filas selecionadas, usar elas. Senão usar todas as filas do usuário
+    const targetQueues = selectedQueueIds.length > 0 ? selectedQueueIds : (user?.queues?.map(q => q.id) || []);
+    return JSON.stringify(targetQueues);
+  }, [selectedQueueIds, user?.queues]);
   
   // Buscar tickets usando o hook original
   const { tickets: ticketsData, loading: ticketsLoading, hasMore } = useTickets({
@@ -427,7 +513,7 @@ const ChatModernoContent = () => {
   useEffect(() => {
     setPageNumber(1); // Reset para página 1
     dispatch({ type: "RESET" });
-  }, [debouncedSearchParam, tabOpen, showAllTickets, appliedTags, appliedConnections, appliedStatuses, appliedUsers]);
+  }, [debouncedSearchParam, tabOpen, showAllTickets, appliedTags, appliedConnections, appliedStatuses, appliedUsers, selectedQueueIds]);
 
   // Carregar tickets no reducer
   useEffect(() => {
@@ -1514,7 +1600,6 @@ const ChatModernoContent = () => {
     setRefreshTickets(prev => !prev);
   };
 
-
   // Limpar estado ao desmontar componente
   useEffect(() => {
     return () => {
@@ -1998,40 +2083,9 @@ const ChatModernoContent = () => {
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   {/* Show All Button - Apenas para admins */}
                   {user?.profile === 'admin' && (
-                  <Box
-                    onClick={() => setShowAllTickets(!showAllTickets)}
-                    sx={{
-                      width: '32px',
-                      height: '32px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: '8px',
-                      backgroundColor: showAllTickets ? 'var(--color-accent)' : 'var(--bg-secondary)',
-                      border: '1px solid var(--border-primary)',
-                      color: showAllTickets ? 'white' : 'var(--text-secondary)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        backgroundColor: showAllTickets ? 'var(--color-green-hover)' : 'var(--bg-tertiary)',
-                        color: showAllTickets ? 'white' : 'var(--text-primary)',
-                        transform: 'scale(1.05)',
-                      }
-                    }}
-                    title={showAllTickets ? 'Ocultar todos os tickets' : 'Mostrar todos os tickets'}
-                  >
-                    {showAllTickets ? (
-                      <EyeIcon style={{ width: '16px', height: '16px' }} />
-                    ) : (
-                      <EyeSlashIcon style={{ width: '16px', height: '16px' }} />
-                    )}
-                  </Box>
-                  )}
-                  
-                  {/* Sort Dropdown */}
-                  <Box sx={{ position: 'relative' }}>
+                  <Tooltip title={showAllTickets ? 'Ocultar todos os tickets' : 'Mostrar todos os tickets'} placement="bottom">
                     <Box
-                      onClick={() => setShowSortOptions(!showSortOptions)}
+                      onClick={() => setShowAllTickets(!showAllTickets)}
                       sx={{
                         width: '32px',
                         height: '32px',
@@ -2039,21 +2093,228 @@ const ChatModernoContent = () => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         borderRadius: '8px',
-                        backgroundColor: showSortOptions ? 'var(--color-accent)' : 'var(--bg-secondary)',
+                        backgroundColor: showAllTickets ? 'var(--color-accent)' : 'var(--bg-secondary)',
                         border: '1px solid var(--border-primary)',
-                        color: showSortOptions ? 'white' : 'var(--text-secondary)',
+                        color: showAllTickets ? 'white' : 'var(--text-secondary)',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
                         '&:hover': {
-                          backgroundColor: showSortOptions ? 'var(--color-green-hover)' : 'var(--bg-tertiary)',
-                          color: showSortOptions ? 'white' : 'var(--text-primary)',
+                          backgroundColor: showAllTickets ? 'var(--color-green-hover)' : 'var(--bg-tertiary)',
+                          color: showAllTickets ? 'white' : 'var(--text-primary)',
+                          transform: 'scale(1.05)',
                         }
                       }}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M3 6H21M7 12H17M11 18H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
+                      {showAllTickets ? (
+                        <EyeIcon style={{ width: '16px', height: '16px' }} />
+                      ) : (
+                        <EyeSlashIcon style={{ width: '16px', height: '16px' }} />
+                      )}
                     </Box>
+                  </Tooltip>
+                  )}
+
+                  {/* Queue Filter Button */}
+                  <Box sx={{ position: 'relative' }}>
+                    <Tooltip title="Filtrar por Filas" placement="bottom">
+                      <Box
+                        onClick={() => setShowQueueFilter(!showQueueFilter)}
+                        sx={{
+                          width: '32px',
+                          height: '32px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '8px',
+                          backgroundColor: showQueueFilter ? 'var(--color-accent)' : 'var(--bg-secondary)',
+                          border: '1px solid var(--border-primary)',
+                          color: showQueueFilter ? 'white' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            backgroundColor: showQueueFilter ? 'var(--color-green-hover)' : 'var(--bg-tertiary)',
+                            color: showQueueFilter ? 'white' : 'var(--text-primary)',
+                            transform: 'scale(1.05)',
+                          }
+                        }}
+                      >
+                        {/* Ícone de filas (layers/stack) */}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </Box>
+                    </Tooltip>
+
+                    {/* Queue Filter Alert Dot - aparece quando nem todas as filas estão selecionadas */}
+                    {user?.queues?.length > 0 && selectedQueueIds.length !== user?.queues?.length && selectedQueueIds.length > 0 && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: '-4px',
+                          right: '-4px',
+                          width: '12px',
+                          height: '12px',
+                          borderRadius: '50%',
+                          backgroundColor: '#ff9800',
+                          animation: 'pulse 1.5s infinite',
+                          '@keyframes pulse': {
+                            '0%': {
+                              opacity: 1,
+                              transform: 'scale(1)',
+                            },
+                            '50%': {
+                              opacity: 0.5,
+                              transform: 'scale(1.2)',
+                            },
+                            '100%': {
+                              opacity: 1,
+                              transform: 'scale(1)',
+                            },
+                          }
+                        }}
+                      />
+                    )}
+
+                    {/* Queue Filter Dropdown */}
+                    {showQueueFilter && (
+                      <>
+                        <Box
+                          onClick={() => setShowQueueFilter(false)}
+                          sx={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            zIndex: 999,
+                          }}
+                        />
+                        <Box sx={{
+                          position: 'absolute',
+                          top: '100%',
+                          right: 0,
+                          mt: 1,
+                          backgroundColor: 'var(--bg-primary)',
+                          border: '1px solid var(--border-primary)',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                          zIndex: 1000,
+                          minWidth: '200px',
+                          maxHeight: '300px',
+                          overflow: 'auto'
+                        }}>
+                          {/* Botão dinâmico no topo */}
+                          <Box
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (selectedQueueIds.length === user?.queues?.length) {
+                                handleClearAllQueues();
+                              } else {
+                                handleSelectAllQueues();
+                              }
+                            }}
+                            sx={{
+                              p: 1.5,
+                              backgroundColor: '#000000',
+                              borderRadius: '14px',
+                              margin: '8px 12px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              color: '#ffffff',
+                              fontWeight: 500,
+                              textAlign: 'center',
+                              '&:hover': {
+                                backgroundColor: '#333333',
+                              },
+                            }}
+                          >
+                            {selectedQueueIds.length === user?.queues?.length ? 'Desmarcar Todas' : 'Selecionar Todas'}
+                          </Box>
+
+                          <Box sx={{ borderTop: '1px solid var(--border-primary)', mt: 1 }} />
+
+                          {/* Lista de filas com checkboxes */}
+                          {user?.queues?.map((queue) => (
+                            <Box
+                              key={queue.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQueueToggle(queue.id);
+                              }}
+                              sx={{
+                                p: 1.5,
+                                display: 'flex',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                '&:hover': {
+                                  backgroundColor: 'var(--bg-secondary)',
+                                }
+                              }}
+                            >
+                              {/* Checkbox customizado */}
+                              <Box
+                                sx={{
+                                  width: '16px',
+                                  height: '16px',
+                                  borderRadius: '3px',
+                                  border: `2px solid ${queue.color}`,
+                                  backgroundColor: selectedQueueIds.includes(queue.id) ? queue.color : 'transparent',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  mr: 1.5,
+                                  transition: 'all 0.2s ease',
+                                }}
+                              >
+                                {selectedQueueIds.includes(queue.id) && (
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                                    <path d="M20 6L9 17L4 12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                )}
+                              </Box>
+
+                              {/* Nome da fila */}
+                              <Box sx={{ color: 'var(--text-primary)', fontSize: '13px' }}>
+                                {queue.name}
+                              </Box>
+                            </Box>
+                          ))}
+                        </Box>
+                      </>
+                    )}
+                  </Box>
+                  
+                  {/* Sort Dropdown */}
+                  <Box sx={{ position: 'relative' }}>
+                    <Tooltip title="Ordenar por" placement="bottom">
+                      <Box
+                        onClick={() => setShowSortOptions(!showSortOptions)}
+                        sx={{
+                          width: '32px',
+                          height: '32px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '8px',
+                          backgroundColor: showSortOptions ? 'var(--color-accent)' : 'var(--bg-secondary)',
+                          border: '1px solid var(--border-primary)',
+                          color: showSortOptions ? 'white' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            backgroundColor: showSortOptions ? 'var(--color-green-hover)' : 'var(--bg-tertiary)',
+                            color: showSortOptions ? 'white' : 'var(--text-primary)',
+                          }
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M3 6H21M7 12H17M11 18H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </Box>
+                    </Tooltip>
                     
                     {/* Sort Options Dropdown */}
                     {showSortOptions && (
@@ -2118,31 +2379,33 @@ const ChatModernoContent = () => {
                   </Box>
                   
                   {/* New Conversation Button */}
-                  <Box
-                    onClick={() => setShowNewConversationModal(true)}
-                    sx={{
-                      width: '32px',
-                      height: '32px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: '8px',
-                      backgroundColor: 'var(--color-accent)',
-                      border: '1px solid var(--color-accent)',
-                      color: 'white',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        backgroundColor: 'var(--color-green-hover)',
-                        borderColor: 'var(--color-green-hover)',
-                        transform: 'scale(1.05)',
-                      }
-                    }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </Box>
+                  <Tooltip title="Iniciar nova conversa" placement="bottom">
+                    <Box
+                      onClick={() => setShowNewConversationModal(true)}
+                      sx={{
+                        width: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--color-accent)',
+                        border: '1px solid var(--color-accent)',
+                        color: 'white',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          backgroundColor: 'var(--color-green-hover)',
+                          borderColor: 'var(--color-green-hover)',
+                          transform: 'scale(1.05)',
+                        }
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </Box>
+                  </Tooltip>
                 </Box>
               </Box>
 
