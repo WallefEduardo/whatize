@@ -51,9 +51,9 @@ const useTickets = ({
                 searchOnMessages
               },
             });
-            
+
             let tickets = [];
-            
+
             tickets = data.tickets;
           
             setTickets(tickets);

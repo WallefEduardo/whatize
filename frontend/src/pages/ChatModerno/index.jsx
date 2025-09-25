@@ -72,6 +72,7 @@ import {
   EyeIcon,
   EyeSlashIcon
 } from '@heroicons/react/24/outline';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
 
 // Componente memoizado para itens da fila
 const QueueDropdownItem = React.memo(({ queue, isSelected, onToggle }) => {
@@ -302,6 +303,7 @@ const ChatModernoContent = () => {
   
   // Estado para mostrar todos os tickets - padrão false como esperado
   const [showAllTickets, setShowAllTickets] = useState(false);
+  const [showClosedTickets, setShowClosedTickets] = useState(false);
   const [pinnedConversations, setPinnedConversations] = useState(new Set());
   const [tabCounts, setTabCounts] = useState({ open: 0, pending: 0 });
   
@@ -564,11 +566,11 @@ const ChatModernoContent = () => {
   }, [selectedQueueIds, user?.queues]);
   
   // Buscar tickets usando o hook original
-  const { tickets: ticketsData, loading: ticketsLoading, hasMore } = useTickets({
+  const ticketParams = {
     searchParam: debouncedSearchParam,
     pageNumber: pageNumber,
-    status: tabOpen,
-    showAll: showAllTickets,
+    status: showClosedTickets ? 'closed' : tabOpen,
+    showAll: showClosedTickets ? true : showAllTickets, // Forçar showAll=true para tickets fechados
     queueIds: queueIds,
     // Parâmetros de filtros aplicados (usando versões memoizadas)
     tags: tagIds,
@@ -577,7 +579,12 @@ const ChatModernoContent = () => {
     // Status filter NÃO enviado para API (controlado localmente via shouldShowTicketsInTab)
     forceSearch: refreshTickets,
     searchOnMessages: searchOnMessages
-  });
+  };
+
+  // Debug removido - testando correção
+
+  const { tickets: ticketsData, loading: ticketsLoading, hasMore } = useTickets(ticketParams);
+
 
   // Loading state específico para busca em mensagens
   useEffect(() => {
@@ -592,7 +599,7 @@ const ChatModernoContent = () => {
   useEffect(() => {
     setPageNumber(1); // Reset para página 1
     dispatch({ type: "RESET" });
-  }, [debouncedSearchParam, tabOpen, showAllTickets, appliedTags, appliedConnections, appliedStatuses, appliedUsers, selectedQueueIds, searchOnMessages]);
+  }, [debouncedSearchParam, tabOpen, showAllTickets, showClosedTickets, appliedTags, appliedConnections, appliedStatuses, appliedUsers, selectedQueueIds, searchOnMessages]);
 
   // Carregar tickets no reducer
   useEffect(() => {
@@ -795,12 +802,14 @@ const ChatModernoContent = () => {
 
   // Filtrar tickets por status - com lógica inteligente de filtros
   const tickets = ticketsList.filter(ticket => {
-    // Primeiro filtrar por status da aba
-    const matchesStatus = ticket.status === tabOpen;
-    
+    // Primeiro filtrar por status da aba (considerando tickets fechados)
+    const matchesStatus = showClosedTickets ?
+      ticket.status === 'closed' :
+      ticket.status === tabOpen;
+
     // Depois aplicar lógica inteligente de filtros
     const shouldShowInThisTab = shouldShowTicketsInTab(tabOpen);
-    
+
     return matchesStatus && shouldShowInThisTab;
   });
 
@@ -2193,6 +2202,38 @@ const ChatModernoContent = () => {
                   </Tooltip>
                   )}
 
+                  {/* Closed Tickets Button - Tickets Finalizados */}
+                  <Tooltip title={showClosedTickets ? 'Ocultar tickets finalizados' : 'Mostrar tickets finalizados'} placement="bottom">
+                    <Box
+                      onClick={() => {
+                        setShowClosedTickets(!showClosedTickets);
+                        if (!showClosedTickets) {
+                          setShowAllTickets(false); // Desativar "mostrar todos" quando ativar finalizados
+                        }
+                      }}
+                      sx={{
+                        width: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '8px',
+                        backgroundColor: showClosedTickets ? 'var(--color-primary)' : 'var(--bg-secondary)',
+                        border: '1px solid var(--border-primary)',
+                        color: showClosedTickets ? 'white' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          backgroundColor: showClosedTickets ? 'var(--color-primary-dark)' : 'var(--bg-tertiary)',
+                          color: showClosedTickets ? 'white' : 'var(--text-primary)',
+                          transform: 'scale(1.05)',
+                        }
+                      }}
+                    >
+                      <CheckBoxIcon style={{ width: '16px', height: '16px' }} />
+                    </Box>
+                  </Tooltip>
+
                   {/* Queue Filter Button */}
                   <Box sx={{ position: 'relative' }}>
                     <Tooltip title="Filtrar por Filas" placement="bottom">
@@ -2517,7 +2558,7 @@ const ChatModernoContent = () => {
                   Carregando conversas...
                 </Box>
               ) : (
-                <TicketsList 
+                <TicketsList
                   tickets={tickets}
                   tabOpen={tabOpen}
                   selectedChatId={selectedChatId}
@@ -2530,6 +2571,8 @@ const ChatModernoContent = () => {
                   hasMore={hasMore}
                   loading={ticketsLoading}
                   onLoadMore={handleLoadMore}
+                  showClosedTickets={showClosedTickets}
+                  setShowClosedTickets={setShowClosedTickets}
                 />
               )}
             </CardContent>

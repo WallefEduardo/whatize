@@ -4,8 +4,8 @@ import { MessageSquare, Clock } from 'lucide-react';
 import TicketCard from '../TicketCard/index.jsx';
 import ScrollArea from '../../../../components/ui/ScrollArea';
 
-const TicketsList = memo(({ 
-  tickets, 
+const TicketsList = memo(({
+  tickets,
   tabOpen,
   selectedChatId,
   openChat,
@@ -16,7 +16,9 @@ const TicketsList = memo(({
   handlePinConversation,
   hasMore,
   loading,
-  onLoadMore
+  onLoadMore,
+  showClosedTickets,
+  setShowClosedTickets
 }) => {
   
   const loadMoreRef = useRef(null);
@@ -146,6 +148,8 @@ const TicketsList = memo(({
             onAccept={onAccept}
             isPinned={pinnedConversations?.has(ticket.id)}
             onPin={() => handlePinConversation(ticket.id)}
+            showClosedTickets={showClosedTickets}
+            setShowClosedTickets={setShowClosedTickets}
           />
         ))}
         

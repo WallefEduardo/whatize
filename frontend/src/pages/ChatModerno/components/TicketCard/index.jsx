@@ -6,6 +6,7 @@ import { X, Tags } from 'lucide-react';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import FacebookIcon from '@mui/icons-material/Facebook';
+import { Replay } from '@mui/icons-material';
 import thumbtacksIcon from '../../../../assets/iconeswhatize/thumbtacks.svg';
 import { Avatar, AvatarImage, AvatarFallback } from '../../../../components/ui/AvatarOptimized';
 import ConversationDropdown from '../../../../components/ui/ConversationDropdown';
@@ -409,7 +410,9 @@ const TicketCard = memo(({
   onRefresh,
   onAccept,
   isPinned,
-  onPin
+  onPin,
+  showClosedTickets,
+  setShowClosedTickets
 }) => {
 
   const { user: currentUser } = useContext(AuthContext);
@@ -439,6 +442,7 @@ const TicketCard = memo(({
   const [tagAnchorEl, setTagAnchorEl] = useState(null);
   const [availableTags, setAvailableTags] = useState([]);
   const [selectedTicketTags, setSelectedTicketTags] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   
   // Dados do contato e ticket memoizados para performance
@@ -706,14 +710,48 @@ const TicketCard = memo(({
       await api.put(`/tickets/${ticket.id}`, {
         status: 'closed'
       });
-      
+
       if (onRefresh) onRefresh();
-      
+
     } catch (err) {
       console.error('Erro ao rejeitar conversa:', err);
       toastError(err);
     }
   };
+
+  // Função para reabrir ticket (baseada na lógica do chat antigo)
+  const handleReopenTicket = useCallback(async () => {
+    setLoading(true);
+    try {
+      const payload = {
+        status: ticket.isGroup && ticket.channel === 'whatsapp' ? "group" : "open",
+        userId: currentUser?.id,
+        useIntegration: false,
+        queueId: ticket.queueId || null
+      };
+
+      await api.put(`/tickets/${ticket.id}`, payload);
+
+      // 1. Desmarcar "Mostrar tickets finalizados"
+      if (showClosedTickets && setShowClosedTickets) {
+        setShowClosedTickets(false);
+      }
+
+      // 2. Abrir automaticamente a conversa
+      if (openChat) {
+        openChat(ticket.id);
+      }
+
+      // 3. Force refresh da lista de tickets
+      if (onRefresh) onRefresh();
+
+    } catch (err) {
+      console.error('❌ Erro ao reabrir ticket:', err);
+      toastError(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [ticket.id, ticket.isGroup, ticket.channel, currentUser?.id, onRefresh, showClosedTickets, setShowClosedTickets, openChat]);
 
   return (
     <>
@@ -1029,6 +1067,40 @@ const TicketCard = memo(({
               </Box>
             )}
             
+          </Box>
+        )}
+
+        {/* Botão de Reabrir para tickets finalizados */}
+        {ticket.status === 'closed' && (
+          <Box
+            onClick={(e) => {
+              e.stopPropagation();
+              handleReopenTicket();
+            }}
+            sx={{
+              position: 'absolute',
+              bottom: '8px',
+              right: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '24px',
+              height: '24px',
+              backgroundColor: 'transparent',
+              color: '#25b6e8',
+              border: '1px solid #25b6e8',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                backgroundColor: 'rgba(37, 182, 232, 0.1)',
+                transform: 'scale(1.1)',
+              }
+            }}
+          >
+            <Tooltip title="Reabrir conversa" placement="top">
+              <Replay style={{ fontSize: '14px' }} />
+            </Tooltip>
           </Box>
         )}
       </StyledContactItem>
