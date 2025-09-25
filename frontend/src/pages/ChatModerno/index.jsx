@@ -65,13 +65,62 @@ import { StatusFilter } from '../../components/StatusFilter';
 import { UsersFilter } from '../../components/UsersFilter';
 
 // Icons
-import { 
+import {
   ChatBubbleLeftRightIcon,
   HomeIcon,
   UserGroupIcon,
   EyeIcon,
   EyeSlashIcon
 } from '@heroicons/react/24/outline';
+
+// Componente memoizado para itens da fila
+const QueueDropdownItem = React.memo(({ queue, isSelected, onToggle }) => {
+  return (
+    <Box
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle(queue.id);
+      }}
+      sx={{
+        p: 1.5,
+        display: 'flex',
+        alignItems: 'center',
+        cursor: 'pointer',
+        fontSize: '13px',
+        '&:hover': {
+          backgroundColor: 'var(--bg-secondary)',
+        }
+      }}
+    >
+      {/* Checkbox customizado */}
+      <Box
+        sx={{
+          width: '16px',
+          height: '16px',
+          borderRadius: '3px',
+          border: `2px solid ${queue.color}`,
+          backgroundColor: isSelected ? queue.color : 'transparent',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          mr: 1.5,
+          transition: 'all 0.2s ease',
+        }}
+      >
+        {isSelected && (
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+            <path d="M20 6L9 17L4 12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+      </Box>
+
+      {/* Nome da fila */}
+      <Box sx={{ color: 'var(--text-primary)', fontSize: '13px' }}>
+        {queue.name}
+      </Box>
+    </Box>
+  );
+});
 
 const ChatContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -274,34 +323,39 @@ const ChatModernoContent = () => {
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
 
   // Função para salvar as preferências de fila no banco
-  const saveQueuePreferences = async (queueIds) => {
+  const saveQueuePreferences = useCallback(async (queueIds) => {
     if (!user?.id) return;
 
     try {
-      console.log('💾 Salvando preferências no banco:', queueIds);
       const { data } = await api.put(`/users/${user.id}/selected-queues`, {
         selectedQueueIds: queueIds
       });
 
-      console.log('💾 Resposta da API:', data);
-
       // Atualizar o contexto do usuário com os dados atualizados
       if (data && typeof updateUser === 'function') {
-        console.log('🔄 Atualizando contexto do usuário com:', data.selectedQueueIds);
         updateUser(data);
-      } else {
-        console.warn('⚠️ Não foi possível atualizar contexto:', { data, updateUser: typeof updateUser });
       }
-
-      console.log('✅ Preferências de filas salvas com sucesso:', queueIds);
     } catch (err) {
-      console.error('❌ Erro ao salvar preferências de filas:', err);
+      console.error('Erro ao salvar preferências de filas:', err);
       toastError(err);
     }
-  };
+  }, [user?.id, updateUser]);
+
+  // Função debounced para salvar preferências (300ms)
+  const debouncedSaveQueuePreferences = useCallback(
+    (() => {
+      let timeoutId;
+      return (queueIds) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          saveQueuePreferences(queueIds);
+        }, 300);
+      };
+    })()
+  , [saveQueuePreferences]);
 
   // Funções de manipulação do filtro de filas
-  const handleQueueToggle = async (queueId) => {
+  const handleQueueToggle = useCallback(async (queueId) => {
     let newSelectedQueueIds;
     if (selectedQueueIds.includes(queueId)) {
       newSelectedQueueIds = selectedQueueIds.filter(id => id !== queueId);
@@ -310,25 +364,24 @@ const ChatModernoContent = () => {
     }
 
     setSelectedQueueIds(newSelectedQueueIds);
-    await saveQueuePreferences(newSelectedQueueIds);
+    debouncedSaveQueuePreferences(newSelectedQueueIds);
     setRefreshTickets(prev => !prev);
-  };
+  }, [selectedQueueIds, debouncedSaveQueuePreferences, setRefreshTickets]);
 
-  const handleSelectAllQueues = async () => {
+  const handleSelectAllQueues = useCallback(async () => {
     const allQueueIds = user?.queues?.map(queue => queue.id) || [];
     setSelectedQueueIds(allQueueIds);
+    // Para "Selecionar Todas" usar chamada imediata (sem debounce)
     await saveQueuePreferences(allQueueIds);
     setRefreshTickets(prev => !prev);
-  };
+  }, [user?.queues, saveQueuePreferences, setRefreshTickets]);
 
-  const handleClearAllQueues = async () => {
-    console.log('🗑️ Desmarcando todas as filas - antes:', selectedQueueIds);
+  const handleClearAllQueues = useCallback(async () => {
     setSelectedQueueIds([]);
-    console.log('🗑️ Estado local limpo, salvando no banco...');
+    // Para "Desmarcar Todas" usar chamada imediata (sem debounce)
     await saveQueuePreferences([]);
-    console.log('🗑️ Preferências salvas, forçando refresh dos tickets');
     setRefreshTickets(prev => !prev);
-  };
+  }, [selectedQueueIds, saveQueuePreferences, setRefreshTickets]);
 
   // Estado para paginação
   const [pageNumber, setPageNumber] = useState(1);
@@ -375,19 +428,11 @@ const ChatModernoContent = () => {
     if (user && user.queues) {
       const userQueueIds = user.queues.map(q => q.id);
 
-      console.log('👤 Carregando preferências de filas do usuário:', {
-        userId: user.id,
-        userQueues: user.queues,
-        savedSelectedQueueIds: user.selectedQueueIds
-      });
-
       if (user.selectedQueueIds !== undefined && user.selectedQueueIds !== null) {
         // Se o usuário tem preferências salvas (mesmo que seja array vazio), usar elas
-        console.log('✅ Usando preferências salvas:', user.selectedQueueIds);
         setSelectedQueueIds(user.selectedQueueIds);
       } else {
         // Se nunca foi salvo (undefined/null), usar todas as filas do usuário
-        console.log('🎯 Usando todas as filas (padrão - nunca foi salvo):', userQueueIds);
         setSelectedQueueIds(userQueueIds);
       }
     }
@@ -2216,71 +2261,65 @@ const ChatModernoContent = () => {
                               }
                             }}
                             sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 1,
                               p: 1.5,
-                              backgroundColor: '#000000',
-                              borderRadius: '14px',
-                              margin: '8px 12px',
+                              mx: 2,
+                              my: 1,
+                              background: selectedQueueIds.length === user?.queues?.length
+                                ? 'linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%)'
+                                : 'linear-gradient(135deg, #51cf66 0%, #37b24d 100%)',
+                              borderRadius: '8px',
                               cursor: 'pointer',
                               fontSize: '12px',
                               color: '#ffffff',
-                              fontWeight: 500,
+                              fontWeight: 600,
                               textAlign: 'center',
+                              border: 'none',
+                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                              transition: 'all 0.2s ease',
                               '&:hover': {
-                                backgroundColor: '#333333',
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                                background: selectedQueueIds.length === user?.queues?.length
+                                  ? 'linear-gradient(135deg, #fa5252 0%, #e03131 100%)'
+                                  : 'linear-gradient(135deg, #40c057 0%, #2f9e44 100%)',
                               },
+                              '&:active': {
+                                transform: 'translateY(0px)',
+                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                              }
                             }}
                           >
-                            {selectedQueueIds.length === user?.queues?.length ? 'Desmarcar Todas' : 'Selecionar Todas'}
+                            {/* Ícone dinâmico */}
+                            {selectedQueueIds.length === user?.queues?.length ? (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            ) : (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+
+                            {/* Texto dinâmico */}
+                            <Box component="span" sx={{ lineHeight: 1 }}>
+                              {selectedQueueIds.length === user?.queues?.length ? 'Desmarcar Todas' : 'Selecionar Todas'}
+                            </Box>
                           </Box>
 
                           <Box sx={{ borderTop: '1px solid var(--border-primary)', mt: 1 }} />
 
-                          {/* Lista de filas com checkboxes */}
+                          {/* Lista de filas com checkboxes - Otimizada com React.memo */}
                           {user?.queues?.map((queue) => (
-                            <Box
+                            <QueueDropdownItem
                               key={queue.id}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleQueueToggle(queue.id);
-                              }}
-                              sx={{
-                                p: 1.5,
-                                display: 'flex',
-                                alignItems: 'center',
-                                cursor: 'pointer',
-                                fontSize: '13px',
-                                '&:hover': {
-                                  backgroundColor: 'var(--bg-secondary)',
-                                }
-                              }}
-                            >
-                              {/* Checkbox customizado */}
-                              <Box
-                                sx={{
-                                  width: '16px',
-                                  height: '16px',
-                                  borderRadius: '3px',
-                                  border: `2px solid ${queue.color}`,
-                                  backgroundColor: selectedQueueIds.includes(queue.id) ? queue.color : 'transparent',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  mr: 1.5,
-                                  transition: 'all 0.2s ease',
-                                }}
-                              >
-                                {selectedQueueIds.includes(queue.id) && (
-                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                                    <path d="M20 6L9 17L4 12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                                  </svg>
-                                )}
-                              </Box>
-
-                              {/* Nome da fila */}
-                              <Box sx={{ color: 'var(--text-primary)', fontSize: '13px' }}>
-                                {queue.name}
-                              </Box>
-                            </Box>
+                              queue={queue}
+                              isSelected={selectedQueueIds.includes(queue.id)}
+                              onToggle={handleQueueToggle}
+                            />
                           ))}
                         </Box>
                       </>
