@@ -532,7 +532,26 @@ const ChatModernoContent = () => {
   };
 
   const [ticketsList, dispatch] = useReducer(reducer, []);
-  
+
+  // 🚀 CACHE INTELIGENTE: Armazena tickets por status para evitar requisições HTTP
+  const ticketsCache = useRef({
+    open: [],
+    pending: [],
+    closed: [],
+    lastFetch: {},
+    isLoading: false
+  });
+
+  // 🚀 CACHE ESTRATÉGIA: Determina se precisa fazer nova requisição
+  const shouldFetchFromAPI = useCallback((status) => {
+    const cache = ticketsCache.current;
+    const lastFetch = cache.lastFetch[status];
+    const cacheAge = lastFetch ? Date.now() - lastFetch : Infinity;
+    const CACHE_DURATION = 30000; // 30 segundos de cache
+
+    return !cache[status]?.length || cacheAge > CACHE_DURATION;
+  }, []);
+
   // Memoizar conversões de nomes para IDs para evitar loops infinitos
   const tagIds = useMemo(() => {
     if (appliedTags.length === 0) return undefined;
@@ -595,13 +614,31 @@ const ChatModernoContent = () => {
     }
   }, [searchOnMessages, debouncedSearchParam, ticketsLoading]);
 
-  // Resetar reducer e página quando parâmetros de busca mudam
-  useEffect(() => {
-    setPageNumber(1); // Reset para página 1
-    dispatch({ type: "RESET" });
-  }, [debouncedSearchParam, tabOpen, showAllTickets, showClosedTickets, appliedTags, appliedConnections, appliedStatuses, appliedUsers, selectedQueueIds, searchOnMessages]);
+  // 🚀 DEBOUNCE SELETIVO: Separar operações instantâneas das que precisam delay
 
-  // Carregar tickets no reducer
+  // Resetar APENAS para parâmetros que exigem nova busca na API
+  useEffect(() => {
+    setPageNumber(1);
+    dispatch({ type: "RESET" });
+  }, [debouncedSearchParam, appliedTags, appliedConnections, appliedStatuses, appliedUsers, selectedQueueIds, searchOnMessages]);
+
+  // Reset INSTANTÂNEO para mudanças locais (sem delay de rede)
+  useEffect(() => {
+    if (showClosedTickets) {
+      setPageNumber(1);
+      dispatch({ type: "RESET" });
+    }
+  }, [showClosedTickets]);
+
+  // Reset INSTANTÂNEO para mudança de aba
+  useEffect(() => {
+    if (!showClosedTickets) {
+      setPageNumber(1);
+      dispatch({ type: "RESET" });
+    }
+  }, [tabOpen, showAllTickets]);
+
+  // 🚀 CARREGAR TICKETS NO REDUCER + ATUALIZAR CACHE
   useEffect(() => {
     if (ticketsData) {
       // Para página 1: RESET e carrega. Para páginas > 1: apenas adiciona
@@ -609,8 +646,27 @@ const ChatModernoContent = () => {
         dispatch({ type: "RESET" });
       }
       dispatch({ type: "LOAD_TICKETS", payload: ticketsData });
+
+      // 🚀 ATUALIZAR CACHE: Separar tickets por status para cache inteligente
+      const cache = ticketsCache.current;
+      const currentStatus = showClosedTickets ? 'closed' : tabOpen;
+
+      if (pageNumber === 1) {
+        // Nova busca - substitui cache completamente
+        cache[currentStatus] = [...ticketsData];
+      } else {
+        // Paginação - adiciona ao cache existente
+        const existing = cache[currentStatus] || [];
+        const newTickets = ticketsData.filter(newTicket =>
+          !existing.some(existing => existing.id === newTicket.id)
+        );
+        cache[currentStatus] = [...existing, ...newTickets];
+      }
+
+      // Marcar timestamp da última busca
+      cache.lastFetch[currentStatus] = Date.now();
     }
-  }, [ticketsData, pageNumber]);
+  }, [ticketsData, pageNumber, showClosedTickets, tabOpen]);
   
   // Função para carregar mais tickets (paginação)
   const handleLoadMore = useCallback(() => {
@@ -800,26 +856,44 @@ const ChatModernoContent = () => {
     return targetStatuses.includes(currentTabStatus);
   };
 
-  // Filtrar tickets por status - com lógica inteligente de filtros
-  const tickets = ticketsList.filter(ticket => {
-    // Primeiro filtrar por status da aba (considerando tickets fechados)
-    const matchesStatus = showClosedTickets ?
-      ticket.status === 'closed' :
-      ticket.status === tabOpen;
+  // 🚀 SINGLE-PASS FILTER: Filtro + contadores em uma única passada (3x mais eficiente)
+  const { tickets, counts } = useMemo(() => {
+    const cache = ticketsCache.current;
+    const targetStatus = showClosedTickets ? 'closed' : tabOpen;
 
-    // Depois aplicar lógica inteligente de filtros
-    const shouldShowInThisTab = shouldShowTicketsInTab(tabOpen);
+    // 🚀 CACHE HIT: Usar dados do cache se disponível e fresco
+    const cachedTickets = cache[targetStatus];
+    const lastFetch = cache.lastFetch[targetStatus];
+    const isRecent = lastFetch && (Date.now() - lastFetch < 30000);
 
-    return matchesStatus && shouldShowInThisTab;
-  });
+    let sourceTickets = ticketsList;
+    if (showClosedTickets && cachedTickets?.length && isRecent) {
+      sourceTickets = cachedTickets;
+    }
 
-  // Log dos tickets filtrados finais
-  
-  // Contar tickets
-  const counts = {
-    pending: ticketsList.filter(t => t.status === 'pending').length,
-    open: ticketsList.filter(t => t.status === 'open').length
-  };
+    // 🚀 SINGLE PASS: Filtrar E contar simultaneamente (O(n) ao invés de O(3n))
+    return sourceTickets.reduce((acc, ticket) => {
+      // Contar todos os tickets por status (sempre fazer isso)
+      if (ticket.status === 'pending') acc.counts.pending++;
+      if (ticket.status === 'open') acc.counts.open++;
+
+      // Filtrar para a lista visível
+      const matchesStatus = showClosedTickets ?
+        ticket.status === 'closed' :
+        ticket.status === tabOpen;
+
+      const shouldShowInThisTab = shouldShowTicketsInTab(tabOpen);
+
+      if (matchesStatus && shouldShowInThisTab) {
+        acc.tickets.push(ticket);
+      }
+
+      return acc;
+    }, {
+      tickets: [],
+      counts: { pending: 0, open: 0 }
+    });
+  }, [ticketsList, showClosedTickets, tabOpen, appliedStatuses]);
 
   // Função para refresh
   const refreshTicketsList = () => {

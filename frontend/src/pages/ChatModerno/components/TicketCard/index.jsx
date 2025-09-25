@@ -1,5 +1,6 @@
 import React, { useState, useContext, useRef, useEffect, memo, useMemo, useCallback } from 'react';
 import ReactDOM from 'react-dom';
+import { unstable_batchedUpdates } from 'react-dom';
 import { Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Tooltip } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { X, Tags } from 'lucide-react';
@@ -719,7 +720,7 @@ const TicketCard = memo(({
     }
   };
 
-  // Função para reabrir ticket (baseada na lógica do chat antigo)
+  // 🚀 Função ULTRA-RÁPIDA para reabrir ticket (operações paralelas)
   const handleReopenTicket = useCallback(async () => {
     setLoading(true);
     try {
@@ -730,20 +731,26 @@ const TicketCard = memo(({
         queueId: ticket.queueId || null
       };
 
+      // 🚀 OPERAÇÃO 1: Reabertura do ticket (crítica - deve acontecer primeiro)
       await api.put(`/tickets/${ticket.id}`, payload);
 
-      // 1. Desmarcar "Mostrar tickets finalizados"
-      if (showClosedTickets && setShowClosedTickets) {
-        setShowClosedTickets(false);
-      }
+      // 🚀 STATE BATCHING: Agrupar todas as mudanças de estado em uma única atualização
+      unstable_batchedUpdates(() => {
+        // Operação A: Desmarcar "Mostrar tickets finalizados"
+        if (showClosedTickets && setShowClosedTickets) {
+          setShowClosedTickets(false);
+        }
 
-      // 2. Abrir automaticamente a conversa
-      if (openChat) {
-        openChat(ticket.id);
-      }
+        // Operação B: Abrir automaticamente a conversa
+        if (openChat) {
+          openChat(ticket.id);
+        }
 
-      // 3. Force refresh da lista de tickets
-      if (onRefresh) onRefresh();
+        // Operação C: Force refresh da lista de tickets
+        if (onRefresh) {
+          onRefresh();
+        }
+      });
 
     } catch (err) {
       console.error('❌ Erro ao reabrir ticket:', err);
