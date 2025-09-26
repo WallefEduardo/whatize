@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useMemo } from 'react';
-import { Box, Typography, IconButton, Tooltip, Button } from '@mui/material';
+import { Box, Typography, IconButton, Tooltip, Button, Menu, MenuItem } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { cn } from '../../../../utils/cn';
 
@@ -18,7 +18,8 @@ import {
   CheckIcon,
   CheckCircleIcon,
   ArrowUturnLeftIcon,
-  ArrowsRightLeftIcon
+  ArrowsRightLeftIcon,
+  EllipsisVerticalIcon
 } from '@heroicons/react/24/outline';
 
 // Context e API
@@ -31,6 +32,10 @@ import toastError from '../../../../errors/toastError';
 import AcceptTicketWithoutQueueModal from '../../../../components/AcceptTicketWithoutQueueModal';
 // Modal para transferir ticket
 import TransferTicketModernModal from '../../../../components/TransferTicketModernModal';
+// Modais para dropdown
+import ShowTicketLogModal from '../../../../components/ShowTicketLogModal';
+import TicketMessagesDialog from '../../../../components/TicketMessagesDialog';
+import ConfirmationModal from '../../../../components/ConfirmationModal';
 
 const HeaderContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -126,6 +131,15 @@ const ChatModernoHeader = ({
   const [acceptTicketModalOpen, setAcceptTicketModalOpen] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
 
+  // Estados do dropdown de três pontinhos
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [showTicketLogOpen, setShowTicketLogOpen] = useState(false);
+  const [openTicketMessageDialog, setOpenTicketMessageDialog] = useState(false);
+  const [disableBot, setDisableBot] = useState(ticket?.contact?.disableBot || false);
+  const [enableIntegration, setEnableIntegration] = useState(ticket?.useIntegration || false);
+
   // CORREÇÃO: Derivar estado diretamente do ticket usando useMemo (mais estável)
   // Evita problemas de timing e dependências circulares do useEffect anterior
   const shouldShowButton = useMemo(() => {
@@ -213,6 +227,73 @@ const ChatModernoHeader = ({
     setShowTransferModal(false);
     if (transferred && onRefresh) {
       onRefresh();
+    }
+  };
+
+  // 🔻 FUNÇÕES DO DROPDOWN DE TRÊS PONTINHOS (Baseadas no TicketActionButtonsCustom)
+  const handleMenu = event => {
+    setAnchorEl(event.currentTarget);
+    setMenuOpen(true);
+  };
+
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+    setMenuOpen(false);
+  };
+
+  const handleOpenConfirmationModal = (e) => {
+    setConfirmationOpen(true);
+    handleCloseMenu();
+  };
+
+  const handleExportPDF = async () => {
+    setOpenTicketMessageDialog(true);
+    handleCloseMenu();
+  };
+
+  const handleEnableIntegration = async () => {
+    setLoading(true);
+    try {
+      await api.put(`/tickets/${ticket.id}`, {
+        useIntegration: !enableIntegration
+      });
+      setEnableIntegration(!enableIntegration);
+      toast.success(`Integração ${!enableIntegration ? 'habilitada' : 'desabilitada'} com sucesso!`);
+      setLoading(false);
+    } catch (err) {
+      setLoading(false);
+      toastError(err);
+    }
+    handleCloseMenu();
+  };
+
+  const handleShowLogTicket = async () => {
+    setShowTicketLogOpen(true);
+    handleCloseMenu();
+  };
+
+  const handleContactToggleDisableBot = async () => {
+    if (!ticket?.contact?.id) return;
+
+    try {
+      const { data } = await api.put(`/contacts/toggleDisableBot/${ticket.contact.id}`);
+      setDisableBot(data.disableBot);
+      toast.success(`Chatbot ${data.disableBot ? 'desabilitado' : 'habilitado'} com sucesso!`);
+    } catch (err) {
+      toastError(err);
+    }
+    handleCloseMenu();
+  };
+
+  const handleDeleteTicket = async () => {
+    try {
+      await api.delete(`/tickets/${ticket.id}`);
+      toast.success('Ticket deletado com sucesso!');
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (err) {
+      toastError(err);
     }
   };
 
@@ -328,6 +409,15 @@ const ChatModernoHeader = ({
                   <InformationCircleIcon style={{ width: '20px', height: '20px' }} />
                 </IconButton>
               </Tooltip>
+
+              <Tooltip title="Mais opções" placement="bottom">
+                <IconButton
+                  onClick={handleMenu}
+                  sx={{ color: 'var(--text-secondary)' }}
+                >
+                  <EllipsisVerticalIcon style={{ width: '20px', height: '20px' }} />
+                </IconButton>
+              </Tooltip>
             </>
           )}
         </ActionButtons>
@@ -350,6 +440,69 @@ const ChatModernoHeader = ({
           onClose={handleTransferModalClose}
           ticketid={ticket?.id}
           ticket={ticket}
+        />
+      )}
+
+      {/* Dropdown de três pontinhos */}
+      <Menu
+        id="menu-appbar"
+        anchorEl={anchorEl}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+        keepMounted
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "right",
+        }}
+        open={menuOpen}
+        onClose={handleCloseMenu}
+      >
+        <MenuItem onClick={handleContactToggleDisableBot}>
+          {disableBot ? 'Habilitar chatbot' : 'Desabilitar chatbot'}
+        </MenuItem>
+        <MenuItem onClick={handleShowLogTicket}>
+          Logs do Ticket
+        </MenuItem>
+        <MenuItem onClick={handleEnableIntegration}>
+          {enableIntegration ? 'Desabilitar integração' : 'Habilitar integração'}
+        </MenuItem>
+        <MenuItem onClick={handleExportPDF}>
+          Exportar em PDF
+        </MenuItem>
+        <MenuItem onClick={handleOpenConfirmationModal}>
+          Deletar Ticket
+        </MenuItem>
+      </Menu>
+
+      {/* Modal de confirmação para deletar ticket */}
+      {confirmationOpen && (
+        <ConfirmationModal
+          title={`Deletar ticket #${ticket?.id}?`}
+          open={confirmationOpen}
+          onClose={() => setConfirmationOpen(false)}
+          onConfirm={handleDeleteTicket}
+        >
+          Esta ação não pode ser desfeita. Tem certeza que deseja deletar este ticket?
+        </ConfirmationModal>
+      )}
+
+      {/* Modal para mostrar logs do ticket */}
+      {showTicketLogOpen && (
+        <ShowTicketLogModal
+          isOpen={showTicketLogOpen}
+          handleClose={() => setShowTicketLogOpen(false)}
+          ticketId={ticket?.id}
+        />
+      )}
+
+      {/* Modal para exportar mensagens em PDF */}
+      {openTicketMessageDialog && (
+        <TicketMessagesDialog
+          open={openTicketMessageDialog}
+          handleClose={() => setOpenTicketMessageDialog(false)}
+          ticketId={ticket?.id}
         />
       )}
     </>
