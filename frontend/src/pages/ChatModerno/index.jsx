@@ -603,8 +603,8 @@ const ChatModernoContent = () => {
     return JSON.stringify(targetQueues);
   }, [selectedQueueIds, user?.queues]);
   
-  // Buscar tickets usando o hook original
-  const ticketParams = {
+  // 🔧 FIX: Memoizar ticketParams para evitar re-renders desnecessários e bug de lista sumindo
+  const ticketParams = useMemo(() => ({
     searchParam: debouncedSearchParam,
     pageNumber: pageNumber,
     status: showClosedTickets ? 'closed' : tabOpen,
@@ -617,7 +617,19 @@ const ChatModernoContent = () => {
     // Status filter NÃO enviado para API (controlado localmente via shouldShowTicketsInTab)
     forceSearch: refreshTickets,
     searchOnMessages: searchOnMessages
-  };
+  }), [
+    debouncedSearchParam,
+    pageNumber,
+    showClosedTickets,
+    tabOpen,
+    showAllTickets,
+    queueIds,
+    tagIds,
+    userIds,
+    connectionIds,
+    refreshTickets,
+    searchOnMessages
+  ]);
 
   // Debug removido - testando correção
 
