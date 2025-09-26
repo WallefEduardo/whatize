@@ -21,6 +21,7 @@ import MessageItem from '../Chat/components/MessageItem';
 import MessageInput from '../Chat/components/MessageInput';
 import ConversationInfo from '../Chat/components/ConversationInfo';
 import FilterDropdown from '../../components/ui/FilterDropdown';
+import MessageSearchPanel from './components/MessageSearchPanel';
 import { useDrawerControl } from '../../context/DrawerContext';
 
 // Componentes otimizados
@@ -176,12 +177,22 @@ const ChatArea = styled(Box)(() => ({
   overflow: 'hidden',
 }));
 
-const MessageArea = styled(Box)(() => ({
+const MessageArea = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isSearchOpen',
+})(({ theme, isSearchOpen }) => ({
   flex: 1,
   position: 'relative',
   overflow: 'hidden',
   minHeight: 0,
   height: '100%',
+  // Ajustar largura quando painel de busca estiver aberto
+  width: isSearchOpen ? 'calc(100% - 320px)' : '100%',
+  transition: 'width 0.2s ease-in-out',
+
+  // No mobile, manter largura total (painel fica em overlay)
+  [theme.breakpoints.down('md')]: {
+    width: '100%',
+  },
 }));
 
 const EmptyState = styled(Box)(() => ({
@@ -244,6 +255,10 @@ const ChatModernoContent = () => {
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [isForward, setIsForward] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+
+  // 🔍 Estados para busca de mensagens
+  const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
+  const [highlightedMessageId, setHighlightedMessageId] = useState(null);
   
   // 🚀 Estados otimistas para mensagens instantâneas
   const [optimisticMessages, setOptimisticMessages] = useState(new Map());
@@ -1138,6 +1153,45 @@ const ChatModernoContent = () => {
   const handleSearch = useCallback((event) => {
     const searchTerm = event.target.value;
     setSearchParam(searchTerm);
+  }, []);
+
+  // 🔍 Handlers para busca de mensagens
+  const handleMessageSearchToggle = useCallback(() => {
+    setIsMessageSearchOpen(prev => !prev);
+  }, []);
+
+  const handleMessageSearchClose = useCallback(() => {
+    setIsMessageSearchOpen(false);
+    setHighlightedMessageId(null);
+  }, []);
+
+  // 🔄 Fechar painel de busca automaticamente ao trocar de conversa
+  useEffect(() => {
+    if (isMessageSearchOpen) {
+      setIsMessageSearchOpen(false);
+      setHighlightedMessageId(null);
+    }
+  }, [selectedChatId]); // Executa sempre que trocar de conversa
+
+  const handleMessageClick = useCallback((message) => {
+    // Destacar a mensagem
+    setHighlightedMessageId(message.id);
+
+    // 🎯 Usar a mesma lógica do reply/scroll existente
+    const messageElement = document.querySelector(`[data-message-id="${message.id}"]`);
+    if (messageElement) {
+      messageElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+
+      // Remover highlight após alguns segundos
+      setTimeout(() => {
+        setHighlightedMessageId(null);
+      }, 3000);
+    } else {
+      console.warn('🔍 Mensagem não encontrada no DOM:', message.id);
+    }
   }, []);
 
   // Handler para criar nova conversa
@@ -2670,23 +2724,24 @@ const ChatModernoContent = () => {
                 handleShowInfo={handleShowInfo}
                 profile={profile}
                 mobileMenuHandler={handleShowSidebar}
-                onSearch={() => {/* TODO: Implement search */}}
+                onSearch={handleMessageSearchToggle}
                 onRefresh={forceTicketsRefresh}
               />
             </CardHeader>
 
             {selectedChatId ? (
               <>
-                {/* Messages Area */}
-                <CardContent sx={{ 
-                  flex: 1, 
-                  p: 0, 
+                {/* Messages Area with Search Panel */}
+                <CardContent sx={{
+                  flex: 1,
+                  p: 0,
                   overflow: 'hidden',
                   minHeight: 0,
                   display: 'flex',
-                  flexDirection: 'column'
+                  flexDirection: 'column',
+                  position: 'relative' // Para permitir posicionamento absoluto do painel
                 }}>
-                  <MessageArea ref={chatHeightRef}>
+                  <MessageArea ref={chatHeightRef} isSearchOpen={isMessageSearchOpen}>
                     <ScrollArea 
                       size="full"
                       sx={{ 
@@ -2718,6 +2773,7 @@ const ChatModernoContent = () => {
                                 return (
                                   <MessageItem
                                     key={`message-${index}-${message.id}`}
+                                    id={`message-${message.id}`} // ID para scroll
                                     message={message}
                                     contact={selectedContact}
                                     profile={profile}
@@ -2730,6 +2786,8 @@ const ChatModernoContent = () => {
                                     pinnedMessages={pinnedMessages}
                                     showDateSeparator={showDateSeparator}
                                     onScrollToMessage={scrollToMessage}
+                                    // 🔍 Props para highlight de busca
+                                    isHighlighted={highlightedMessageId === message.id}
                                     // 🎭 Props para reações persistentes
                                     addReactionToMessage={addReactionToMessage}
                                     getMessageReactions={getMessageReactions}
@@ -2830,6 +2888,18 @@ const ChatModernoContent = () => {
                       </Box>
                     </ScrollArea>
                   </MessageArea>
+
+                  {/* Message Search Panel */}
+                  <MessageSearchPanel
+                    isOpen={isMessageSearchOpen}
+                    onClose={handleMessageSearchClose}
+                    messages={messages}
+                    onMessageClick={handleMessageClick}
+                    ticketId={selectedChatId}
+                    selectedContact={selectedContact}
+                    currentUser={user}
+                    profile={profile}
+                  />
                 </CardContent>
 
                 {/* Message Input */}
