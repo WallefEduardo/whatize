@@ -16,8 +16,7 @@ import {
   MagnifyingGlassIcon,
   HandRaisedIcon,
   CheckIcon,
-  CheckCircleIcon,
-  ArrowUturnLeftIcon
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
 // Context e API
@@ -171,34 +170,6 @@ const ChatModernoHeader = ({
     }
   };
 
-  // 🔄 FUNÇÃO PARA DEVOLVER TICKET PARA A FILA (Baseada na handleAcceptTicket)
-  const handleReturnToQueue = async () => {
-    if (!ticket) return;
-
-    try {
-      setLoading(true);
-
-      // Devolver ticket para fila (status: pending, userId: null)
-      await api.put(`/tickets/${ticket.id}`, {
-        status: 'pending',
-        userId: null
-      });
-
-      toast.success('Ticket devolvido para a fila com sucesso!');
-
-      // Refresh da lista de tickets
-      if (onRefresh) {
-        onRefresh();
-      }
-
-    } catch (err) {
-      console.error('❌ Erro ao devolver ticket para fila:', err);
-      toastError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
 
   return (
     <>
@@ -257,16 +228,6 @@ const ChatModernoHeader = ({
                   sx={{ color: 'var(--text-secondary)' }}
                 >
                   <CheckCircleIcon style={{ width: '20px', height: '20px' }} />
-                </IconButton>
-              </Tooltip>
-
-              <Tooltip title="Devolver para fila" placement="bottom">
-                <IconButton
-                  onClick={handleReturnToQueue}
-                  disabled={loading}
-                  sx={{ color: 'var(--text-secondary)' }}
-                >
-                  <ArrowUturnLeftIcon style={{ width: '20px', height: '20px' }} />
                 </IconButton>
               </Tooltip>
 
