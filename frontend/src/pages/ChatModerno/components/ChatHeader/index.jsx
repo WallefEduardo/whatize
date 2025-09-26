@@ -315,19 +315,29 @@ const ChatModernoHeader = ({
 
         {/* Contact Information */}
         <ContactInfo>
-          <Avatar
-            src={contact?.avatar}
-            alt={contact?.name || 'Contato'}
-            size="md"
-            fallbackText={contact?.name ? contact.name.charAt(0).toUpperCase() : '?'}
-          />
+          <Box
+            onClick={handleShowInfo}
+            sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+          >
+            <Avatar
+              src={contact?.avatar}
+              alt={contact?.name || 'Contato'}
+              size="md"
+              fallbackText={contact?.name ? contact.name.charAt(0).toUpperCase() : '?'}
+            />
+          </Box>
           <ContactDetails>
-            <ContactName>
+            <ContactName
+              onClick={handleShowInfo}
+              sx={{ cursor: 'pointer' }}
+            >
               {contact?.name || 'Selecione uma conversa'}
             </ContactName>
-            <ContactStatus>
-              Offline
-            </ContactStatus>
+            <Tooltip title="Número do Ticket" placement="bottom">
+              <ContactStatus>
+                #{ticket?.id || 'Ticket'}
+              </ContactStatus>
+            </Tooltip>
           </ContactDetails>
         </ContactInfo>
 
