@@ -17,7 +17,8 @@ import {
   HandRaisedIcon,
   CheckIcon,
   CheckCircleIcon,
-  ArrowUturnLeftIcon
+  ArrowUturnLeftIcon,
+  ArrowsRightLeftIcon
 } from '@heroicons/react/24/outline';
 
 // Context e API
@@ -28,6 +29,8 @@ import toastError from '../../../../errors/toastError';
 
 // Modal para aceitar ticket
 import AcceptTicketWithoutQueueModal from '../../../../components/AcceptTicketWithoutQueueModal';
+// Modal para transferir ticket
+import TransferTicketModernModal from '../../../../components/TransferTicketModernModal';
 
 const HeaderContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -121,6 +124,7 @@ const ChatModernoHeader = ({
   const { user: currentUser } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
   const [acceptTicketModalOpen, setAcceptTicketModalOpen] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
 
   // CORREÇÃO: Derivar estado diretamente do ticket usando useMemo (mais estável)
   // Evita problemas de timing e dependências circulares do useEffect anterior
@@ -199,6 +203,19 @@ const ChatModernoHeader = ({
     }
   };
 
+  // 🔀 FUNÇÃO PARA ABRIR MODAL DE TRANSFERIR (Baseada no TicketCard)
+  const handleTransferTicket = () => {
+    setShowTransferModal(true);
+  };
+
+  // Função para fechar modal de transferir e refresh se necessário
+  const handleTransferModalClose = (transferred = false) => {
+    setShowTransferModal(false);
+    if (transferred && onRefresh) {
+      onRefresh();
+    }
+  };
+
 
   return (
     <>
@@ -270,6 +287,15 @@ const ChatModernoHeader = ({
                 </IconButton>
               </Tooltip>
 
+              <Tooltip title="Transferir conversa" placement="bottom">
+                <IconButton
+                  onClick={handleTransferTicket}
+                  sx={{ color: 'var(--text-secondary)' }}
+                >
+                  <ArrowsRightLeftIcon style={{ width: '20px', height: '20px' }} />
+                </IconButton>
+              </Tooltip>
+
               <Tooltip title="Buscar mensagens" placement="bottom">
                 <IconButton
                   onClick={onSearch}
@@ -313,6 +339,16 @@ const ChatModernoHeader = ({
           modalOpen={acceptTicketModalOpen}
           onClose={handleModalClose}
           ticketId={ticket?.id}
+          ticket={ticket}
+        />
+      )}
+
+      {/* Modal para transferir ticket */}
+      {showTransferModal && (
+        <TransferTicketModernModal
+          modalOpen={showTransferModal}
+          onClose={handleTransferModalClose}
+          ticketid={ticket?.id}
           ticket={ticket}
         />
       )}
