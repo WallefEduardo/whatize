@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Box, Typography, IconButton, TextField, Divider } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
@@ -101,6 +101,26 @@ const MessageSearchPanel = ({
   const [isSearching, setIsSearching] = useState(false);
   const panelRef = useRef(null);
 
+  // 🎯 Hook de debounce centralizado
+  const useDebounce = (value, delay) => {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+
+    useEffect(() => {
+      const handler = setTimeout(() => {
+        setDebouncedValue(value);
+      }, delay);
+
+      return () => {
+        clearTimeout(handler);
+      };
+    }, [value, delay]);
+
+    return debouncedValue;
+  };
+
+  // Debounce centralizado da query
+  const debouncedQuery = useDebounce(searchQuery, 300);
+
   // Fechar com ESC
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -138,10 +158,16 @@ const MessageSearchPanel = ({
     }).sort((a, b) => new Date(b.createdAt || b.timestamp) - new Date(a.createdAt || a.timestamp));
   }, []);
 
-  const handleSearchQueryChange = useCallback((query) => {
-    setSearchQuery(query);
+  // 🧹 Clear function centralizada - SEM conflitos
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setIsSearching(false);
+  }, []);
 
-    if (!query.trim()) {
+  // 🎯 Busca quando debouncedQuery muda
+  useEffect(() => {
+    if (!debouncedQuery.trim()) {
       setSearchResults([]);
       setIsSearching(false);
       return;
@@ -151,7 +177,7 @@ const MessageSearchPanel = ({
 
     // Simular delay de busca para UX
     setTimeout(() => {
-      const results = searchInMessages(query, messages).map(message => ({
+      const results = searchInMessages(debouncedQuery, messages).map(message => ({
         ...message,
         // Garantir que cada mensagem tem dados do contato
         contact: message.contact || selectedContact
@@ -159,7 +185,12 @@ const MessageSearchPanel = ({
       setSearchResults(results);
       setIsSearching(false);
     }, 200);
-  }, [messages, searchInMessages]);
+  }, [debouncedQuery, messages, searchInMessages, selectedContact]);
+
+  // Handler simples para mudanças no input
+  const handleInputChange = useCallback((e) => {
+    setSearchQuery(e.target.value);
+  }, []);
 
   const handleMessageResultClick = useCallback((message) => {
     if (onMessageClick) {
@@ -196,7 +227,8 @@ const MessageSearchPanel = ({
           <Box sx={{ p: 2, borderBottom: '1px solid var(--border-primary)' }}>
             <SearchInput
               value={searchQuery}
-              onChange={handleSearchQueryChange}
+              onChange={handleInputChange}
+              onClear={clearSearch}
               isLoading={isSearching}
               placeholder="Digite para pesquisar..."
             />

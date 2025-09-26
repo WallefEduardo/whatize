@@ -55,63 +55,20 @@ const ActionButton = styled(IconButton)(() => ({
   }
 }));
 
-// Hook para debounce
-const useDebounce = (value, delay) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-
-  return debouncedValue;
-};
-
 const SearchInput = ({
   value = '',
   onChange,
+  onClear,
   isLoading = false,
-  placeholder = 'Digite para pesquisar...',
-  debounceMs = 300
+  placeholder = 'Digite para pesquisar...'
 }) => {
-  const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef(null);
-
-  // Debounce da busca
-  const debouncedQuery = useDebounce(localValue, debounceMs);
-
-  // Efeito para chamar onChange quando o valor debounced muda
-  useEffect(() => {
-    if (onChange && debouncedQuery !== value) {
-      onChange(debouncedQuery);
-    }
-  }, [debouncedQuery, onChange, value]);
-
-  // Sincronizar valor externo com valor local
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  const handleInputChange = useCallback((e) => {
-    setLocalValue(e.target.value);
-  }, []);
-
-  // 🆕 Nova função de limpar - simples e direta
-  const clearField = () => {
-    setLocalValue('');
-    onChange('');
-  };
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Escape') {
-      clearField();
+      onClear();
     }
-  }, [clearField]);
+  }, [onClear]);
 
   // Auto-focus quando componente é montado
   useEffect(() => {
@@ -124,8 +81,8 @@ const SearchInput = ({
     <SearchContainer>
       <SearchField
         inputRef={inputRef}
-        value={localValue}
-        onChange={handleInputChange}
+        value={value}
+        onChange={onChange}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         variant="outlined"
@@ -149,29 +106,16 @@ const SearchInput = ({
               )}
             </Box>
           ),
-          endAdornment: localValue && (
-            <Box
-              onClick={clearField}
-              sx={{
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--text-secondary)',
-                '&:hover': {
-                  backgroundColor: 'var(--text-primary)',
-                }
+          endAdornment: value && (
+            <XMarkIcon
+              onClick={onClear}
+              style={{
+                width: '16px',
+                height: '16px',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer'
               }}
-            >
-              <XMarkIcon style={{
-                width: '12px',
-                height: '12px',
-                color: 'white'
-              }} />
-            </Box>
+            />
           ),
         }}
       />

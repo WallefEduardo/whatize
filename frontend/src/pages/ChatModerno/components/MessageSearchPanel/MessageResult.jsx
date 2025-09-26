@@ -211,15 +211,6 @@ const MessageResult = memo(({ message, query, onClick, currentUser, profile, sel
 
   // 🔧 Usar selectedContact como fallback se contact não existir ou estiver incompleto
   const actualContact = useMemo(() => {
-    // 🐛 Debug temporário
-    console.log('🔍 MessageResult Debug:', {
-      messageId: id,
-      fromMe,
-      messageContact: contact,
-      selectedContact,
-      hasContactData: contact && (contact.name || contact.avatar || contact.profilePicUrl)
-    });
-
     // Se messageContact não tem avatar, sempre usar selectedContact que tem dados completos
     if (!contact || !contact.avatar) {
       return selectedContact;
@@ -227,25 +218,13 @@ const MessageResult = memo(({ message, query, onClick, currentUser, profile, sel
 
     // Se messageContact tem avatar, usar ele
     return contact;
-  }, [contact, selectedContact, id, fromMe]);
+  }, [contact, selectedContact]);
 
   const sender = useMemo(() => {
-    const result = isSent
+    return isSent
       ? (messageUser || currentUser || profile) // Prioridade: messageUser > currentUser > profile
       : actualContact; // ✅ Usar actualContact ao invés de contact direto
-
-    // 🐛 Debug temporário para avatar
-    if (!isSent) {
-      console.log('🖼️ Avatar Debug:', {
-        messageId: id,
-        sender: result,
-        avatarUrl: getAvatarUrl(result),
-        senderName: result?.name
-      });
-    }
-
-    return result;
-  }, [isSent, messageUser, currentUser, profile, actualContact, id]);
+  }, [isSent, messageUser, currentUser, profile, actualContact]);
 
   // Memoizar preview de mídia
   const mediaPreview = useMemo(() => getMediaPreview(message), [message]);
