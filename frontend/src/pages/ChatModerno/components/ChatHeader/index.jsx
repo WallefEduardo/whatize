@@ -15,9 +15,9 @@ import {
   Bars3Icon,
   MagnifyingGlassIcon,
   HandRaisedIcon,
-  CheckIcon
+  CheckIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
-import { CheckCircleIcon } from '@heroicons/react/24/solid';
 
 // Context e API
 import { AuthContext } from '../../../../context/Auth/AuthContext';
@@ -114,7 +114,8 @@ const ChatModernoHeader = ({
   profile,
   mobileMenuHandler,
   onSearch,
-  onRefresh
+  onRefresh,
+  onResolveTicket
 }) => {
   const { user: currentUser } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
@@ -221,6 +222,15 @@ const ChatModernoHeader = ({
           {/* Botões existentes - só aparecem quando ticket NÃO está pending */}
           {ticket?.status !== 'pending' && (
             <>
+              <Tooltip title="Resolver conversa" placement="bottom">
+                <IconButton
+                  onClick={onResolveTicket}
+                  sx={{ color: 'var(--text-secondary)' }}
+                >
+                  <CheckCircleIcon style={{ width: '20px', height: '20px' }} />
+                </IconButton>
+              </Tooltip>
+
               <Tooltip title="Buscar mensagens" placement="bottom">
                 <IconButton
                   onClick={onSearch}

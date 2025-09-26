@@ -58,6 +58,7 @@ import NewConversationModal from '../../components/ui/NewConversationModal';
 import ChatTabs from './components/ChatTabs';
 import SearchAndFilters from './components/SearchAndFilters';
 import TicketsList from './components/TicketsList';
+import ResolverTicketModal from '../../components/ResolverTicketModal';
 
 // Componentes de filtro (reutilizados do chat antigo)
 import { TagsFilter } from '../../components/TagsFilter';
@@ -259,6 +260,9 @@ const ChatModernoContent = () => {
   // 🔍 Estados para busca de mensagens
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState(null);
+
+  // 🎯 Estado para modal de finalizar conversa
+  const [showCloseTicketModal, setShowCloseTicketModal] = useState(false);
   
   // 🚀 Estados otimistas para mensagens instantâneas
   const [optimisticMessages, setOptimisticMessages] = useState(new Map());
@@ -1193,6 +1197,55 @@ const ChatModernoContent = () => {
       console.warn('🔍 Mensagem não encontrada no DOM:', message.id);
     }
   }, []);
+
+  // 🎯 Handler para abrir modal de resolver conversa (igual ao dropdown)
+  const handleResolveTicket = useCallback(() => {
+    setShowCloseTicketModal(true);
+  }, []);
+
+  // 🎯 Handler para resolver COM mensagem de despedida
+  const handleResolverComMensagem = useCallback(async () => {
+    if (!selectedChatId) return;
+
+    try {
+      await api.put(`/tickets/${selectedChatId}`, {
+        status: 'closed',
+        sendFarewellMessage: true
+      });
+
+      // Fechar modal
+      setShowCloseTicketModal(false);
+
+      // Refresh da lista de tickets
+      forceTicketsRefresh();
+
+      console.log('Conversa resolvida com mensagem de despedida');
+    } catch (error) {
+      console.error('Erro ao resolver com mensagem:', error);
+    }
+  }, [selectedChatId, forceTicketsRefresh]);
+
+  // 🎯 Handler para resolver SEM mensagem de despedida
+  const handleResolverSemMensagem = useCallback(async () => {
+    if (!selectedChatId) return;
+
+    try {
+      await api.put(`/tickets/${selectedChatId}`, {
+        status: 'closed',
+        sendFarewellMessage: false
+      });
+
+      // Fechar modal
+      setShowCloseTicketModal(false);
+
+      // Refresh da lista de tickets
+      forceTicketsRefresh();
+
+      console.log('Conversa resolvida sem mensagem de despedida');
+    } catch (error) {
+      console.error('Erro ao resolver sem mensagem:', error);
+    }
+  }, [selectedChatId, forceTicketsRefresh]);
 
   // Handler para criar nova conversa
   const handleCreateTicket = useCallback((newTicket) => {
@@ -2726,6 +2779,7 @@ const ChatModernoContent = () => {
                 mobileMenuHandler={handleShowSidebar}
                 onSearch={handleMessageSearchToggle}
                 onRefresh={forceTicketsRefresh}
+                onResolveTicket={handleResolveTicket}
               />
             </CardHeader>
 
@@ -2974,6 +3028,15 @@ const ChatModernoContent = () => {
             setSelectedMessages([]);
           }}
           forceTicketsRefresh={forceTicketsRefresh}
+        />
+
+        {/* Modal de Resolver Conversa - Igual ao dropdown */}
+        <ResolverTicketModal
+          isVisible={showCloseTicketModal}
+          onClose={() => setShowCloseTicketModal(false)}
+          onResolverComMensagem={handleResolverComMensagem}
+          onResolverSemMensagem={handleResolverSemMensagem}
+          contactName={selectedContact?.name || 'Contato'}
         />
         </Box>
     </ChatPageBase>
