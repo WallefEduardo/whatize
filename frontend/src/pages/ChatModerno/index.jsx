@@ -854,7 +854,7 @@ const ChatModernoContent = () => {
       socket.off(`company-${companyId}-appMessage`, onCompanyAppMessage);
       socket.emit("leaveTickets", tabOpen);
     };
-  }, [socket, tabOpen, user?.companyId]);
+  }, [socket, tabOpen, user?.companyId, selectedChatId, messageIds, isScrolledUp]);
 
   // useEffect para joinChatBox quando seleciona conversa específica
   useEffect(() => {
