@@ -11,7 +11,9 @@ import makeWASocket, {
   isJidBroadcast,
   isJidGroup,
   jidNormalizedUser,
-  makeCacheableSignalKeyStore
+  proto,
+  WAMessageContent
+  // ⚠️ IMPORTANTE: Removido makeCacheableSignalKeyStore para WSocket
 } from "baileys";
 
 // Importação separada do makeInMemoryStore
@@ -40,7 +42,42 @@ import NodeCache from "node-cache";
 import { Store } from "./store";
 import readline from "readline";
 import { sessionManager } from "./WhatsAppSessionManager";
+import Message from "../models/Message";
 
+// ⚠️ IMPLEMENTAÇÃO OBRIGATÓRIA PARA WSOCKET
+// Função getMessage é CRÍTICA para funcionamento do WSocket
+export const getMessage = async (
+  key: WAMessageKey
+): Promise<WAMessageContent | undefined> => {
+  if (!key.id) {
+    logger.debug("getMessage: key.id is undefined");
+    return undefined;
+  }
+
+  try {
+    logger.debug(`getMessage: Searching for message ${key.id}`);
+    
+    // Buscar mensagem do banco de dados
+    const message = await Message.findOne({
+      where: {
+        messageId: key.id,
+        remoteJid: key.remoteJid
+      }
+    });
+
+    if (message?.dataJson) {
+      logger.debug(`getMessage: Found message ${key.id} in database`);
+      const data = JSON.parse(message.dataJson);
+      return proto.Message.fromObject(data);
+    }
+
+    logger.debug(`getMessage: Message ${key.id} not found in database`);
+    return undefined;
+  } catch (error) {
+    logger.error(`getMessage: Error fetching message ${key.id}: ${error.message}`);
+    return undefined;
+  }
+};
 
 const msgRetryCounterCache = new NodeCache({
   stdTTL: 600,
@@ -384,22 +421,15 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
           version,
           logger: loggerBaileys,
           printQRInTerminal: false,
-          // auth: state as AuthenticationState,
-          auth: {
-            creds: state.creds,
-            /** caching makes the store faster to send/recv messages */
-            keys: makeCacheableSignalKeyStore(state.keys, logger),
-          },
+          // ⚠️ WSOCKET: Usar state diretamente sem makeCacheableSignalKeyStore
+          auth: state as AuthenticationState,
           generateHighQualityLinkPreview: true,
           linkPreviewImageThumbnailWidth: 192,
-          // shouldIgnoreJid: jid => isJidBroadcast(jid),
-
           shouldIgnoreJid: (jid) => {
-            //   // const isGroupJid = !allowGroup && isJidGroup(jid)
-            return isJidBroadcast(jid) || (!allowGroup && isJidGroup(jid)) //|| jid.includes('newsletter')
+            return isJidBroadcast(jid) || (!allowGroup && isJidGroup(jid))
           },
-          browser: ['ubuntu', 'chrome', ''],
-          defaultQueryTimeoutMs: undefined,
+          browser: ['Whatize', 'Chrome', '10.15.7'], // ⚠️ WSOCKET: Browser personalizado
+          defaultQueryTimeoutMs: 60000, // ⚠️ WSOCKET: Timeout definido
           msgRetryCounterCache,
           markOnlineOnConnect: false,
           retryRequestDelayMs: 500,
@@ -407,9 +437,12 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
           emitOwnEvents: true,
           fireInitQueries: true,
           transactionOpts: { maxCommitRetries: 10, delayBetweenTriesMs: 3000 },
-          connectTimeoutMs: 25_000,
-          // keepAliveIntervalMs: 60_000,
-          getMessage: msgDB.get,
+          connectTimeoutMs: 60000, // ⚠️ WSOCKET: Timeout aumentado
+          keepAliveIntervalMs: 30000, // ⚠️ WSOCKET: Keep alive definido
+          // ⚠️ CRÍTICO: Usar nossa implementação getMessage
+          getMessage: getMessage,
+          syncFullHistory: false, // ⚠️ WSOCKET: Evitar sync completo
+          qrTimeout: 40000, // ⚠️ WSOCKET: Timeout QR
         });
 
         // Agora que wsocket existe, anexar cacheMessage

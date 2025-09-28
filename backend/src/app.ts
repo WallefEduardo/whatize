@@ -53,7 +53,7 @@ app.set("queues", {
 
 const allowedOrigins = [
   process.env.FRONTEND_URL || "https://whatize.pro",
-  "https://front.whatize.pro", // Adicionar explicitamente para garantir
+  "https://betaapp.zmaxsys.com.br", // Adicionar explicitamente para garantir
   "https://whatize.pro",
   "http://localhost:3000",
   "http://localhost:3035",
