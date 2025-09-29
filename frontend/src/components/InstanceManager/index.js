@@ -19,7 +19,7 @@ import {
   Chip
 } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
-import { Edit, Delete, Add } from "@material-ui/icons";
+import { Edit, Delete } from "@material-ui/icons";
 import { toast } from "react-toastify";
 
 const useStyles = makeStyles((theme) => ({
@@ -38,13 +38,6 @@ const useStyles = makeStyles((theme) => ({
   },
   table: {
     marginTop: theme.spacing(2),
-  },
-  addButton: {
-    backgroundColor: "#00c307",
-    color: "white",
-    "&:hover": {
-      backgroundColor: "#32CD32",
-    },
   },
   editButton: {
     color: "#1976d2",
@@ -92,16 +85,10 @@ const InstanceManager = () => {
     loadInstances();
   }, []);
 
-  // Salvar instância (criar ou editar)
+  // Salvar edição da instância
   const handleSave = async () => {
-    if (!formData.code || !formData.backendUrl) {
-      toast.error("Código e URL do backend são obrigatórios");
-      return;
-    }
-
-    // Validar se código é só números
-    if (!/^\d+$/.test(formData.code)) {
-      toast.error("Código deve conter apenas números");
+    if (!formData.backendUrl) {
+      toast.error("URL do backend é obrigatória");
       return;
     }
 
@@ -109,29 +96,25 @@ const InstanceManager = () => {
       setLoading(true);
       
       if (editingInstance) {
-        // Editar (implementar se necessário)
-        toast.warning("Edição ainda não implementada");
-        return;
-      } else {
-        // Criar nova instância
-        const response = await fetch(`${LOOKUP_API_URL}/companies`, {
-          method: "POST",
+        // Editar instância existente
+        const response = await fetch(`${LOOKUP_API_URL}/companies/${editingInstance.id}`, {
+          method: "PUT",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            code: formData.code,
             backendUrl: formData.backendUrl,
-            companyName: formData.companyName || `Instância ${formData.code}`,
+            companyName: formData.companyName,
+            status: true
           }),
         });
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.error || "Erro ao salvar instância");
+          throw new Error(error.error || "Erro ao atualizar instância");
         }
 
-        toast.success("Instância criada com sucesso!");
+        toast.success("Instância atualizada com sucesso!");
         handleCloseDialog();
         loadInstances();
       }
@@ -171,12 +154,7 @@ const InstanceManager = () => {
     }
   };
 
-  // Abrir dialog para nova instância
-  const handleAdd = () => {
-    setEditingInstance(null);
-    setFormData({ code: "", backendUrl: "", companyName: "" });
-    setDialogOpen(true);
-  };
+  // Função removida - não criamos mais instâncias via interface
 
   // Abrir dialog para editar
   const handleEdit = (instance) => {
@@ -214,17 +192,8 @@ const InstanceManager = () => {
       <Paper className={classes.paper}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h6">
-            🏗️ Gerenciar Instâncias
+            Instâncias do Sistema
           </Typography>
-          <Button
-            variant="contained"
-            className={classes.addButton}
-            startIcon={<Add />}
-            onClick={handleAdd}
-            disabled={loading}
-          >
-            Nova Instância
-          </Button>
         </Box>
 
         <Paper style={{ 
@@ -234,8 +203,8 @@ const InstanceManager = () => {
           border: '1px solid #2196f3'
         }}>
           <Typography variant="body2" style={{ color: '#1976d2' }}>
-            <strong>ℹ️ Atenção:</strong> Cada código representa uma instância completa do sistema. 
-            Todos os usuários da mesma instância usarão o mesmo código para login.
+            <strong>ℹ️ Informação:</strong> As instâncias são registradas automaticamente pelos backends no startup. 
+            Aqui você pode visualizar e editar as informações das instâncias ativas.
           </Typography>
         </Paper>
 
@@ -304,21 +273,19 @@ const InstanceManager = () => {
         </TableContainer>
       </Paper>
 
-      {/* Dialog para criar/editar instância */}
+      {/* Dialog para editar instância */}
       <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {editingInstance ? "Editar Instância" : "Nova Instância"}
+          Editar Instância
         </DialogTitle>
         <DialogContent>
           <Box display="flex" flexDirection="column" gap={2} mt={1}>
             <TextField
               label="Código da Instância"
-              placeholder="Ex: 1122, 3344"
               value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-              helperText="Apenas números. Será usado no login."
-              disabled={editingInstance} // Não permite editar código
+              disabled
               fullWidth
+              helperText="O código não pode ser alterado (gerado automaticamente pelo backend)"
             />
             <TextField
               label="Nome da Instância"
@@ -345,7 +312,7 @@ const InstanceManager = () => {
             variant="contained"
             disabled={loading}
           >
-            {editingInstance ? "Salvar" : "Criar"}
+            Salvar Alterações
           </Button>
         </DialogActions>
       </Dialog>
