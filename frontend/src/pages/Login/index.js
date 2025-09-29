@@ -20,7 +20,7 @@ import useSettings from "../../hooks/useSettings";
 import ColorModeContext from "../../layout/themeContext";
 import { Helmet } from "react-helmet";
 import SendIcon from '@mui/icons-material/Send';
-import { Mail, Lock } from '@mui/icons-material';
+import { Mail, Lock, Business } from '@mui/icons-material';
 import InputAdornment from '@mui/material/InputAdornment';
 
 const Card = styled(MuiCard)(({ theme }) => ({
@@ -89,9 +89,11 @@ const Login = () => {
 	const [emailErrorMessage, setEmailErrorMessage] = useState('');
 	const [passwordError, setPasswordError] = useState(false);
 	const [passwordErrorMessage, setPasswordErrorMessage] = useState('');
+	const [companyCodeError, setCompanyCodeError] = useState(false);
+	const [companyCodeErrorMessage, setCompanyCodeErrorMessage] = useState('');
 	const { colorMode } = useContext(ColorModeContext);
 	const { appName } = colorMode;
-	const [user, setUser] = useState({ email: "", password: "" });
+	const [user, setUser] = useState({ email: "", password: "", companyCode: "" });
 	const [allowSignup, setAllowSignup] = useState(false);
 	const { getPublicSetting } = useSettings();
 	const { handleLogin } = useContext(AuthContext);
@@ -116,9 +118,19 @@ const Login = () => {
 	}, []);
 
 	const validateInputs = () => {
+		const companyCode = document.getElementById('companyCode');
 		const email = document.getElementById('email');
 		const password = document.getElementById('password');
 		let isValid = true;
+
+		if (!companyCode.value || companyCode.value.trim().length < 3) {
+			setCompanyCodeError(true);
+			setCompanyCodeErrorMessage('Código da empresa é obrigatório (mín. 3 caracteres).');
+			isValid = false;
+		} else {
+			setCompanyCodeError(false);
+			setCompanyCodeErrorMessage('');
+		}
 
 		if (!email.value || !/\S+@\S+\.\S+/.test(email.value)) {
 			setEmailError(true);
@@ -175,6 +187,30 @@ const Login = () => {
 						}}
 					>
 						<FormControl>
+							<StyledFormLabel htmlFor="companyCode">Código da Empresa</StyledFormLabel>
+							<StyledTextField
+								error={companyCodeError}
+								helperText={companyCodeErrorMessage}
+								id="companyCode"
+								type="text"
+								name="companyCode"
+								placeholder="Ex: EMP001"
+								autoComplete="organization"
+								autoFocus
+								required
+								fullWidth
+								onChange={handleChangeInput}
+								InputProps={{
+									startAdornment: (
+										<InputAdornment position="start">
+											<Business sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+										</InputAdornment>
+									),
+								}}
+							/>
+						</FormControl>
+
+						<FormControl>
 							<StyledFormLabel htmlFor="email">Seu e-mail</StyledFormLabel>
 							<StyledTextField
 								error={emailError}
@@ -184,7 +220,6 @@ const Login = () => {
 								name="email"
 								placeholder="exemplo@email.com"
 								autoComplete="email"
-								autoFocus
 								required
 								fullWidth
 								onChange={handleChangeInput}

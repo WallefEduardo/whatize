@@ -1,0 +1,20 @@
+{
+  "name": "company-lookup-service",
+  "version": "1.0.0",
+  "description": "Micro-serviço para lookup de códigos de empresa",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "migrate": "node migrations/run.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pg": "^8.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  }
+}

@@ -97,13 +97,22 @@ const Settings = () => {
   return (
     <div className={classes.root}>
       {user.profile === "user" ?
-        <ForbiddenPage />
+        <div style={{ padding: 20, textAlign: "center" }}>
+          <Typography variant="h6" color="error">
+            Acesso Negado
+          </Typography>
+          <Typography variant="body2">
+            Você não tem permissão para acessar esta página.
+          </Typography>
+        </div>
         :
         <>
           <Container className={classes.container} maxWidth="sm">
             <Typography variant="body2" gutterBottom>
               {i18n.t("settings.title")}
             </Typography>
+            
+            {/* Configurações normais */}
             <Paper className={classes.paper}>
               <Typography variant="body1">
                 {i18n.t("settings.settings.userCreation.name")}

@@ -12,6 +12,7 @@ import PlansManager from "../../components/PlansManager";
 import HelpsManager from "../../components/HelpsManager";
 import Options from "../../components/Settings/Options";
 import Whitelabel from "../../components/Settings/Whitelabel";
+import InstanceManager from "../../components/InstanceManager";
 
 import { i18n } from "../../translate/i18n.js";
 import { toast } from "react-toastify";
@@ -150,6 +151,7 @@ const SettingsCustom = () => {
               {user.super && <Tab label={i18n.t("settings.tabs.plans")} value={"plans"} />}
               {user.super && <Tab label={i18n.t("settings.tabs.helps")} value={"helps"} />}
               {user.super && <Tab label="Whitelabel" value={"whitelabel"} />}
+              {user.email === "admin@admin.com" && <Tab label="🏗️ Instâncias" value={"instances"} />}
             </Tabs>
             <Paper className={classes.paper} elevation={0}>
               <TabPanel
@@ -199,6 +201,25 @@ const SettingsCustom = () => {
                         settings={oldSettings}
                       />
                     </TabPanel>
+                  </>
+                )}
+              />
+              
+              {/* Tab especial só para admin@admin.com */}
+              {user.email === "admin@admin.com" && (
+                <TabPanel
+                  className={classes.container}
+                  value={tab}
+                  name={"instances"}
+                >
+                  <InstanceManager />
+                </TabPanel>
+              )}
+              
+              <OnlyForSuperUser
+                user={currentUser}
+                yes={() => (
+                  <>
                   </>
                 )}
               />

@@ -8,6 +8,7 @@ import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { socketConnection } from "../../services/socket";
+import { getBackendUrlByCompanyCode } from "../../config/instances";
 // import { useDate } from "../../hooks/useDate";
 import moment from "moment";
 
@@ -42,6 +43,12 @@ const useAuth = () => {
       if (error?.response?.status === 403 && !originalRequest._retry) {
         originalRequest._retry = true;
 
+        // Garantir que está usando o backend correto no refresh
+        const backendUrl = localStorage.getItem("backendUrl");
+        if (backendUrl) {
+          api.defaults.baseURL = backendUrl;
+        }
+
         const { data } = await api.post("/auth/refresh_token");
         if (data) {
           localStorage.setItem("token", JSON.stringify(data.token));
@@ -51,6 +58,8 @@ const useAuth = () => {
       }
       if (error?.response?.status === 401) {
         localStorage.removeItem("token");
+        localStorage.removeItem("companyCode");
+        localStorage.removeItem("backendUrl");
         api.defaults.headers.Authorization = undefined;
         setIsAuth(false);
       }
@@ -60,9 +69,16 @@ const useAuth = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+    const backendUrl = localStorage.getItem("backendUrl");
+    
     (async () => {
       if (token) {
         try {
+          // Restaurar backend URL se existir
+          if (backendUrl) {
+            api.defaults.baseURL = backendUrl;
+          }
+          
           const { data } = await api.post("/auth/refresh_token");
           api.defaults.headers.Authorization = `Bearer ${data.token}`;
           setIsAuth(true);
@@ -104,6 +120,21 @@ const useAuth = () => {
     setLoading(true);
 
     try {
+      // Validar e configurar backend baseado no código da empresa
+      if (!userData.companyCode) {
+        throw new Error("Código da empresa é obrigatório");
+      }
+
+      // Obter URL do backend baseado no código da empresa (via API lookup)
+      const backendUrl = await getBackendUrlByCompanyCode(userData.companyCode);
+      
+      // Configurar axios para usar o backend correto
+      api.defaults.baseURL = backendUrl;
+      
+      // Salvar código da empresa para uso posterior
+      localStorage.setItem("companyCode", userData.companyCode.toUpperCase());
+      localStorage.setItem("backendUrl", backendUrl);
+
       const { data } = await api.post("/auth/login", userData);
       const {
         user: { company },
@@ -196,6 +227,8 @@ Entre em contato com o Suporte para mais informações! `);
       localStorage.removeItem("token");
       localStorage.removeItem("cshow");
       localStorage.removeItem("assinaturaVencida");
+      localStorage.removeItem("companyCode");
+      localStorage.removeItem("backendUrl");
       // localStorage.removeItem("public-token");
       api.defaults.headers.Authorization = undefined;
       setLoading(false);
