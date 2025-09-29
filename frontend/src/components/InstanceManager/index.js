@@ -16,8 +16,7 @@ import {
   DialogContent,
   DialogActions,
   Box,
-  Chip,
-  Alert
+  Chip
 } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
 import { Edit, Delete, Add } from "@material-ui/icons";
@@ -228,10 +227,17 @@ const InstanceManager = () => {
           </Button>
         </Box>
 
-        <Alert severity="info" style={{ marginBottom: 16 }}>
-          <strong>Atenção:</strong> Cada código representa uma instância completa do sistema. 
-          Todos os usuários da mesma instância usarão o mesmo código para login.
-        </Alert>
+        <Paper style={{ 
+          padding: 16, 
+          marginBottom: 16, 
+          backgroundColor: '#e3f2fd',
+          border: '1px solid #2196f3'
+        }}>
+          <Typography variant="body2" style={{ color: '#1976d2' }}>
+            <strong>ℹ️ Atenção:</strong> Cada código representa uma instância completa do sistema. 
+            Todos os usuários da mesma instância usarão o mesmo código para login.
+          </Typography>
+        </Paper>
 
         <TableContainer component={Paper} className={classes.table}>
           <Table>

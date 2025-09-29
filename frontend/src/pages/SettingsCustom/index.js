@@ -151,7 +151,8 @@ const SettingsCustom = () => {
               {user.super && <Tab label={i18n.t("settings.tabs.plans")} value={"plans"} />}
               {user.super && <Tab label={i18n.t("settings.tabs.helps")} value={"helps"} />}
               {user.super && <Tab label="Whitelabel" value={"whitelabel"} />}
-              {user.email === "admin@admin.com" && <Tab label="🏗️ Instâncias" value={"instances"} />}
+              {user.email === "admin@admin.com" && <Tab label="Instâncias" value={"instances"} />}
+              {console.log("Debug - User email:", user.email, "Should show instances tab:", user.email === "admin@admin.com")}
             </Tabs>
             <Paper className={classes.paper} elevation={0}>
               <TabPanel
