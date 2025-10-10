@@ -1,41 +1,75 @@
 import React, { useState, useRef, useEffect, memo } from 'react';
-import { Box, Typography, IconButton, Backdrop, Paper } from '@mui/material';
+import { Box, Typography, IconButton, Dialog } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import {
-  PlayArrow,
-  Pause,
-  VolumeUp,
-  VolumeOff,
-  Fullscreen,
-  Close,
-  Download,
-  PlayCircleOutline
-} from '@mui/icons-material';
-import { getBackendUrl } from '../../../config';
+import { PlayCircleOutline, Close, Download } from '@mui/icons-material';
 import api from '../../../services/api';
+import { sanitizeMediaUrl } from './mediaUtils';
 
-const VideoContainer = styled(Box, {
+// ============= PREVIEW COMPONENTS =============
+const PreviewContainer = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isSent'
-})(({ theme, isSent }) => ({
+})(({ isSent, theme }) => ({
   position: 'relative',
   borderRadius: '8px',
   overflow: 'hidden',
   backgroundColor: '#000',
-  maxWidth: '350px',
+  cursor: 'pointer',
   width: '100%',
   alignSelf: isSent ? 'flex-end' : 'flex-start',
+  transition: 'transform 0.2s ease',
+
+  // Responsivo - diferentes tamanhos por tela
+  maxWidth: '320px', // Mobile
+
+  [theme.breakpoints.up('sm')]: {
+    maxWidth: '380px', // Tablets pequenos
+  },
+
+  [theme.breakpoints.up('md')]: {
+    maxWidth: '420px', // Tablets médios
+  },
+
+  [theme.breakpoints.up('lg')]: {
+    maxWidth: '460px', // Desktop
+  },
+
+  [theme.breakpoints.up('xl')]: {
+    maxWidth: '500px', // Telas grandes
+  },
+
+  '&:hover': {
+    transform: 'scale(1.02)',
+  },
 }));
 
-const VideoElement = styled('video')(() => ({
+const VideoThumbnail = styled('video')(({ theme }) => ({
   width: '100%',
   height: 'auto',
-  maxHeight: '300px',
   objectFit: 'cover',
   display: 'block',
-  cursor: 'pointer',
+  pointerEvents: 'none',
+
+  // Altura responsiva
+  maxHeight: '300px', // Mobile
+
+  [theme.breakpoints.up('sm')]: {
+    maxHeight: '340px', // Tablets pequenos
+  },
+
+  [theme.breakpoints.up('md')]: {
+    maxHeight: '380px', // Tablets médios
+  },
+
+  [theme.breakpoints.up('lg')]: {
+    maxHeight: '420px', // Desktop
+  },
+
+  [theme.breakpoints.up('xl')]: {
+    maxHeight: '460px', // Telas grandes
+  },
 }));
 
-const VideoOverlay = styled(Box)(() => ({
+const ThumbnailOverlay = styled(Box)(() => ({
   position: 'absolute',
   top: 0,
   left: 0,
@@ -45,77 +79,56 @@ const VideoOverlay = styled(Box)(() => ({
   alignItems: 'center',
   justifyContent: 'center',
   backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  opacity: 0,
-  transition: 'opacity 0.2s ease',
-  cursor: 'pointer',
-
-  '&.show': {
-    opacity: 1,
-  },
 }));
 
-const PlayButton = styled(IconButton)(() => ({
+const PlayIconButton = styled(IconButton)(({ theme }) => ({
   backgroundColor: 'rgba(255, 255, 255, 0.9)',
   color: '#000',
-  fontSize: '48px',
+
+  // Tamanho responsivo do botão
+  width: '56px',
+  height: '56px',
+
+  [theme.breakpoints.up('sm')]: {
+    width: '64px',
+    height: '64px',
+  },
+
+  [theme.breakpoints.up('md')]: {
+    width: '72px',
+    height: '72px',
+  },
+
+  [theme.breakpoints.up('lg')]: {
+    width: '80px',
+    height: '80px',
+  },
+
   '&:hover': {
     backgroundColor: 'rgba(255, 255, 255, 1)',
-  },
-}));
-
-const VideoControls = styled(Box)(() => ({
-  position: 'absolute',
-  bottom: 0,
-  left: 0,
-  right: 0,
-  padding: '8px',
-  background: 'linear-gradient(transparent, rgba(0, 0, 0, 0.7))',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  opacity: 0,
-  transition: 'opacity 0.2s ease',
-
-  '&.show': {
-    opacity: 1,
-  },
-}));
-
-const ProgressBar = styled('input')(() => ({
-  flex: 1,
-  height: '4px',
-  backgroundColor: 'rgba(255, 255, 255, 0.3)',
-  border: 'none',
-  borderRadius: '2px',
-  outline: 'none',
-  cursor: 'pointer',
-
-  '&::-webkit-slider-thumb': {
-    appearance: 'none',
-    width: '12px',
-    height: '12px',
-    borderRadius: '50%',
-    backgroundColor: '#fff',
-    cursor: 'pointer',
+    transform: 'scale(1.1)',
   },
 
-  '&::-moz-range-thumb': {
-    width: '12px',
-    height: '12px',
-    borderRadius: '50%',
-    backgroundColor: '#fff',
-    cursor: 'pointer',
-    border: 'none',
+  '& .MuiSvgIcon-root': {
+    fontSize: '40px',
+
+    [theme.breakpoints.up('sm')]: {
+      fontSize: '48px',
+    },
+
+    [theme.breakpoints.up('md')]: {
+      fontSize: '56px',
+    },
+
+    [theme.breakpoints.up('lg')]: {
+      fontSize: '64px',
+    },
   },
+
+  transition: 'all 0.2s ease',
 }));
 
-const TimeDisplay = styled(Typography)(() => ({
-  color: '#fff',
-  fontSize: '12px',
-  minWidth: '40px',
-}));
-
-const LoadingContainer = styled(Box)(() => ({
+const LoadingPlaceholder = styled(Box)(() => ({
   width: '100%',
   height: '200px',
   backgroundColor: 'var(--bg-tertiary)',
@@ -126,9 +139,8 @@ const LoadingContainer = styled(Box)(() => ({
   animation: 'pulse 1.5s ease-in-out infinite',
 
   '@keyframes pulse': {
-    '0%': { opacity: 1 },
+    '0%, 100%': { opacity: 1 },
     '50%': { opacity: 0.5 },
-    '100%': { opacity: 1 },
   },
 }));
 
@@ -140,66 +152,97 @@ const ErrorContainer = styled(Box)(() => ({
   color: 'var(--text-secondary)',
 }));
 
-const Caption = styled(Typography, {
-  shouldForwardProp: (prop) => prop !== 'isSent'
-})(({ theme, isSent }) => ({
-  padding: '8px 12px',
-  fontSize: '14px',
-  lineHeight: 1.4,
-  color: 'var(--text-primary)',
-  backgroundColor: isSent
-    ? 'rgba(0, 195, 7, 0.15)'
-    : 'var(--bg-secondary)',
-  borderRadius: '0 0 8px 8px',
-  wordBreak: 'break-word',
-}));
-
-const ModalContainer = styled(Backdrop)(() => ({
-  zIndex: 1300,
-}));
-
-const ModalContent = styled(Paper)(() => ({
-  position: 'relative',
-  maxWidth: '90vw',
-  maxHeight: '90vh',
-  outline: 'none',
-  borderRadius: '8px',
-  overflow: 'hidden',
-  backgroundColor: '#000',
-}));
-
-const ModalVideo = styled('video')(() => ({
-  width: '100%',
-  height: 'auto',
-  maxWidth: '90vw',
-  maxHeight: '90vh',
-  objectFit: 'contain',
-}));
-
-const ModalActions = styled(Box)(() => ({
+const VideoDuration = styled(Box)(() => ({
   position: 'absolute',
-  top: '16px',
-  right: '16px',
-  display: 'flex',
-  gap: '8px',
-}));
-
-const ActionButton = styled(IconButton)(() => ({
+  bottom: '8px',
+  right: '8px',
   backgroundColor: 'rgba(0, 0, 0, 0.7)',
   color: 'white',
-  '&:hover': {
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+  padding: '2px 6px',
+  borderRadius: '4px',
+  fontSize: '12px',
+  fontWeight: 500,
+}));
+
+// ============= MODAL COMPONENTS =============
+const StyledDialog = styled(Dialog)(() => ({
+  '& .MuiBackdrop-root': {
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+  },
+  '& .MuiDialog-paper': {
+    backgroundColor: 'transparent',
+    boxShadow: 'none',
+    maxWidth: '100vw',
+    maxHeight: '100vh',
+    margin: 0,
+    overflow: 'hidden',
   },
 }));
 
-const formatTime = (seconds) => {
+const ModalWrapper = styled(Box)(() => ({
+  position: 'relative',
+  width: '100vw',
+  height: '100vh',
+  display: 'flex',
+  flexDirection: 'column',
+}));
+
+const ModalHeader = styled(Box)(() => ({
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  height: '64px',
+  background: 'linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 70%, transparent 100%)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+  padding: '0 20px',
+  gap: '12px',
+  zIndex: 10,
+}));
+
+const HeaderButton = styled(IconButton)(() => ({
+  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  color: 'white',
+  backdropFilter: 'blur(10px)',
+  border: '1px solid rgba(255, 255, 255, 0.2)',
+  width: '48px',
+  height: '48px',
+
+  '&:hover': {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    transform: 'scale(1.05)',
+  },
+
+  transition: 'all 0.2s ease',
+}));
+
+const VideoPlayer = styled(Box)(() => ({
+  flex: 1,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '80px 20px 20px',
+
+  '& video': {
+    maxWidth: '90vw',
+    maxHeight: '85vh',
+    objectFit: 'contain',
+    borderRadius: '4px',
+  },
+}));
+
+// Helper para formatar duração
+const formatDuration = (seconds) => {
+  if (!seconds || isNaN(seconds)) return '0:00';
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
 /**
- * VideoMessage - Componente para renderizar mensagens de vídeo
+ * VideoMessage Component - Renderiza mensagens de vídeo com preview thumbnail
  */
 const VideoMessage = ({
   message,
@@ -209,286 +252,204 @@ const VideoMessage = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [showControls, setShowControls] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [blobUrl, setBlobUrl] = useState('');
+  const [duration, setDuration] = useState(0);
+  const thumbnailRef = useRef(null);
+  const playerRef = useRef(null);
 
-  const videoRef = useRef(null);
-  const modalVideoRef = useRef(null);
-  const controlsTimeoutRef = useRef(null);
-
-  const backendUrl = getBackendUrl();
   const { mediaUrl, body } = message;
 
-  const videoUrl = mediaUrl?.startsWith('http')
-    ? mediaUrl
-    : `${backendUrl}${mediaUrl}`;
+  // Carregar vídeo
+  useEffect(() => {
+    if (!mediaUrl) {
+      setHasError(true);
+      setIsLoading(false);
+      return;
+    }
 
-  // Load handlers
-  const handleLoadedData = () => {
-    setIsLoading(false);
-    setHasError(false);
-    if (videoRef.current) {
-      setDuration(videoRef.current.duration);
-      // Recuperar volume salvo
-      const savedVolume = localStorage.getItem('video-volume');
-      if (savedVolume) {
-        videoRef.current.volume = parseFloat(savedVolume);
+    const fetchVideo = async () => {
+      try {
+        // Se é blob otimista, usar diretamente
+        if (mediaUrl.startsWith('blob:')) {
+          setBlobUrl(mediaUrl);
+          setIsLoading(false);
+          setHasError(false);
+          onLoad?.();
+          return;
+        }
+
+        // Buscar da API
+        const cleanUrl = sanitizeMediaUrl(mediaUrl);
+        const { data, headers } = await api.get(cleanUrl, {
+          responseType: 'blob',
+        });
+
+        const url = window.URL.createObjectURL(
+          new Blob([data], { type: headers['content-type'] || 'video/mp4' })
+        );
+
+        setBlobUrl(url);
+        setIsLoading(false);
+        setHasError(false);
+        onLoad?.();
+      } catch (error) {
+        console.error('Erro ao carregar vídeo:', error);
+        setIsLoading(false);
+        setHasError(true);
+        onError?.();
       }
-    }
-    onLoad?.();
-  };
+    };
 
-  const handleError = () => {
-    setIsLoading(false);
-    setHasError(true);
-    onError?.();
-  };
+    fetchVideo();
 
-  // Play/Pause handlers
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
+    // Cleanup
+    return () => {
+      if (blobUrl && !mediaUrl.startsWith('blob:')) {
+        window.URL.revokeObjectURL(blobUrl);
       }
-      setIsPlaying(!isPlaying);
+    };
+  }, [mediaUrl, onLoad, onError]);
+
+  // Capturar duração quando thumbnail carregar
+  const handleThumbnailLoad = () => {
+    if (thumbnailRef.current) {
+      setDuration(thumbnailRef.current.duration);
     }
   };
 
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+  const handleOpenModal = () => {
+    if (!hasError && !isLoading) {
+      setIsModalOpen(true);
     }
   };
 
-  // Time update handler
-  const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
-    }
-  };
-
-  // Progress bar handler
-  const handleProgressChange = (e) => {
-    const newTime = parseFloat(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
-    }
-  };
-
-  // Volume handler
-  const handleVolumeChange = (e) => {
-    const volume = parseFloat(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.volume = volume;
-      localStorage.setItem('video-volume', volume.toString());
-      setIsMuted(volume === 0);
-    }
-  };
-
-  // Controls visibility
-  const showControlsTemporarily = () => {
-    setShowControls(true);
-
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-
-    controlsTimeoutRef.current = setTimeout(() => {
-      setShowControls(false);
-    }, 3000);
-  };
-
-  const handleMouseMove = () => {
-    showControlsTemporarily();
-  };
-
-  // Modal handlers
-  const openModal = () => {
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
+  const handleCloseModal = () => {
     setIsModalOpen(false);
-    if (modalVideoRef.current) {
-      modalVideoRef.current.pause();
+    // Pausar player quando fechar
+    if (playerRef.current) {
+      playerRef.current.pause();
     }
   };
 
-  // Download handler
   const handleDownload = async (e) => {
     e.stopPropagation();
+
     try {
-      const response = await fetch(videoUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `video-${message.id || Date.now()}.mp4`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      if (blobUrl) {
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `video-${message.id || Date.now()}.mp4`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        const cleanUrl = sanitizeMediaUrl(mediaUrl);
+        const { data } = await api.get(cleanUrl, { responseType: 'blob' });
+        const url = window.URL.createObjectURL(data);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `video-${message.id || Date.now()}.mp4`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }
     } catch (error) {
       console.error('Erro ao baixar vídeo:', error);
     }
   };
 
-  // Cleanup
-  useEffect(() => {
-    return () => {
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
-    };
-  }, []);
-
+  // Estado de erro
   if (hasError) {
     return (
       <ErrorContainer>
         <Typography variant="body2">
           ❌ Erro ao carregar vídeo
         </Typography>
-        {body && (
-          <Caption isSent={isSent}>
-            {body}
-          </Caption>
-        )}
       </ErrorContainer>
     );
   }
 
   return (
     <>
-      <VideoContainer
-        isSent={isSent}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => setShowControls(false)}
-      >
+      {/* Preview do vídeo */}
+      <PreviewContainer isSent={isSent} onClick={handleOpenModal}>
         {isLoading ? (
-          <LoadingContainer>
+          <LoadingPlaceholder>
             <Typography variant="body2" color="inherit">
               Carregando vídeo...
             </Typography>
-          </LoadingContainer>
+          </LoadingPlaceholder>
         ) : (
           <>
-            <VideoElement
-              ref={videoRef}
-              src={videoUrl}
-              onLoadedData={handleLoadedData}
-              onError={handleError}
-              onTimeUpdate={handleTimeUpdate}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              onClick={togglePlay}
-              muted={isMuted}
+            <VideoThumbnail
+              ref={thumbnailRef}
+              src={blobUrl || sanitizeMediaUrl(mediaUrl)}
+              onLoadedMetadata={handleThumbnailLoad}
+              muted
               playsInline
             />
 
-            {/* Overlay com botão de play */}
-            <VideoOverlay
-              className={!isPlaying || showControls ? 'show' : ''}
-              onClick={togglePlay}
-            >
-              {!isPlaying && (
-                <PlayButton>
-                  <PlayCircleOutline sx={{ fontSize: 'inherit' }} />
-                </PlayButton>
-              )}
-            </VideoOverlay>
+            <ThumbnailOverlay>
+              <PlayIconButton>
+                <PlayCircleOutline />
+              </PlayIconButton>
+            </ThumbnailOverlay>
 
-            {/* Controles de vídeo */}
-            <VideoControls className={showControls ? 'show' : ''}>
-              <IconButton
-                size="small"
-                onClick={togglePlay}
-                sx={{ color: '#fff' }}
-              >
-                {isPlaying ? <Pause /> : <PlayArrow />}
-              </IconButton>
-
-              <TimeDisplay>
-                {formatTime(currentTime)}
-              </TimeDisplay>
-
-              <ProgressBar
-                type="range"
-                min="0"
-                max={duration || 0}
-                value={currentTime}
-                onChange={handleProgressChange}
-              />
-
-              <TimeDisplay>
-                {formatTime(duration)}
-              </TimeDisplay>
-
-              <IconButton
-                size="small"
-                onClick={toggleMute}
-                sx={{ color: '#fff' }}
-              >
-                {isMuted ? <VolumeOff /> : <VolumeUp />}
-              </IconButton>
-
-              <IconButton
-                size="small"
-                onClick={openModal}
-                sx={{ color: '#fff' }}
-              >
-                <Fullscreen />
-              </IconButton>
-            </VideoControls>
+            {duration > 0 && (
+              <VideoDuration>
+                {formatDuration(duration)}
+              </VideoDuration>
+            )}
           </>
         )}
+      </PreviewContainer>
 
-        {body && (
-          <Caption isSent={isSent}>
-            {body}
-          </Caption>
-        )}
-      </VideoContainer>
-
-      {/* Modal fullscreen */}
-      <ModalContainer
+      {/* Modal com player de vídeo */}
+      <StyledDialog
         open={isModalOpen}
-        onClick={closeModal}
+        onClose={handleCloseModal}
+        maxWidth={false}
+        fullScreen
       >
-        <ModalContent onClick={(e) => e.stopPropagation()}>
-          <ModalVideo
-            ref={modalVideoRef}
-            src={videoUrl}
-            controls
-            autoPlay
-          />
-          <ModalActions>
-            <ActionButton
+        <ModalWrapper>
+          {/* Header com botões */}
+          <ModalHeader>
+            <HeaderButton
               onClick={handleDownload}
               title="Baixar vídeo"
+              aria-label="Baixar vídeo"
             >
               <Download />
-            </ActionButton>
-            <ActionButton
-              onClick={closeModal}
+            </HeaderButton>
+
+            <HeaderButton
+              onClick={handleCloseModal}
               title="Fechar"
+              aria-label="Fechar visualizador"
             >
               <Close />
-            </ActionButton>
-          </ModalActions>
-        </ModalContent>
-      </ModalContainer>
+            </HeaderButton>
+          </ModalHeader>
+
+          {/* Player de vídeo */}
+          <VideoPlayer onClick={handleCloseModal}>
+            <video
+              ref={playerRef}
+              src={blobUrl || sanitizeMediaUrl(mediaUrl)}
+              controls
+              autoPlay
+              onClick={(e) => e.stopPropagation()}
+            />
+          </VideoPlayer>
+        </ModalWrapper>
+      </StyledDialog>
     </>
   );
 };
 
+// Otimização com React.memo
 export default memo(VideoMessage, (prevProps, nextProps) => {
   return (
     prevProps.message.id === nextProps.message.id &&
