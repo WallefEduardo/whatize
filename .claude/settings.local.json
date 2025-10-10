@@ -28,7 +28,10 @@
       "Read(/home/eduardo_wallef/sistema-oficiais/MarcoTicket/backend/src/libs/**)",
       "Read(/home/eduardo_wallef/sistema-oficiais/MarcoTicket/backend/src/models/**)",
       "Read(/home/eduardo_wallef/sistema-oficiais/MarcoTicket/**)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Read(//home/eduardo_wallef/sistema-oficiais/whatizeupdate/frontend/src/**)",
+      "Read(//home/eduardo_wallef/sistema-oficiais/whatizeupdate/backend/src/routes/**)",
+      "Read(//home/eduardo_wallef/sistema-oficiais/whatizeupdate/backend/**)"
     ],
     "deny": []
   }

@@ -248,12 +248,16 @@ const UserSettings = ({ user, onUpdate, onCancel }) => {
               </Typography>
               <Select
                 value={formData.tema}
-                onChange={(e) => handleInputChange('tema', e.target.value)}
-              >
-                <option value="light">Claro</option>
-                <option value="dark">Escuro</option>
-                <option value="auto">Automático</option>
-              </Select>
+                onChange={(value) => handleInputChange('tema', value)}
+                options={[
+                  { value: 'light', label: 'Claro' },
+                  { value: 'dark', label: 'Escuro' },
+                  { value: 'auto', label: 'Automático' }
+                ]}
+                displayKey="label"
+                valueKey="value"
+                placeholder="Selecione um tema"
+              />
             </Box>
             <Box>
               <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
@@ -261,11 +265,15 @@ const UserSettings = ({ user, onUpdate, onCancel }) => {
               </Typography>
               <Select
                 value={formData.menuPadrao}
-                onChange={(e) => handleInputChange('menuPadrao', e.target.value)}
-              >
-                <option value="open">Aberto</option>
-                <option value="closed">Fechado</option>
-              </Select>
+                onChange={(value) => handleInputChange('menuPadrao', value)}
+                options={[
+                  { value: 'open', label: 'Aberto' },
+                  { value: 'closed', label: 'Fechado' }
+                ]}
+                displayKey="label"
+                valueKey="value"
+                placeholder="Selecione uma opção"
+              />
             </Box>
           </Box>
         </Box>
@@ -348,15 +356,15 @@ const UserSettings = ({ user, onUpdate, onCancel }) => {
               </Typography>
               <Select
                 value={formData.conexao}
-                onChange={(e) => handleInputChange('conexao', e.target.value)}
-              >
-                <option value="">Nenhuma conexão</option>
-                {whatsApps.map((whatsapp) => (
-                  <option key={whatsapp.id} value={whatsapp.id}>
-                    {whatsapp.name}
-                  </option>
-                ))}
-              </Select>
+                onChange={(value) => handleInputChange('conexao', value)}
+                options={[
+                  { id: '', name: 'Nenhuma conexão' },
+                  ...whatsApps
+                ]}
+                displayKey="name"
+                valueKey="id"
+                placeholder="Selecione uma conexão"
+              />
             </Box>
             <Box>
               <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'var(--text-gray-medium)' }}>
@@ -364,11 +372,15 @@ const UserSettings = ({ user, onUpdate, onCancel }) => {
               </Typography>
               <Select
                 value={formData.perfil}
-                onChange={(e) => handleInputChange('perfil', e.target.value)}
-              >
-                <option value="admin">Administrador</option>
-                <option value="user">Usuário</option>
-              </Select>
+                onChange={(value) => handleInputChange('perfil', value)}
+                options={[
+                  { value: 'admin', label: 'Administrador' },
+                  { value: 'user', label: 'Usuário' }
+                ]}
+                displayKey="label"
+                valueKey="value"
+                placeholder="Selecione um perfil"
+              />
             </Box>
           </Box>
 

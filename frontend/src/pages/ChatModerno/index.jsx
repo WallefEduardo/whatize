@@ -2857,6 +2857,8 @@ const ChatModernoContent = () => {
                                     // 🎭 Props para reações persistentes
                                     addReactionToMessage={addReactionToMessage}
                                     getMessageReactions={getMessageReactions}
+                                    // Para galeria de mídias
+                                    allMessages={allMessages}
                                   />
                                 );
                               })

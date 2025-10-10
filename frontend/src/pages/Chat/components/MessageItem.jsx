@@ -13,6 +13,7 @@ import { EditMessageContext } from '../../../context/EditingMessage/EditingMessa
 import { Avatar } from '../../../components/ui/AvatarOptimized';
 import Dropdown, { DropdownTrigger, DropdownContent, DropdownItem } from '../../../components/ui/Dropdown';
 import MessageReactionsPopover from './MessageReactionsPopover';
+import MediaRenderer from '../../ChatModerno/components/MediaRenderer';
 
 // API e utils
 import api from '../../../services/api';
@@ -286,7 +287,9 @@ const MessageItem = ({
   onScrollToMessage,
   // 🎭 Props para reações persistentes
   addReactionToMessage,
-  getMessageReactions
+  getMessageReactions,
+  // Para galeria de mídias
+  allMessages = []
 }) => {
   const backendUrl = getBackendUrl();
 
@@ -724,9 +727,27 @@ const MessageItem = ({
                 </Typography>
               </Box>
             )}
-            <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
-              {messageText}
-            </Typography>
+            {/* Renderizar mídia se existir, senão mostrar texto */}
+            <MediaRenderer
+              message={message}
+              isSent={isSent}
+              contact={contact}
+              allMediaMessages={allMessages.filter(msg =>
+                msg.mediaUrl && (
+                  msg.mediaType === 'image' ||
+                  msg.mediaType?.startsWith('image/') ||
+                  msg.mediaType === 'video' ||
+                  msg.mediaType?.startsWith('video/')
+                )
+              )}
+            />
+
+            {/* Mostrar texto apenas se não for mídia ou se mídia tem legenda */}
+            {messageText && (!message.mediaUrl || message.mediaType === 'chat') && (
+              <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
+                {messageText}
+              </Typography>
+            )}
           </MessageBubble>
         )}
 

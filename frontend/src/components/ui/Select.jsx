@@ -114,29 +114,41 @@ const Select = ({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (isOpen) {
+      // Aguardar um pequeno delay antes de adicionar o listener
+      setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 0);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   // Toggle dropdown
-  const handleToggle = () => {
+  const handleToggle = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!disabled) {
       setIsOpen(!isOpen);
     }
   };
 
   // Selecionar opção
-  const handleSelect = (option) => {
+  const handleSelect = (option, e) => {
+    e.preventDefault();
+    e.stopPropagation();
     const optionValue = typeof option === 'object' ? option[valueKey] : option;
     onChange?.(optionValue, option);
     setIsOpen(false);
     inputRef.current?.blur();
   };
 
-  // Prevenir foco no input
-  const handleFocus = (e) => {
-    e.target.blur();
-    handleToggle();
+  // Prevenir comportamento padrão
+  const handleInputClick = (e) => {
+    e.preventDefault();
+    handleToggle(e);
   };
 
   return (
@@ -148,8 +160,7 @@ const Select = ({
           placeholder={placeholder}
           readOnly
           disabled={disabled}
-          onFocus={handleFocus}
-          onClick={handleToggle}
+          onClick={handleInputClick}
           {...inputProps}
           style={{
             paddingRight: '36px',
@@ -158,7 +169,7 @@ const Select = ({
         />
         <ChevronIcon size={16} isOpen={isOpen} />
       </Box>
-      
+
       <DropdownContainer isOpen={isOpen && !disabled}>
         {options.length === 0 ? (
           <DropdownOption>
@@ -174,10 +185,7 @@ const Select = ({
               <DropdownOption
                 key={index}
                 selected={isSelected}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  handleSelect(option);
-                }}
+                onClick={(e) => handleSelect(option, e)}
               >
                 {optionLabel}
               </DropdownOption>

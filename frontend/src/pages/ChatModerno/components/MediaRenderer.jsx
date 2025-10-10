@@ -92,12 +92,15 @@ const detectMediaType = (message) => {
  * Props:
  * - message: objeto da mensagem com mediaType, mediaUrl, body
  * - isSent: boolean se a mensagem foi enviada pelo usuário
+ * - allMediaMessages: array com todas as mensagens de mídia da conversa (opcional)
  * - onMediaLoad: callback quando mídia carrega (opcional)
  * - onMediaError: callback quando mídia falha (opcional)
  */
 const MediaRenderer = ({
   message,
   isSent = false,
+  contact,
+  allMediaMessages = [],
   onMediaLoad,
   onMediaError,
   ...props
@@ -120,6 +123,8 @@ const MediaRenderer = ({
   const commonProps = {
     message,
     isSent,
+    contact,
+    allMediaMessages,
     onLoad: onMediaLoad,
     onError: onMediaError,
     ...props
