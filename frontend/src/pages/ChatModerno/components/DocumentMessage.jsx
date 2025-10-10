@@ -295,36 +295,39 @@ const DocumentMessage = ({ message, isSent = false, onLoad, onError }) => {
   const displayFileSize = formatFileSize(realFileSize || fileSize);
   const isPdf = isPdfFile(rawFileName, mediaType);
 
-  // Fetch PDF e converter para blob (solução CORS)
+  // Fetch arquivo e capturar tamanho real
   React.useEffect(() => {
-    if (!isPdf || !documentUrl) return;
+    if (!documentUrl) return;
 
-    const fetchPdfAsBlob = async () => {
+    const fetchFileBlob = async () => {
       try {
-        console.log('🔄 Buscando PDF:', documentUrl);
         const response = await api.get(documentUrl, { responseType: 'blob' });
-        const blob = new Blob([response.data], { type: 'application/pdf' });
-        const blobUrl = URL.createObjectURL(blob);
 
         // Capturar tamanho real do blob
-        setRealFileSize(blob.size);
-        setPdfBlobUrl(blobUrl);
+        setRealFileSize(response.data.size);
 
-        console.log('✅ PDF blob criado:', blobUrl, 'Tamanho:', blob.size);
+        // Se for PDF, criar blob URL para preview
+        if (isPdf) {
+          const blob = new Blob([response.data], { type: 'application/pdf' });
+          const blobUrl = URL.createObjectURL(blob);
+          setPdfBlobUrl(blobUrl);
+        }
       } catch (error) {
-        console.error('❌ Erro ao buscar PDF:', error);
-        setPdfError(true);
+        console.error('Erro ao buscar arquivo:', error);
+        if (isPdf) {
+          setPdfError(true);
+        }
       }
     };
 
-    fetchPdfAsBlob();
+    fetchFileBlob();
 
     return () => {
       if (pdfBlobUrl) {
         URL.revokeObjectURL(pdfBlobUrl);
       }
     };
-  }, [isPdf, documentUrl]);
+  }, [documentUrl, isPdf]);
 
   const handleDownload = async (e) => {
     e.stopPropagation();
@@ -384,15 +387,13 @@ const DocumentMessage = ({ message, isSent = false, onLoad, onError }) => {
   };
 
   const onDocumentLoadSuccess = ({ numPages }) => {
-    console.log('✅ PDF carregado com sucesso:', { numPages, documentUrl });
     setNumPages(numPages);
     setPdfError(false);
     onLoad?.();
   };
 
   const onDocumentLoadError = (error) => {
-    console.error('❌ Erro ao carregar PDF:', error);
-    console.error('URL do PDF:', documentUrl);
+    console.error('Erro ao carregar PDF:', error);
     setPdfError(true);
     onError?.(error);
   };
