@@ -1,31 +1,165 @@
 import React, { useState, memo } from 'react';
 import { Box, Typography, IconButton, LinearProgress } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import {
-  Download,
-  InsertDriveFile,
-  PictureAsPdf,
-  Description,
-  TableChart,
-  Archive,
-  Code,
-  Image as ImageIcon,
-  VideoFile,
-  AudioFile
-} from '@mui/icons-material';
+import { Download, InsertDriveFile, PictureAsPdf } from '@mui/icons-material';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import { getBackendUrl } from '../../../config';
+import { sanitizeMediaUrl } from './mediaUtils';
 import api from '../../../services/api';
 
-const DocumentContainer = styled(Box, {
+// Configurar worker do PDF.js
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
+// ============= STYLED COMPONENTS =============
+
+const DocumentWrapper = styled(Box)(() => ({
+  display: 'flex',
+  flexDirection: 'column',
+  maxWidth: '320px',
+  width: '100%',
+}));
+
+// Container do PDF com preview visual
+const PdfPreviewContainer = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isSent'
+})(({ theme, isSent }) => ({
+  position: 'relative',
+  borderRadius: '8px',
+  overflow: 'hidden',
+  backgroundColor: '#fff',
+  border: '1px solid var(--border-primary)',
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+  alignSelf: isSent ? 'flex-end' : 'flex-start',
+
+  '&:hover': {
+    transform: 'translateY(-1px)',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+  },
+}));
+
+// Container do preview da primeira página
+const PdfPagePreview = styled(Box)(() => ({
+  position: 'relative',
+  width: '100%',
+  height: '180px',
+  backgroundColor: '#f5f5f5',
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'flex-start',
+  overflow: 'hidden',
+
+  '& .react-pdf__Page': {
+    display: 'block',
+    width: '100%',
+    margin: 0,
+    padding: 0,
+  },
+
+  '& .react-pdf__Page__canvas': {
+    width: '100% !important',
+    height: 'auto !important',
+    display: 'block',
+    margin: 0,
+  },
+}));
+
+// Overlay gradient sobre o preview
+const PdfOverlay = styled(Box)(() => ({
+  position: 'absolute',
+  bottom: 0,
+  left: 0,
+  right: 0,
+  height: '60px',
+  background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.6) 100%)',
+  pointerEvents: 'none',
+}));
+
+// Botão de download no preview (estilo WhatsApp)
+const PreviewDownloadButton = styled(IconButton)(() => ({
+  position: 'absolute',
+  bottom: '12px',
+  right: '12px',
+  backgroundColor: 'rgba(0, 168, 132, 0.9)',
+  color: 'white',
+  width: '40px',
+  height: '40px',
+  zIndex: 2,
+
+  '&:hover': {
+    backgroundColor: '#00a884',
+  },
+}));
+
+// Container de info do arquivo
+const PdfInfo = styled(Box)(() => ({
+  display: 'flex',
+  alignItems: 'center',
+  padding: '12px',
+  backgroundColor: '#fff',
+  gap: '12px',
+}));
+
+const FileIconWrapper = styled(Box)(() => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '40px',
+  height: '40px',
+  borderRadius: '6px',
+  backgroundColor: '#d32f2f',
+  color: 'white',
+  flexShrink: 0,
+}));
+
+const FileDetails = styled(Box)(() => ({
+  flex: 1,
+  minWidth: 0,
+  overflow: 'hidden',
+}));
+
+const FileName = styled(Typography)(() => ({
+  fontSize: '13px',
+  fontWeight: 600,
+  color: '#000',
+  wordBreak: 'break-word',
+  overflowWrap: 'break-word',
+  marginBottom: '2px',
+  lineHeight: 1.3,
+}));
+
+const FileMetadata = styled(Typography)(() => ({
+  fontSize: '12px',
+  color: '#667781',
+  wordBreak: 'break-word',
+}));
+
+const DownloadButton = styled(IconButton)(() => ({
+  backgroundColor: '#8696a0',
+  color: 'white',
+  width: '36px',
+  height: '36px',
+  flexShrink: 0,
+
+  '&:hover': {
+    backgroundColor: '#667781',
+  },
+
+  '&:disabled': {
+    backgroundColor: '#e0e0e0',
+  },
+}));
+
+// Container genérico (para não-PDFs)
+const GenericDocContainer = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isSent'
 })(({ theme, isSent }) => ({
   display: 'flex',
   alignItems: 'center',
   padding: '12px',
   borderRadius: '8px',
-  backgroundColor: isSent
-    ? 'rgba(0, 195, 7, 0.15)'
-    : 'var(--bg-secondary)',
+  backgroundColor: isSent ? 'rgba(0, 195, 7, 0.15)' : 'var(--bg-secondary)',
   border: '1px solid var(--border-primary)',
   maxWidth: '320px',
   width: '100%',
@@ -34,15 +168,13 @@ const DocumentContainer = styled(Box, {
   alignSelf: isSent ? 'flex-end' : 'flex-start',
 
   '&:hover': {
-    backgroundColor: isSent
-      ? 'rgba(0, 195, 7, 0.25)'
-      : 'var(--bg-tertiary)',
+    backgroundColor: isSent ? 'rgba(0, 195, 7, 0.25)' : 'var(--bg-tertiary)',
     transform: 'translateY(-1px)',
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
   },
 }));
 
-const FileIcon = styled(Box)(() => ({
+const GenericFileIcon = styled(Box)(() => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -55,37 +187,6 @@ const FileIcon = styled(Box)(() => ({
   flexShrink: 0,
 }));
 
-const FileInfo = styled(Box)(() => ({
-  flex: 1,
-  minWidth: 0,
-  marginRight: '8px',
-}));
-
-const FileName = styled(Typography)(() => ({
-  fontSize: '14px',
-  fontWeight: 600,
-  color: 'var(--text-primary)',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-  marginBottom: '2px',
-}));
-
-const FileSize = styled(Typography)(() => ({
-  fontSize: '12px',
-  color: 'var(--text-secondary)',
-}));
-
-const DownloadButton = styled(IconButton)(() => ({
-  backgroundColor: 'var(--color-accent)',
-  color: 'white',
-  width: '36px',
-  height: '36px',
-  '&:hover': {
-    backgroundColor: 'var(--color-green-hover)',
-  },
-}));
-
 const Caption = styled(Typography, {
   shouldForwardProp: (prop) => prop !== 'isSent'
 })(({ theme, isSent }) => ({
@@ -93,11 +194,10 @@ const Caption = styled(Typography, {
   fontSize: '14px',
   lineHeight: 1.4,
   color: 'var(--text-primary)',
-  backgroundColor: isSent
-    ? 'rgba(0, 195, 7, 0.15)'
-    : 'var(--bg-secondary)',
+  backgroundColor: isSent ? 'rgba(0, 195, 7, 0.15)' : 'var(--bg-secondary)',
   borderRadius: '0 0 8px 8px',
   wordBreak: 'break-word',
+  marginTop: '4px',
 }));
 
 const ProgressContainer = styled(Box)(() => ({
@@ -107,117 +207,124 @@ const ProgressContainer = styled(Box)(() => ({
   gap: '8px',
 }));
 
-/**
- * Utilitário para detectar tipo de arquivo e retornar ícone apropriado
- */
-const getFileIcon = (fileName, mediaType) => {
-  const name = fileName?.toLowerCase() || '';
-  const type = mediaType?.toLowerCase() || '';
+const LoadingPlaceholder = styled(Box)(() => ({
+  width: '100%',
+  height: '180px',
+  backgroundColor: '#f5f5f5',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '12px',
+  color: '#667781',
+}));
 
-  // PDFs
-  if (name.includes('.pdf') || type.includes('pdf')) {
-    return <PictureAsPdf />;
-  }
+// ============= UTILITIES =============
 
-  // Documentos de texto
-  if (name.includes('.doc') || name.includes('.docx') ||
-      name.includes('.txt') || type.includes('word') ||
-      type.includes('text')) {
-    return <Description />;
-  }
-
-  // Planilhas
-  if (name.includes('.xls') || name.includes('.xlsx') ||
-      name.includes('.csv') || type.includes('excel') ||
-      type.includes('spreadsheet')) {
-    return <TableChart />;
-  }
-
-  // Arquivos compactados
-  if (name.includes('.zip') || name.includes('.rar') ||
-      name.includes('.7z') || type.includes('zip') ||
-      type.includes('archive')) {
-    return <Archive />;
-  }
-
-  // Códigos
-  if (name.includes('.js') || name.includes('.css') ||
-      name.includes('.html') || name.includes('.json') ||
-      name.includes('.xml') || name.includes('.php') ||
-      type.includes('javascript') || type.includes('css')) {
-    return <Code />;
-  }
-
-  // Imagens (como fallback)
-  if (type.includes('image')) {
-    return <ImageIcon />;
-  }
-
-  // Vídeos (como fallback)
-  if (type.includes('video')) {
-    return <VideoFile />;
-  }
-
-  // Áudios (como fallback)
-  if (type.includes('audio')) {
-    return <AudioFile />;
-  }
-
-  // Genérico
-  return <InsertDriveFile />;
-};
-
-/**
- * Utilitário para formatar tamanho do arquivo
- */
 const formatFileSize = (bytes) => {
   if (!bytes) return 'Tamanho desconhecido';
-
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
   const size = (bytes / Math.pow(1024, i)).toFixed(1);
-
   return `${size} ${sizes[i]}`;
 };
 
-/**
- * Utilitário para extrair nome do arquivo da URL
- */
 const getFileNameFromUrl = (url) => {
   if (!url) return 'documento';
-
   try {
     const urlObj = new URL(url, window.location.origin);
     const pathname = urlObj.pathname;
     const fileName = pathname.split('/').pop();
-    return fileName || 'documento';
+    return decodeURIComponent(fileName || 'documento');
   } catch {
     return url.split('/').pop() || 'documento';
   }
 };
 
-/**
- * DocumentMessage - Componente para renderizar mensagens de documento
- */
-const DocumentMessage = ({
-  message,
-  isSent = false,
-  onLoad,
-  onError
-}) => {
+// Limpar nome do arquivo removendo timestamp/ID no início e fim
+const cleanFileName = (fileName) => {
+  if (!fileName) return 'documento';
+
+  // Remove padrões como:
+  // "405988_-_CLICK-2_1760078182224.pdf" -> "CLICK-2.pdf"
+  // "1760078182243_Orcamento_1225.pdf" -> "Orcamento_1225.pdf"
+
+  let cleaned = fileName;
+
+  // Remove números no início seguidos de _ ou _-_
+  cleaned = cleaned.replace(/^\d+_+(-_)?/g, '');
+
+  // Remove _números antes da extensão
+  cleaned = cleaned.replace(/_\d+(\.[^.]+)$/, '$1');
+
+  // Substitui múltiplos underscores por espaço
+  cleaned = cleaned.replace(/_+/g, ' ');
+
+  // Remove espaços extras
+  cleaned = cleaned.trim();
+
+  return cleaned || fileName;
+};
+
+const isPdfFile = (fileName, mediaType) => {
+  const name = fileName?.toLowerCase() || '';
+  const type = mediaType?.toLowerCase() || '';
+  return name.includes('.pdf') || type.includes('pdf');
+};
+
+// ============= MAIN COMPONENT =============
+
+const DocumentMessage = ({ message, isSent = false, onLoad, onError }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [numPages, setNumPages] = useState(null);
+  const [pdfError, setPdfError] = useState(false);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
+  const [realFileSize, setRealFileSize] = useState(null);
 
   const backendUrl = getBackendUrl();
   const { mediaUrl, body, fileName, fileSize, mediaType } = message;
 
-  const documentUrl = mediaUrl?.startsWith('http')
+  // Construir URL e sanitizar para remover portas duplicadas
+  const rawUrl = mediaUrl?.startsWith('http')
     ? mediaUrl
     : `${backendUrl}${mediaUrl}`;
+  const documentUrl = sanitizeMediaUrl(rawUrl);
 
-  const displayFileName = fileName || getFileNameFromUrl(mediaUrl) || 'documento';
-  const displayFileSize = formatFileSize(fileSize);
-  const fileIcon = getFileIcon(displayFileName, mediaType);
+  const rawFileName = fileName || getFileNameFromUrl(mediaUrl) || 'documento';
+  const displayFileName = cleanFileName(rawFileName);
+  const displayFileSize = formatFileSize(realFileSize || fileSize);
+  const isPdf = isPdfFile(rawFileName, mediaType);
+
+  // Fetch PDF e converter para blob (solução CORS)
+  React.useEffect(() => {
+    if (!isPdf || !documentUrl) return;
+
+    const fetchPdfAsBlob = async () => {
+      try {
+        console.log('🔄 Buscando PDF:', documentUrl);
+        const response = await api.get(documentUrl, { responseType: 'blob' });
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        // Capturar tamanho real do blob
+        setRealFileSize(blob.size);
+        setPdfBlobUrl(blobUrl);
+
+        console.log('✅ PDF blob criado:', blobUrl, 'Tamanho:', blob.size);
+      } catch (error) {
+        console.error('❌ Erro ao buscar PDF:', error);
+        setPdfError(true);
+      }
+    };
+
+    fetchPdfAsBlob();
+
+    return () => {
+      if (pdfBlobUrl) {
+        URL.revokeObjectURL(pdfBlobUrl);
+      }
+    };
+  }, [isPdf, documentUrl]);
 
   const handleDownload = async (e) => {
     e.stopPropagation();
@@ -240,7 +347,6 @@ const DocumentMessage = ({
 
       while (true) {
         const { done, value } = await reader.read();
-
         if (done) break;
 
         chunks.push(value);
@@ -277,23 +383,131 @@ const DocumentMessage = ({
     }
   };
 
-  return (
-    <Box>
-      <DocumentContainer
-        isSent={isSent}
-        onClick={handleOpen}
-      >
-        <FileIcon>
-          {fileIcon}
-        </FileIcon>
+  const onDocumentLoadSuccess = ({ numPages }) => {
+    console.log('✅ PDF carregado com sucesso:', { numPages, documentUrl });
+    setNumPages(numPages);
+    setPdfError(false);
+    onLoad?.();
+  };
 
-        <FileInfo>
+  const onDocumentLoadError = (error) => {
+    console.error('❌ Erro ao carregar PDF:', error);
+    console.error('URL do PDF:', documentUrl);
+    setPdfError(true);
+    onError?.(error);
+  };
+
+  // Renderizar PDF com preview visual
+  if (isPdf) {
+    return (
+      <DocumentWrapper>
+        <PdfPreviewContainer isSent={isSent} onClick={handleOpen}>
+          {/* Preview da primeira página */}
+          <PdfPagePreview>
+            {pdfError ? (
+              <LoadingPlaceholder>
+                <PictureAsPdf sx={{ fontSize: 48, color: '#d32f2f', opacity: 0.5 }} />
+              </LoadingPlaceholder>
+            ) : !pdfBlobUrl ? (
+              <LoadingPlaceholder>
+                Carregando PDF...
+              </LoadingPlaceholder>
+            ) : (
+              <Document
+                file={pdfBlobUrl}
+                onLoadSuccess={onDocumentLoadSuccess}
+                onLoadError={onDocumentLoadError}
+                options={{
+                  cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+                  cMapPacked: true,
+                  standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+                }}
+                loading={
+                  <LoadingPlaceholder>
+                    Renderizando...
+                  </LoadingPlaceholder>
+                }
+                error={
+                  <LoadingPlaceholder>
+                    <PictureAsPdf sx={{ fontSize: 48, color: '#d32f2f', opacity: 0.5 }} />
+                  </LoadingPlaceholder>
+                }
+              >
+                <Page
+                  pageNumber={1}
+                  width={320}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                  renderMode="canvas"
+                />
+              </Document>
+            )}
+            <PdfOverlay />
+          </PdfPagePreview>
+
+          {/* Info do arquivo */}
+          <PdfInfo>
+            <FileIconWrapper>
+              <PictureAsPdf sx={{ fontSize: 24 }} />
+            </FileIconWrapper>
+
+            <FileDetails>
+              <FileName title={displayFileName}>
+                {displayFileName}
+              </FileName>
+              <FileMetadata>
+                {numPages ? `${numPages} página${numPages > 1 ? 's' : ''}` : ''} • PDF • {displayFileSize}
+              </FileMetadata>
+
+              {isDownloading && (
+                <ProgressContainer>
+                  <LinearProgress
+                    variant="determinate"
+                    value={downloadProgress}
+                    sx={{
+                      flex: 1,
+                      height: '3px',
+                      borderRadius: '2px',
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      '& .MuiLinearProgress-bar': {
+                        backgroundColor: '#00a884',
+                      },
+                    }}
+                  />
+                  <Typography variant="caption" sx={{ fontSize: '11px', color: '#667781' }}>
+                    {Math.round(downloadProgress)}%
+                  </Typography>
+                </ProgressContainer>
+              )}
+            </FileDetails>
+
+            <DownloadButton
+              onClick={handleDownload}
+              disabled={isDownloading}
+              title="Baixar PDF"
+              size="small"
+            >
+              <Download sx={{ fontSize: '18px' }} />
+            </DownloadButton>
+          </PdfInfo>
+        </PdfPreviewContainer>
+      </DocumentWrapper>
+    );
+  }
+
+  // Renderizar outros arquivos (modo genérico)
+  return (
+    <DocumentWrapper>
+      <GenericDocContainer isSent={isSent} onClick={handleOpen}>
+        <GenericFileIcon>
+          <InsertDriveFile />
+        </GenericFileIcon>
+
+        <FileDetails>
           <FileName title={displayFileName}>
             {displayFileName}
           </FileName>
-          <FileSize>
-            {displayFileSize}
-          </FileSize>
+          <FileMetadata>{displayFileSize}</FileMetadata>
 
           {isDownloading && (
             <ProgressContainer>
@@ -315,7 +529,7 @@ const DocumentMessage = ({
               </Typography>
             </ProgressContainer>
           )}
-        </FileInfo>
+        </FileDetails>
 
         <DownloadButton
           onClick={handleDownload}
@@ -325,14 +539,8 @@ const DocumentMessage = ({
         >
           <Download sx={{ fontSize: '18px' }} />
         </DownloadButton>
-      </DocumentContainer>
-
-      {body && (
-        <Caption isSent={isSent}>
-          {body}
-        </Caption>
-      )}
-    </Box>
+      </GenericDocContainer>
+    </DocumentWrapper>
   );
 };
 
