@@ -153,7 +153,6 @@ const ImageMessage = ({
   onLoad,
   onError
 }) => {
-  const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [blobUrl, setBlobUrl] = useState('');
@@ -161,26 +160,26 @@ const ImageMessage = ({
 
   const { mediaUrl, body } = message;
 
-  // Carregar imagem
+  // URL para exibição imediata (sanitizada ou blob)
+  const displayUrl = blobUrl || (mediaUrl?.startsWith('blob:') ? mediaUrl : sanitizeMediaUrl(mediaUrl));
+
+  // Carregar imagem em background (sem bloquear renderização)
   useEffect(() => {
     if (!mediaUrl) {
       setHasError(true);
-      setIsLoading(false);
       return;
     }
 
+    // Se já é blob, não precisa buscar
+    if (mediaUrl.startsWith('blob:')) {
+      setBlobUrl(mediaUrl);
+      onLoad?.();
+      return;
+    }
+
+    // Buscar blob em background para melhor qualidade
     const fetchImage = async () => {
       try {
-        // Se é blob otimista, usar diretamente
-        if (mediaUrl.startsWith('blob:')) {
-          setBlobUrl(mediaUrl);
-          setIsLoading(false);
-          setHasError(false);
-          onLoad?.();
-          return;
-        }
-
-        // Buscar da API
         const cleanUrl = sanitizeMediaUrl(mediaUrl);
         const { data, headers } = await api.get(cleanUrl, {
           responseType: 'blob',
@@ -191,13 +190,10 @@ const ImageMessage = ({
         );
 
         setBlobUrl(url);
-        setIsLoading(false);
-        setHasError(false);
         onLoad?.();
       } catch (error) {
         console.error('Erro ao carregar imagem:', error);
-        setIsLoading(false);
-        setHasError(true);
+        // Não marcar erro - a URL direta pode funcionar
         onError?.();
       }
     };
@@ -213,7 +209,7 @@ const ImageMessage = ({
   }, [mediaUrl, onLoad, onError]);
 
   const handleImageClick = () => {
-    if (!hasError && !isLoading) {
+    if (!hasError) {
       setIsModalOpen(true);
     }
   };
@@ -265,25 +261,15 @@ const ImageMessage = ({
     <>
       {/* Preview da imagem */}
       <PreviewImageContainer isSent={isSent} onClick={handleImageClick}>
-        {isLoading ? (
-          <LoadingPlaceholder>
-            <Typography variant="body2" color="inherit">
-              Carregando...
-            </Typography>
-          </LoadingPlaceholder>
-        ) : (
-          <>
-            <StyledImage
-              ref={imageRef}
-              src={blobUrl || sanitizeMediaUrl(mediaUrl)}
-              alt="Imagem da mensagem"
-              loading="lazy"
-            />
-            <ImageOverlay className="image-overlay">
-              <ZoomIn sx={{ fontSize: 32 }} />
-            </ImageOverlay>
-          </>
-        )}
+        <StyledImage
+          ref={imageRef}
+          src={displayUrl}
+          alt="Imagem da mensagem"
+          loading="lazy"
+        />
+        <ImageOverlay className="image-overlay">
+          <ZoomIn sx={{ fontSize: 32 }} />
+        </ImageOverlay>
       </PreviewImageContainer>
 
       {/* Modal de visualização */}

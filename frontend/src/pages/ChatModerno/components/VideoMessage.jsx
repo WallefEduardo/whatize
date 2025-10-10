@@ -250,7 +250,6 @@ const VideoMessage = ({
   onLoad,
   onError
 }) => {
-  const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [blobUrl, setBlobUrl] = useState('');
@@ -260,26 +259,26 @@ const VideoMessage = ({
 
   const { mediaUrl, body } = message;
 
-  // Carregar vídeo
+  // URL para exibição imediata (sanitizada ou blob)
+  const displayUrl = blobUrl || (mediaUrl?.startsWith('blob:') ? mediaUrl : sanitizeMediaUrl(mediaUrl));
+
+  // Carregar vídeo em background (sem bloquear renderização)
   useEffect(() => {
     if (!mediaUrl) {
       setHasError(true);
-      setIsLoading(false);
       return;
     }
 
+    // Se já é blob, não precisa buscar
+    if (mediaUrl.startsWith('blob:')) {
+      setBlobUrl(mediaUrl);
+      onLoad?.();
+      return;
+    }
+
+    // Buscar blob em background para melhor qualidade
     const fetchVideo = async () => {
       try {
-        // Se é blob otimista, usar diretamente
-        if (mediaUrl.startsWith('blob:')) {
-          setBlobUrl(mediaUrl);
-          setIsLoading(false);
-          setHasError(false);
-          onLoad?.();
-          return;
-        }
-
-        // Buscar da API
         const cleanUrl = sanitizeMediaUrl(mediaUrl);
         const { data, headers } = await api.get(cleanUrl, {
           responseType: 'blob',
@@ -290,13 +289,10 @@ const VideoMessage = ({
         );
 
         setBlobUrl(url);
-        setIsLoading(false);
-        setHasError(false);
         onLoad?.();
       } catch (error) {
         console.error('Erro ao carregar vídeo:', error);
-        setIsLoading(false);
-        setHasError(true);
+        // Não marcar erro - a URL direta pode funcionar
         onError?.();
       }
     };
@@ -314,12 +310,26 @@ const VideoMessage = ({
   // Capturar duração quando thumbnail carregar
   const handleThumbnailLoad = () => {
     if (thumbnailRef.current) {
+      console.log('✅ [VideoMessage] Thumbnail carregado, duração:', thumbnailRef.current.duration);
       setDuration(thumbnailRef.current.duration);
     }
   };
 
+  // Handler de erro do elemento video
+  const handleVideoError = (e) => {
+    console.error('❌ [VideoMessage] Erro no elemento <video>:', {
+      error: e,
+      videoSrc: thumbnailRef.current?.src,
+      networkState: thumbnailRef.current?.networkState,
+      readyState: thumbnailRef.current?.readyState,
+      errorCode: thumbnailRef.current?.error?.code,
+      errorMessage: thumbnailRef.current?.error?.message
+    });
+    setHasError(true);
+  };
+
   const handleOpenModal = () => {
-    if (!hasError && !isLoading) {
+    if (!hasError) {
       setIsModalOpen(true);
     }
   };
@@ -375,34 +385,25 @@ const VideoMessage = ({
     <>
       {/* Preview do vídeo */}
       <PreviewContainer isSent={isSent} onClick={handleOpenModal}>
-        {isLoading ? (
-          <LoadingPlaceholder>
-            <Typography variant="body2" color="inherit">
-              Carregando vídeo...
-            </Typography>
-          </LoadingPlaceholder>
-        ) : (
-          <>
-            <VideoThumbnail
-              ref={thumbnailRef}
-              src={blobUrl || sanitizeMediaUrl(mediaUrl)}
-              onLoadedMetadata={handleThumbnailLoad}
-              muted
-              playsInline
-            />
+        <VideoThumbnail
+          ref={thumbnailRef}
+          src={displayUrl}
+          onLoadedMetadata={handleThumbnailLoad}
+          onError={handleVideoError}
+          muted
+          playsInline
+        />
 
-            <ThumbnailOverlay>
-              <PlayIconButton>
-                <PlayCircleOutline />
-              </PlayIconButton>
-            </ThumbnailOverlay>
+        <ThumbnailOverlay>
+          <PlayIconButton>
+            <PlayCircleOutline />
+          </PlayIconButton>
+        </ThumbnailOverlay>
 
-            {duration > 0 && (
-              <VideoDuration>
-                {formatDuration(duration)}
-              </VideoDuration>
-            )}
-          </>
+        {duration > 0 && (
+          <VideoDuration>
+            {formatDuration(duration)}
+          </VideoDuration>
         )}
       </PreviewContainer>
 
@@ -437,7 +438,7 @@ const VideoMessage = ({
           <VideoPlayer onClick={handleCloseModal}>
             <video
               ref={playerRef}
-              src={blobUrl || sanitizeMediaUrl(mediaUrl)}
+              src={displayUrl}
               controls
               autoPlay
               onClick={(e) => e.stopPropagation()}

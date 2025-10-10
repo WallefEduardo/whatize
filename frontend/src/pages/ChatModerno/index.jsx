@@ -790,7 +790,11 @@ const ChatModernoContent = () => {
                   ...msg,
                   ...data.message,
                   // Preservar user se a mensagem local tiver dados completos
-                  user: msg.user && msg.user.profileImage ? msg.user : data.message.user
+                  user: msg.user && msg.user.profileImage ? msg.user : data.message.user,
+                  // 🔧 FIX: Preservar mediaUrl original se a nova tiver "companyundefined"
+                  mediaUrl: (data.message.mediaUrl && data.message.mediaUrl.includes('companyundefined'))
+                    ? msg.mediaUrl  // Manter URL original
+                    : data.message.mediaUrl || msg.mediaUrl  // Usar nova ou manter original
                 };
                 // Forçar re-render atualizando também um timestamp para garantir detecção de mudança
                 updatedMessage._lastUpdated = Date.now();
