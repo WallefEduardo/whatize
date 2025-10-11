@@ -33,9 +33,10 @@ import {
   CheckIcon,
   ClockIcon,
   PencilIcon, // Para editar
-  DocumentDuplicateIcon // Para copiar
+  DocumentDuplicateIcon, // Para copiar
+  ArrowDownTrayIcon // Para download
 } from '@heroicons/react/24/outline';
-import { 
+import {
   BookmarkIcon as BookmarkSolidIcon,
   MapPinIcon
 } from '@heroicons/react/24/solid';
@@ -475,13 +476,95 @@ const MessageItem = ({
   // Handler para selecionar/deselecionar mensagem (não funciona para deletadas)
   const handleSelectMessage = () => {
     if (isDeleted) return; // Não permite selecionar mensagens deletadas
-    
+
     if (isSelected) {
       // Remover da seleção
       setSelectedMessages(prev => prev.filter(msg => msg.id !== messageId));
     } else {
       // Adicionar à seleção
       setSelectedMessages(prev => [...prev, message]);
+    }
+  };
+
+  // Handler para download de mídia
+  const handleDownloadMedia = async () => {
+    if (!message.mediaUrl) {
+      toast.error('Mídia não disponível para download');
+      return;
+    }
+
+    try {
+      console.log('[Download] Iniciando download de mídia:', {
+        mediaUrl: message.mediaUrl,
+        mediaType: message.mediaType,
+        backendUrl: backendUrl
+      });
+
+      // Construir URL completa corretamente
+      let mediaUrl = message.mediaUrl;
+
+      // Se não começar com http, adicionar backendUrl
+      if (!mediaUrl.startsWith('http')) {
+        // Garantir que não tenha barras duplicadas
+        const cleanBackendUrl = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
+        const cleanMediaUrl = mediaUrl.startsWith('/') ? mediaUrl : `/${mediaUrl}`;
+        mediaUrl = `${cleanBackendUrl}${cleanMediaUrl}`;
+      }
+
+      // Corrigir URLs com portas duplicadas ou inválidas (ex: :443 após :4000)
+      // Remover padrões como :443, :80 que aparecem após a porta correta
+      mediaUrl = mediaUrl.replace(/(:(\d+)):(\d+)/, '$1');
+
+      console.log('[Download] URL final para download:', mediaUrl);
+
+      // Determinar nome do arquivo
+      let fileName = message.mediaUrl.split('/').pop() || 'download';
+
+      // Se tiver mediaType, adicionar extensão apropriada
+      if (message.mediaType && !fileName.includes('.')) {
+        const ext = message.mediaType.split('/')[1] || '';
+        if (ext) fileName += `.${ext}`;
+      }
+
+      console.log('[Download] Nome do arquivo:', fileName);
+
+      // Baixar arquivo via axios como blob
+      const response = await api.get(mediaUrl, {
+        responseType: 'blob'
+      });
+
+      console.log('[Download] Arquivo baixado com sucesso, tamanho:', response.data.size);
+
+      // Criar URL do blob
+      const blobUrl = window.URL.createObjectURL(response.data);
+
+      // Criar link temporário e forçar download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+
+      // Adicionar ao DOM temporariamente
+      document.body.appendChild(link);
+
+      // Clicar no link
+      link.click();
+
+      // Remover do DOM e limpar blob URL
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+      }, 100);
+
+      toast.success('Download concluído!');
+      console.log('[Download] Download concluído com sucesso');
+    } catch (error) {
+      console.error('[Download] Erro ao baixar mídia:', {
+        error: error,
+        message: error.message,
+        response: error.response,
+        mediaUrl: message.mediaUrl
+      });
+      toast.error('Erro ao baixar arquivo');
     }
   };
 
@@ -611,6 +694,13 @@ const MessageItem = ({
                 <DropdownItem onClick={handleOpenReactionMenu} icon={<FaceSmileIcon style={{ width: '16px', height: '16px' }} />}>
                   Reagir
                 </DropdownItem>
+
+                {/* Download - apenas se a mensagem tiver mídia */}
+                {message.mediaUrl && (
+                  <DropdownItem onClick={handleDownloadMedia} icon={<ArrowDownTrayIcon style={{ width: '16px', height: '16px' }} />}>
+                    Download
+                  </DropdownItem>
+                )}
               </>
             ) : (
               // Options for received messages (left side)
@@ -626,10 +716,17 @@ const MessageItem = ({
                 <DropdownItem onClick={handleForwardMessage} icon={<ArrowTopRightOnSquareIcon style={{ width: '16px', height: '16px' }} />}>
                   Encaminhar
                 </DropdownItem>
-                
+
                 <DropdownItem onClick={handleOpenReactionMenu} icon={<FaceSmileIcon style={{ width: '16px', height: '16px' }} />}>
                   Reagir
                 </DropdownItem>
+
+                {/* Download - apenas se a mensagem tiver mídia */}
+                {message.mediaUrl && (
+                  <DropdownItem onClick={handleDownloadMedia} icon={<ArrowDownTrayIcon style={{ width: '16px', height: '16px' }} />}>
+                    Download
+                  </DropdownItem>
+                )}
               </>
             )}
           </DropdownContent>

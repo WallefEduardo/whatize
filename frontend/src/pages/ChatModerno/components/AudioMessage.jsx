@@ -10,6 +10,7 @@ import {
   GraphicEq
 } from '@mui/icons-material';
 import { getBackendUrl } from '../../../config';
+import { sanitizeMediaUrl } from './mediaUtils';
 import api from '../../../services/api';
 
 const AudioContainer = styled(Box, {
@@ -23,7 +24,7 @@ const AudioContainer = styled(Box, {
     ? 'rgba(0, 195, 7, 0.15)'
     : 'var(--bg-secondary)',
   border: '1px solid var(--border-primary)',
-  maxWidth: '280px',
+  minWidth: '280px',
   width: '100%',
   position: 'relative',
   alignSelf: isSent ? 'flex-end' : 'flex-start',
@@ -49,17 +50,18 @@ const WaveformContainer = styled(Box)(() => ({
   display: 'flex',
   alignItems: 'center',
   height: '30px',
-  marginBottom: '4px',
   position: 'relative',
+  cursor: 'pointer',
+  flex: 1,
+  gap: '2px',
 }));
 
 const WaveformBar = styled(Box, {
   shouldForwardProp: (prop) => !['height', 'isActive'].includes(prop)
 })(({ height, isActive }) => ({
-  width: '3px',
+  width: '2px',
   backgroundColor: isActive ? 'var(--color-accent)' : 'var(--text-tertiary)',
-  marginRight: '2px',
-  borderRadius: '2px',
+  borderRadius: '1px',
   transition: 'all 0.1s ease',
   height: `${height}%`,
   minHeight: '20%',
@@ -69,8 +71,8 @@ const WaveformBar = styled(Box, {
 const AudioControls = styled(Box)(() => ({
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'space-between',
-  marginTop: '4px',
+  gap: '12px',
+  width: '100%',
 }));
 
 const TimeDisplay = styled(Typography)(() => ({
@@ -163,11 +165,53 @@ const LoadingContainer = styled(Box)(() => ({
 }));
 
 /**
- * Gerar waveform mock baseado na duração
+ * Analisar áudio real e extrair waveform baseado em amplitude
  */
-const generateWaveform = (duration = 30) => {
-  const bars = Math.min(40, Math.max(20, Math.floor(duration / 2)));
-  return Array.from({ length: bars }, () => Math.random() * 80 + 20);
+const analyzeAudioWaveform = async (audioElement) => {
+  try {
+    // Criar AudioContext para análise
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Criar source a partir do elemento audio
+    const source = audioContext.createMediaElementSource(audioElement);
+
+    // Fetch do áudio como ArrayBuffer para análise offline
+    const response = await fetch(audioElement.src);
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+    // Extrair dados do canal (mono ou usar primeiro canal)
+    const rawData = audioBuffer.getChannelData(0);
+    const samples = 60; // Número de barras que queremos
+    const blockSize = Math.floor(rawData.length / samples);
+    const amplitudes = [];
+
+    // Calcular amplitude média para cada bloco
+    for (let i = 0; i < samples; i++) {
+      const start = blockSize * i;
+      let sum = 0;
+
+      for (let j = 0; j < blockSize; j++) {
+        sum += Math.abs(rawData[start + j]);
+      }
+
+      const amplitude = sum / blockSize;
+      // Normalizar para 0-100 com amplificação muito alta para detectar sons baixos
+      const normalized = Math.min(100, amplitude * 2000);
+      // Se amplitude muito baixa (< 0.3%), considerar silêncio, senão mínimo 20%
+      amplitudes.push(normalized < 0.3 ? 0 : Math.max(20, normalized));
+    }
+
+    // Reconectar source (estava desconectado pela análise)
+    source.connect(audioContext.destination);
+
+    return amplitudes;
+  } catch (error) {
+    console.error('❌ [AudioMessage] Erro ao analisar waveform:', error);
+    // Fallback: gerar mock se análise falhar
+    const bars = 60;
+    return Array.from({ length: bars }, () => Math.random() * 80 + 20);
+  }
 };
 
 /**
@@ -186,7 +230,8 @@ const AudioMessage = ({
   message,
   isSent = false,
   onLoad,
-  onError
+  onError,
+  onDownload // Callback para download externo
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -196,25 +241,78 @@ const AudioMessage = ({
   const [volume, setVolume] = useState(0.7);
   const [isMuted, setIsMuted] = useState(false);
   const [waveform, setWaveform] = useState([]);
+  const [audioBlobUrl, setAudioBlobUrl] = useState(null);
 
   const audioRef = useRef(null);
 
   const backendUrl = getBackendUrl();
-  const { mediaUrl, body, duration: messageDuration } = message;
+  const { mediaUrl, body } = message;
 
-  const audioUrl = mediaUrl?.startsWith('http')
+  const rawUrl = mediaUrl?.startsWith('http')
     ? mediaUrl
     : `${backendUrl}${mediaUrl}`;
+  const audioUrl = sanitizeMediaUrl(rawUrl);
+
+  // Fetch áudio e converter para blob (solução CORS)
+  useEffect(() => {
+    console.log('🔍 [AudioMessage] audioUrl:', audioUrl);
+
+    if (!audioUrl) {
+      console.log('⚠️ [AudioMessage] audioUrl vazio, abortando');
+      return;
+    }
+
+    let blobUrlToRevoke = null;
+
+    const fetchAudioBlob = async () => {
+      try {
+        console.log('🔄 [AudioMessage] Iniciando fetch do áudio:', audioUrl);
+        const response = await api.get(audioUrl, { responseType: 'blob' });
+        console.log('✅ [AudioMessage] Fetch concluído, tamanho:', response.data.size);
+
+        const blob = new Blob([response.data], { type: 'audio/mpeg' });
+        const blobUrl = URL.createObjectURL(blob);
+        console.log('✅ [AudioMessage] Blob URL criado:', blobUrl);
+
+        blobUrlToRevoke = blobUrl;
+        setAudioBlobUrl(blobUrl);
+        console.log('✅ [AudioMessage] audioBlobUrl setado');
+      } catch (error) {
+        console.error('❌ [AudioMessage] Erro ao buscar áudio:', error);
+        setHasError(true);
+        setIsLoading(false);
+      }
+    };
+
+    fetchAudioBlob();
+
+    return () => {
+      if (blobUrlToRevoke) {
+        console.log('🧹 [AudioMessage] Limpando blob URL:', blobUrlToRevoke);
+        URL.revokeObjectURL(blobUrlToRevoke);
+      }
+    };
+  }, [audioUrl]);
 
   useEffect(() => {
-    if (audioRef.current) {
+    console.log('🎵 [AudioMessage] useEffect 2 - audioRef:', !!audioRef.current, 'audioBlobUrl:', audioBlobUrl);
+
+    if (audioRef.current && audioBlobUrl) {
       const audio = audioRef.current;
 
-      const handleLoadedData = () => {
+      console.log('🎵 [AudioMessage] Adicionando event listeners, readyState:', audio.readyState);
+
+      const handleLoadedData = async () => {
+        console.log('✅ [AudioMessage] handleLoadedData disparado! duration:', audio.duration);
         setIsLoading(false);
         setHasError(false);
         setDuration(audio.duration);
-        setWaveform(generateWaveform(audio.duration));
+
+        // Analisar áudio real para extrair waveform
+        console.log('🎵 [AudioMessage] Analisando waveform do áudio...');
+        const realWaveform = await analyzeAudioWaveform(audio);
+        console.log('✅ [AudioMessage] Waveform analisado:', realWaveform);
+        setWaveform(realWaveform);
 
         // Restaurar volume salvo
         const savedVolume = localStorage.getItem('audio-volume');
@@ -229,7 +327,8 @@ const AudioMessage = ({
         onLoad?.();
       };
 
-      const handleError = () => {
+      const handleError = (e) => {
+        console.error('❌ [AudioMessage] handleError disparado:', e);
         setIsLoading(false);
         setHasError(true);
         onError?.();
@@ -250,14 +349,21 @@ const AudioMessage = ({
       audio.addEventListener('timeupdate', handleTimeUpdate);
       audio.addEventListener('ended', handleEnded);
 
+      // Se já está carregado (readyState >= 2), disparar manualmente
+      if (audio.readyState >= 2) {
+        console.log('⚡ [AudioMessage] Áudio já carregado, disparando handleLoadedData manualmente');
+        handleLoadedData();
+      }
+
       return () => {
+        console.log('🧹 [AudioMessage] Removendo event listeners');
         audio.removeEventListener('loadeddata', handleLoadedData);
         audio.removeEventListener('error', handleError);
         audio.removeEventListener('timeupdate', handleTimeUpdate);
         audio.removeEventListener('ended', handleEnded);
       };
     }
-  }, [audioUrl, volume, onLoad, onError]);
+  }, [audioBlobUrl, volume, onLoad, onError]);
 
   const togglePlay = () => {
     if (audioRef.current) {
@@ -273,6 +379,18 @@ const AudioMessage = ({
   const handleProgressChange = (event, newValue) => {
     if (audioRef.current) {
       const newTime = (newValue / 100) * duration;
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  // Handler para clicar no waveform e navegar no áudio
+  const handleWaveformClick = (event) => {
+    if (audioRef.current && event.currentTarget) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const percent = clickX / rect.width;
+      const newTime = percent * duration;
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
     }
@@ -300,16 +418,14 @@ const AudioMessage = ({
   const handleDownload = async (e) => {
     e.stopPropagation();
     try {
-      const response = await fetch(audioUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `audio-${message.id || Date.now()}.mp3`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      if (audioBlobUrl) {
+        const link = document.createElement('a');
+        link.href = audioBlobUrl;
+        link.download = `audio-${message.id || Date.now()}.mp3`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } catch (error) {
       console.error('Erro ao baixar áudio:', error);
     }
@@ -330,25 +446,35 @@ const AudioMessage = ({
     );
   }
 
-  if (isLoading) {
+  const progressPercent = duration ? (currentTime / duration) * 100 : 0;
+
+  // Renderizar loading OU player (mas sempre com o elemento <audio> no DOM)
+  if (isLoading || !audioBlobUrl) {
     return (
-      <LoadingContainer>
-        <GraphicEq sx={{ marginRight: 1, color: 'var(--text-secondary)' }} />
-        <Typography variant="body2" color="inherit">
-          Carregando áudio...
-        </Typography>
-      </LoadingContainer>
+      <Box>
+        {/* Elemento <audio> hidden para garantir que audioRef existe */}
+        <audio
+          ref={audioRef}
+          src={audioBlobUrl || ''}
+          preload="metadata"
+          style={{ display: 'none' }}
+        />
+        <LoadingContainer>
+          <GraphicEq sx={{ marginRight: 1, color: 'var(--text-secondary)' }} />
+          <Typography variant="body2" color="inherit">
+            Carregando áudio...
+          </Typography>
+        </LoadingContainer>
+      </Box>
     );
   }
-
-  const progressPercent = duration ? (currentTime / duration) * 100 : 0;
 
   return (
     <Box>
       <AudioContainer isSent={isSent}>
         <audio
           ref={audioRef}
-          src={audioUrl}
+          src={audioBlobUrl}
           preload="metadata"
         />
 
@@ -357,66 +483,29 @@ const AudioMessage = ({
         </PlayButton>
 
         <AudioInfo>
-          {/* Waveform visual */}
-          <WaveformContainer>
-            {waveform.map((height, index) => {
-              const progressIndex = Math.floor((progressPercent / 100) * waveform.length);
-              return (
-                <WaveformBar
-                  key={index}
-                  height={height}
-                  isActive={index <= progressIndex}
-                />
-              );
-            })}
-          </WaveformContainer>
-
-          {/* Controles de áudio */}
+          {/* Waveform visual com tempo integrado - estilo WhatsApp */}
           <AudioControls>
-            <TimeDisplay>
-              {formatTime(currentTime)}
-            </TimeDisplay>
+            <WaveformContainer onClick={handleWaveformClick}>
+              {waveform.map((height, index) => {
+                const progressIndex = Math.floor((progressPercent / 100) * waveform.length);
+                return (
+                  <WaveformBar
+                    key={index}
+                    height={height}
+                    isActive={index <= progressIndex}
+                  />
+                );
+              })}
+            </WaveformContainer>
 
-            <ProgressSlider
-              size="small"
-              value={progressPercent}
-              onChange={handleProgressChange}
-              sx={{ flex: 1, mx: 1 }}
-            />
-
             <TimeDisplay>
-              {formatTime(duration)}
+              {formatTime(duration - currentTime)}
             </TimeDisplay>
           </AudioControls>
-
-          {/* Volume e download */}
-          <VolumeContainer>
-            <IconButton
-              size="small"
-              onClick={toggleMute}
-              sx={{ color: 'var(--text-secondary)' }}
-            >
-              {isMuted ? <VolumeOff /> : <VolumeUp />}
-            </IconButton>
-
-            <VolumeSlider
-              size="small"
-              value={isMuted ? 0 : volume * 100}
-              onChange={handleVolumeChange}
-            />
-
-            <IconButton
-              size="small"
-              onClick={handleDownload}
-              sx={{ color: 'var(--text-secondary)' }}
-            >
-              <Download />
-            </IconButton>
-          </VolumeContainer>
         </AudioInfo>
       </AudioContainer>
 
-      {body && (
+      {body && body.trim() !== 'Áudio' && body.trim() !== 'Audio' && (
         <Caption isSent={isSent}>
           {body}
         </Caption>

@@ -10,7 +10,7 @@ const DocumentMessage = lazy(() => import('./DocumentMessage'));
 
 const MediaContainer = styled(Box)(() => ({
   width: '100%',
-  maxWidth: '300px',
+  maxWidth: '350px',
   borderRadius: '8px',
   overflow: 'hidden',
   marginBottom: '4px',
