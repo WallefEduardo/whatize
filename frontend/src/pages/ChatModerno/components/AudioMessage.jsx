@@ -252,14 +252,59 @@ const AudioMessage = ({
   const backendUrl = getBackendUrl();
   const { mediaUrl, body, isOptimistic, audioDuration, _blobUrl } = message;
 
-  // 🎯 Se audioDuration está disponível (mensagem otimista), usar direto
+  // 🎯 Se audioDuration está disponível (mensagem otimista/em envio), usar direto
+  // IMPORTANTE: Rodar no primeiro render também, não apenas quando mudar
   useEffect(() => {
     if (audioDuration && audioDuration > 0) {
-      console.log('✅ [AudioMessage] Usando audioDuration da mensagem:', audioDuration);
+      console.log('✅ [AudioMessage] Usando audioDuration da mensagem:', audioDuration, 'segundos');
+      setDuration(audioDuration);
+      setIsLoading(false); // ✅ Não precisa loading se já temos duração
+    }
+  }, [audioDuration]);
+
+  // 🎯 INICIALIZAÇÃO: Se já tem audioDuration no primeiro render, configurar imediatamente
+  useEffect(() => {
+    if (audioDuration && audioDuration > 0) {
+      console.log('🚀 [AudioMessage] INICIALIZAÇÃO - audioDuration:', audioDuration, 'segundos');
       setDuration(audioDuration);
       setIsLoading(false);
     }
-  }, [audioDuration]);
+  }, []); // Roda apenas no mount
+
+  // 🎯 ANALISAR WAVEFORM REAL quando áudio carregar (sem mocks!)
+  useEffect(() => {
+    const analyzeAudio = async () => {
+      // Aguardar audioRef e audioBlobUrl estarem prontos
+      if (audioRef.current && audioBlobUrl && waveform.length === 0) {
+        // Aguardar áudio carregar completamente
+        const audio = audioRef.current;
+
+        const waitForLoad = () => {
+          return new Promise((resolve) => {
+            if (audio.readyState >= 2) {
+              resolve();
+            } else {
+              audio.addEventListener('loadeddata', () => resolve(), { once: true });
+            }
+          });
+        };
+
+        try {
+          await waitForLoad();
+          console.log('🎵 [AudioMessage] Analisando waveform REAL...');
+          const realWaveform = await analyzeAudioWaveform(audio);
+          setWaveform(realWaveform);
+          console.log('✅ [AudioMessage] Waveform REAL gerado:', realWaveform.slice(0, 10));
+        } catch (error) {
+          console.error('❌ [AudioMessage] Erro ao analisar waveform:', error);
+          // SEM MOCK - deixar vazio ou gerar padrão simples
+          setWaveform(Array.from({ length: 60 }, () => 50));
+        }
+      }
+    };
+
+    analyzeAudio();
+  }, [audioBlobUrl]); // Rodar quando blob carregar
 
   // 🎯 PRIORIDADE: Usar _blobUrl se disponível (blob preservado após reconciliação)
   // Senão, usar mediaUrl normal
@@ -335,10 +380,19 @@ const AudioMessage = ({
       console.log('🎵 [AudioMessage] Adicionando event listeners, readyState:', audio.readyState);
 
       const handleLoadedData = async () => {
-        console.log('✅ [AudioMessage] handleLoadedData disparado! duration:', audio.duration);
+        console.log('✅ [AudioMessage] handleLoadedData disparado! audio.duration:', audio.duration);
         setIsLoading(false);
         setHasError(false);
-        setDuration(audio.duration);
+
+        // ✅ PRESERVAR audioDuration da mensagem se já estiver definido e válido
+        // Só usar audio.duration se audioDuration não existir ou for inválido
+        if (audioDuration && audioDuration > 0) {
+          console.log('✅ [AudioMessage] Mantendo audioDuration da mensagem:', audioDuration, '(ignorando audio.duration)');
+          setDuration(audioDuration); // Manter o valor original
+        } else {
+          console.log('✅ [AudioMessage] Usando audio.duration do elemento:', audio.duration);
+          setDuration(audio.duration);
+        }
 
         // Analisar áudio real para extrair waveform
         console.log('🎵 [AudioMessage] Analisando waveform do áudio...');
@@ -481,7 +535,10 @@ const AudioMessage = ({
   const progressPercent = duration ? (currentTime / duration) * 100 : 0;
 
   // Renderizar loading OU player (mas sempre com o elemento <audio> no DOM)
-  if (isLoading || !audioBlobUrl) {
+  // ✅ Se já temos audioDuration, mostrar player mesmo sem blob carregado ainda
+  const shouldShowLoading = (isLoading || !audioBlobUrl) && !(audioDuration && audioDuration > 0);
+
+  if (shouldShowLoading) {
     return (
       <Box>
         {/* Elemento <audio> hidden para garantir que audioRef existe */}
