@@ -1578,11 +1578,13 @@ const ChatModernoContent = () => {
   };
 
   // 🚀 Handle send message - VERSÃO OTIMISTA INSTANTÂNEA (REFATORADA)
-  const handleSendMessage = async (message) => {
+  const handleSendMessage = async (message, isPrivate = "false") => {
     if (!selectedChatId || !message.trim()) {
       return;
     }
 
+    // Converter isPrivate para boolean para uso no frontend
+    const isPrivateBool = isPrivate === "true" || isPrivate === true;
 
     // 1. Gerar ID temporário único
     const tempId = generateTempId();
@@ -1598,7 +1600,7 @@ const ChatModernoContent = () => {
       mediaType: "chat",
       read: false,
       quotedMsg: replyingMessage,
-      isPrivate: false,
+      isPrivate: isPrivateBool, // ✅ Usar valor real do isPrivate
       user: {
         id: user.id,
         name: user.name,
@@ -1623,7 +1625,7 @@ const ChatModernoContent = () => {
         mediaUrl: "",
         body: message.trim(),
         quotedMsg: replyingMessage,
-        isPrivate: "false"
+        isPrivate: isPrivate // ✅ Usar valor real recebido do MessageInput
       };
 
 

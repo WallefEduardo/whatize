@@ -1,7 +1,0 @@
-Aguardando conexão para iniciar a importação de mensagens:
-  Whatsapp nome: Dr. Marcelo Byll
-  Whatsapp Id: 88
-  Criação do arquivo de logs: 16/04/2025 16:23:14
-  Selecionado Data de inicio de importação: 17/03/2025 08:00:00 
-  Selecionado Data final da importação: 16/04/2025 12:15:00 
-   

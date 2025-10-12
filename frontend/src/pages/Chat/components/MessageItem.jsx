@@ -83,8 +83,8 @@ const MessageContent = styled(Box, {
 }));
 
 const MessageBubble = styled(Box, {
-  shouldForwardProp: (prop) => !['isSent', 'isDeleted'].includes(prop)
-})(({ theme, isSent, isDeleted }) => ({
+  shouldForwardProp: (prop) => !['isSent', 'isDeleted', 'isPrivate'].includes(prop)
+})(({ theme, isSent, isDeleted, isPrivate }) => ({
   padding: '8px 12px',
   borderRadius: '12px',
   wordBreak: 'break-word',
@@ -97,8 +97,10 @@ const MessageBubble = styled(Box, {
     fontStyle: 'italic',
     border: '1px dashed var(--border-secondary)',
   } : isSent ? {
-    backgroundColor: 'rgba(0, 195, 7, 0.15)',
-    color: 'var(--text-primary)',
+    // Mensagens privadas: azul claro (#afeaff)
+    // Mensagens normais: verde claro
+    backgroundColor: isPrivate ? '#afeaff' : 'rgba(0, 195, 7, 0.15)',
+    color: isPrivate ? '#303030' : 'var(--text-primary)',
     borderBottomRightRadius: '4px',
   } : {
     backgroundColor: 'var(--bg-secondary)',
@@ -198,6 +200,70 @@ const DateLabel = styled(Typography)(() => ({
   border: '1px solid var(--border-primary)',
   zIndex: 1,
 }));
+
+// 📝 Função para formatar texto com Markdown simples (*bold*, _italic_, ~strike~, ```code```)
+const formatMessageText = (text) => {
+  if (!text) return null;
+
+  // Dividir o texto por quebras de linha primeiro
+  const lines = text.split('\n');
+
+  return lines.map((line, lineIndex) => {
+    const parts = [];
+    let currentText = line;
+    let key = 0;
+
+    // Regex para encontrar padrões de formatação
+    // *texto* = negrito
+    const boldRegex = /\*([^*]+)\*/g;
+
+    let lastIndex = 0;
+    let match;
+
+    // Processar negritos
+    while ((match = boldRegex.exec(line)) !== null) {
+      // Adicionar texto antes do match
+      if (match.index > lastIndex) {
+        parts.push(
+          <span key={`text-${lineIndex}-${key++}`}>
+            {line.substring(lastIndex, match.index)}
+          </span>
+        );
+      }
+
+      // Adicionar texto em negrito
+      parts.push(
+        <strong key={`bold-${lineIndex}-${key++}`} style={{ fontWeight: 600 }}>
+          {match[1]}
+        </strong>
+      );
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Adicionar texto restante após o último match
+    if (lastIndex < line.length) {
+      parts.push(
+        <span key={`text-${lineIndex}-${key++}`}>
+          {line.substring(lastIndex)}
+        </span>
+      );
+    }
+
+    // Se não houver formatação, retornar a linha como está
+    if (parts.length === 0) {
+      parts.push(<span key={`text-${lineIndex}-${key++}`}>{line}</span>);
+    }
+
+    // Adicionar quebra de linha entre linhas (exceto a última)
+    return (
+      <React.Fragment key={`line-${lineIndex}`}>
+        {parts}
+        {lineIndex < lines.length - 1 && <br />}
+      </React.Fragment>
+    );
+  });
+};
 
 const MessageStatus = ({ status, ack, isOptimistic }) => {
   // 🚀 Sistema otimista: usar ack numérico se disponível
@@ -783,7 +849,12 @@ const MessageItem = ({
             </MessageBubble>
           </Tooltip>
         ) : (
-          <MessageBubble ref={messageBubbleRef} isSent={isSent} isDeleted={isDeleted}>
+          <MessageBubble
+            ref={messageBubbleRef}
+            isSent={isSent}
+            isDeleted={isDeleted}
+            isPrivate={message.isPrivate === "true" || message.isPrivate === true}
+          >
             {/* Reply dentro da bubble igual WhatsApp */}
             {quotedMsg && (
               <Box 
@@ -841,8 +912,8 @@ const MessageItem = ({
 
             {/* Mostrar texto apenas se não for mídia ou se mídia tem legenda */}
             {messageText && (!message.mediaUrl || message.mediaType === 'chat') && (
-              <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
-                {messageText}
+              <Typography variant="body2" sx={{ lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>
+                {formatMessageText(messageText)}
               </Typography>
             )}
           </MessageBubble>

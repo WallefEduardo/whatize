@@ -1,7 +1,0 @@
-Aguardando conexão para iniciar a importação de mensagens:
-    Whatsapp nome: Solita
-    Whatsapp Id: 84
-    Criação do arquivo de logs: 28/04/2025 10:36:45
-    Selecionado Data de inicio de importação: Invalid date 
-    Selecionado Data final da importação: 08/04/2025 10:26:00 
-     

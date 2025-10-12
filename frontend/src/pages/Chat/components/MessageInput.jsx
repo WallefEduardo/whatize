@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Box, Typography, IconButton, TextField } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { cn } from '../../../utils/cn';
+import { isNil } from 'lodash';
 
 // Nossos componentes UI
 import ModernButton from '../../../components/ui/ModernButton';
@@ -17,6 +18,7 @@ import { sanitizeFileForUpload } from '../../../utils';
 
 // Hooks
 import useAudioRecorder from '../../../hooks/useAudioRecorder';
+import useCompanySettings from '../../../hooks/useSettings/companySettings';
 
 // Components
 import MediaPreviewModal from '../../ChatModerno/components/MediaPreviewModal';
@@ -37,6 +39,9 @@ import {
   Wand2
 } from 'lucide-react';
 
+// Material-UI Icons
+import { Create, Comment } from '@mui/icons-material';
+
 // Heroicons para ícones mais bonitos
 import {
   PhotoIcon,
@@ -51,6 +56,7 @@ import AdicionarIcon from '../../../assets/iconeswhatize/adicionar.svg';
 import { ReplyMessageContext } from '../../../context/ReplyingMessage/ReplyingMessageContext';
 import { ForwardMessageContext } from '../../../context/ForwarMessage/ForwardMessageContext';
 import { EditMessageContext } from '../../../context/EditingMessage/EditingMessageContext';
+import { AuthContext } from '../../../context/Auth/AuthContext';
 import NovoArquivoIcon from '../../../assets/iconeswhatize/novo-arquivo.svg';
 import GaleriaImagensIcon from '../../../assets/iconeswhatize/galeria-de-imagens.svg';
 import MandarIcon from '../../../assets/iconeswhatize/mandar.svg';
@@ -110,15 +116,17 @@ const ActionsContainer = styled(Box)(() => ({
   gap: '6px',
 }));
 
-const MessageTextArea = styled(TextField)(({ theme }) => ({
+const MessageTextArea = styled(TextField, {
+  shouldForwardProp: (prop) => prop !== 'isPrivateMode'
+})(({ theme, isPrivateMode }) => ({
   flex: 1,
   width: '100%',
   alignSelf: 'center',
-  
+
   '& .MuiOutlinedInput-root': {
     borderRadius: '8px',
-    backgroundColor: '#F8F9FA',
-    border: '1px solid #E2E8F0',
+    backgroundColor: isPrivateMode ? 'rgba(14, 165, 233, 0.08)' : '#F8F9FA', // Azul transparente quando privado
+    border: isPrivateMode ? '1px solid rgba(14, 165, 233, 0.3)' : '1px solid #E2E8F0',
     height: '40px',
     minHeight: '40px',
     maxHeight: '40px',
@@ -127,37 +135,38 @@ const MessageTextArea = styled(TextField)(({ theme }) => ({
     fontSize: '14px',
     display: 'flex',
     alignItems: 'center',
-    
+    transition: 'all 0.2s ease',
+
     '& .MuiInputBase-inputMultiline': {
       overflow: 'hidden',
       resize: 'none',
     },
-    
+
     '& fieldset': {
       border: 'none',
     },
-    
+
     '&:hover': {
-      backgroundColor: '#F1F3F4',
-      borderColor: '#D1D5DB',
+      backgroundColor: isPrivateMode ? 'rgba(14, 165, 233, 0.12)' : '#F1F3F4',
+      borderColor: isPrivateMode ? 'rgba(14, 165, 233, 0.4)' : '#D1D5DB',
     },
-    
+
     '&.Mui-focused': {
-      backgroundColor: 'white',
-      borderColor: 'var(--color-accent)',
-      boxShadow: '0 0 0 3px rgba(0, 195, 7, 0.1)',
-      
+      backgroundColor: isPrivateMode ? 'rgba(14, 165, 233, 0.1)' : 'white',
+      borderColor: isPrivateMode ? '#0ea5e9' : 'var(--color-accent)',
+      boxShadow: isPrivateMode ? '0 0 0 3px rgba(14, 165, 233, 0.1)' : '0 0 0 3px rgba(0, 195, 7, 0.1)',
+
       '& fieldset': {
         border: 'none',
       },
     },
-    
+
     '& textarea': {
       color: 'var(--text-primary)',
       padding: '10px 0',
       lineHeight: 1.5,
       resize: 'none',
-      
+
       '&::placeholder': {
         color: 'var(--text-secondary)',
         opacity: 1,
@@ -323,6 +332,18 @@ const MessageInput = ({
   // Context API para edit - igual ao chat antigo
   const { setEditingMessage, editingMessage } = useContext(EditMessageContext);
 
+  // Context para pegar dados do usuário
+  const { user } = useContext(AuthContext);
+
+  // Hook para configurações da empresa
+  const { get: getSetting } = useCompanySettings();
+
+  // States para assinatura e mensagem privada (do chat antigo)
+  const [signMessagePar, setSignMessagePar] = useState(false);
+  const [signMessage, setSignMessage] = useState(true);
+  const [privateMessage, setPrivateMessage] = useState(false);
+  const [privateMessageInputVisible, setPrivateMessageInputVisible] = useState(false);
+
   // useEffect para preencher o input quando estiver editando
   useEffect(() => {
     if (editingMessage) {
@@ -336,6 +357,31 @@ const MessageInput = ({
       }
     }
   }, [editingMessage]);
+
+  // useEffect para carregar configuração de assinatura da empresa
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const setting = await getSetting({ "column": "sendSignMessage" });
+        if (setting.sendSignMessage === "enabled") {
+          setSignMessagePar(true);
+          const signMessageStorage = JSON.parse(
+            localStorage.getItem("persistentSignMessage")
+          );
+          if (isNil(signMessageStorage)) {
+            setSignMessage(true);
+          } else {
+            setSignMessage(signMessageStorage);
+          }
+        } else {
+          setSignMessagePar(false);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar configuração de assinatura:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // Auto-resize textarea
   const handleTextChange = (e) => {
@@ -381,10 +427,36 @@ const MessageInput = ({
         toastError(err);
       }
     } else {
+      // Preparar userName considerando mensagem privada
+      const userName = privateMessage
+        ? `${user.name} - Mensagem Privada`
+        : user.name;
+
+      // Preparar corpo da mensagem com assinatura e/ou mensagem privada
+      let messageBody = message.trim();
+      if (signMessage || privateMessage) {
+        messageBody = `*${userName}:*\n${message.trim()}`;
+      }
+
+      // Criar objeto de mensagem com flag isPrivate
+      // Nota: mensagens privadas NÃO são enviadas pro WhatsApp!
+      // São apenas notas internas do sistema para os atendentes
+      const messageData = {
+        body: messageBody,
+        isPrivate: privateMessage ? "true" : "false"
+      };
+
       // Enviar nova mensagem
-      onSendMessage(message.trim());
+      // O callback deve receber o corpo da mensagem e a flag isPrivate separadamente
+      onSendMessage(messageBody, messageData.isPrivate);
       setMessage('');
       setReplyingMessage(null); // Limpar reply após enviar
+
+      // Limpar estado de mensagem privada após enviar
+      if (privateMessage) {
+        setPrivateMessage(false);
+        setPrivateMessageInputVisible(false);
+      }
     }
 
     // Reset textarea height
@@ -455,6 +527,33 @@ const MessageInput = ({
     } finally {
       setIsCorrectingText(false);
     }
+  };
+
+  // ===== FUNÇÕES DE ASSINATURA E MENSAGEM PRIVADA =====
+
+  // Toggle assinatura
+  const handleChangeSign = () => {
+    const signMessageStorage = JSON.parse(
+      localStorage.getItem("persistentSignMessage")
+    );
+    if (signMessageStorage !== null) {
+      if (signMessageStorage) {
+        localStorage.setItem("persistentSignMessage", false);
+        setSignMessage(false);
+      } else {
+        localStorage.setItem("persistentSignMessage", true);
+        setSignMessage(true);
+      }
+    } else {
+      localStorage.setItem("persistentSignMessage", false);
+      setSignMessage(false);
+    }
+  };
+
+  // Toggle mensagem privada
+  const handlePrivateMessage = () => {
+    setPrivateMessage(!privateMessage);
+    setPrivateMessageInputVisible(!privateMessageInputVisible);
   };
 
   // ===== FUNÇÕES DE UPLOAD DE MÍDIAS =====
@@ -1010,6 +1109,44 @@ const MessageInput = ({
                 </IconButton>
               </Tooltip>
 
+              {/* Botão de Assinatura */}
+              {signMessagePar && (
+                <Tooltip title={signMessage ? "Desabilitar assinatura" : "Habilitar assinatura"}>
+                  <IconButton
+                    onClick={handleChangeSign}
+                    sx={{
+                      p: 1,
+                      color: signMessage ? 'var(--color-accent)' : 'grey',
+                      '&:hover': {
+                        color: signMessage ? 'var(--color-green-hover)' : 'var(--color-accent)',
+                        backgroundColor: 'rgba(0, 195, 7, 0.1)'
+                      }
+                    }}
+                  >
+                    <Create sx={{ fontSize: '20px' }} />
+                  </IconButton>
+                </Tooltip>
+              )}
+
+              {/* Botão de Mensagem Privada */}
+              <Tooltip title={privateMessage ? "Desabilitar comentário" : "Habilitar comentário"}>
+                <IconButton
+                  onClick={handlePrivateMessage}
+                  sx={{
+                    p: 1,
+                    color: privateMessage ? '#0ea5e9' : 'var(--color-accent)', // Azul quando ativo, verde quando inativo
+                    opacity: privateMessage ? 1 : 0.6,
+                    '&:hover': {
+                      color: privateMessage ? '#0284c7' : 'var(--color-green-hover)',
+                      backgroundColor: privateMessage ? 'rgba(14, 165, 233, 0.1)' : 'rgba(0, 195, 7, 0.1)',
+                      opacity: 1
+                    }
+                  }}
+                >
+                  <Comment sx={{ fontSize: '20px' }} />
+                </IconButton>
+              </Tooltip>
+
               {/* Hidden File Inputs */}
               <input
                 ref={photoVideoInputRef}
@@ -1047,6 +1184,7 @@ const MessageInput = ({
                 onKeyDown={handleKeyDown}
                 disabled={disabled}
                 variant="outlined"
+                isPrivateMode={privateMessage}
                 InputProps={{
                   endAdornment: (
                     <Tooltip title="Corrigir texto (em breve)">
