@@ -14,6 +14,7 @@ const useAudioRecorder = () => {
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
   const timerRef = useRef(null);
+  const isCancellingRef = useRef(false); // Flag para distinguir stop de cancel
 
   // Inicia o timer de gravação
   const startTimer = useCallback(() => {
@@ -54,6 +55,7 @@ const useAudioRecorder = () => {
 
       streamRef.current = stream;
       audioChunksRef.current = [];
+      isCancellingRef.current = false; // Reset flag ao iniciar nova gravação
 
       // Cria o MediaRecorder com formato WebM (será convertido pelo backend)
       const mediaRecorder = new MediaRecorder(stream, {
@@ -71,8 +73,11 @@ const useAudioRecorder = () => {
 
       // Quando a gravação parar completamente
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        setAudioBlob(audioBlob);
+        // ✅ SÓ criar blob se NÃO for cancelamento
+        if (!isCancellingRef.current) {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          setAudioBlob(audioBlob);
+        }
 
         // Para o stream do microfone
         if (streamRef.current) {
@@ -133,8 +138,11 @@ const useAudioRecorder = () => {
 
   // Cancela a gravação
   const cancelRecording = useCallback(() => {
+    // ✅ Marcar como cancelamento ANTES de chamar stop()
+    isCancellingRef.current = true;
+
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stop(); // Isso vai disparar onstop, mas a flag impede criar blob
     }
 
     // Para o stream do microfone

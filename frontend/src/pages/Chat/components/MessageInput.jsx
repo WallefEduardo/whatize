@@ -422,7 +422,7 @@ const MessageInput = ({
 
   // Cancela a gravação
   const handleCancelRecording = () => {
-    cancelRecording();
+    cancelRecording(); // Hook agora gerencia tudo internamente
   };
 
   // Envia o áudio gravado
@@ -477,6 +477,7 @@ const MessageInput = ({
   useEffect(() => {
     if (audioBlob && !isRecording) {
       // Áudio foi gravado e parado, agora envia
+      // Se foi cancelado, o hook NÃO cria blob, então isso nunca será chamado
       handleSendAudio();
     }
   }, [audioBlob, isRecording]);

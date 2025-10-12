@@ -827,6 +827,8 @@ const ChatModernoContent = () => {
               // 2. Preparar mensagem atualizada (mantém estrutura, atualiza dados)
               console.log('🔍 [Socket] foundOptimistic.user:', foundOptimistic.user);
               console.log('🔍 [Socket] data.message.user:', data.message.user);
+              console.log('🔍 [Socket] foundOptimistic.audioDuration:', foundOptimistic.audioDuration);
+              console.log('🔍 [Socket] data.message.audioDuration:', data.message.audioDuration);
 
               // ✅ MERGE INTELIGENTE: Preservar user da otimista se backend não retornar profileImage
               const mergedUser = {
@@ -842,11 +844,15 @@ const ChatModernoContent = () => {
                 id: data.message.id, // ✅ USAR ID DO BAILEYS
                 ack: data.message.ack || 1, // ✅ Atualizar ack (relógio → check)
                 mediaUrl: data.message.mediaUrl, // ✅ URL real do backend
-                audioDuration: data.message.audioDuration || foundOptimistic.audioDuration,
+                // ✅ PRESERVAR audioDuration da otimista se backend retornar 0, null ou undefined
+                audioDuration: (data.message.audioDuration && data.message.audioDuration > 0)
+                  ? data.message.audioDuration
+                  : foundOptimistic.audioDuration,
                 user: mergedUser // ✅ PRESERVAR user com profileImage
               };
 
               console.log('✅ [Socket] updatedMessage.user:', updatedMessage.user);
+              console.log('✅ [Socket] updatedMessage.audioDuration:', updatedMessage.audioDuration);
 
               console.log('✨ [Socket] UPDATE IN-PLACE - Substituindo no Map:', {
                 tempId: foundTempId,
