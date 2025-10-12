@@ -2975,11 +2975,12 @@ const ChatModernoContent = () => {
                 </CardContent>
 
                 {/* Message Input */}
-                <Box sx={{ 
+                <Box sx={{
                   borderTop: '1px solid var(--border-primary)',
                   flexShrink: 0
                 }}>
                   <MessageInput
+                    ticketId={selectedChatId}
                     onSendMessage={handleSendMessage}
                     disabled={messagesLoading || currentTicket?.status === 'pending'}
                     placeholder={

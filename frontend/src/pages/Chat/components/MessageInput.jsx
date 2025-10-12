@@ -14,14 +14,20 @@ import api from '../../../services/api';
 import { toast } from '../../../components/ui/ToastProvider';
 import toastError from '../../../errors/toastError';
 
+// Hooks
+import useAudioRecorder from '../../../hooks/useAudioRecorder';
+
 // Icons
-import { 
+import {
   Send,
   Smile,
   Plus,
   Paperclip,
   Mic,
-  X
+  X,
+  Pause,
+  Play,
+  Trash2
 } from 'lucide-react';
 
 // Heroicons para ícones mais bonitos
@@ -173,7 +179,7 @@ const EmojiButton = styled(IconButton)(() => ({
 
 const SendButton = styled(IconButton)(() => ({
   minWidth: '44px',
-  width: '44px', 
+  width: '44px',
   height: '44px',
   borderRadius: '50%',
   padding: 0,
@@ -182,18 +188,37 @@ const SendButton = styled(IconButton)(() => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  
+
   '&:hover': {
     backgroundColor: 'var(--color-green-hover) !important',
     boxShadow: '0 4px 12px rgba(0, 195, 7, 0.4)',
     transform: 'translateY(-1px)',
   },
-  
+
   '&:disabled': {
     backgroundColor: '#E2E8F0 !important',
     color: '#94A3B8',
     boxShadow: 'none',
     transform: 'none',
+  },
+}));
+
+const AudioButton = styled(IconButton)(() => ({
+  minWidth: '44px',
+  width: '44px',
+  height: '44px',
+  borderRadius: '50%',
+  padding: 0,
+  backgroundColor: 'var(--color-accent) !important',
+  boxShadow: '0 2px 8px rgba(0, 195, 7, 0.3)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+
+  '&:hover': {
+    backgroundColor: 'var(--color-green-hover) !important',
+    boxShadow: '0 4px 12px rgba(0, 195, 7, 0.4)',
+    transform: 'translateY(-1px)',
   },
 }));
 
@@ -209,13 +234,29 @@ const mockEmojis = [
 const MessageInput = ({
   onSendMessage,
   disabled = false,
-  placeholder = "Digite sua mensagem..."
+  placeholder = "Digite sua mensagem...",
+  ticketId // Adicionar ticketId para envio de áudio
 }) => {
   const [message, setMessage] = useState('');
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // Hook de gravação de áudio com MediaRecorder API
+  const {
+    isRecording,
+    isPaused,
+    recordingTime,
+    audioBlob,
+    startRecording,
+    pauseRecording,
+    resumeRecording,
+    stopRecording,
+    cancelRecording,
+    resetRecorder,
+    formatTime,
+  } = useAudioRecorder();
 
   // Context API - igual ao chat antigo
   const { setReplyingMessage, replyingMessage } = useContext(ReplyMessageContext);
@@ -353,6 +394,82 @@ const MessageInput = ({
     setForwardMessageModalOpen(true);
   };
 
+  // ===== FUNÇÕES DE GRAVAÇÃO DE ÁUDIO =====
+
+  // Inicia a gravação de áudio
+  const handleStartRecording = async () => {
+    try {
+      await startRecording();
+    } catch (error) {
+      toast.error(error.message || 'Erro ao iniciar gravação');
+    }
+  };
+
+  // Pausa/Retoma a gravação
+  const handleTogglePauseRecording = () => {
+    if (isPaused) {
+      resumeRecording();
+    } else {
+      pauseRecording();
+    }
+  };
+
+  // Para a gravação e prepara para enviar
+  const handleStopRecording = () => {
+    stopRecording();
+  };
+
+  // Cancela a gravação
+  const handleCancelRecording = () => {
+    cancelRecording();
+  };
+
+  // Envia o áudio gravado
+  const handleSendAudio = async () => {
+    if (!audioBlob) {
+      toast.error('Nenhum áudio gravado');
+      return;
+    }
+
+    if (!ticketId) {
+      toast.error('Nenhum ticket selecionado');
+      return;
+    }
+
+    try {
+      // Cria um arquivo do blob
+      const filename = `audio-${Date.now()}.webm`;
+      const audioFile = new File(
+        [audioBlob],
+        filename,
+        { type: 'audio/webm' }
+      );
+
+      // Cria FormData seguindo o padrão do chat antigo
+      const formData = new FormData();
+      formData.append('medias', audioFile);
+      formData.append('body', filename);
+      formData.append('fromMe', true);
+
+      // Envia para o backend - mesma rota que o chat antigo usa
+      await api.post(`/messages/${ticketId}`, formData);
+
+      // Reseta o recorder
+      resetRecorder();
+
+    } catch (error) {
+      console.error('Erro ao enviar áudio:', error);
+      toastError(error);
+    }
+  };
+
+  // useEffect para enviar áudio automaticamente quando stopRecording() criar o blob
+  useEffect(() => {
+    if (audioBlob && !isRecording) {
+      // Áudio foi gravado e parado, agora envia
+      handleSendAudio();
+    }
+  }, [audioBlob, isRecording]);
 
   // Render reply preview igual ao chat antigo
   const renderReplyingMessage = (message) => {
@@ -692,30 +809,97 @@ const MessageInput = ({
               />
             </Box>
 
-            {/* Send Button */}
-            <SendButton
-              onClick={handleSubmit}
-              disabled={!message.trim() || disabled}
-              title={editingMessage ? "Salvar edição" : "Enviar"}
-            >
-              {editingMessage ? (
-                <CheckIcon style={{
-                  width: '18px',
-                  height: '18px',
-                  color: 'white'
-                }} />
-              ) : (
-                <img
-                  src={MandarIcon}
-                  alt="Enviar"
-                  style={{
+            {/* Audio or Send Button - WhatsApp Style */}
+            {!isRecording && (message.trim() || editingMessage) ? (
+              // Mostrar botão de enviar quando há texto ou está editando
+              <SendButton
+                onClick={handleSubmit}
+                disabled={!message.trim() || disabled}
+                title={editingMessage ? "Salvar edição" : "Enviar"}
+              >
+                {editingMessage ? (
+                  <CheckIcon style={{
                     width: '18px',
                     height: '18px',
-                    filter: 'brightness(0) invert(1)'
+                    color: 'white'
+                  }} />
+                ) : (
+                  <img
+                    src={MandarIcon}
+                    alt="Enviar"
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      filter: 'brightness(0) invert(1)'
+                    }}
+                  />
+                )}
+              </SendButton>
+            ) : isRecording ? (
+              // Interface de gravação com pause/resume
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {/* Botão de cancelar */}
+                <Tooltip title="Cancelar gravação">
+                  <IconButton
+                    onClick={handleCancelRecording}
+                    sx={{
+                      color: '#ef4444',
+                      '&:hover': {
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)'
+                      }
+                    }}
+                  >
+                    <Trash2 size={20} />
+                  </IconButton>
+                </Tooltip>
+
+                {/* Timer de gravação */}
+                <Typography
+                  sx={{
+                    color: isPaused ? '#f59e0b' : '#ef4444',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    minWidth: '45px'
                   }}
-                />
-              )}
-            </SendButton>
+                >
+                  {formatTime(recordingTime)}
+                </Typography>
+
+                {/* Botão de pause/resume */}
+                <Tooltip title={isPaused ? "Retomar gravação" : "Pausar gravação"}>
+                  <IconButton
+                    onClick={handleTogglePauseRecording}
+                    sx={{
+                      color: 'var(--color-accent)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 195, 7, 0.1)'
+                      }
+                    }}
+                  >
+                    {isPaused ? <Play size={20} /> : <Pause size={20} />}
+                  </IconButton>
+                </Tooltip>
+
+                {/* Botão de enviar áudio */}
+                <Tooltip title="Enviar áudio">
+                  <AudioButton
+                    onClick={handleStopRecording}
+                  >
+                    <Send size={18} color="white" />
+                  </AudioButton>
+                </Tooltip>
+              </Box>
+            ) : (
+              // Mostrar botão de áudio quando o campo está vazio
+              <Tooltip title="Gravar áudio">
+                <AudioButton
+                  onClick={handleStartRecording}
+                  disabled={disabled}
+                >
+                  <Mic size={18} color="white" />
+                </AudioButton>
+              </Tooltip>
+            )}
           </>
         )}
       </InputRow>
