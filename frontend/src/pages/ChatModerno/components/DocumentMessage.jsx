@@ -298,6 +298,10 @@ const DocumentMessage = ({ message, isSent = false, onLoad, onError }) => {
   const displayFileSize = formatFileSize(realFileSize || fileSize);
   const isPdf = isPdfFile(rawFileName, mediaType);
 
+  // ✅ Extrair legenda: se body é diferente do nome do arquivo, é uma legenda
+  const hasCaption = body && body !== rawFileName && body !== displayFileName;
+  const caption = hasCaption ? body : null;
+
   // ✅ URL para exibição imediata do PDF (igual ao ImageMessage)
   const displayPdfUrl = pdfBlobUrl || (isOptimisticBlob && isPdf ? documentUrl : null);
 
@@ -516,6 +520,13 @@ const DocumentMessage = ({ message, isSent = false, onLoad, onError }) => {
             </DownloadButton>
           </PdfInfo>
         </PdfPreviewContainer>
+
+        {/* Legenda (se existir) */}
+        {caption && (
+          <Caption isSent={isSent}>
+            {caption}
+          </Caption>
+        )}
       </DocumentWrapper>
     );
   }
@@ -565,6 +576,13 @@ const DocumentMessage = ({ message, isSent = false, onLoad, onError }) => {
           <Download sx={{ fontSize: '18px' }} />
         </DownloadButton>
       </GenericDocContainer>
+
+      {/* Legenda (se existir) */}
+      {caption && (
+        <Caption isSent={isSent}>
+          {caption}
+        </Caption>
+      )}
     </DocumentWrapper>
   );
 };

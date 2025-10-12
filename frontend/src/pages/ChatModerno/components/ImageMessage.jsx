@@ -75,6 +75,26 @@ const ErrorContainer = styled(Box)(() => ({
   color: 'var(--text-secondary)',
 }));
 
+const ImageWrapper = styled(Box)(() => ({
+  display: 'flex',
+  flexDirection: 'column',
+  maxWidth: '250px',
+  width: '100%',
+}));
+
+const Caption = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isSent'
+})(({ isSent }) => ({
+  padding: '8px 12px',
+  fontSize: '14px',
+  lineHeight: 1.4,
+  color: 'var(--text-primary)',
+  backgroundColor: isSent ? 'rgba(0, 195, 7, 0.15)' : 'var(--bg-secondary)',
+  borderRadius: '0 0 8px 8px',
+  wordBreak: 'break-word',
+  marginTop: '4px',
+}));
+
 // ============= MODAL COMPONENTS =============
 const StyledDialog = styled(Dialog)(() => ({
   '& .MuiBackdrop-root': {
@@ -162,6 +182,10 @@ const ImageMessage = ({
 
   // URL para exibição imediata (sanitizada ou blob)
   const displayUrl = blobUrl || (mediaUrl?.startsWith('blob:') ? mediaUrl : sanitizeMediaUrl(mediaUrl));
+
+  // ✅ Extract caption: if body exists, it's a caption
+  const hasCaption = body && body.trim().length > 0;
+  const caption = hasCaption ? body : null;
 
   // Carregar imagem em background (sem bloquear renderização)
   useEffect(() => {
@@ -259,18 +283,28 @@ const ImageMessage = ({
 
   return (
     <>
-      {/* Preview da imagem */}
-      <PreviewImageContainer isSent={isSent} onClick={handleImageClick}>
-        <StyledImage
-          ref={imageRef}
-          src={displayUrl}
-          alt="Imagem da mensagem"
-          loading="lazy"
-        />
-        <ImageOverlay className="image-overlay">
-          <ZoomIn sx={{ fontSize: 32 }} />
-        </ImageOverlay>
-      </PreviewImageContainer>
+      {/* Wrapper para imagem + legenda */}
+      <ImageWrapper>
+        {/* Preview da imagem */}
+        <PreviewImageContainer isSent={isSent} onClick={handleImageClick}>
+          <StyledImage
+            ref={imageRef}
+            src={displayUrl}
+            alt="Imagem da mensagem"
+            loading="lazy"
+          />
+          <ImageOverlay className="image-overlay">
+            <ZoomIn sx={{ fontSize: 32 }} />
+          </ImageOverlay>
+        </PreviewImageContainer>
+
+        {/* Legenda abaixo da imagem */}
+        {caption && (
+          <Caption isSent={isSent}>
+            {caption}
+          </Caption>
+        )}
+      </ImageWrapper>
 
       {/* Modal de visualização */}
       <StyledDialog

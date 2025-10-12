@@ -164,6 +164,42 @@ const VideoDuration = styled(Box)(() => ({
   fontWeight: 500,
 }));
 
+const VideoWrapper = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  width: '100%',
+  maxWidth: '320px',
+
+  [theme.breakpoints.up('sm')]: {
+    maxWidth: '380px',
+  },
+
+  [theme.breakpoints.up('md')]: {
+    maxWidth: '420px',
+  },
+
+  [theme.breakpoints.up('lg')]: {
+    maxWidth: '460px',
+  },
+
+  [theme.breakpoints.up('xl')]: {
+    maxWidth: '500px',
+  },
+}));
+
+const Caption = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isSent'
+})(({ isSent }) => ({
+  padding: '8px 12px',
+  fontSize: '14px',
+  lineHeight: 1.4,
+  color: 'var(--text-primary)',
+  backgroundColor: isSent ? 'rgba(0, 195, 7, 0.15)' : 'var(--bg-secondary)',
+  borderRadius: '0 0 8px 8px',
+  wordBreak: 'break-word',
+  marginTop: '4px',
+}));
+
 // ============= MODAL COMPONENTS =============
 const StyledDialog = styled(Dialog)(() => ({
   '& .MuiBackdrop-root': {
@@ -261,6 +297,10 @@ const VideoMessage = ({
 
   // URL para exibição imediata (sanitizada ou blob)
   const displayUrl = blobUrl || (mediaUrl?.startsWith('blob:') ? mediaUrl : sanitizeMediaUrl(mediaUrl));
+
+  // ✅ Extract caption: if body exists, it's a caption
+  const hasCaption = body && body.trim().length > 0;
+  const caption = hasCaption ? body : null;
 
   // Carregar vídeo em background (sem bloquear renderização)
   useEffect(() => {
@@ -383,29 +423,39 @@ const VideoMessage = ({
 
   return (
     <>
-      {/* Preview do vídeo */}
-      <PreviewContainer isSent={isSent} onClick={handleOpenModal}>
-        <VideoThumbnail
-          ref={thumbnailRef}
-          src={displayUrl}
-          onLoadedMetadata={handleThumbnailLoad}
-          onError={handleVideoError}
-          muted
-          playsInline
-        />
+      {/* Wrapper para vídeo + legenda */}
+      <VideoWrapper>
+        {/* Preview do vídeo */}
+        <PreviewContainer isSent={isSent} onClick={handleOpenModal}>
+          <VideoThumbnail
+            ref={thumbnailRef}
+            src={displayUrl}
+            onLoadedMetadata={handleThumbnailLoad}
+            onError={handleVideoError}
+            muted
+            playsInline
+          />
 
-        <ThumbnailOverlay>
-          <PlayIconButton>
-            <PlayCircleOutline />
-          </PlayIconButton>
-        </ThumbnailOverlay>
+          <ThumbnailOverlay>
+            <PlayIconButton>
+              <PlayCircleOutline />
+            </PlayIconButton>
+          </ThumbnailOverlay>
 
-        {duration > 0 && (
-          <VideoDuration>
-            {formatDuration(duration)}
-          </VideoDuration>
+          {duration > 0 && (
+            <VideoDuration>
+              {formatDuration(duration)}
+            </VideoDuration>
+          )}
+        </PreviewContainer>
+
+        {/* Legenda abaixo do vídeo */}
+        {caption && (
+          <Caption isSent={isSent}>
+            {caption}
+          </Caption>
         )}
-      </PreviewContainer>
+      </VideoWrapper>
 
       {/* Modal com player de vídeo */}
       <StyledDialog
