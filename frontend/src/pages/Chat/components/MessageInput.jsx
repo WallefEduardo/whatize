@@ -20,7 +20,7 @@ import useAudioRecorder from '../../../hooks/useAudioRecorder';
 
 // Components
 import MediaPreviewModal from '../../ChatModerno/components/MediaPreviewModal';
-import StickerPicker from '../../ChatModerno/components/StickerPicker';
+import EmojiStickerPicker from '../../ChatModerno/components/EmojiStickerPicker';
 
 // Icons
 import {
@@ -33,7 +33,8 @@ import {
   Pause,
   Play,
   Trash2,
-  Sticker
+  Sticker,
+  Wand2
 } from 'lucide-react';
 
 // Heroicons para ícones mais bonitos
@@ -227,6 +228,34 @@ const AudioButton = styled(IconButton)(() => ({
   },
 }));
 
+// Sticker Preview Container
+const StickerPreviewContainer = styled(Box)(() => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '12px 16px',
+  backgroundColor: '#f0f2f5',
+  borderRadius: '8px 8px 0 0',
+  marginBottom: '8px',
+  borderLeft: '4px solid var(--color-accent)',
+}));
+
+const StickerPreviewContent = styled(Box)(() => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  flex: 1,
+}));
+
+const StickerPreviewImage = styled('img')(() => ({
+  width: '64px',
+  height: '64px',
+  objectFit: 'contain',
+  borderRadius: '4px',
+  backgroundColor: 'white',
+  padding: '4px',
+}));
+
 // Mock emoji data - In real app, you'd use a proper emoji library
 const mockEmojis = [
   '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂',
@@ -250,6 +279,7 @@ const MessageInput = ({
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [isStickerPickerOpen, setIsStickerPickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isCorrectingText, setIsCorrectingText] = useState(false);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const photoVideoInputRef = useRef(null);
@@ -259,6 +289,9 @@ const MessageInput = ({
   // States para upload de mídias
   const [mediasUpload, setMediasUpload] = useState([]);
   const [showModalMedias, setShowModalMedias] = useState(false);
+
+  // State para preview de sticker
+  const [selectedSticker, setSelectedSticker] = useState(null);
 
   // Hook de gravação de áudio com MediaRecorder API
   const {
@@ -362,21 +395,33 @@ const MessageInput = ({
 
   // Handle emoji selection
   const handleEmojiSelect = (emoji) => {
-    const textarea = textareaRef.current?.querySelector('textarea');
+    // Tentar encontrar o textarea de diferentes formas
+    let textarea = textareaRef.current?.querySelector('textarea');
+
+    // Se não encontrar, tentar pegar o input diretamente
+    if (!textarea && textareaRef.current) {
+      textarea = textareaRef.current.querySelector('input[type="text"]');
+    }
+
     if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
+      const start = textarea.selectionStart || 0;
+      const end = textarea.selectionEnd || 0;
       const text = message;
       const newText = text.substring(0, start) + emoji + text.substring(end);
       setMessage(newText);
-      
+
       // Set cursor position after emoji
       setTimeout(() => {
         textarea.setSelectionRange(start + emoji.length, start + emoji.length);
         textarea.focus();
       }, 0);
+    } else {
+      // Fallback: apenas adicionar no final
+      setMessage(message + emoji);
     }
+
     setIsEmojiOpen(false);
+    setIsStickerPickerOpen(false); // Fechar o picker unificado também
   };
 
   // Handle keyboard shortcuts
@@ -384,6 +429,31 @@ const MessageInput = ({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
+    }
+  };
+
+  // Handle text correction - Placeholder para implementação futura
+  const handleTextCorrection = async () => {
+    if (!message.trim()) {
+      toast.error('Digite uma mensagem para corrigir');
+      return;
+    }
+
+    setIsCorrectingText(true);
+
+    try {
+      // TODO: Implementar correção de texto com IA
+      // Por enquanto, apenas um placeholder
+      toast.info('Corretor de texto será implementado em breve');
+
+      // Exemplo de como será:
+      // const response = await api.post('/ai/correct-text', { text: message });
+      // setMessage(response.data.correctedText);
+    } catch (error) {
+      console.error('Erro ao corrigir texto:', error);
+      toastError(error);
+    } finally {
+      setIsCorrectingText(false);
     }
   };
 
@@ -418,12 +488,23 @@ const MessageInput = ({
     setIsStickerPickerOpen(false);
   };
 
-  // Envia uma figurinha selecionada
+  // Seleciona uma figurinha para preview
   const handleSelectSticker = (sticker) => {
-    if (onSendSticker) {
-      onSendSticker(sticker);
-    }
+    setSelectedSticker(sticker);
     setIsStickerPickerOpen(false);
+  };
+
+  // Envia a figurinha selecionada
+  const handleSendSticker = () => {
+    if (selectedSticker && onSendSticker) {
+      onSendSticker(selectedSticker);
+      setSelectedSticker(null);
+    }
+  };
+
+  // Cancela o preview de sticker
+  const handleCancelStickerPreview = () => {
+    setSelectedSticker(null);
   };
 
   // Abre modal para adicionar nova figurinha
@@ -711,6 +792,41 @@ const MessageInput = ({
     );
   };
 
+  // Render sticker preview
+  const renderStickerPreview = (sticker) => {
+    return (
+      <StickerPreviewContainer>
+        <StickerPreviewContent>
+          <StickerPreviewImage
+            src={sticker.url}
+            alt="Sticker preview"
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: 'var(--color-accent)' }}>
+              Figurinha selecionada
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
+              Clique em enviar para compartilhar
+            </Typography>
+          </Box>
+        </StickerPreviewContent>
+        <IconButton
+          size="small"
+          onClick={handleCancelStickerPreview}
+          sx={{
+            ml: 1,
+            color: 'var(--text-secondary)'
+          }}
+        >
+          <X size={16} />
+        </IconButton>
+      </StickerPreviewContainer>
+    );
+  };
+
   return (
     <>
       {/* Modal de Upload de Mídias */}
@@ -724,7 +840,7 @@ const MessageInput = ({
         />
       )}
 
-      {/* Sticker Picker */}
+      {/* Emoji & Sticker Picker Unificado */}
       {isStickerPickerOpen && (
         <Box sx={{
           position: 'absolute',
@@ -732,10 +848,12 @@ const MessageInput = ({
           left: '16px',
           zIndex: 1000,
         }}>
-          <StickerPicker
+          <EmojiStickerPicker
+            onSelectEmoji={handleEmojiSelect}
             onSelectSticker={handleSelectSticker}
-            onClose={handleCloseStickerPicker}
             onAddSticker={handleAddSticker}
+            onClose={handleCloseStickerPicker}
+            defaultTab="emojis"
           />
         </Box>
       )}
@@ -746,6 +864,9 @@ const MessageInput = ({
 
         {/* Edit Preview */}
         {editingMessage && renderEditingMessage(editingMessage)}
+
+        {/* Sticker Preview */}
+        {selectedSticker && renderStickerPreview(selectedSticker)}
 
       {/* Input Row - Modo normal ou modo de seleção */}
       <InputRow>
@@ -864,12 +985,6 @@ const MessageInput = ({
                     Documento
                   </DropdownItem>
                   <DropdownItem
-                    onClick={handleStickerClick}
-                    icon={<Sticker size={16} />}
-                  >
-                    Figurinha
-                  </DropdownItem>
-                  <DropdownItem
                     onClick={handleAudioClick}
                     icon={<Mic size={16} />}
                   >
@@ -877,6 +992,23 @@ const MessageInput = ({
                   </DropdownItem>
                 </DropdownContent>
               </Dropdown>
+
+              {/* Botão de Emoji/Sticker - Fixo ao lado do + */}
+              <Tooltip title="Emojis e figurinhas">
+                <IconButton
+                  onClick={handleStickerClick}
+                  sx={{
+                    p: 1,
+                    color: 'var(--color-accent)',
+                    '&:hover': {
+                      color: 'var(--color-green-hover)',
+                      backgroundColor: 'rgba(0, 195, 7, 0.1)'
+                    }
+                  }}
+                >
+                  <Smile size={20} />
+                </IconButton>
+              </Tooltip>
 
               {/* Hidden File Inputs */}
               <input
@@ -917,61 +1049,43 @@ const MessageInput = ({
                 variant="outlined"
                 InputProps={{
                   endAdornment: (
-                    <Popover open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
-                      <PopoverTrigger asChild>
-                        <EmojiButton>
-                          <Smile size={20} />
-                        </EmojiButton>
-                      </PopoverTrigger>
-                      
-                      <PopoverContent 
-                        align="end" 
-                        side="top"
-                        size="auto"
+                    <Tooltip title="Corrigir texto (em breve)">
+                      <EmojiButton
+                        onClick={handleTextCorrection}
+                        disabled={!message.trim() || isCorrectingText}
                       >
-                        <Box sx={{ 
-                          display: 'grid', 
-                          gridTemplateColumns: 'repeat(10, 1fr)',
-                          gap: '4px',
-                          p: 1,
-                          maxWidth: '280px'
-                        }}>
-                          {mockEmojis.map((emoji, index) => (
-                            <Box
-                              key={index}
-                              onClick={() => handleEmojiSelect(emoji)}
-                              sx={{
-                                width: '24px',
-                                height: '24px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                borderRadius: '4px',
-                                fontSize: '16px',
-                                '&:hover': {
-                                  backgroundColor: 'var(--bg-secondary)',
-                                },
-                              }}
-                            >
-                              {emoji}
-                            </Box>
-                          ))}
-                        </Box>
-                      </PopoverContent>
-                    </Popover>
+                        {isCorrectingText ? (
+                          <Box
+                            sx={{
+                              width: '20px',
+                              height: '20px',
+                              border: '2px solid var(--color-accent)',
+                              borderTopColor: 'transparent',
+                              borderRadius: '50%',
+                              animation: 'spin 1s linear infinite',
+                              '@keyframes spin': {
+                                '0%': { transform: 'rotate(0deg)' },
+                                '100%': { transform: 'rotate(360deg)' }
+                              }
+                            }}
+                          />
+                        ) : (
+                          <Wand2 size={20} />
+                        )}
+                      </EmojiButton>
+                    </Tooltip>
                   )
                 }}
               />
             </Box>
 
             {/* Audio or Send Button - WhatsApp Style */}
-            {!isRecording && (message.trim() || editingMessage) ? (
-              // Mostrar botão de enviar quando há texto ou está editando
+            {!isRecording && (message.trim() || editingMessage || selectedSticker) ? (
+              // Mostrar botão de enviar quando há texto, está editando ou tem sticker selecionado
               <SendButton
-                onClick={handleSubmit}
-                disabled={!message.trim() || disabled}
-                title={editingMessage ? "Salvar edição" : "Enviar"}
+                onClick={selectedSticker ? handleSendSticker : handleSubmit}
+                disabled={(!message.trim() && !selectedSticker) || disabled}
+                title={selectedSticker ? "Enviar figurinha" : (editingMessage ? "Salvar edição" : "Enviar")}
               >
                 {editingMessage ? (
                   <CheckIcon style={{

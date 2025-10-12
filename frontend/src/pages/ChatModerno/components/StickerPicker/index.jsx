@@ -326,13 +326,18 @@ const clearStickersCache = () => {
 /**
  * StickerPicker - Painel de seleção de figurinhas (stickers)
  * Otimizado com cache, memoization e lazy loading
+ * @param {boolean} embedded - Se true, não renderiza container/header próprio (usa com EmojiStickerPicker)
+ * @param {string} externalSearch - Busca controlada externamente (quando embedded)
  */
-const StickerPicker = ({ onSelectSticker, onClose, onAddSticker }) => {
+const StickerPicker = ({ onSelectSticker, onClose, onAddSticker, embedded = false, externalSearch = '' }) => {
   const [stickers, setStickers] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [internalSearchTerm, setInternalSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [stickerToDelete, setStickerToDelete] = useState(null);
+
+  // Usar busca externa se embedded, senão usar interna
+  const searchTerm = embedded ? externalSearch : internalSearchTerm;
 
   // ✅ OTIMIZAÇÃO: Carregar figurinhas com cache
   useEffect(() => {
@@ -422,24 +427,26 @@ const StickerPicker = ({ onSelectSticker, onClose, onAddSticker }) => {
     }
   }, [stickerToDelete, stickers]);
 
-  return (
-    <PickerContainer>
-      {/* Header com busca */}
-      <PickerHeader>
-        <SearchContainer>
-          <Search sx={{ color: '#8696a0', fontSize: '20px' }} />
-          <SearchInput
-            placeholder="Pesquisar na loja de figurinhas do WhatsApp"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            variant="outlined"
-            size="small"
-          />
-        </SearchContainer>
-        <CloseButton onClick={onClose}>
-          <Close fontSize="small" />
-        </CloseButton>
-      </PickerHeader>
+  const content = (
+    <>
+      {/* Header com busca (só quando não embedded) */}
+      {!embedded && (
+        <PickerHeader>
+          <SearchContainer>
+            <Search sx={{ color: '#8696a0', fontSize: '20px' }} />
+            <SearchInput
+              placeholder="Pesquisar na loja de figurinhas do WhatsApp"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              variant="outlined"
+              size="small"
+            />
+          </SearchContainer>
+          <CloseButton onClick={onClose}>
+            <Close fontSize="small" />
+          </CloseButton>
+        </PickerHeader>
+      )}
 
       {/* Grid de figurinhas */}
       <StickersGrid>
@@ -519,6 +526,18 @@ const StickerPicker = ({ onSelectSticker, onClose, onAddSticker }) => {
           </DeleteConfirmButton>
         </StyledDialogActions>
       </StyledDialog>
+    </>
+  );
+
+  // Se embedded, retornar apenas o conteúdo (sem container)
+  if (embedded) {
+    return content;
+  }
+
+  // Se standalone, retornar com container próprio
+  return (
+    <PickerContainer>
+      {content}
     </PickerContainer>
   );
 };
