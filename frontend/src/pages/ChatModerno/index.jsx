@@ -789,9 +789,15 @@ const ChatModernoContent = () => {
                 return type === 'chat' || type === 'extendedTextMessage' || type === 'conversation';
               };
 
+              // ✅ Considerar "document" e "application" como equivalentes (backend inconsistente)
+              const isDocumentMessage = (type) => {
+                return type === 'document' || type === 'application';
+              };
+
               const typeMatches =
                 optMsg.mediaType === data.message.mediaType || // Match exato
-                (isTextMessage(optMsg.mediaType) && isTextMessage(data.message.mediaType)); // Ambos texto
+                (isTextMessage(optMsg.mediaType) && isTextMessage(data.message.mediaType)) || // Ambos texto
+                (isDocumentMessage(optMsg.mediaType) && isDocumentMessage(data.message.mediaType)); // Ambos documento
 
               const isMatch =
                 typeMatches &&
@@ -1367,18 +1373,16 @@ const ChatModernoContent = () => {
       // Verificar se existe mensagem real correspondente (5 segundos de diferença)
       const hasRealVersion = realMessages.some(realMsg => {
         const timeDiff = Math.abs(new Date(realMsg.createdAt).getTime() - new Date(optMsg.createdAt).getTime());
+
+        // Verificar por fromMe + tempo + body/fileName
         const isMatch = realMsg.fromMe &&
-          realMsg.mediaType === optMsg.mediaType &&
-          timeDiff < 5000;
+          timeDiff < 5000 &&
+          (realMsg.body === optMsg.body || realMsg.fileName === optMsg.fileName);
 
         return isMatch;
       });
       return !hasRealVersion; // Manter apenas se NÃO tem versão real
     });
-
-
-    if (activeOptimistic.length > 0) {
-    }
 
     // 4. Merge e ordenar por data
     const merged = [...realMessages, ...activeOptimistic].sort((a, b) =>
@@ -1715,6 +1719,99 @@ const ChatModernoContent = () => {
         optimisticMessagesRef.current.set(tempId, { ...msg, ack: -1 });
         forceUpdate();
       }
+    }
+  };
+
+  // 🚀 Handle send media (foto/vídeo/documento) - VERSÃO OTIMISTA INSTANTÂNEA
+  const handleSendMediaMessage = async (mediasArray) => {
+    if (!selectedChatId || !mediasArray || mediasArray.length === 0) {
+      return;
+    }
+
+    // Processar cada mídia individualmente com UI otimista
+    for (const mediaItem of mediasArray) {
+      const { file, caption } = mediaItem;
+
+      // 1. Gerar ID temporário único
+      const tempId = generateTempId();
+
+      // 2. Detectar tipo de mídia
+      let mediaType = 'document';
+      if (file.type.startsWith('image/')) {
+        mediaType = 'image';
+      } else if (file.type.startsWith('video/')) {
+        mediaType = 'video';
+      }
+
+      // 3. Criar URL temporária do blob para preview imediato
+      const tempMediaUrl = URL.createObjectURL(file);
+
+      // 4. Criar mensagem otimista
+      const tempMessage = {
+        id: tempId,
+        body: caption || file.name,
+        fromMe: true,
+        ack: 0, // Relógio (enviando)
+        createdAt: new Date().toISOString(),
+        mediaUrl: tempMediaUrl, // Blob local
+        mediaType: mediaType,
+        fileName: file.name, // ✅ Nome do arquivo para DocumentMessage
+        fileSize: file.size, // ✅ Tamanho do arquivo para DocumentMessage
+        read: false,
+        quotedMsg: replyingMessage,
+        isPrivate: false,
+        user: {
+          id: user.id,
+          name: user.name,
+          profileImage: user.profileImage,
+          companyId: user.companyId
+        }
+      };
+
+      // 5. ✅ Adicionar no Map de otimistas
+      optimisticMessagesRef.current.set(tempId, tempMessage);
+      forceUpdate(); // Força re-render
+
+      // 6. Scroll automático
+      scrollToBottomOnSend();
+
+      // 7. ⏱️ MICRO-DELAY para garantir que React renderize a mensagem otimista ANTES do socket
+      // Sem isso, o socket responde TÃO rápido que o React não tem tempo de fazer o primeiro render
+      await new Promise(resolve => setTimeout(resolve, 50)); // 50ms de delay
+
+      // 8. Enviar para backend (assíncrono)
+      try {
+        const formData = new FormData();
+        formData.append('medias', file);
+        formData.append('body', caption || file.name);
+        formData.append('fromMe', true);
+
+        if (replyingMessage) {
+          formData.append('quotedMsg', JSON.stringify(replyingMessage));
+        }
+
+        const response = await api.post(`/messages/${selectedChatId}`, formData);
+
+        // ✅ BAILEYS: Backend retorna message.key.id
+        if (response.data?.messageIds && response.data.messageIds.length > 0) {
+          const baileysId = response.data.messageIds[0];
+        }
+
+      } catch (error) {
+        console.error('❌ [handleSendMedia] Erro no envio:', error);
+
+        // Atualizar mensagem otimista para status de erro
+        const msg = optimisticMessagesRef.current.get(tempId);
+        if (msg) {
+          optimisticMessagesRef.current.set(tempId, { ...msg, ack: -1 });
+          forceUpdate();
+        }
+      }
+    }
+
+    // Limpar estado de reply após enviar todas as mídias
+    if (replyingMessage) {
+      setReplyingMessage(null);
     }
   };
 
@@ -3021,6 +3118,7 @@ const ChatModernoContent = () => {
                     ticketId={selectedChatId}
                     onSendMessage={handleSendMessage}
                     onSendAudio={handleSendAudioMessage}
+                    onSendMedia={handleSendMediaMessage}
                     disabled={messagesLoading || currentTicket?.status === 'pending'}
                     placeholder={
                       currentTicket?.status === 'pending'

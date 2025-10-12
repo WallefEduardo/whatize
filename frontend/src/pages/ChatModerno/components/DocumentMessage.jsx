@@ -284,21 +284,41 @@ const DocumentMessage = ({ message, isSent = false, onLoad, onError }) => {
   const backendUrl = getBackendUrl();
   const { mediaUrl, body, fileName, fileSize, mediaType } = message;
 
+  // ✅ Se já é blob URL (mensagem otimista), usar diretamente
+  const isOptimisticBlob = mediaUrl?.startsWith('blob:');
+
   // Construir URL e sanitizar para remover portas duplicadas
-  const rawUrl = mediaUrl?.startsWith('http')
+  const rawUrl = isOptimisticBlob
     ? mediaUrl
-    : `${backendUrl}${mediaUrl}`;
-  const documentUrl = sanitizeMediaUrl(rawUrl);
+    : (mediaUrl?.startsWith('http') ? mediaUrl : `${backendUrl}${mediaUrl}`);
+  const documentUrl = isOptimisticBlob ? mediaUrl : sanitizeMediaUrl(rawUrl);
 
   const rawFileName = fileName || getFileNameFromUrl(mediaUrl) || 'documento';
   const displayFileName = cleanFileName(rawFileName);
   const displayFileSize = formatFileSize(realFileSize || fileSize);
   const isPdf = isPdfFile(rawFileName, mediaType);
 
+  // ✅ URL para exibição imediata do PDF (igual ao ImageMessage)
+  const displayPdfUrl = pdfBlobUrl || (isOptimisticBlob && isPdf ? documentUrl : null);
+
   // Fetch arquivo e capturar tamanho real
   React.useEffect(() => {
     if (!documentUrl) return;
 
+    // ✅ Se já é blob (mensagem otimista), usar diretamente
+    if (isOptimisticBlob) {
+      if (isPdf) {
+        setPdfBlobUrl(documentUrl);
+      }
+      // Usar fileSize da mensagem otimista
+      if (fileSize) {
+        setRealFileSize(fileSize);
+      }
+      onLoad?.();
+      return;
+    }
+
+    // ✅ URL do backend - fazer fetch via API
     const fetchFileBlob = async () => {
       try {
         const response = await api.get(documentUrl, { responseType: 'blob' });
@@ -312,22 +332,26 @@ const DocumentMessage = ({ message, isSent = false, onLoad, onError }) => {
           const blobUrl = URL.createObjectURL(blob);
           setPdfBlobUrl(blobUrl);
         }
+
+        onLoad?.();
       } catch (error) {
         console.error('Erro ao buscar arquivo:', error);
         if (isPdf) {
           setPdfError(true);
         }
+        onError?.(error);
       }
     };
 
     fetchFileBlob();
 
+    // Cleanup: só revogar se NÃO for blob otimista
     return () => {
-      if (pdfBlobUrl) {
+      if (pdfBlobUrl && !isOptimisticBlob) {
         URL.revokeObjectURL(pdfBlobUrl);
       }
     };
-  }, [documentUrl, isPdf]);
+  }, [documentUrl, isPdf, isOptimisticBlob, fileSize, onLoad, onError]);
 
   const handleDownload = async (e) => {
     e.stopPropagation();
@@ -409,13 +433,13 @@ const DocumentMessage = ({ message, isSent = false, onLoad, onError }) => {
               <LoadingPlaceholder>
                 <PictureAsPdf sx={{ fontSize: 48, color: '#d32f2f', opacity: 0.5 }} />
               </LoadingPlaceholder>
-            ) : !pdfBlobUrl ? (
+            ) : !displayPdfUrl ? (
               <LoadingPlaceholder>
                 Carregando PDF...
               </LoadingPlaceholder>
             ) : (
               <Document
-                file={pdfBlobUrl}
+                file={displayPdfUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
                 onLoadError={onDocumentLoadError}
                 options={{

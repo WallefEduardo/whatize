@@ -238,6 +238,7 @@ const mockEmojis = [
 const MessageInput = ({
   onSendMessage,
   onSendAudio, // Callback para envio otimista de áudio
+  onSendMedia, // Callback para envio otimista de mídias (fotos/vídeos/docs)
   disabled = false,
   placeholder = "Digite sua mensagem...",
   ticketId // Adicionar ticketId para envio de áudio
@@ -422,19 +423,30 @@ const MessageInput = ({
 
   // Envia as mídias selecionadas para o backend
   const handleUploadMedia = async (mediasUpload) => {
+    // Verificar se há mídias selecionadas
+    if (!mediasUpload || mediasUpload.length === 0) {
+      console.log("Nenhuma mídia selecionada.");
+      return;
+    }
+
+    // ✅ Se houver callback onSendMedia (ChatModerno com envio otimista)
+    if (onSendMedia) {
+      // Passar array de mídias para envio otimista
+      onSendMedia(mediasUpload);
+
+      // Limpar estados imediatamente para UX responsiva
+      setMediasUpload([]);
+      setShowModalMedias(false);
+      return;
+    }
+
+    // ⚠️ Fallback para envio direto (chat antigo sem UI otimista)
     if (!ticketId) {
       toast.error('Nenhum ticket selecionado');
       return;
     }
 
     setLoading(true);
-
-    // Verificar se há mídias selecionadas
-    if (!mediasUpload || mediasUpload.length === 0) {
-      console.log("Nenhuma mídia selecionada.");
-      setLoading(false);
-      return;
-    }
 
     try {
       // Criar FormData seguindo o padrão do chat antigo
