@@ -278,7 +278,6 @@ const ChatModernoContent = () => {
   // 🔍 DEBUG: Rastrear mudanças no updateCounter
   useEffect(() => {
     const timestamp = new Date().toISOString().split('T')[1];
-    console.log(`🔢 [updateCounter] ${timestamp} - Counter mudou para:`, updateCounter);
   }, [updateCounter]);
 
   // 🧹 LIMPEZA AUTOMÁTICA: Remover mensagens otimistas antigas (>10 segundos sem resposta)
@@ -291,14 +290,12 @@ const ChatModernoContent = () => {
         const age = now - new Date(optMsg.createdAt).getTime();
 
         if (age > 10000) { // 10 segundos
-          console.log('🧹 [CLEANUP] Removendo mensagem otimista antiga:', tempId, 'idade:', Math.round(age / 1000), 's');
           optimisticMessagesRef.current.delete(tempId);
           removedCount++;
         }
       }
 
       if (removedCount > 0) {
-        console.log('🧹 [CLEANUP] Removidas', removedCount, 'mensagens otimistas antigas');
         forceUpdate(); // Re-render para atualizar allMessages
       }
     }, 5000); // Rodar a cada 5 segundos
@@ -402,7 +399,6 @@ const ChatModernoContent = () => {
         updateUser(data);
       }
     } catch (err) {
-      console.error('Erro ao salvar preferências de filas:', err);
       toastError(err);
     }
   }, [user?.id, updateUser]);
@@ -507,7 +503,6 @@ const ChatModernoContent = () => {
       try {
         setPinnedConversations(new Set(JSON.parse(savedPinned)));
       } catch (error) {
-        console.error('Erro ao carregar conversas fixadas:', error);
       }
     }
   }, []);
@@ -775,12 +770,9 @@ const ChatModernoContent = () => {
         // Se for mensagem do chat atual
         if (data.message.ticketId?.toString() === selectedChatId?.toString()) {
 
-          console.log('📨 [Socket] Nova mensagem recebida:', data.message.id);
 
           // 🎯 RECONCILIAÇÃO: Se for mensagem minha, buscar otimista correspondente
           if (data.message.fromMe) {
-            console.log('🔍 [Socket] Mensagem minha, buscando otimista...');
-            console.log('📊 [Socket] Otimistas no Map:', optimisticMessagesRef.current.size);
 
             let foundOptimistic = null;
             let foundTempId = null;
@@ -809,26 +801,19 @@ const ChatModernoContent = () => {
               if (isMatch) {
                 foundOptimistic = optMsg;
                 foundTempId = tempId;
-                console.log('✅ [Socket] Otimista encontrada:', tempId, '| Match type:', optMsg.mediaType, '→', data.message.mediaType);
                 break;
               }
             }
 
             if (foundOptimistic && foundTempId) {
               // ✅ UPDATE IN-PLACE: Substituir dados da otimista pelos dados reais (SEM remover/adicionar)
-              console.log('🔄 [Socket] UPDATE IN-PLACE:', foundTempId, '→', data.message.id);
 
               // 1. Revogar blob URL (síncrono)
               if (foundOptimistic.mediaUrl?.startsWith('blob:')) {
                 URL.revokeObjectURL(foundOptimistic.mediaUrl);
-                console.log('🗑️ [Socket] Blob URL revogado');
               }
 
               // 2. Preparar mensagem atualizada (mantém estrutura, atualiza dados)
-              console.log('🔍 [Socket] foundOptimistic.user:', foundOptimistic.user);
-              console.log('🔍 [Socket] data.message.user:', data.message.user);
-              console.log('🔍 [Socket] foundOptimistic.audioDuration:', foundOptimistic.audioDuration);
-              console.log('🔍 [Socket] data.message.audioDuration:', data.message.audioDuration);
 
               // ✅ MERGE INTELIGENTE: Preservar user da otimista se backend não retornar profileImage
               const mergedUser = {
@@ -851,16 +836,6 @@ const ChatModernoContent = () => {
                 user: mergedUser // ✅ PRESERVAR user com profileImage
               };
 
-              console.log('✅ [Socket] updatedMessage.user:', updatedMessage.user);
-              console.log('✅ [Socket] updatedMessage.audioDuration:', updatedMessage.audioDuration);
-
-              console.log('✨ [Socket] UPDATE IN-PLACE - Substituindo no Map:', {
-                tempId: foundTempId,
-                newId: updatedMessage.id,
-                oldAck: foundOptimistic.ack,
-                newAck: updatedMessage.ack
-              });
-
               // 3. ✅ SUBSTITUIR no Map (DELETE temp + SET real NO MESMO MOMENTO)
               optimisticMessagesRef.current.delete(foundTempId); // Remove temp
               // NÃO adiciona no Map - vai direto pro messages[] como real
@@ -869,30 +844,21 @@ const ChatModernoContent = () => {
               setMessages(prev => {
                 // Verificar se já não existe
                 if (prev.some(msg => msg.id === updatedMessage.id)) {
-                  console.log('⚠️ [Socket] Mensagem JÁ EXISTE em messages');
                   return prev;
                 }
-                console.log('✅ [Socket] Adicionando mensagem REAL em messages (otimista virou real)');
                 return [...prev, updatedMessage];
               });
 
               setMessageIds(prev => new Set([...prev, updatedMessage.id]));
 
-              // 5. forceUpdate() para recalcular allMessages (Map mudou - temp foi removido)
               forceUpdate();
 
-              console.log('✅ [Socket] UPDATE IN-PLACE completo!');
-              console.log('📊 [Socket] Otimistas restantes no Map:', optimisticMessagesRef.current.size);
-
-              return; // ✅ Não executar código abaixo (evitar duplicata)
-            } else {
-              console.log('⚠️ [Socket] Otimista NÃO encontrada, adicionando como nova');
+              return;
             }
           }
 
           // 📨 MENSAGEM NOVA (de outro usuário ou sem otimista correspondente)
           if (!messageIds.has(data.message.id)) {
-            console.log('✅ [Socket] Adicionando mensagem nova:', data.message.id);
 
             setMessages(prev => [...prev, data.message]);
             setMessageIds(prev => new Set([...prev, data.message.id]));
@@ -902,7 +868,6 @@ const ChatModernoContent = () => {
               setNewMessagesCount(prev => prev + 1);
             }
           } else {
-            console.log('⚠️ [Socket] Mensagem duplicada ignorada:', data.message.id);
           }
         }
       }
@@ -1390,24 +1355,12 @@ const ChatModernoContent = () => {
   // 🚀 MERGE INTELIGENTE: Combina mensagens reais + otimistas (SEM DUPLICAR)
   const allMessages = useMemo(() => {
     const timestamp = new Date().toISOString().split('T')[1];
-    console.log(`🔄 [allMessages] ${timestamp} - RECALCULANDO allMessages...`);
 
     // 1. Mensagens reais do backend
     const realMessages = messages || [];
-    console.log(`📦 [allMessages] ${timestamp} - Real messages:`, realMessages.length);
 
     // 2. Mensagens otimistas do Map
     const optimisticArray = Array.from(optimisticMessagesRef.current.values());
-    console.log('⏳ [allMessages] Optimistic messages no Map:', optimisticArray.length);
-
-    if (optimisticArray.length > 0) {
-      console.log('⏳ [allMessages] Detalhes das otimistas:', optimisticArray.map(m => ({
-        id: m.id,
-        mediaType: m.mediaType,
-        createdAt: m.createdAt,
-        ack: m.ack
-      })));
-    }
 
     // 3. Filtrar otimistas que já viraram reais (evitar duplicata)
     const activeOptimistic = optimisticArray.filter(optMsg => {
@@ -1418,22 +1371,13 @@ const ChatModernoContent = () => {
           realMsg.mediaType === optMsg.mediaType &&
           timeDiff < 5000;
 
-        if (isMatch) {
-          console.log('🔍 [allMessages] Encontrou versão real para otimista:', {
-            optId: optMsg.id,
-            realId: realMsg.id,
-            timeDiff
-          });
-        }
         return isMatch;
       });
       return !hasRealVersion; // Manter apenas se NÃO tem versão real
     });
 
-    console.log('✅ [allMessages] Otimistas ATIVAS (após filtro):', activeOptimistic.length);
 
     if (activeOptimistic.length > 0) {
-      console.log('✅ [allMessages] IDs das otimistas ativas:', activeOptimistic.map(m => m.id));
     }
 
     // 4. Merge e ordenar por data
@@ -1442,29 +1386,16 @@ const ChatModernoContent = () => {
     );
 
     // 5. 🔍 DETECTOR DE DUPLICATAS
-    const idCounts = {};
-    merged.forEach(msg => {
-      idCounts[msg.id] = (idCounts[msg.id] || 0) + 1;
-    });
-    const duplicates = Object.entries(idCounts).filter(([id, count]) => count > 1);
-    if (duplicates.length > 0) {
-      console.error(`🚨 [allMessages] ${timestamp} - DUPLICATAS DETECTADAS:`, duplicates);
-    }
-
-    const lastThreeIds = merged.slice(-3).map(m => `${m.id} (${m.mediaType})`);
-    console.log(`📊 [allMessages] ${timestamp} - Total final: ${merged.length} | Últimas 3: ${lastThreeIds.join(', ')}`);
-
     return merged;
   }, [messages, updateCounter]); // updateCounter força re-computação quando optimisticRef muda
 
   // 🚀 DETECÇÃO DE SCROLL OTIMIZADA
-  const handleScroll = useCallback(() => {    
+  const handleScroll = useCallback(() => {
     if (chatHeightRef.current) {
       let scrollElement = null;
-      
-      // Encontrar elemento com scroll real
-      const allElements = chatHeightRef.current.querySelectorAll('*');
-      const elementsWithScroll = Array.from(allElements).filter(el => {
+
+      const allNodes = chatHeightRef.current.querySelectorAll('*');
+      const elementsWithScroll = Array.from(allNodes).filter(el => {
         const style = getComputedStyle(el);
         return style.overflowY === 'auto' || style.overflowY === 'scroll';
       });
@@ -1648,7 +1579,6 @@ const ChatModernoContent = () => {
       return;
     }
 
-    console.log('💬 [handleSendMessage] Iniciando envio...');
 
     // 1. Gerar ID temporário único
     const tempId = generateTempId();
@@ -1677,8 +1607,6 @@ const ChatModernoContent = () => {
     optimisticMessagesRef.current.set(tempId, tempMessage);
     forceUpdate();
 
-    console.log('✅ [handleSendMessage] Mensagem otimista adicionada no Map:', tempId);
-    console.log('📊 [handleSendMessage] Total otimistas:', optimisticMessagesRef.current.size);
 
     // 4. Scroll automático
     scrollToBottomOnSend();
@@ -1694,11 +1622,9 @@ const ChatModernoContent = () => {
         isPrivate: "false"
       };
 
-      console.log('📤 [handleSendMessage] Enviando para backend...');
 
       await api.post(`/messages/${selectedChatId}`, messageData);
 
-      console.log('✅ [handleSendMessage] Backend respondeu! Socket vai receber e reconciliar.');
 
     } catch (error) {
       console.error('❌ [handleSendMessage] Erro no envio:', error);
@@ -1718,7 +1644,6 @@ const ChatModernoContent = () => {
       return;
     }
 
-    console.log('🎤 [handleSendAudio] Iniciando envio... Duration:', audioDuration, 'segundos');
 
     // 1. Gerar ID temporário único
     const tempId = generateTempId();
@@ -1751,13 +1676,9 @@ const ChatModernoContent = () => {
     // 4. ✅ Adicionar no Map de otimistas (NÃO em messages!)
     optimisticMessagesRef.current.set(tempId, tempMessage);
 
-    console.log('✅ [handleSendAudio] Mensagem otimista adicionada no Map:', tempId);
-    console.log('📊 [handleSendAudio] Total otimistas:', optimisticMessagesRef.current.size);
-    console.log('🔄 [handleSendAudio] Chamando forceUpdate() para re-render...');
 
     forceUpdate(); // Força re-render
 
-    console.log('✅ [handleSendAudio] forceUpdate() chamado! Counter atual:', updateCounter);
 
     // 5. Scroll automático
     scrollToBottomOnSend();
@@ -1775,19 +1696,14 @@ const ChatModernoContent = () => {
         formData.append('quotedMsg', JSON.stringify(replyingMessage));
       }
 
-      console.log('📤 [handleSendAudio] Enviando para backend...');
 
       const response = await api.post(`/messages/${selectedChatId}`, formData);
 
-      console.log('✅ [handleSendAudio] Backend respondeu:', response.data);
 
       // ✅ BAILEYS: Backend retorna message.key.id
       if (response.data?.messageIds && response.data.messageIds.length > 0) {
         const baileysId = response.data.messageIds[0];
-        console.log('🎯 [handleSendAudio] Baileys ID recebido:', baileysId);
-        console.log('🔄 [handleSendAudio] Aguardando Socket fazer UPDATE in-place...');
       } else {
-        console.log('⚠️ [handleSendAudio] Backend NÃO retornou messageIds! Socket vai reconciliar por match.');
       }
 
     } catch (error) {
@@ -2083,8 +1999,8 @@ const ChatModernoContent = () => {
       let scrollElement = null;
       
       // Buscar elemento com scroll real
-      const allElements = chatHeightRef.current.querySelectorAll('*');
-      const elementsWithScroll = Array.from(allElements).filter(el => {
+      const elements = chatHeightRef.current.querySelectorAll('*');
+      const elementsWithScroll = Array.from(elements).filter(el => {
         const style = getComputedStyle(el);
         return style.overflowY === 'auto' || style.overflowY === 'scroll';
       });
@@ -2951,7 +2867,6 @@ const ChatModernoContent = () => {
                           <>
                             {(() => {
                               const renderTimestamp = new Date().toISOString().split('T')[1];
-                              console.log(`🎨 [RENDER] ${renderTimestamp} - Renderizando ${allMessages.length} mensagens`);
                               return null;
                             })()}
                             {Array.isArray(allMessages) && allMessages.length > 0 ? (

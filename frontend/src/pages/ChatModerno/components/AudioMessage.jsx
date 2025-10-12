@@ -256,7 +256,6 @@ const AudioMessage = ({
   // IMPORTANTE: Rodar no primeiro render também, não apenas quando mudar
   useEffect(() => {
     if (audioDuration && audioDuration > 0) {
-      console.log('✅ [AudioMessage] Usando audioDuration da mensagem:', audioDuration, 'segundos');
       setDuration(audioDuration);
       setIsLoading(false); // ✅ Não precisa loading se já temos duração
     }
@@ -265,7 +264,6 @@ const AudioMessage = ({
   // 🎯 INICIALIZAÇÃO: Se já tem audioDuration no primeiro render, configurar imediatamente
   useEffect(() => {
     if (audioDuration && audioDuration > 0) {
-      console.log('🚀 [AudioMessage] INICIALIZAÇÃO - audioDuration:', audioDuration, 'segundos');
       setDuration(audioDuration);
       setIsLoading(false);
     }
@@ -291,10 +289,8 @@ const AudioMessage = ({
 
         try {
           await waitForLoad();
-          console.log('🎵 [AudioMessage] Analisando waveform REAL...');
           const realWaveform = await analyzeAudioWaveform(audio);
           setWaveform(realWaveform);
-          console.log('✅ [AudioMessage] Waveform REAL gerado:', realWaveform.slice(0, 10));
         } catch (error) {
           console.error('❌ [AudioMessage] Erro ao analisar waveform:', error);
           // SEM MOCK - deixar vazio ou gerar padrão simples
@@ -312,7 +308,6 @@ const AudioMessage = ({
   const isBlobUrl = effectiveMediaUrl?.startsWith('blob:');
 
   if (_blobUrl) {
-    console.log('🎯 [AudioMessage] Usando blob preservado:', _blobUrl.substring(0, 30));
   }
 
   const rawUrl = isBlobUrl
@@ -324,10 +319,8 @@ const AudioMessage = ({
 
   // Fetch áudio e converter para blob (solução CORS) - ou usar blob direto se otimista
   useEffect(() => {
-    console.log('🔍 [AudioMessage] audioUrl:', audioUrl, 'isBlobUrl:', isBlobUrl);
 
     if (!audioUrl) {
-      console.log('⚠️ [AudioMessage] audioUrl vazio, abortando');
       return;
     }
 
@@ -335,7 +328,6 @@ const AudioMessage = ({
 
     // Se já é blob URL (mensagem otimista), usar diretamente
     if (isBlobUrl) {
-      console.log('✅ [AudioMessage] URL já é blob (mensagem otimista), usando diretamente');
       setAudioBlobUrl(audioUrl);
       return;
     }
@@ -343,17 +335,13 @@ const AudioMessage = ({
     // Senão, fazer fetch do servidor
     const fetchAudioBlob = async () => {
       try {
-        console.log('🔄 [AudioMessage] Iniciando fetch do áudio:', audioUrl);
         const response = await api.get(audioUrl, { responseType: 'blob' });
-        console.log('✅ [AudioMessage] Fetch concluído, tamanho:', response.data.size);
 
         const blob = new Blob([response.data], { type: 'audio/mpeg' });
         const blobUrl = URL.createObjectURL(blob);
-        console.log('✅ [AudioMessage] Blob URL criado:', blobUrl);
 
         blobUrlToRevoke = blobUrl;
         setAudioBlobUrl(blobUrl);
-        console.log('✅ [AudioMessage] audioBlobUrl setado');
       } catch (error) {
         console.error('❌ [AudioMessage] Erro ao buscar áudio:', error);
         setHasError(true);
@@ -365,39 +353,31 @@ const AudioMessage = ({
 
     return () => {
       if (blobUrlToRevoke) {
-        console.log('🧹 [AudioMessage] Limpando blob URL:', blobUrlToRevoke);
         URL.revokeObjectURL(blobUrlToRevoke);
       }
     };
   }, [audioUrl, isBlobUrl]);
 
   useEffect(() => {
-    console.log('🎵 [AudioMessage] useEffect 2 - audioRef:', !!audioRef.current, 'audioBlobUrl:', audioBlobUrl);
 
     if (audioRef.current && audioBlobUrl) {
       const audio = audioRef.current;
 
-      console.log('🎵 [AudioMessage] Adicionando event listeners, readyState:', audio.readyState);
 
       const handleLoadedData = async () => {
-        console.log('✅ [AudioMessage] handleLoadedData disparado! audio.duration:', audio.duration);
         setIsLoading(false);
         setHasError(false);
 
         // ✅ PRESERVAR audioDuration da mensagem se já estiver definido e válido
         // Só usar audio.duration se audioDuration não existir ou for inválido
         if (audioDuration && audioDuration > 0) {
-          console.log('✅ [AudioMessage] Mantendo audioDuration da mensagem:', audioDuration, '(ignorando audio.duration)');
           setDuration(audioDuration); // Manter o valor original
         } else {
-          console.log('✅ [AudioMessage] Usando audio.duration do elemento:', audio.duration);
           setDuration(audio.duration);
         }
 
         // Analisar áudio real para extrair waveform
-        console.log('🎵 [AudioMessage] Analisando waveform do áudio...');
         const realWaveform = await analyzeAudioWaveform(audio);
-        console.log('✅ [AudioMessage] Waveform analisado:', realWaveform);
         setWaveform(realWaveform);
 
         // Restaurar volume salvo
@@ -437,12 +417,10 @@ const AudioMessage = ({
 
       // Se já está carregado (readyState >= 2), disparar manualmente
       if (audio.readyState >= 2) {
-        console.log('⚡ [AudioMessage] Áudio já carregado, disparando handleLoadedData manualmente');
         handleLoadedData();
       }
 
       return () => {
-        console.log('🧹 [AudioMessage] Removendo event listeners');
         audio.removeEventListener('loadeddata', handleLoadedData);
         audio.removeEventListener('error', handleError);
         audio.removeEventListener('timeupdate', handleTimeUpdate);

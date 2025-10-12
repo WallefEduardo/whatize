@@ -221,14 +221,14 @@ const MessageStatus = ({ status, ack, isOptimistic }) => {
         return <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--text-secondary)' }} />;
       case 2:
         return (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0px' }}>
             <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--text-secondary)' }} />
             <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--text-secondary)' }} />
           </span>
         );
       case 3:
         return (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0px' }}>
             <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--color-accent)' }} />
             <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--color-accent)' }} />
           </span>
@@ -254,14 +254,14 @@ const MessageStatus = ({ status, ack, isOptimistic }) => {
       return <CheckIcon style={{ width: '12px', height: '12px' }} />;
     case 'delivered':
       return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0px' }}>
           <CheckIcon style={{ width: '12px', height: '12px' }} />
           <CheckIcon style={{ width: '12px', height: '12px' }} />
         </span>
       );
     case 'read':
       return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0px' }}>
           <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--color-accent)' }} />
           <CheckIcon style={{ width: '12px', height: '12px', color: 'var(--color-accent)' }} />
         </span>

@@ -76,10 +76,8 @@ const useAudioRecorder = () => {
         // ✅ SÓ criar blob se NÃO for cancelamento
         if (!isCancellingRef.current) {
           const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          console.log('🎤 [useAudioRecorder] Blob criado - Tamanho:', audioBlob.size, 'bytes, Chunks:', audioChunksRef.current.length);
           setAudioBlob(audioBlob);
         } else {
-          console.log('🚫 [useAudioRecorder] Gravação cancelada, blob NÃO criado');
         }
 
         // Para o stream do microfone
