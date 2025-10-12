@@ -53,6 +53,7 @@ import flowCampaignRoutes from "./flowCampaignRoutes";
 import raceConditionRoutes from "./raceConditionRoutes";
 import taskRoutes from "./taskRoutes";
 import debugRoutes from "./debugRoutes";
+import stickerRoutes from "./stickerRoutes";
 
 
 const routes = Router();
@@ -109,6 +110,7 @@ routes.use(webHook)
 routes.use(flowBuilder)
 routes.use(flowCampaignRoutes)
 routes.use(taskRoutes);
+routes.use(stickerRoutes);
 
 
 routes.use(promptRoutes);

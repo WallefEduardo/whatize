@@ -222,7 +222,20 @@ const SendWhatsAppMedia = async ({
       };
       bodyTicket = "📎 Outros anexos"
     } else {
-      if (media.mimetype.includes("gif")) {
+      // 🎨 STICKER: Verificar se é sticker pelo body ou filename
+      const isSticker = body === 'sticker' ||
+                       bodyMedia === 'sticker' ||
+                       media.originalname.toLowerCase().includes('sticker') ||
+                       media.mimetype === 'image/webp';
+
+      if (isSticker) {
+        // ✅ Enviar como STICKER do WhatsApp (não como imagem)
+        options = {
+          sticker: fs.readFileSync(pathMedia),
+          // Stickers não tem caption nem contextInfo
+        };
+        bodyTicket = "Figurinha"
+      } else if (media.mimetype.includes("gif")) {
         options = {
           image: fs.readFileSync(pathMedia),
           caption: bodyMedia,
@@ -238,7 +251,7 @@ const SendWhatsAppMedia = async ({
           contextInfo: { forwardingScore: isForwarded ? 2 : 0, isForwarded: isForwarded },
         };
       }
-      bodyTicket = "📎 Outros anexos"
+      bodyTicket = isSticker ? "Figurinha" : "📎 Outros anexos"
     }
 
     if (isPrivate === true) {

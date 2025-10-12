@@ -7,14 +7,17 @@ const ImageMessage = lazy(() => import('./ImageMessage'));
 const VideoMessage = lazy(() => import('./VideoMessage'));
 const AudioMessage = lazy(() => import('./AudioMessage'));
 const DocumentMessage = lazy(() => import('./DocumentMessage'));
+// Importação direta para debug (SEM lazy loading)
+import StickerMessage from './StickerMessage';
 
 const MediaContainer = styled(Box)(() => ({
-  width: '100%',
+  width: 'auto',
   maxWidth: '350px',
   borderRadius: '8px',
-  overflow: 'hidden',
+  overflow: 'visible',
   marginBottom: '4px',
   position: 'relative',
+  display: 'inline-block',
 }));
 
 const LoadingContainer = styled(Box)(() => ({
@@ -30,15 +33,25 @@ const LoadingContainer = styled(Box)(() => ({
  * Utilitário para detectar tipo de mídia baseado em mediaType e URL
  */
 const detectMediaType = (message) => {
-  const { mediaType, mediaUrl } = message;
+  const { mediaType, mediaUrl, body } = message || {};
+
+  // Debug logs removidos para produção
 
   if (!mediaType && !mediaUrl) {
     return null;
   }
 
+  // 🎨 PRIORIDADE MÁXIMA: Verificar se é sticker pelo body
+  if (body === 'sticker') {
+    return 'sticker';
+  }
+
   // Priorizar mediaType se disponível
   if (mediaType) {
-    // Sistema usa strings simples: "image", "video", "audio", "application"
+    // Sistema usa strings simples: "image", "video", "audio", "application", "sticker"
+    if (mediaType === 'sticker') {
+      return 'sticker';
+    }
     if (mediaType === 'image' || mediaType.startsWith('image/')) {
       return 'image';
     }
@@ -133,6 +146,7 @@ const MediaRenderer = ({
   return (
     <MediaContainer>
       <Suspense fallback={<LoadingFallback />}>
+        {mediaType === 'sticker' && <StickerMessage {...commonProps} />}
         {mediaType === 'image' && <ImageMessage {...commonProps} />}
         {mediaType === 'video' && <VideoMessage {...commonProps} />}
         {mediaType === 'audio' && <AudioMessage {...commonProps} />}
@@ -144,8 +158,8 @@ const MediaRenderer = ({
 
 // Otimização com React.memo - só re-renderizar se props essenciais mudaram
 export default memo(MediaRenderer, (prevProps, nextProps) => {
-  const prevMessage = prevProps.message;
-  const nextMessage = nextProps.message;
+  const prevMessage = prevProps.message || {};
+  const nextMessage = nextProps.message || {};
 
   return (
     prevMessage.id === nextMessage.id &&

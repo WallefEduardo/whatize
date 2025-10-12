@@ -20,6 +20,7 @@ import useAudioRecorder from '../../../hooks/useAudioRecorder';
 
 // Components
 import MediaPreviewModal from '../../ChatModerno/components/MediaPreviewModal';
+import StickerPicker from '../../ChatModerno/components/StickerPicker';
 
 // Icons
 import {
@@ -31,13 +32,13 @@ import {
   X,
   Pause,
   Play,
-  Trash2
+  Trash2,
+  Sticker
 } from 'lucide-react';
 
 // Heroicons para ícones mais bonitos
 import {
   PhotoIcon,
-  GifIcon,
   ArrowTopRightOnSquareIcon,
   CheckIcon
 } from '@heroicons/react/24/outline';
@@ -239,6 +240,7 @@ const MessageInput = ({
   onSendMessage,
   onSendAudio, // Callback para envio otimista de áudio
   onSendMedia, // Callback para envio otimista de mídias (fotos/vídeos/docs)
+  onSendSticker, // Callback para envio otimista de stickers
   disabled = false,
   placeholder = "Digite sua mensagem...",
   ticketId // Adicionar ticketId para envio de áudio
@@ -246,11 +248,13 @@ const MessageInput = ({
   const [message, setMessage] = useState('');
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [isAttachOpen, setIsAttachOpen] = useState(false);
+  const [isStickerPickerOpen, setIsStickerPickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const photoVideoInputRef = useRef(null);
   const documentInputRef = useRef(null);
+  const audioInputRef = useRef(null);
 
   // States para upload de mídias
   const [mediasUpload, setMediasUpload] = useState([]);
@@ -397,6 +401,39 @@ const MessageInput = ({
     setIsAttachOpen(false);
   };
 
+  // Abre o seletor de áudios
+  const handleAudioClick = () => {
+    audioInputRef.current?.click();
+    setIsAttachOpen(false);
+  };
+
+  // Abre o seletor de figurinhas
+  const handleStickerClick = () => {
+    setIsStickerPickerOpen(true);
+    setIsAttachOpen(false);
+  };
+
+  // Fecha o seletor de figurinhas
+  const handleCloseStickerPicker = () => {
+    setIsStickerPickerOpen(false);
+  };
+
+  // Envia uma figurinha selecionada
+  const handleSelectSticker = (sticker) => {
+    if (onSendSticker) {
+      onSendSticker(sticker);
+    }
+    setIsStickerPickerOpen(false);
+  };
+
+  // Abre modal para adicionar nova figurinha
+  const handleAddSticker = () => {
+    // Por enquanto, apenas abre o seletor de imagens
+    // No futuro, pode abrir um modal específico para criar stickers
+    photoVideoInputRef.current?.click();
+    setIsStickerPickerOpen(false);
+  };
+
   // Captura arquivos selecionados (fotos/vídeos)
   const handlePhotoVideoChange = (e) => {
     if (!e.target.files || e.target.files.length === 0) {
@@ -411,6 +448,18 @@ const MessageInput = ({
 
   // Captura arquivos selecionados (documentos)
   const handleDocumentChange = (e) => {
+    if (!e.target.files || e.target.files.length === 0) {
+      return;
+    }
+    const selectedMedias = Array.from(e.target.files).map(file => sanitizeFileForUpload(file));
+    setMediasUpload(selectedMedias);
+    setShowModalMedias(true);
+    // Limpar input para permitir selecionar o mesmo arquivo novamente
+    e.target.value = '';
+  };
+
+  // Captura arquivos de áudio selecionados
+  const handleAudioChange = (e) => {
     if (!e.target.files || e.target.files.length === 0) {
       return;
     }
@@ -675,6 +724,22 @@ const MessageInput = ({
         />
       )}
 
+      {/* Sticker Picker */}
+      {isStickerPickerOpen && (
+        <Box sx={{
+          position: 'absolute',
+          bottom: '70px',
+          left: '16px',
+          zIndex: 1000,
+        }}>
+          <StickerPicker
+            onSelectSticker={handleSelectSticker}
+            onClose={handleCloseStickerPicker}
+            onAddSticker={handleAddSticker}
+          />
+        </Box>
+      )}
+
       <InputContainer>
         {/* Reply Preview */}
         {replyingMessage && renderReplyingMessage(replyingMessage)}
@@ -778,7 +843,7 @@ const MessageInput = ({
                       style={{
                         width: '16px',
                         height: '16px',
-                        filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
+                        opacity: '0.6'
                       }}
                     />}
                   >
@@ -792,21 +857,23 @@ const MessageInput = ({
                       style={{
                         width: '16px',
                         height: '16px',
-                        filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
+                        opacity: '0.6'
                       }}
                     />}
                   >
                     Documento
                   </DropdownItem>
                   <DropdownItem
+                    onClick={handleStickerClick}
+                    icon={<Sticker size={16} />}
+                  >
+                    Figurinha
+                  </DropdownItem>
+                  <DropdownItem
+                    onClick={handleAudioClick}
                     icon={<Mic size={16} />}
                   >
                     Áudio
-                  </DropdownItem>
-                  <DropdownItem
-                    icon={<GifIcon style={{ width: '16px', height: '16px' }} />}
-                  >
-                    GIF
                   </DropdownItem>
                 </DropdownContent>
               </Dropdown>
@@ -827,6 +894,14 @@ const MessageInput = ({
                 style={{ display: 'none' }}
                 onChange={handleDocumentChange}
                 accept="application/*, text/*"
+              />
+              <input
+                ref={audioInputRef}
+                type="file"
+                multiple
+                style={{ display: 'none' }}
+                onChange={handleAudioChange}
+                accept="audio/*"
               />
             </ActionsContainer>
 

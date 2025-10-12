@@ -1,12 +1,18 @@
 'use strict';
 
 module.exports = {
-  up: (queryInterface, Sequelize) => {
-    return queryInterface.addColumn('Messages', 'reactions', {
-      type: Sequelize.JSON,
-      allowNull: true,
-      defaultValue: null
-    });
+  up: async (queryInterface, Sequelize) => {
+    const tableInfo = await queryInterface.describeTable('Messages');
+
+    if (!tableInfo.reactions) {
+      return queryInterface.addColumn('Messages', 'reactions', {
+        type: Sequelize.JSON,
+        allowNull: true,
+        defaultValue: null
+      });
+    }
+
+    return Promise.resolve();
   },
 
   down: (queryInterface, Sequelize) => {

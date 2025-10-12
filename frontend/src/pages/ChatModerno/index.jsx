@@ -1815,6 +1815,88 @@ const ChatModernoContent = () => {
     }
   };
 
+  // 🎨 Handle send sticker - VERSÃO OTIMISTA INSTANTÂNEA
+  const handleSendStickerMessage = async (sticker) => {
+    if (!selectedChatId || !sticker) {
+      return;
+    }
+
+    // 1. Gerar ID temporário único
+    const tempId = generateTempId();
+
+    // 2. Criar mensagem otimista de sticker
+    const tempMessage = {
+      id: tempId,
+      body: sticker.name || 'Figurinha',
+      fromMe: true,
+      ack: 0, // Relógio (enviando)
+      createdAt: new Date().toISOString(),
+      mediaUrl: sticker.mediaUrl, // URL do sticker
+      mediaType: 'sticker',
+      fileName: sticker.fileName,
+      fileSize: sticker.fileSize,
+      read: false,
+      quotedMsg: replyingMessage,
+      isPrivate: false,
+      user: {
+        id: user.id,
+        name: user.name,
+        profileImage: user.profileImage,
+        companyId: user.companyId
+      }
+    };
+
+    // 3. Adicionar no Map de otimistas
+    optimisticMessagesRef.current.set(tempId, tempMessage);
+    forceUpdate();
+
+    // 4. Scroll automático
+    scrollToBottomOnSend();
+
+    // 5. Micro-delay para React renderizar
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // 6. Enviar para backend
+    try {
+      // Buscar o arquivo original do sticker
+      const response = await fetch(sticker.mediaUrl);
+      const blob = await response.blob();
+
+      // Criar arquivo com nome apropriado
+      const stickerFile = new File(
+        [blob],
+        sticker.fileName || `sticker-${Date.now()}.webp`,
+        { type: blob.type || 'image/webp' }
+      );
+
+      const formData = new FormData();
+      formData.append('medias', stickerFile);
+      formData.append('body', 'sticker'); // ✅ Enviar 'sticker' para identificar como figurinha
+      formData.append('fromMe', true);
+
+      if (replyingMessage) {
+        formData.append('quotedMsg', JSON.stringify(replyingMessage));
+      }
+
+      await api.post(`/messages/${selectedChatId}`, formData);
+
+    } catch (error) {
+      console.error('❌ [handleSendSticker] Erro no envio:', error);
+
+      // Atualizar mensagem otimista para status de erro
+      const msg = optimisticMessagesRef.current.get(tempId);
+      if (msg) {
+        optimisticMessagesRef.current.set(tempId, { ...msg, ack: -1 });
+        forceUpdate();
+      }
+    }
+
+    // Limpar estado de reply
+    if (replyingMessage) {
+      setReplyingMessage(null);
+    }
+  };
+
   // Handle delete message - Agora abre modal ao invés de deletar diretamente
   const handleDeleteMessage = (messageId) => {
     const message = allMessages.find(msg => msg.id === messageId);
@@ -3119,6 +3201,7 @@ const ChatModernoContent = () => {
                     onSendMessage={handleSendMessage}
                     onSendAudio={handleSendAudioMessage}
                     onSendMedia={handleSendMediaMessage}
+                    onSendSticker={handleSendStickerMessage}
                     disabled={messagesLoading || currentTicket?.status === 'pending'}
                     placeholder={
                       currentTicket?.status === 'pending'

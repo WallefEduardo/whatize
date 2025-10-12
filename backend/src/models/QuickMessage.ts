@@ -29,9 +29,8 @@ class QuickMessage extends Model<QuickMessage> {
   @Column
   get mediaPath(): string | null {
     if (this.getDataValue("mediaPath")) {
-      
-      return `${process.env.BACKEND_URL}${process.env.PROXY_PORT ?`:${process.env.PROXY_PORT}`:""}/public/company${this.companyId}/quickMessage/${this.getDataValue("mediaPath")}`;
-
+      // Usar apenas BACKEND_URL sem PROXY_PORT (URL já contém a porta)
+      return `${process.env.BACKEND_URL}/public/company${this.companyId}/quickMessage/${this.getDataValue("mediaPath")}`;
     }
     return null;
   }

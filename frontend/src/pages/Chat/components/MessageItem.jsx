@@ -89,7 +89,7 @@ const MessageBubble = styled(Box, {
   borderRadius: '12px',
   wordBreak: 'break-word',
   position: 'relative',
-  
+
   ...(isDeleted ? {
     // Estilo para mensagens deletadas
     backgroundColor: 'var(--bg-tertiary)',
@@ -97,8 +97,8 @@ const MessageBubble = styled(Box, {
     fontStyle: 'italic',
     border: '1px dashed var(--border-secondary)',
   } : isSent ? {
-    backgroundColor: 'rgba(0, 195, 7, 0.15)', // Verde bem clarinho e transparente
-    color: 'var(--text-primary)', // Texto que se adapta ao tema
+    backgroundColor: 'rgba(0, 195, 7, 0.15)',
+    color: 'var(--text-primary)',
     borderBottomRightRadius: '4px',
   } : {
     backgroundColor: 'var(--bg-secondary)',
