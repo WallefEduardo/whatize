@@ -13,9 +13,13 @@ import Tooltip from '../../../components/ui/Tooltip';
 import api from '../../../services/api';
 import { toast } from '../../../components/ui/ToastProvider';
 import toastError from '../../../errors/toastError';
+import { sanitizeFileForUpload } from '../../../utils';
 
 // Hooks
 import useAudioRecorder from '../../../hooks/useAudioRecorder';
+
+// Components
+import MediaPreviewModal from '../../ChatModerno/components/MediaPreviewModal';
 
 // Icons
 import {
@@ -241,8 +245,15 @@ const MessageInput = ({
   const [message, setMessage] = useState('');
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [isAttachOpen, setIsAttachOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const photoVideoInputRef = useRef(null);
+  const documentInputRef = useRef(null);
+
+  // States para upload de mídias
+  const [mediasUpload, setMediasUpload] = useState([]);
+  const [showModalMedias, setShowModalMedias] = useState(false);
 
   // Hook de gravação de áudio com MediaRecorder API
   const {
@@ -371,18 +382,94 @@ const MessageInput = ({
     }
   };
 
-  // Handle file attachment
-  const handleFileAttach = () => {
-    fileInputRef.current?.click();
+  // ===== FUNÇÕES DE UPLOAD DE MÍDIAS =====
+
+  // Abre o seletor de fotos/vídeos
+  const handlePhotoVideoClick = () => {
+    photoVideoInputRef.current?.click();
     setIsAttachOpen(false);
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // In a real app, you'd handle file upload here
-      console.log('File selected:', file.name);
+  // Abre o seletor de documentos
+  const handleDocumentClick = () => {
+    documentInputRef.current?.click();
+    setIsAttachOpen(false);
+  };
+
+  // Captura arquivos selecionados (fotos/vídeos)
+  const handlePhotoVideoChange = (e) => {
+    if (!e.target.files || e.target.files.length === 0) {
+      return;
     }
+    const selectedMedias = Array.from(e.target.files).map(file => sanitizeFileForUpload(file));
+    setMediasUpload(selectedMedias);
+    setShowModalMedias(true);
+    // Limpar input para permitir selecionar o mesmo arquivo novamente
+    e.target.value = '';
+  };
+
+  // Captura arquivos selecionados (documentos)
+  const handleDocumentChange = (e) => {
+    if (!e.target.files || e.target.files.length === 0) {
+      return;
+    }
+    const selectedMedias = Array.from(e.target.files).map(file => sanitizeFileForUpload(file));
+    setMediasUpload(selectedMedias);
+    setShowModalMedias(true);
+    // Limpar input para permitir selecionar o mesmo arquivo novamente
+    e.target.value = '';
+  };
+
+  // Envia as mídias selecionadas para o backend
+  const handleUploadMedia = async (mediasUpload) => {
+    if (!ticketId) {
+      toast.error('Nenhum ticket selecionado');
+      return;
+    }
+
+    setLoading(true);
+
+    // Verificar se há mídias selecionadas
+    if (!mediasUpload || mediasUpload.length === 0) {
+      console.log("Nenhuma mídia selecionada.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Criar FormData seguindo o padrão do chat antigo
+      const formData = new FormData();
+      formData.append("fromMe", true);
+
+      // Adicionar cada mídia com sua legenda
+      mediasUpload.forEach((media) => {
+        formData.append("body", media.caption || '');
+        formData.append("medias", media.file);
+      });
+
+      // Enviar para o backend - mesma rota do chat antigo
+      await api.post(`/messages/${ticketId}`, formData);
+
+      // Sucesso!
+      setMediasUpload([]);
+      setShowModalMedias(false);
+
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fecha o modal de upload de mídias
+  const handleCloseModalMedias = () => {
+    setShowModalMedias(false);
+  };
+
+  // Cancela a seleção de mídias
+  const handleCancelMediaSelection = () => {
+    setMediasUpload([]);
+    setShowModalMedias(false);
   };
 
   // Funções para modo de seleção de mensagens
@@ -564,12 +651,24 @@ const MessageInput = ({
   };
 
   return (
-    <InputContainer>
-      {/* Reply Preview */}
-      {replyingMessage && renderReplyingMessage(replyingMessage)}
+    <>
+      {/* Modal de Upload de Mídias */}
+      {showModalMedias && (
+        <MediaPreviewModal
+          isOpen={showModalMedias}
+          files={mediasUpload}
+          onClose={handleCloseModalMedias}
+          onSend={handleUploadMedia}
+          onCancelSelection={handleCancelMediaSelection}
+        />
+      )}
 
-      {/* Edit Preview */}
-      {editingMessage && renderEditingMessage(editingMessage)}
+      <InputContainer>
+        {/* Reply Preview */}
+        {replyingMessage && renderReplyingMessage(replyingMessage)}
+
+        {/* Edit Preview */}
+        {editingMessage && renderEditingMessage(editingMessage)}
 
       {/* Input Row - Modo normal ou modo de seleção */}
       <InputRow>
@@ -659,40 +758,40 @@ const MessageInput = ({
                 </DropdownTrigger>
                 
                 <DropdownContent align="start" side="top">
-                  <DropdownItem 
-                    onClick={handleFileAttach}
-                    icon={<img 
-                      src={GaleriaImagensIcon} 
-                      alt="Foto" 
-                      style={{ 
-                        width: '16px', 
+                  <DropdownItem
+                    onClick={handlePhotoVideoClick}
+                    icon={<img
+                      src={GaleriaImagensIcon}
+                      alt="Foto"
+                      style={{
+                        width: '16px',
                         height: '16px',
                         filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
-                      }} 
+                      }}
                     />}
                   >
                     Foto ou Vídeo
                   </DropdownItem>
-                  <DropdownItem 
-                    onClick={handleFileAttach}
-                    icon={<img 
-                      src={NovoArquivoIcon} 
-                      alt="Documento" 
-                      style={{ 
-                        width: '16px', 
+                  <DropdownItem
+                    onClick={handleDocumentClick}
+                    icon={<img
+                      src={NovoArquivoIcon}
+                      alt="Documento"
+                      style={{
+                        width: '16px',
                         height: '16px',
                         filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
-                      }} 
+                      }}
                     />}
                   >
                     Documento
                   </DropdownItem>
-                  <DropdownItem 
+                  <DropdownItem
                     icon={<Mic size={16} />}
                   >
                     Áudio
                   </DropdownItem>
-                  <DropdownItem 
+                  <DropdownItem
                     icon={<GifIcon style={{ width: '16px', height: '16px' }} />}
                   >
                     GIF
@@ -700,63 +799,22 @@ const MessageInput = ({
                 </DropdownContent>
               </Dropdown>
 
-              {/* Photo/Gallery Icon */}
-              <Tooltip title="Enviar foto">
-                <IconButton
-                  onClick={handleFileAttach}
-                  sx={{
-                    p: 1,
-                    color: 'var(--color-accent)',
-                    '&:hover': { 
-                      color: 'var(--color-green-hover)',
-                      backgroundColor: 'rgba(0, 195, 7, 0.1)'
-                    }
-                  }}
-                >
-                  <img 
-                    src={GaleriaImagensIcon} 
-                    alt="Galeria" 
-                    style={{ 
-                      width: '20px', 
-                      height: '20px',
-                      filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
-                    }} 
-                  />
-                </IconButton>
-              </Tooltip>
-
-              {/* Document Icon */}
-              <Tooltip title="Enviar documento">
-                <IconButton
-                  onClick={handleFileAttach}
-                  sx={{
-                    p: 1,
-                    color: 'var(--color-accent)',
-                    '&:hover': { 
-                      color: 'var(--color-green-hover)',
-                      backgroundColor: 'rgba(0, 195, 7, 0.1)'
-                    }
-                  }}
-                >
-                  <img 
-                    src={NovoArquivoIcon} 
-                    alt="Documento" 
-                    style={{ 
-                      width: '20px', 
-                      height: '20px',
-                      filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
-                    }} 
-                  />
-                </IconButton>
-              </Tooltip>
-
-              {/* Hidden File Input */}
+              {/* Hidden File Inputs */}
               <input
-                ref={fileInputRef}
+                ref={photoVideoInputRef}
                 type="file"
+                multiple
                 style={{ display: 'none' }}
-                onChange={handleFileChange}
-                accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={handlePhotoVideoChange}
+                accept="image/*, video/*"
+              />
+              <input
+                ref={documentInputRef}
+                type="file"
+                multiple
+                style={{ display: 'none' }}
+                onChange={handleDocumentChange}
+                accept="application/*, text/*"
               />
             </ActionsContainer>
 
@@ -915,6 +973,7 @@ const MessageInput = ({
         )}
       </InputRow>
     </InputContainer>
+    </>
   );
 };
 
