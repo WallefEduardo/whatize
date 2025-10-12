@@ -233,6 +233,7 @@ const mockEmojis = [
 
 const MessageInput = ({
   onSendMessage,
+  onSendAudio, // Callback para envio otimista de áudio
   disabled = false,
   placeholder = "Digite sua mensagem...",
   ticketId // Adicionar ticketId para envio de áudio
@@ -431,6 +432,15 @@ const MessageInput = ({
       return;
     }
 
+    // Se houver callback onSendAudio (chat moderno com envio otimista)
+    if (onSendAudio) {
+      // Passar blob + duration para envio otimista
+      onSendAudio(audioBlob, recordingTime);
+      resetRecorder();
+      return;
+    }
+
+    // Fallback para envio direto (chat antigo)
     if (!ticketId) {
       toast.error('Nenhum ticket selecionado');
       return;

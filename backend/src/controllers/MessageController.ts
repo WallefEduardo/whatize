@@ -319,11 +319,14 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   // ### Fim da Verificação de Limite ###
 
   try {
+    // Array para armazenar IDs das mensagens enviadas (Baileys retorna message.key.id)
+    const sentMessagesIds: string[] = [];
+
     if (medias) {
       await Promise.all(
         medias.map(async (media: Express.Multer.File, index) => {
           if (ticket.channel === "whatsapp") {
-            await SendWhatsAppMedia({
+            const sentMessage = await SendWhatsAppMedia({
               media,
               ticket,
               body: Array.isArray(body) ? body[index] : body,
@@ -331,6 +334,12 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
               isForwarded: false,
               userId: Number(req.user.id)
             });
+
+            // ✅ Armazenar ID da mensagem retornada pelo Baileys
+            if (sentMessage?.key?.id) {
+              sentMessagesIds.push(sentMessage.key.id);
+              logger.info(`✅ [MSG-CONTROLLER] Baileys retornou message ID: ${sentMessage.key.id}`);
+            }
           }
 
           if (["facebook", "instagram"].includes(ticket.channel)) {
@@ -360,26 +369,31 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       );
     } else {
       if (ticket.channel === "whatsapp" && isPrivate === "false") {
-        logger.info(`🚀 [MSG-CONTROLLER] Iniciando envio WhatsApp: { 
-          ticketId: ${ticket.id}, 
-          contactId: ${ticket.contactId}, 
+        logger.info(`🚀 [MSG-CONTROLLER] Iniciando envio WhatsApp: {
+          ticketId: ${ticket.id},
+          contactId: ${ticket.contactId},
           contactNumber: '${ticket.contact?.number}',
           whatsappId: ${ticket.whatsappId},
           bodyLength: ${body?.length},
           userId: ${req.user.id},
           companyId: ${companyId}
         }`);
-        
+
         try {
           logger.info(`📤 [MSG-CONTROLLER] Chamando SendWhatsAppMessage...`);
-          const result = await SendWhatsAppMessage({ 
-            body, 
-            ticket, 
-            quotedMsg, 
-            vCard, 
-            userId: Number(req.user.id) 
+          const result = await SendWhatsAppMessage({
+            body,
+            ticket,
+            quotedMsg,
+            vCard,
+            userId: Number(req.user.id)
           });
-          
+
+          // ✅ Armazenar ID da mensagem retornada pelo Baileys (mensagens de texto)
+          if (result?.key?.id) {
+            sentMessagesIds.push(result.key.id);
+          }
+
           logger.info(`✅ [MSG-CONTROLLER] SendWhatsAppMessage concluído com sucesso: {
             messageId: '${result?.key?.id}',
             remoteJid: '${result?.key?.remoteJid}',
@@ -423,7 +437,13 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
         }
       }
     }
-    return res.send();
+
+    // ✅ Retornar IDs das mensagens enviadas pelo Baileys pro frontend
+    logger.info(`✅ [MSG-CONTROLLER] Retornando ${sentMessagesIds.length} message IDs para o frontend`);
+    return res.json({
+      success: true,
+      messageIds: sentMessagesIds // Array com IDs retornados pelo Baileys
+    });
   } catch (error) {
     console.error('Erro ao processar mensagem:', error);
     return res.status(500).json({

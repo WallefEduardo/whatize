@@ -264,10 +264,53 @@ const ChatModernoContent = () => {
   // 🎯 Estado para modal de finalizar conversa
   const [showCloseTicketModal, setShowCloseTicketModal] = useState(false);
   
-  // 🚀 Estados otimistas para mensagens instantâneas
-  const [optimisticMessages, setOptimisticMessages] = useState(new Map());
-  const [messageQueue, setMessageQueue] = useState(new Map());
+  // 🚀 NOVA LÓGICA OTIMISTA SIMPLIFICADA
+  // Apenas 1 contador para IDs temporários
   const tempIdCounter = useRef(0);
+
+  // Map para armazenar mensagens otimistas (enviadas mas ainda não confirmadas pelo servidor)
+  const optimisticMessagesRef = useRef(new Map());
+
+  // Hook para forçar re-render quando necessário
+  // O counter aumenta sempre que forceUpdate() é chamado, forçando re-renders
+  const [updateCounter, forceUpdate] = useReducer(x => x + 1, 0);
+
+  // 🔍 DEBUG: Rastrear mudanças no updateCounter
+  useEffect(() => {
+    const timestamp = new Date().toISOString().split('T')[1];
+    console.log(`🔢 [updateCounter] ${timestamp} - Counter mudou para:`, updateCounter);
+  }, [updateCounter]);
+
+  // 🧹 LIMPEZA AUTOMÁTICA: Remover mensagens otimistas antigas (>10 segundos sem resposta)
+  useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      let removedCount = 0;
+
+      for (const [tempId, optMsg] of optimisticMessagesRef.current.entries()) {
+        const age = now - new Date(optMsg.createdAt).getTime();
+
+        if (age > 10000) { // 10 segundos
+          console.log('🧹 [CLEANUP] Removendo mensagem otimista antiga:', tempId, 'idade:', Math.round(age / 1000), 's');
+          optimisticMessagesRef.current.delete(tempId);
+          removedCount++;
+        }
+      }
+
+      if (removedCount > 0) {
+        console.log('🧹 [CLEANUP] Removidas', removedCount, 'mensagens otimistas antigas');
+        forceUpdate(); // Re-render para atualizar allMessages
+      }
+    }, 5000); // Rodar a cada 5 segundos
+
+    return () => clearInterval(cleanupInterval);
+  }, []);
+
+  // Fila de mensagens pendentes (aguardando confirmação do servidor)
+  const [messageQueue, setMessageQueue] = useState(new Map());
+
+  // Atalho para acessar o Map de mensagens otimistas
+  const optimisticMessages = optimisticMessagesRef.current;
 
   // 🚀 OTIMIZAÇÃO: Set para verificação rápida de duplicatas (O(1))
   const [messageIds, setMessageIds] = useState(new Set());
@@ -727,37 +770,119 @@ const ChatModernoContent = () => {
     };
 
     const onCompanyAppMessage = (data) => {
-      // 🚀 RECONCILIAÇÃO OTIMISTA INTELIGENTE
+      // 🚀 RECONCILIAÇÃO OTIMISTA REFATORADA (React 18.3.1)
       if (data.action === "create" && data.message) {
-        // Verificar se é mensagem que estava pendente (reconciliação)
-        const tempMessage = findOptimisticByContent(data.message.body);
-        if (tempMessage) {
-          // Substituir otimista por mensagem real
-          replaceOptimisticMessage(tempMessage.id, data.message);
-          
-          // Atualizar lista de mensagens real (se for o chat atual)
-          if (data.message.ticketId?.toString() === selectedChatId?.toString()) {
-            // 🚀 OTIMIZAÇÃO: Verificação rápida de duplicatas com Set (O(1))
-            if (!messageIds.has(data.message.id)) {
-              setMessages(prev => [...prev, data.message].sort((a, b) =>
-                new Date(a.createdAt) - new Date(b.createdAt)
-              ));
-              setMessageIds(prev => new Set([...prev, data.message.id]));
+        // Se for mensagem do chat atual
+        if (data.message.ticketId?.toString() === selectedChatId?.toString()) {
+
+          console.log('📨 [Socket] Nova mensagem recebida:', data.message.id);
+
+          // 🎯 RECONCILIAÇÃO: Se for mensagem minha, buscar otimista correspondente
+          if (data.message.fromMe) {
+            console.log('🔍 [Socket] Mensagem minha, buscando otimista...');
+            console.log('📊 [Socket] Otimistas no Map:', optimisticMessagesRef.current.size);
+
+            let foundOptimistic = null;
+            let foundTempId = null;
+
+            // Buscar no Map de otimistas (NÃO em messages!)
+            for (const [tempId, optMsg] of optimisticMessagesRef.current.entries()) {
+              const timeDiff = Math.abs(
+                new Date(optMsg.createdAt).getTime() -
+                new Date(data.message.createdAt).getTime()
+              );
+
+              // ✅ MATCH INTELIGENTE: Considerar "chat" e "extendedTextMessage" como texto
+              const isTextMessage = (type) => {
+                return type === 'chat' || type === 'extendedTextMessage' || type === 'conversation';
+              };
+
+              const typeMatches =
+                optMsg.mediaType === data.message.mediaType || // Match exato
+                (isTextMessage(optMsg.mediaType) && isTextMessage(data.message.mediaType)); // Ambos texto
+
+              const isMatch =
+                typeMatches &&
+                optMsg.fromMe &&
+                timeDiff < 5000; // 5 segundos de tolerância
+
+              if (isMatch) {
+                foundOptimistic = optMsg;
+                foundTempId = tempId;
+                console.log('✅ [Socket] Otimista encontrada:', tempId, '| Match type:', optMsg.mediaType, '→', data.message.mediaType);
+                break;
+              }
+            }
+
+            if (foundOptimistic && foundTempId) {
+              // ✅ UPDATE IN-PLACE: Substituir dados da otimista pelos dados reais (SEM remover/adicionar)
+              console.log('🔄 [Socket] UPDATE IN-PLACE:', foundTempId, '→', data.message.id);
+
+              // 1. Revogar blob URL (síncrono)
+              if (foundOptimistic.mediaUrl?.startsWith('blob:')) {
+                URL.revokeObjectURL(foundOptimistic.mediaUrl);
+                console.log('🗑️ [Socket] Blob URL revogado');
+              }
+
+              // 2. Preparar mensagem atualizada (mantém estrutura, atualiza dados)
+              const updatedMessage = {
+                ...foundOptimistic, // Mantém dados otimistas
+                ...data.message, // Sobrescreve com dados reais do backend
+                id: data.message.id, // ✅ USAR ID DO BAILEYS
+                ack: data.message.ack || 1, // ✅ Atualizar ack (relógio → check)
+                mediaUrl: data.message.mediaUrl, // ✅ URL real do backend
+                audioDuration: data.message.audioDuration || foundOptimistic.audioDuration
+              };
+
+              console.log('✨ [Socket] UPDATE IN-PLACE - Substituindo no Map:', {
+                tempId: foundTempId,
+                newId: updatedMessage.id,
+                oldAck: foundOptimistic.ack,
+                newAck: updatedMessage.ack
+              });
+
+              // 3. ✅ SUBSTITUIR no Map (DELETE temp + SET real NO MESMO MOMENTO)
+              optimisticMessagesRef.current.delete(foundTempId); // Remove temp
+              // NÃO adiciona no Map - vai direto pro messages[] como real
+
+              // 4. ✅ Adicionar em messages[] (fonte de verdade)
+              setMessages(prev => {
+                // Verificar se já não existe
+                if (prev.some(msg => msg.id === updatedMessage.id)) {
+                  console.log('⚠️ [Socket] Mensagem JÁ EXISTE em messages');
+                  return prev;
+                }
+                console.log('✅ [Socket] Adicionando mensagem REAL em messages (otimista virou real)');
+                return [...prev, updatedMessage];
+              });
+
+              setMessageIds(prev => new Set([...prev, updatedMessage.id]));
+
+              // 5. forceUpdate() para recalcular allMessages (Map mudou - temp foi removido)
+              forceUpdate();
+
+              console.log('✅ [Socket] UPDATE IN-PLACE completo!');
+              console.log('📊 [Socket] Otimistas restantes no Map:', optimisticMessagesRef.current.size);
+
+              return; // ✅ Não executar código abaixo (evitar duplicata)
+            } else {
+              console.log('⚠️ [Socket] Otimista NÃO encontrada, adicionando como nova');
             }
           }
-        } else if (data.message.ticketId?.toString() === selectedChatId?.toString()) {
-          // 📨 MENSAGEM NOVA de outro usuário
-          // 🚀 OTIMIZAÇÃO: Verificação rápida de duplicatas com Set (O(1))
+
+          // 📨 MENSAGEM NOVA (de outro usuário ou sem otimista correspondente)
           if (!messageIds.has(data.message.id)) {
-            setMessages(prev => [...prev, data.message].sort((a, b) =>
-              new Date(a.createdAt) - new Date(b.createdAt)
-            ));
+            console.log('✅ [Socket] Adicionando mensagem nova:', data.message.id);
+
+            setMessages(prev => [...prev, data.message]);
             setMessageIds(prev => new Set([...prev, data.message.id]));
 
             // 🚀 INCREMENTAR CONTADOR se usuário não está no final da conversa
             if (isScrolledUp && !data.message.fromMe) {
               setNewMessagesCount(prev => prev + 1);
             }
+          } else {
+            console.log('⚠️ [Socket] Mensagem duplicada ignorada:', data.message.id);
           }
         }
       }
@@ -812,24 +937,18 @@ const ChatModernoContent = () => {
             return hasChanges ? [...updatedMessages] : prev;
           });
         }
-
-        // Remover das mensagens otimistas se existir
-        removeOptimisticMessage(data.message.id);
       }
 
       // Tratamento para mensagens deletadas
       if (data.action === "delete" && data.message) {
         if (data.message.ticketId?.toString() === selectedChatId?.toString()) {
-          setMessages(prev => 
+          setMessages(prev =>
             prev.filter(msg => msg.id !== data.message.id)
           );
         }
-        
-        // Remover das mensagens otimistas se existir
-        removeOptimisticMessage(data.message.id);
-        
+
         // Remover das mensagens fixadas se existir
-        setPinnedMessages(prev => 
+        setPinnedMessages(prev =>
           prev.filter(msg => msg.id !== data.message.id)
         );
       }
@@ -966,84 +1085,34 @@ const ChatModernoContent = () => {
 
   // 🚀 FUNÇÕES OTIMISTAS ULTRA-PERFORMÁTICAS
   
-  // Gerador de IDs únicos para mensagens temporárias  
+  // Gerador de IDs únicos para mensagens temporárias
   const generateTempId = useCallback(() => {
     return `temp_${Date.now()}_${++tempIdCounter.current}_${user?.id || 'unknown'}`;
   }, [user?.id]);
 
   // Atualizar status de mensagem otimista
   const updateOptimisticStatus = useCallback((tempId, newAck) => {
-    setOptimisticMessages(prev => {
-      const updated = new Map(prev);
-      const message = updated.get(tempId);
-      if (message) {
-        updated.set(tempId, { ...message, ack: newAck });
-      }
-      return updated;
-    });
-  }, []);
+    console.log('🔄 [updateOptimisticStatus] Atualizando status:', tempId, 'para ack:', newAck);
 
-  // Substituir mensagem otimista por real do servidor
-  const replaceOptimisticMessage = useCallback((tempId, realMessage) => {
-    setOptimisticMessages(prev => {
-      const updated = new Map(prev);
-      const optimisticMessage = prev.get(tempId);
+    const message = optimisticMessagesRef.current.get(tempId);
 
-      // 🎯 PRESERVAR dados do usuário da mensagem otimista
-      if (optimisticMessage && optimisticMessage.user) {
-        // Merge inteligente: usar dados do servidor + preservar user da otimista
-        const mergedMessage = {
-          ...realMessage,
-          user: optimisticMessage.user // Preservar dados completos do usuário
-        };
-
-        // Se a mensagem real também tem user mas sem dados completos, fazer merge
-        if (realMessage.user) {
-          mergedMessage.user = {
-            ...optimisticMessage.user,
-            ...realMessage.user,
-            // Garantir que campos essenciais são preservados
-            profileImage: optimisticMessage.user.profileImage || realMessage.user.profileImage,
-            companyId: optimisticMessage.user.companyId || realMessage.user.companyId
-          };
-        }
-
-        // Atualizar a mensagem real no array principal
-        setMessages(prev => prev.map(msg =>
-          msg.id === realMessage.id ? mergedMessage : msg
-        ));
-      }
-
-      updated.delete(tempId);
-      return updated;
-    });
-  }, []);
-
-  // Remover mensagem otimista (para deleteMessage)
-  const removeOptimisticMessage = useCallback((messageId) => {
-    setOptimisticMessages(prev => {
-      const updated = new Map(prev);
-      // Verificar se existe uma mensagem otimista com esse ID real
-      for (const [tempId, message] of prev.entries()) {
-        if (message.id === messageId) {
-          updated.delete(tempId);
-          break;
-        }
-      }
-      return updated;
-    });
-  }, []);
-
-  // Encontrar mensagem otimista por conteúdo (para reconciliação)
-  const findOptimisticByContent = useCallback((bodyContent) => {
-    for (const [tempId, message] of optimisticMessages.entries()) {
-      if (message.body === bodyContent && message.fromMe) {
-        return { id: tempId, ...message };
-      }
+    if (!message) {
+      console.warn('⚠️ [updateOptimisticStatus] Mensagem não encontrada:', tempId);
+      console.log('📊 [updateOptimisticStatus] Keys disponíveis:', Array.from(optimisticMessagesRef.current.keys()));
+      return;
     }
-    return null;
-  }, [optimisticMessages]);
 
+    console.log('✅ [updateOptimisticStatus] Mensagem encontrada, atualizando...');
+
+    // Atualizar diretamente no Ref
+    optimisticMessagesRef.current.set(tempId, { ...message, ack: newAck });
+    forceUpdate(); // Forçar re-render
+
+    console.log('✅ [updateOptimisticStatus] Status atualizado com sucesso!');
+  }, []);
+
+  // 🎯 NOVA LÓGICA OTIMISTA SIMPLIFICADA
+  // Reconciliar mensagem otimista (temp_xxx) com mensagem real do servidor
   // 🚀 OTIMIZAÇÃO: Função pura não precisa de useCallback (Risco Zero)
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -1061,113 +1130,6 @@ const ChatModernoContent = () => {
   const getMessageReactions = useCallback((messageId) => {
     return messageReactions[messageId] || [];
   }, [messageReactions]);
-
-  // 🚀 BACKGROUND PROCESSING COM RETRY INTELIGENTE
-  const sendToBackend = useCallback(async (tempId, messageText, quotedMessage = null) => {
-    const maxRetries = 3;
-    let attempt = 0;
-    
-    while (attempt < maxRetries) {
-      try {
-        // Atualizar para "enviando" se ainda não foi  
-        if (attempt === 0) {
-          updateOptimisticStatus(tempId, 0);
-        }
-        
-        const messageData = {
-          read: 1,
-          fromMe: true,
-          mediaUrl: "",
-          body: messageText.trim(),
-          quotedMsg: quotedMessage, // Incluir mensagem citada se existir
-          isPrivate: "false"
-        };
-        
-        const response = await api.post(`/messages/${selectedChatId}`, messageData);
-        
-        // ✅ SUCESSO: Atualizar status para enviado
-        updateOptimisticStatus(tempId, 1);
-        
-        // Remover da queue de pendentes
-        setMessageQueue(prev => {
-          const updated = new Map(prev);
-          updated.delete(tempId);
-          return updated;
-        });
-        
-        // Recarregar mensagens para ver a nova mensagem real
-        setTimeout(() => {
-          if (selectedChatId) {
-            api.get(`/messages/${selectedChatId}`)
-              .then(response => {
-                const messagesData = response.data.messages || [];
-                setMessages(Array.isArray(messagesData) ? messagesData : []);
-                
-                // Tentar reconciliar com mensagem otimista
-                const realMessage = messagesData.find(msg => 
-                  msg.body === messageText.trim() && 
-                  msg.fromMe && 
-                  new Date(msg.createdAt).getTime() > Date.now() - 10000
-                );
-                
-                if (realMessage) {
-                  replaceOptimisticMessage(tempId, realMessage);
-                }
-              })
-              .catch(error => console.error('Erro ao recarregar mensagens:', error));
-          }
-        }, 500);
-        
-        return;
-        
-      } catch (error) {
-        attempt++;
-        
-        if (attempt >= maxRetries) {
-          // ❌ FALHA FINAL: Marcar como erro
-          updateOptimisticStatus(tempId, -1);
-          
-          // Manter na queue para retry manual futuro
-          setMessageQueue(prev => {
-            const updated = new Map(prev);
-            updated.set(tempId, { 
-              messageText, 
-              status: 'failed', 
-              lastAttempt: Date.now() 
-            });
-            return updated;
-          });
-        } else {
-          // ⏳ RETRY: Aguardar com backoff exponencial  
-          const delay = 1000 * Math.pow(2, attempt);
-          await sleep(delay);
-        }
-      }
-    }
-  }, [selectedChatId, updateOptimisticStatus, replaceOptimisticMessage, sleep]);
-
-  // 🚀 RETRY MANUAL para mensagens com erro (APÓS sendToBackend)
-  const retryFailedMessage = useCallback((tempId) => {
-    const message = optimisticMessages.get(tempId);
-    const queueItem = messageQueue.get(tempId);
-    
-    if (message && queueItem && message.ack === -1) {
-      // Voltar status para "enviando"
-      updateOptimisticStatus(tempId, 0);
-      
-      // Atualizar queue
-      setMessageQueue(prev => new Map(prev.set(tempId, {
-        ...queueItem,
-        status: 'retrying',
-        lastAttempt: Date.now()
-      })));
-      
-      // Reenviar
-      sendToBackend(tempId, message.body, message.quotedMsg).catch(error => {
-        console.error('Erro no retry manual:', error);
-      });
-    }
-  }, [optimisticMessages, messageQueue, updateOptimisticStatus, sendToBackend]);
 
   // Handler para busca otimizada
   const handleSearch = useCallback((event) => {
@@ -1403,16 +1365,77 @@ const ChatModernoContent = () => {
   }, []);
 
   // 🚀 RENDERING HÍBRIDO - Mesclar mensagens reais com otimistas
+  // 🎯 NOVA LÓGICA SIMPLIFICADA: Todas as mensagens já estão em 'messages'
+  // Não precisa mais mesclar/filtrar - apenas ordenar!
+  // 🚀 MERGE INTELIGENTE: Combina mensagens reais + otimistas (SEM DUPLICAR)
   const allMessages = useMemo(() => {
+    const timestamp = new Date().toISOString().split('T')[1];
+    console.log(`🔄 [allMessages] ${timestamp} - RECALCULANDO allMessages...`);
+
+    // 1. Mensagens reais do backend
     const realMessages = messages || [];
-    const optimisticArray = Array.from(optimisticMessages.values());
-    
-    // Combinar mensagens reais com otimistas
-    const combined = [...realMessages, ...optimisticArray]
-      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    
-    return combined;
-  }, [messages, optimisticMessages]);
+    console.log(`📦 [allMessages] ${timestamp} - Real messages:`, realMessages.length);
+
+    // 2. Mensagens otimistas do Map
+    const optimisticArray = Array.from(optimisticMessagesRef.current.values());
+    console.log('⏳ [allMessages] Optimistic messages no Map:', optimisticArray.length);
+
+    if (optimisticArray.length > 0) {
+      console.log('⏳ [allMessages] Detalhes das otimistas:', optimisticArray.map(m => ({
+        id: m.id,
+        mediaType: m.mediaType,
+        createdAt: m.createdAt,
+        ack: m.ack
+      })));
+    }
+
+    // 3. Filtrar otimistas que já viraram reais (evitar duplicata)
+    const activeOptimistic = optimisticArray.filter(optMsg => {
+      // Verificar se existe mensagem real correspondente (5 segundos de diferença)
+      const hasRealVersion = realMessages.some(realMsg => {
+        const timeDiff = Math.abs(new Date(realMsg.createdAt).getTime() - new Date(optMsg.createdAt).getTime());
+        const isMatch = realMsg.fromMe &&
+          realMsg.mediaType === optMsg.mediaType &&
+          timeDiff < 5000;
+
+        if (isMatch) {
+          console.log('🔍 [allMessages] Encontrou versão real para otimista:', {
+            optId: optMsg.id,
+            realId: realMsg.id,
+            timeDiff
+          });
+        }
+        return isMatch;
+      });
+      return !hasRealVersion; // Manter apenas se NÃO tem versão real
+    });
+
+    console.log('✅ [allMessages] Otimistas ATIVAS (após filtro):', activeOptimistic.length);
+
+    if (activeOptimistic.length > 0) {
+      console.log('✅ [allMessages] IDs das otimistas ativas:', activeOptimistic.map(m => m.id));
+    }
+
+    // 4. Merge e ordenar por data
+    const merged = [...realMessages, ...activeOptimistic].sort((a, b) =>
+      new Date(a.createdAt) - new Date(b.createdAt)
+    );
+
+    // 5. 🔍 DETECTOR DE DUPLICATAS
+    const idCounts = {};
+    merged.forEach(msg => {
+      idCounts[msg.id] = (idCounts[msg.id] || 0) + 1;
+    });
+    const duplicates = Object.entries(idCounts).filter(([id, count]) => count > 1);
+    if (duplicates.length > 0) {
+      console.error(`🚨 [allMessages] ${timestamp} - DUPLICATAS DETECTADAS:`, duplicates);
+    }
+
+    const lastThreeIds = merged.slice(-3).map(m => `${m.id} (${m.mediaType})`);
+    console.log(`📊 [allMessages] ${timestamp} - Total final: ${merged.length} | Últimas 3: ${lastThreeIds.join(', ')}`);
+
+    return merged;
+  }, [messages, updateCounter]); // updateCounter força re-computação quando optimisticRef muda
 
   // 🚀 DETECÇÃO DE SCROLL OTIMIZADA
   const handleScroll = useCallback(() => {    
@@ -1599,25 +1622,28 @@ const ChatModernoContent = () => {
     }
   };
 
-  // 🚀 Handle send message - VERSÃO OTIMISTA INSTANTÂNEA
+  // 🚀 Handle send message - VERSÃO OTIMISTA INSTANTÂNEA (REFATORADA)
   const handleSendMessage = async (message) => {
     if (!selectedChatId || !message.trim()) {
       return;
     }
-    
-    // 🚀 ADIÇÃO INSTANTÂNEA (0ms lag)
+
+    console.log('💬 [handleSendMessage] Iniciando envio...');
+
+    // 1. Gerar ID temporário único
     const tempId = generateTempId();
+
+    // 2. Criar mensagem otimista
     const tempMessage = {
       id: tempId,
       body: message.trim(),
       fromMe: true,
-      ack: 0, // Status: enviando (relógio)
+      ack: 0, // Relógio (enviando)
       createdAt: new Date().toISOString(),
-      isOptimistic: true,
       mediaUrl: "",
       mediaType: "chat",
       read: false,
-      quotedMsg: replyingMessage, // Incluir mensagem sendo respondida
+      quotedMsg: replyingMessage,
       isPrivate: false,
       user: {
         id: user.id,
@@ -1626,25 +1652,134 @@ const ChatModernoContent = () => {
         companyId: user.companyId
       }
     };
-    
-    // Adicionar instantaneamente à lista otimista
-    setOptimisticMessages(prev => new Map(prev.set(tempId, tempMessage)));
-    
-    // Adicionar à queue de pendentes
-    setMessageQueue(prev => new Map(prev.set(tempId, { 
-      messageText: message.trim(), 
-      status: 'pending',
-      createdAt: Date.now()
-    })));
-    
-    
-    // 🚀 SCROLL AUTOMÁTICO - Desce pro final quando EU envio
+
+    // 3. ✅ Adicionar no Map de otimistas (NÃO em messages!)
+    optimisticMessagesRef.current.set(tempId, tempMessage);
+    forceUpdate();
+
+    console.log('✅ [handleSendMessage] Mensagem otimista adicionada no Map:', tempId);
+    console.log('📊 [handleSendMessage] Total otimistas:', optimisticMessagesRef.current.size);
+
+    // 4. Scroll automático
     scrollToBottomOnSend();
-    
-    // 🚀 ENVIO BACKGROUND ASSÍNCRONO
-    sendToBackend(tempId, message.trim(), replyingMessage).catch(error => {
-      console.error('Erro no envio background:', error);
-    });
+
+    // 5. Enviar para backend (assíncrono)
+    try {
+      const messageData = {
+        read: 1,
+        fromMe: true,
+        mediaUrl: "",
+        body: message.trim(),
+        quotedMsg: replyingMessage,
+        isPrivate: "false"
+      };
+
+      console.log('📤 [handleSendMessage] Enviando para backend...');
+
+      await api.post(`/messages/${selectedChatId}`, messageData);
+
+      console.log('✅ [handleSendMessage] Backend respondeu! Socket vai receber e reconciliar.');
+
+    } catch (error) {
+      console.error('❌ [handleSendMessage] Erro no envio:', error);
+
+      // Atualizar mensagem otimista para status de erro
+      const msg = optimisticMessagesRef.current.get(tempId);
+      if (msg) {
+        optimisticMessagesRef.current.set(tempId, { ...msg, ack: -1 });
+        forceUpdate();
+      }
+    }
+  };
+
+  // 🚀 Handle send audio - VERSÃO OTIMISTA INSTANTÂNEA (REFATORADA)
+  const handleSendAudioMessage = async (audioBlob, audioDuration = 0) => {
+    if (!selectedChatId || !audioBlob) {
+      return;
+    }
+
+    console.log('🎤 [handleSendAudio] Iniciando envio... Duration:', audioDuration, 'segundos');
+
+    // 1. Gerar ID temporário único
+    const tempId = generateTempId();
+    const filename = `audio-${Date.now()}.webm`;
+
+    // 2. Criar URL temporária do blob para preview imediato
+    const tempAudioUrl = URL.createObjectURL(audioBlob);
+
+    // 3. Criar mensagem otimista
+    const tempMessage = {
+      id: tempId,
+      body: "Áudio",
+      fromMe: true,
+      ack: 0, // Relógio (enviando)
+      createdAt: new Date().toISOString(),
+      mediaUrl: tempAudioUrl, // Blob local
+      mediaType: "audio",
+      audioDuration: audioDuration,
+      read: false,
+      quotedMsg: replyingMessage,
+      isPrivate: false,
+      user: {
+        id: user.id,
+        name: user.name,
+        profileImage: user.profileImage,
+        companyId: user.companyId
+      }
+    };
+
+    // 4. ✅ Adicionar no Map de otimistas (NÃO em messages!)
+    optimisticMessagesRef.current.set(tempId, tempMessage);
+
+    console.log('✅ [handleSendAudio] Mensagem otimista adicionada no Map:', tempId);
+    console.log('📊 [handleSendAudio] Total otimistas:', optimisticMessagesRef.current.size);
+    console.log('🔄 [handleSendAudio] Chamando forceUpdate() para re-render...');
+
+    forceUpdate(); // Força re-render
+
+    console.log('✅ [handleSendAudio] forceUpdate() chamado! Counter atual:', updateCounter);
+
+    // 5. Scroll automático
+    scrollToBottomOnSend();
+
+    // 6. Enviar para backend (assíncrono)
+    try {
+      const formData = new FormData();
+      const audioFile = new File([audioBlob], filename, { type: 'audio/webm' });
+
+      formData.append('medias', audioFile);
+      formData.append('body', filename);
+      formData.append('fromMe', true);
+
+      if (replyingMessage) {
+        formData.append('quotedMsg', JSON.stringify(replyingMessage));
+      }
+
+      console.log('📤 [handleSendAudio] Enviando para backend...');
+
+      const response = await api.post(`/messages/${selectedChatId}`, formData);
+
+      console.log('✅ [handleSendAudio] Backend respondeu:', response.data);
+
+      // ✅ BAILEYS: Backend retorna message.key.id
+      if (response.data?.messageIds && response.data.messageIds.length > 0) {
+        const baileysId = response.data.messageIds[0];
+        console.log('🎯 [handleSendAudio] Baileys ID recebido:', baileysId);
+        console.log('🔄 [handleSendAudio] Aguardando Socket fazer UPDATE in-place...');
+      } else {
+        console.log('⚠️ [handleSendAudio] Backend NÃO retornou messageIds! Socket vai reconciliar por match.');
+      }
+
+    } catch (error) {
+      console.error('❌ [handleSendAudio] Erro no envio:', error);
+
+      // Atualizar mensagem otimista para status de erro
+      const msg = optimisticMessagesRef.current.get(tempId);
+      if (msg) {
+        optimisticMessagesRef.current.set(tempId, { ...msg, ack: -1 });
+        forceUpdate();
+      }
+    }
   };
 
   // Handle delete message - Agora abre modal ao invés de deletar diretamente
@@ -1901,61 +2036,24 @@ const ChatModernoContent = () => {
     setSelectedContact(contact || null);
   }, [selectedChatId, contacts]);
 
-  // 🚀 MEMORY MANAGEMENT & CLEANUP
-  useEffect(() => {
-    // Limpeza automática de mensagens otimistas antigas (30s timeout)
-    const cleanup = setInterval(() => {
-      const cutoff = Date.now() - 30000; // 30 segundos
-      
-      setOptimisticMessages(prev => {
-        const cleaned = new Map();
-        let removedCount = 0;
-        
-        prev.forEach((message, tempId) => {
-          const messageTime = new Date(message.createdAt).getTime();
-          if (messageTime > cutoff) {
-            cleaned.set(tempId, message);
-          } else {
-            removedCount++;
-          }
-        });
-        
-        // Limpeza automática de mensagens antigas concluída
-        
-        return cleaned;
-      });
-      
-      // Limpar queue também
-      setMessageQueue(prev => {
-        const cleaned = new Map();
-        let removedCount = 0;
-        
-        prev.forEach((queueItem, tempId) => {
-          if (queueItem.createdAt > cutoff) {
-            cleaned.set(tempId, queueItem);
-          } else {
-            removedCount++;
-          }
-        });
-        
-        return cleaned;
-      });
-    }, 10000); // Check a cada 10s
-    
-    return () => clearInterval(cleanup);
-  }, []);
+  // ✅ CLEANUP AUTOMÁTICO REMOVIDO
+  // Não é mais necessário - mensagens otimistas são reconciliadas rapidamente pelo socket
 
   // 🚀 OTIMIZAÇÃO: Consolidar limpeza quando muda de chat (Risco Zero)
+  const previousChatIdRef = useRef(null);
+
   useEffect(() => {
-    if (selectedChatId) {
-      // Limpando mensagens otimistas ao trocar de chat
-      setOptimisticMessages(new Map());
-      setMessageQueue(new Map());
+    // Só limpar se o chat REALMENTE mudou (não apenas atualizou)
+    if (selectedChatId && selectedChatId !== previousChatIdRef.current) {
+      console.log('🧹 [Cleanup] Trocando de chat:', previousChatIdRef.current, '→', selectedChatId);
 
       // 🚀 RESETAR estados da setinha
       setIsScrolledUp(false);
       setNewMessagesCount(0);
       setLastSeenMessageId(null);
+
+      // Atualizar referência
+      previousChatIdRef.current = selectedChatId;
     }
   }, [selectedChatId]);
 
@@ -2831,6 +2929,11 @@ const ChatModernoContent = () => {
                           </Box>
                         ) : (
                           <>
+                            {(() => {
+                              const renderTimestamp = new Date().toISOString().split('T')[1];
+                              console.log(`🎨 [RENDER] ${renderTimestamp} - Renderizando ${allMessages.length} mensagens`);
+                              return null;
+                            })()}
                             {Array.isArray(allMessages) && allMessages.length > 0 ? (
                               allMessages.map((message, index) => {
                                 // Verificar se deve mostrar separador de data
@@ -2982,6 +3085,7 @@ const ChatModernoContent = () => {
                   <MessageInput
                     ticketId={selectedChatId}
                     onSendMessage={handleSendMessage}
+                    onSendAudio={handleSendAudioMessage}
                     disabled={messagesLoading || currentTicket?.status === 'pending'}
                     placeholder={
                       currentTicket?.status === 'pending'

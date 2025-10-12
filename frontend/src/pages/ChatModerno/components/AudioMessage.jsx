@@ -218,6 +218,10 @@ const analyzeAudioWaveform = async (audioElement) => {
  * Formatar tempo em MM:SS
  */
 const formatTime = (seconds) => {
+  // Proteção contra NaN ou Infinity
+  if (!isFinite(seconds) || isNaN(seconds) || seconds < 0) {
+    return '0:00';
+  }
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -246,16 +250,36 @@ const AudioMessage = ({
   const audioRef = useRef(null);
 
   const backendUrl = getBackendUrl();
-  const { mediaUrl, body } = message;
+  const { mediaUrl, body, isOptimistic, audioDuration, _blobUrl } = message;
 
-  const rawUrl = mediaUrl?.startsWith('http')
-    ? mediaUrl
-    : `${backendUrl}${mediaUrl}`;
-  const audioUrl = sanitizeMediaUrl(rawUrl);
-
-  // Fetch áudio e converter para blob (solução CORS)
+  // 🎯 Se audioDuration está disponível (mensagem otimista), usar direto
   useEffect(() => {
-    console.log('🔍 [AudioMessage] audioUrl:', audioUrl);
+    if (audioDuration && audioDuration > 0) {
+      console.log('✅ [AudioMessage] Usando audioDuration da mensagem:', audioDuration);
+      setDuration(audioDuration);
+      setIsLoading(false);
+    }
+  }, [audioDuration]);
+
+  // 🎯 PRIORIDADE: Usar _blobUrl se disponível (blob preservado após reconciliação)
+  // Senão, usar mediaUrl normal
+  const effectiveMediaUrl = _blobUrl || mediaUrl;
+  const isBlobUrl = effectiveMediaUrl?.startsWith('blob:');
+
+  if (_blobUrl) {
+    console.log('🎯 [AudioMessage] Usando blob preservado:', _blobUrl.substring(0, 30));
+  }
+
+  const rawUrl = isBlobUrl
+    ? effectiveMediaUrl
+    : effectiveMediaUrl?.startsWith('http')
+    ? effectiveMediaUrl
+    : `${backendUrl}${effectiveMediaUrl}`;
+  const audioUrl = isBlobUrl ? rawUrl : sanitizeMediaUrl(rawUrl);
+
+  // Fetch áudio e converter para blob (solução CORS) - ou usar blob direto se otimista
+  useEffect(() => {
+    console.log('🔍 [AudioMessage] audioUrl:', audioUrl, 'isBlobUrl:', isBlobUrl);
 
     if (!audioUrl) {
       console.log('⚠️ [AudioMessage] audioUrl vazio, abortando');
@@ -264,6 +288,14 @@ const AudioMessage = ({
 
     let blobUrlToRevoke = null;
 
+    // Se já é blob URL (mensagem otimista), usar diretamente
+    if (isBlobUrl) {
+      console.log('✅ [AudioMessage] URL já é blob (mensagem otimista), usando diretamente');
+      setAudioBlobUrl(audioUrl);
+      return;
+    }
+
+    // Senão, fazer fetch do servidor
     const fetchAudioBlob = async () => {
       try {
         console.log('🔄 [AudioMessage] Iniciando fetch do áudio:', audioUrl);
@@ -292,7 +324,7 @@ const AudioMessage = ({
         URL.revokeObjectURL(blobUrlToRevoke);
       }
     };
-  }, [audioUrl]);
+  }, [audioUrl, isBlobUrl]);
 
   useEffect(() => {
     console.log('🎵 [AudioMessage] useEffect 2 - audioRef:', !!audioRef.current, 'audioBlobUrl:', audioBlobUrl);
@@ -515,10 +547,22 @@ const AudioMessage = ({
 };
 
 export default memo(AudioMessage, (prevProps, nextProps) => {
-  return (
+  // 🎯 OTIMIZAÇÃO: Não rerenderizar se apenas ack mudou (relógio → check)
+  // Apenas rerenderizar se mediaUrl, body, ID ou _blobUrl mudarem
+  const shouldNotRerender = (
     prevProps.message.id === nextProps.message.id &&
     prevProps.message.mediaUrl === nextProps.message.mediaUrl &&
+    prevProps.message._blobUrl === nextProps.message._blobUrl &&
     prevProps.message.body === nextProps.message.body &&
+    prevProps.message.audioDuration === nextProps.message.audioDuration &&
     prevProps.isSent === nextProps.isSent
   );
+
+  if (shouldNotRerender) {
+    // Se apenas ack mudou, não precisa rerenderizar o AudioMessage
+    // O ack é exibido fora do componente (no MessageItem)
+    console.log('⚡ [AudioMessage memo] Evitando rerender - apenas ack mudou');
+  }
+
+  return shouldNotRerender;
 });
