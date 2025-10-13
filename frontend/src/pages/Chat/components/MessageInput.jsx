@@ -508,7 +508,7 @@ const MessageInput = ({
     }
   };
 
-  // Handle text correction - Placeholder para implementação futura
+  // Handle text correction - Corrige texto usando OpenAI API
   const handleTextCorrection = async () => {
     if (!message.trim()) {
       toast.error('Digite uma mensagem para corrigir');
@@ -518,13 +518,27 @@ const MessageInput = ({
     setIsCorrectingText(true);
 
     try {
-      // TODO: Implementar correção de texto com IA
-      // Por enquanto, apenas um placeholder
-      toast.info('Corretor de texto será implementado em breve');
+      // Importar a função correctText do serviço de API
+      const { correctText } = await import('../../../services/api');
 
-      // Exemplo de como será:
-      // const response = await api.post('/ai/correct-text', { text: message });
-      // setMessage(response.data.correctedText);
+      // Chamar API de correção
+      const response = await correctText(message);
+
+      // Atualizar mensagem com o texto corrigido
+      setMessage(response.correctedText);
+
+      // Feedback de sucesso
+      toast.success('Texto corrigido com sucesso!');
+
+      // Focar no textarea após correção
+      if (textareaRef.current) {
+        const textarea = textareaRef.current.querySelector('textarea');
+        if (textarea) {
+          textarea.focus();
+          // Mover cursor para o final
+          textarea.setSelectionRange(response.correctedText.length, response.correctedText.length);
+        }
+      }
     } catch (error) {
       console.error('Erro ao corrigir texto:', error);
       toastError(error);
@@ -1257,7 +1271,7 @@ const MessageInput = ({
                 isPrivateMode={privateMessage}
                 InputProps={{
                   endAdornment: (
-                    <Tooltip title="Corrigir texto (em breve)">
+                    <Tooltip title="Corrigir texto com IA">
                       <EmojiButton
                         onClick={handleTextCorrection}
                         disabled={!message.trim() || isCorrectingText}

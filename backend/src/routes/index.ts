@@ -54,6 +54,7 @@ import raceConditionRoutes from "./raceConditionRoutes";
 import taskRoutes from "./taskRoutes";
 import debugRoutes from "./debugRoutes";
 import stickerRoutes from "./stickerRoutes";
+import textCorrectionRoutes from "./textCorrectionRoutes";
 
 
 const routes = Router();
@@ -111,6 +112,7 @@ routes.use(flowBuilder)
 routes.use(flowCampaignRoutes)
 routes.use(taskRoutes);
 routes.use(stickerRoutes);
+routes.use("/api", textCorrectionRoutes);
 
 
 routes.use(promptRoutes);

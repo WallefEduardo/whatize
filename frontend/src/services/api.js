@@ -21,4 +21,14 @@ export const openApi = axios.create({
 	timeout: 30000,
 });
 
+/**
+ * Corrige texto usando OpenAI API
+ * @param {string} text - Texto a ser corrigido
+ * @returns {Promise<{originalText: string, correctedText: string}>}
+ */
+export const correctText = async (text) => {
+	const { data } = await api.post('/api/messages/correct-text', { text });
+	return data;
+};
+
 export default api;
