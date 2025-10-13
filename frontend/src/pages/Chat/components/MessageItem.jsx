@@ -356,7 +356,9 @@ const MessageItem = ({
   addReactionToMessage,
   getMessageReactions,
   // Para galeria de mídias
-  allMessages = []
+  allMessages = [],
+  // Callback para iniciar conversa com contato
+  onStartChat
 }) => {
   const backendUrl = getBackendUrl();
 
@@ -908,10 +910,11 @@ const MessageItem = ({
                   msg.mediaType?.startsWith('video/')
                 )
               )}
+              onStartChat={onStartChat}
             />
 
             {/* Mostrar texto apenas se não for mídia ou se mídia tem legenda */}
-            {messageText && (!message.mediaUrl || message.mediaType === 'chat') && (
+            {messageText && (!message.mediaUrl || message.mediaType === 'chat') && message.mediaType !== 'contactMessage' && !messageText.includes('BEGIN:VCARD') && (
               <Typography variant="body2" sx={{ lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>
                 {formatMessageText(messageText)}
               </Typography>

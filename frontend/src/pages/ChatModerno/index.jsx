@@ -384,6 +384,13 @@ const ChatModernoContent = () => {
   
   // Estado do modal de nova conversa
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  const [preSelectedContactForModal, setPreSelectedContactForModal] = useState(null);
+
+  // Função para abrir modal de nova conversa com contato pré-selecionado
+  const handleStartChatWithContact = useCallback((contact) => {
+    setPreSelectedContactForModal(contact);
+    setShowNewConversationModal(true);
+  }, []);
 
   // Função para salvar as preferências de fila no banco
   const saveQueuePreferences = useCallback(async (queueIds) => {
@@ -1899,6 +1906,80 @@ const ChatModernoContent = () => {
     }
   };
 
+  // 📇 Handle send contact (vCard) - VERSÃO OTIMISTA INSTANTÂNEA
+  const handleSendContactMessage = async (contact) => {
+    if (!selectedChatId || !contact) {
+      return;
+    }
+
+    // 1. Gerar ID temporário único
+    const tempId = generateTempId();
+
+    // 2. Criar mensagem otimista de contato
+    const tempMessage = {
+      id: tempId,
+      body: `BEGIN:VCARD\nVERSION:3.0\nFN:${contact.name}\nTEL:${contact.number}\nEND:VCARD`,
+      fromMe: true,
+      ack: 0, // Relógio (enviando)
+      createdAt: new Date().toISOString(),
+      mediaType: 'contactMessage',
+      vcard: {
+        name: contact.name,
+        number: contact.number
+      },
+      read: false,
+      quotedMsg: replyingMessage,
+      isPrivate: false,
+      user: {
+        id: user.id,
+        name: user.name,
+        profileImage: user.profileImage,
+        companyId: user.companyId
+      }
+    };
+
+    // 3. Adicionar no Map de otimistas
+    optimisticMessagesRef.current.set(tempId, tempMessage);
+    forceUpdate();
+
+    // 4. Scroll automático
+    scrollToBottomOnSend();
+
+    // 5. Micro-delay para React renderizar
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // 6. Enviar para backend
+    try {
+      const payload = {
+        vCard: {
+          name: contact.name,
+          number: contact.number
+        }
+      };
+
+      if (replyingMessage) {
+        payload.quotedMsg = replyingMessage;
+      }
+
+      await api.post(`/messages/${selectedChatId}`, payload);
+
+    } catch (error) {
+      console.error('❌ [handleSendContact] Erro no envio:', error);
+
+      // Atualizar mensagem otimista para status de erro
+      const msg = optimisticMessagesRef.current.get(tempId);
+      if (msg) {
+        optimisticMessagesRef.current.set(tempId, { ...msg, ack: -1 });
+        forceUpdate();
+      }
+    }
+
+    // Limpar estado de reply
+    if (replyingMessage) {
+      setReplyingMessage(null);
+    }
+  };
+
   // Handle delete message - Agora abre modal ao invés de deletar diretamente
   const handleDeleteMessage = (messageId) => {
     const message = allMessages.find(msg => msg.id === messageId);
@@ -3051,40 +3132,146 @@ const ChatModernoContent = () => {
                               return null;
                             })()}
                             {Array.isArray(allMessages) && allMessages.length > 0 ? (
-                              allMessages.map((message, index) => {
-                                // Verificar se deve mostrar separador de data
-                                const showDateSeparator = index === 0 || 
-                                  !isSameDay(
-                                    message.createdAt || message.timestamp,
-                                    allMessages[index - 1]?.createdAt || allMessages[index - 1]?.timestamp
-                                  );
+                              (() => {
+                                // 🔄 Agrupar mensagens de contato consecutivas
+                                const groupedMessages = [];
+                                let i = 0;
 
-                                return (
-                                  <MessageItem
-                                    key={`message-${index}-${message.id}`}
-                                    id={`message-${message.id}`} // ID para scroll
-                                    message={message}
-                                    contact={selectedContact}
-                                    profile={profile}
-                                    currentUser={user}
-                                    onDelete={handleDeleteMessage}
-                                    index={index}
-                                    selectedChatId={selectedChatId}
-                                    handleForward={handleForward}
-                                    handlePinMessage={handlePinMessage}
-                                    pinnedMessages={pinnedMessages}
-                                    showDateSeparator={showDateSeparator}
-                                    onScrollToMessage={scrollToMessage}
-                                    // 🔍 Props para highlight de busca
-                                    isHighlighted={highlightedMessageId === message.id}
-                                    // 🎭 Props para reações persistentes
-                                    addReactionToMessage={addReactionToMessage}
-                                    getMessageReactions={getMessageReactions}
-                                    // Para galeria de mídias
-                                    allMessages={allMessages}
-                                  />
-                                );
-                              })
+                                while (i < allMessages.length) {
+                                  const currentMessage = allMessages[i];
+
+                                  // Verificar se é mensagem de contato
+                                  const isContactMessage =
+                                    currentMessage.mediaType === 'contactMessage' ||
+                                    (currentMessage.body && currentMessage.body.includes('BEGIN:VCARD'));
+
+                                  if (isContactMessage) {
+                                    // Coletar mensagens de contato consecutivas do mesmo remetente
+                                    const contactGroup = [currentMessage];
+                                    let j = i + 1;
+
+                                    // Pegar timestamp da mensagem atual
+                                    const currentTimestamp = new Date(currentMessage.createdAt || currentMessage.timestamp).getTime();
+
+                                    while (j < allMessages.length) {
+                                      const nextMessage = allMessages[j];
+                                      const isNextContact =
+                                        nextMessage.mediaType === 'contactMessage' ||
+                                        (nextMessage.body && nextMessage.body.includes('BEGIN:VCARD'));
+
+                                      // Verificar diferença de tempo (máximo 10 segundos)
+                                      const nextTimestamp = new Date(nextMessage.createdAt || nextMessage.timestamp).getTime();
+                                      const timeDifference = Math.abs(nextTimestamp - currentTimestamp) / 1000; // em segundos
+
+                                      // Mesma direção (fromMe), é contato E enviado dentro de 10 segundos
+                                      if (isNextContact &&
+                                          nextMessage.fromMe === currentMessage.fromMe &&
+                                          timeDifference <= 10) {
+                                        contactGroup.push(nextMessage);
+                                        j++;
+                                      } else {
+                                        break;
+                                      }
+                                    }
+
+                                    // Se tem mais de 1, criar grupo
+                                    if (contactGroup.length > 1) {
+                                      groupedMessages.push({
+                                        type: 'contact-group',
+                                        messages: contactGroup,
+                                        index: i
+                                      });
+                                      i = j;
+                                    } else {
+                                      groupedMessages.push({
+                                        type: 'single',
+                                        message: currentMessage,
+                                        index: i
+                                      });
+                                      i++;
+                                    }
+                                  } else {
+                                    groupedMessages.push({
+                                      type: 'single',
+                                      message: currentMessage,
+                                      index: i
+                                    });
+                                    i++;
+                                  }
+                                }
+
+                                // Renderizar mensagens agrupadas
+                                return groupedMessages.map((item, groupIndex) => {
+                                  if (item.type === 'contact-group') {
+                                    // Renderizar grupo de contatos
+                                    const firstMessage = item.messages[0];
+                                    const showDateSeparator = item.index === 0 ||
+                                      !isSameDay(
+                                        firstMessage.createdAt || firstMessage.timestamp,
+                                        allMessages[item.index - 1]?.createdAt || allMessages[item.index - 1]?.timestamp
+                                      );
+
+                                    return (
+                                      <MessageItem
+                                        key={`contact-group-${groupIndex}-${firstMessage.id}`}
+                                        id={`message-${firstMessage.id}`}
+                                        message={{
+                                          ...firstMessage,
+                                          contactGroup: item.messages // Passar grupo para MessageItem
+                                        }}
+                                        contact={selectedContact}
+                                        profile={profile}
+                                        currentUser={user}
+                                        onDelete={handleDeleteMessage}
+                                        index={item.index}
+                                        selectedChatId={selectedChatId}
+                                        handleForward={handleForward}
+                                        handlePinMessage={handlePinMessage}
+                                        pinnedMessages={pinnedMessages}
+                                        showDateSeparator={showDateSeparator}
+                                        onScrollToMessage={scrollToMessage}
+                                        isHighlighted={highlightedMessageId === firstMessage.id}
+                                        addReactionToMessage={addReactionToMessage}
+                                        getMessageReactions={getMessageReactions}
+                                        allMessages={allMessages}
+                                        onStartChat={handleStartChatWithContact}
+                                      />
+                                    );
+                                  } else {
+                                    // Renderizar mensagem única
+                                    const message = item.message;
+                                    const showDateSeparator = item.index === 0 ||
+                                      !isSameDay(
+                                        message.createdAt || message.timestamp,
+                                        allMessages[item.index - 1]?.createdAt || allMessages[item.index - 1]?.timestamp
+                                      );
+
+                                    return (
+                                      <MessageItem
+                                        key={`message-${item.index}-${message.id}`}
+                                        id={`message-${message.id}`}
+                                        message={message}
+                                        contact={selectedContact}
+                                        profile={profile}
+                                        currentUser={user}
+                                        onDelete={handleDeleteMessage}
+                                        index={item.index}
+                                        selectedChatId={selectedChatId}
+                                        handleForward={handleForward}
+                                        handlePinMessage={handlePinMessage}
+                                        pinnedMessages={pinnedMessages}
+                                        showDateSeparator={showDateSeparator}
+                                        onScrollToMessage={scrollToMessage}
+                                        isHighlighted={highlightedMessageId === message.id}
+                                        addReactionToMessage={addReactionToMessage}
+                                        getMessageReactions={getMessageReactions}
+                                        allMessages={allMessages}
+                                        onStartChat={handleStartChatWithContact}
+                                      />
+                                    );
+                                  }
+                                });
+                              })()
                             ) : (
                               <Box sx={{ 
                                 display: 'flex', 
@@ -3204,6 +3391,7 @@ const ChatModernoContent = () => {
                     onSendAudio={handleSendAudioMessage}
                     onSendMedia={handleSendMediaMessage}
                     onSendSticker={handleSendStickerMessage}
+                    onSendContact={handleSendContactMessage}
                     disabled={messagesLoading || currentTicket?.status === 'pending'}
                     placeholder={
                       currentTicket?.status === 'pending'
@@ -3242,8 +3430,12 @@ const ChatModernoContent = () => {
         {/* Modal de Nova Conversa */}
         <NewConversationModal
           isOpen={showNewConversationModal}
-          onClose={() => setShowNewConversationModal(false)}
+          onClose={() => {
+            setShowNewConversationModal(false);
+            setPreSelectedContactForModal(null); // Limpar contato pré-selecionado ao fechar
+          }}
           onCreateTicket={handleCreateTicket}
+          preSelectedContact={preSelectedContactForModal}
         />
         
         {/* Modal de Deletar Mensagem */}

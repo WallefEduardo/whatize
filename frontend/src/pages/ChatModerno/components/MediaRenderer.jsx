@@ -7,6 +7,7 @@ const ImageMessage = lazy(() => import('./ImageMessage'));
 const VideoMessage = lazy(() => import('./VideoMessage'));
 const AudioMessage = lazy(() => import('./AudioMessage'));
 const DocumentMessage = lazy(() => import('./DocumentMessage'));
+const ContactMessage = lazy(() => import('./ContactMessage'));
 // Importação direta para debug (SEM lazy loading)
 import StickerMessage from './StickerMessage';
 
@@ -46,11 +47,19 @@ const detectMediaType = (message) => {
     return 'sticker';
   }
 
+  // 📇 Verificar se é contato (vCard)
+  if (mediaType === 'contactMessage' || (body && body.includes('BEGIN:VCARD'))) {
+    return 'contact';
+  }
+
   // Priorizar mediaType se disponível
   if (mediaType) {
-    // Sistema usa strings simples: "image", "video", "audio", "application", "sticker"
+    // Sistema usa strings simples: "image", "video", "audio", "application", "sticker", "contactMessage"
     if (mediaType === 'sticker') {
       return 'sticker';
+    }
+    if (mediaType === 'contactMessage') {
+      return 'contact';
     }
     if (mediaType === 'image' || mediaType.startsWith('image/')) {
       return 'image';
@@ -147,6 +156,7 @@ const MediaRenderer = ({
     <MediaContainer>
       <Suspense fallback={<LoadingFallback />}>
         {mediaType === 'sticker' && <StickerMessage {...commonProps} />}
+        {mediaType === 'contact' && <ContactMessage {...commonProps} />}
         {mediaType === 'image' && <ImageMessage {...commonProps} />}
         {mediaType === 'video' && <VideoMessage {...commonProps} />}
         {mediaType === 'audio' && <AudioMessage {...commonProps} />}

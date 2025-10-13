@@ -156,15 +156,15 @@ const ModalFooter = styled(Box)(() => ({
   backgroundColor: 'var(--bg-primary)',
 }));
 
-const NewConversationModal = ({ isOpen, onClose, onCreateTicket }) => {
+const NewConversationModal = ({ isOpen, onClose, onCreateTicket, preSelectedContact = null }) => {
   const { user } = useContext(AuthContext);
   const history = useHistory();
   const backendUrl = getBackendUrl();
-  
+
   // Estados do modal
   const [step, setStep] = useState(1); // 1: selecionar contato, 2: selecionar fila/conexão
   const [loading, setLoading] = useState(false);
-  
+
   // Estados para contatos
   const [contacts, setContacts] = useState([]);
   const [filteredContacts, setFilteredContacts] = useState([]);
@@ -253,8 +253,14 @@ const NewConversationModal = ({ isOpen, onClose, onCreateTicket }) => {
       fetchContacts();
       fetchQueues();
       fetchWhatsapps();
+
+      // Se tem contato pré-selecionado, ir direto para step 2
+      if (preSelectedContact) {
+        setSelectedContact(preSelectedContact);
+        setStep(2);
+      }
     }
-  }, [isOpen, fetchContacts, fetchQueues, fetchWhatsapps]);
+  }, [isOpen, fetchContacts, fetchQueues, fetchWhatsapps, preSelectedContact]);
 
   // Função para construir URL da imagem do contato (mesma lógica do sidebar)
   const getContactImageUrl = (contact) => {

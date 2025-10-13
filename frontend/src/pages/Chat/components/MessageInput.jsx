@@ -23,6 +23,7 @@ import useCompanySettings from '../../../hooks/useSettings/companySettings';
 // Components
 import MediaPreviewModal from '../../ChatModerno/components/MediaPreviewModal';
 import EmojiStickerPicker from '../../ChatModerno/components/EmojiStickerPicker';
+import ModernContactSendModal from '../../../components/ModernContactSendModal';
 
 // Icons
 import {
@@ -36,7 +37,8 @@ import {
   Play,
   Trash2,
   Sticker,
-  Wand2
+  Wand2,
+  User
 } from 'lucide-react';
 
 // Material-UI Icons
@@ -63,7 +65,7 @@ import MandarIcon from '../../../assets/iconeswhatize/mandar.svg';
 
 const InputContainer = styled(Box)(({ theme }) => ({
   padding: '12px 16px',
-  backgroundColor: 'white',
+  backgroundColor: 'var(--bg-primary)', // Suporta dark mode
   borderRadius: '0 0 12px 12px',
 }));
 
@@ -125,8 +127,8 @@ const MessageTextArea = styled(TextField, {
 
   '& .MuiOutlinedInput-root': {
     borderRadius: '8px',
-    backgroundColor: isPrivateMode ? 'rgba(14, 165, 233, 0.08)' : '#F8F9FA', // Azul transparente quando privado
-    border: isPrivateMode ? '1px solid rgba(14, 165, 233, 0.3)' : '1px solid #E2E8F0',
+    backgroundColor: isPrivateMode ? 'rgba(14, 165, 233, 0.08)' : 'var(--bg-secondary)', // Azul transparente quando privado, tema secundário quando normal
+    border: isPrivateMode ? '1px solid rgba(14, 165, 233, 0.3)' : '1px solid var(--border-primary)',
     height: '40px',
     minHeight: '40px',
     maxHeight: '40px',
@@ -147,12 +149,12 @@ const MessageTextArea = styled(TextField, {
     },
 
     '&:hover': {
-      backgroundColor: isPrivateMode ? 'rgba(14, 165, 233, 0.12)' : '#F1F3F4',
-      borderColor: isPrivateMode ? 'rgba(14, 165, 233, 0.4)' : '#D1D5DB',
+      backgroundColor: isPrivateMode ? 'rgba(14, 165, 233, 0.12)' : 'var(--bg-tertiary)',
+      borderColor: isPrivateMode ? 'rgba(14, 165, 233, 0.4)' : 'var(--border-secondary)',
     },
 
     '&.Mui-focused': {
-      backgroundColor: isPrivateMode ? 'rgba(14, 165, 233, 0.1)' : 'white',
+      backgroundColor: isPrivateMode ? 'rgba(14, 165, 233, 0.1)' : 'var(--bg-primary)',
       borderColor: isPrivateMode ? '#0ea5e9' : 'var(--color-accent)',
       boxShadow: isPrivateMode ? '0 0 0 3px rgba(14, 165, 233, 0.1)' : '0 0 0 3px rgba(0, 195, 7, 0.1)',
 
@@ -243,7 +245,7 @@ const StickerPreviewContainer = styled(Box)(() => ({
   alignItems: 'center',
   justifyContent: 'space-between',
   padding: '12px 16px',
-  backgroundColor: '#f0f2f5',
+  backgroundColor: 'var(--bg-secondary)', // Suporta dark mode
   borderRadius: '8px 8px 0 0',
   marginBottom: '8px',
   borderLeft: '4px solid var(--color-accent)',
@@ -261,7 +263,7 @@ const StickerPreviewImage = styled('img')(() => ({
   height: '64px',
   objectFit: 'contain',
   borderRadius: '4px',
-  backgroundColor: 'white',
+  backgroundColor: 'var(--bg-tertiary)', // Suporta dark mode
   padding: '4px',
 }));
 
@@ -279,6 +281,7 @@ const MessageInput = ({
   onSendAudio, // Callback para envio otimista de áudio
   onSendMedia, // Callback para envio otimista de mídias (fotos/vídeos/docs)
   onSendSticker, // Callback para envio otimista de stickers
+  onSendContact, // Callback para envio otimista de contatos
   disabled = false,
   placeholder = "Digite sua mensagem...",
   ticketId // Adicionar ticketId para envio de áudio
@@ -287,6 +290,7 @@ const MessageInput = ({
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [isStickerPickerOpen, setIsStickerPickerOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isCorrectingText, setIsCorrectingText] = useState(false);
   const textareaRef = useRef(null);
@@ -580,6 +584,58 @@ const MessageInput = ({
   const handleStickerClick = () => {
     setIsStickerPickerOpen(true);
     setIsAttachOpen(false);
+  };
+
+  // Abre o modal de contatos
+  const handleContactClick = () => {
+    setContactModalOpen(true);
+    setIsAttachOpen(false);
+  };
+
+  // Envia os contatos selecionados
+  const handleSendContacts = async (selectedContacts) => {
+    if (!selectedContacts || selectedContacts.length === 0) {
+      setContactModalOpen(false);
+      return;
+    }
+
+    // Se houver callback onSendContact (ChatModerno com envio otimista)
+    if (onSendContact && typeof onSendContact === 'function') {
+      // Enviar cada contato individualmente para o callback otimista
+      for (const contact of selectedContacts) {
+        onSendContact(contact);
+      }
+
+      setContactModalOpen(false);
+      return;
+    }
+
+    // Fallback para envio direto (chat antigo)
+    if (!ticketId) {
+      toast.error('Nenhum ticket selecionado');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Enviar cada contato individualmente para o backend
+      for (const contact of selectedContacts) {
+        await api.post(`/messages/${ticketId}`, {
+          vCard: {
+            name: contact.name,
+            number: contact.number
+          }
+        });
+      }
+
+      toast.success(`${selectedContacts.length} contato(s) enviado(s)`);
+      setContactModalOpen(false);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Fecha o seletor de figurinhas
@@ -939,6 +995,14 @@ const MessageInput = ({
         />
       )}
 
+      {/* Modal de Envio de Contatos */}
+      {contactModalOpen && (
+        <ModernContactSendModal
+          open={contactModalOpen}
+          onClose={handleSendContacts}
+        />
+      )}
+
       {/* Emoji & Sticker Picker Unificado */}
       {isStickerPickerOpen && (
         <Box sx={{
@@ -1034,21 +1098,23 @@ const MessageInput = ({
                     <IconButton
                       sx={{
                         p: 1,
-                        color: 'var(--color-accent)',
-                        '&:hover': { 
-                          color: 'var(--color-green-hover)',
+                        color: isAttachOpen ? 'var(--color-accent)' : '#9ca3af', // Verde quando ativo, cinza quando inativo
+                        '&:hover': {
+                          color: 'var(--color-accent)',
                           backgroundColor: 'rgba(0, 195, 7, 0.1)'
                         }
                       }}
                     >
-                      <img 
-                        src={AdicionarIcon} 
-                        alt="Adicionar" 
-                        style={{ 
-                          width: '20px', 
+                      <img
+                        src={AdicionarIcon}
+                        alt="Adicionar"
+                        style={{
+                          width: '20px',
                           height: '20px',
-                          filter: 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)'
-                        }} 
+                          filter: isAttachOpen
+                            ? 'brightness(0) saturate(100%) invert(49%) sepia(91%) saturate(3524%) hue-rotate(88deg) brightness(98%) contrast(101%)' // Verde
+                            : 'brightness(0) saturate(100%) invert(70%) sepia(0%) saturate(0%) hue-rotate(0deg)' // Cinza
+                        }}
                       />
                     </IconButton>
                   </Tooltip>
@@ -1089,6 +1155,12 @@ const MessageInput = ({
                   >
                     Áudio
                   </DropdownItem>
+                  <DropdownItem
+                    onClick={handleContactClick}
+                    icon={<User size={16} />}
+                  >
+                    Contato
+                  </DropdownItem>
                 </DropdownContent>
               </Dropdown>
 
@@ -1098,9 +1170,9 @@ const MessageInput = ({
                   onClick={handleStickerClick}
                   sx={{
                     p: 1,
-                    color: 'var(--color-accent)',
+                    color: isStickerPickerOpen ? 'var(--color-accent)' : '#9ca3af', // Verde quando ativo, cinza quando inativo
                     '&:hover': {
-                      color: 'var(--color-green-hover)',
+                      color: 'var(--color-accent)',
                       backgroundColor: 'rgba(0, 195, 7, 0.1)'
                     }
                   }}
@@ -1116,9 +1188,9 @@ const MessageInput = ({
                     onClick={handleChangeSign}
                     sx={{
                       p: 1,
-                      color: signMessage ? 'var(--color-accent)' : 'grey',
+                      color: signMessage ? 'var(--color-accent)' : '#9ca3af', // Verde quando ativo, cinza quando inativo
                       '&:hover': {
-                        color: signMessage ? 'var(--color-green-hover)' : 'var(--color-accent)',
+                        color: 'var(--color-accent)',
                         backgroundColor: 'rgba(0, 195, 7, 0.1)'
                       }
                     }}
@@ -1134,12 +1206,10 @@ const MessageInput = ({
                   onClick={handlePrivateMessage}
                   sx={{
                     p: 1,
-                    color: privateMessage ? '#0ea5e9' : 'var(--color-accent)', // Azul quando ativo, verde quando inativo
-                    opacity: privateMessage ? 1 : 0.6,
+                    color: privateMessage ? '#0ea5e9' : '#9ca3af', // Azul quando ativo, cinza quando inativo
                     '&:hover': {
-                      color: privateMessage ? '#0284c7' : 'var(--color-green-hover)',
-                      backgroundColor: privateMessage ? 'rgba(14, 165, 233, 0.1)' : 'rgba(0, 195, 7, 0.1)',
-                      opacity: 1
+                      color: privateMessage ? '#0284c7' : '#0ea5e9',
+                      backgroundColor: privateMessage ? 'rgba(14, 165, 233, 0.1)' : 'rgba(14, 165, 233, 0.05)'
                     }
                   }}
                 >
